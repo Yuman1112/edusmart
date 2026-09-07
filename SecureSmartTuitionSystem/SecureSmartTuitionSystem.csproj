@@ -1,26 +1,48 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>secure-smart-tuition-system</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- EF Core + SQL Server (Chapter 2.4: "Database Integration Using SQL Server and Entity Framework Core") -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.8">
+    <Compile Remove="NewFolder1\**" />
+    <Compile Remove="NewFolder2\**" />
+    <Content Remove="NewFolder1\**" />
+    <Content Remove="NewFolder2\**" />
+    <EmbeddedResource Remove="NewFolder1\**" />
+    <EmbeddedResource Remove="NewFolder2\**" />
+    <None Remove="NewFolder1\**" />
+    <None Remove="NewFolder2\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\Billing\" />
+    <Folder Include="Models\Communication\" />
+    <Folder Include="Models\Security\" />
+    <Folder Include="Models\Reporting\" />
+    <Folder Include="Services\Billing\" />
+    <Folder Include="Services\Communication\" />
+    <Folder Include="Services\Enrollment\" />
+    <Folder Include="Services\Reporting\" />
+    <Folder Include="Services\Security\" />
+    <Folder Include="wwwroot\NewFolder1\" />
+    <Folder Include="wwwroot\images\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-
-    <!-- ASP.NET Core Identity (User Authentication & RBAC module integration point) -->
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.8" />
-
-    <!-- Report export: Report Export use case (Table 4.26) -->
-    <PackageReference Include="ClosedXML" Version="0.102.2" />
-    <PackageReference Include="QuestPDF" Version="2024.10.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>
