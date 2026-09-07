@@ -1,0 +1,20 @@
+# Visual Studio
+.vs/
+**/bin/
+**/obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+
+# SQL Server database files
+*.mdf
+*.ldf
+
+# Local configuration and secrets
+.env
+appsettings.Local.json
+
+# Test output
+TestResults/

@@ -1,0 +1,44 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using SecureSmartTuitionSystem.Models.Identity
+
+@inject SignInManager<ApplicationUser> SignInManager
+
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="text-center py-5">
+    <h1 class="display-4">
+        Secure Smart Tuition System
+    </h1>
+
+    <p class="lead mt-3">
+        Manage classes, enrollments, payments,
+        communication and reports in one secure platform.
+    </p>
+
+    <div class="mt-4">
+        @if (!SignInManager.IsSignedIn(User))
+        {
+            <a class="btn btn-primary btn-lg me-2"
+               asp-area="Identity"
+               asp-page="/Account/Register">
+                Register
+            </a>
+
+            <a class="btn btn-outline-primary btn-lg"
+               asp-area="Identity"
+               asp-page="/Account/Login">
+                Login
+            </a>
+        }
+        else if (User.IsInRole("Admin"))
+        {
+            <a class="btn btn-primary btn-lg"
+               asp-controller="Admin"
+               asp-action="Index">
+                Go to Admin Dashboard
+            </a>
+        }
+    </div>
+</div>

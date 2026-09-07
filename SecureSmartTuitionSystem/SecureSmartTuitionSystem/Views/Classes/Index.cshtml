@@ -1,0 +1,140 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.BrowseClassesViewModel
+
+@{
+    ViewData["Title"] = "Browse Classes";
+}
+
+<div class="container mt-4">
+    <div class="mb-4">
+        <h1>Browse Available Classes</h1>
+
+        <p class="text-muted">
+            View available subjects, schedules and class fees.
+        </p>
+    </div>
+
+    <form method="get"
+          asp-controller="Classes"
+          asp-action="Index"
+          class="row g-3 mb-4">
+
+        <div class="col-md-4">
+            <label class="form-label">Subject</label>
+
+            <select name="subject"
+                    class="form-select">
+                <option value="">All subjects</option>
+
+                @foreach (var subject in Model.Subjects)
+                {
+                    <option value="@subject"
+                            selected="@(subject == Model.SelectedSubject)">
+                        @subject
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">
+                Academic Level
+            </label>
+
+            <select name="level"
+                    class="form-select">
+                <option value="">All levels</option>
+
+                @foreach (var level in Model.AcademicLevels)
+                {
+                    <option value="@level"
+                            selected="@(level == Model.SelectedLevel)">
+                        @level
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-4 d-flex align-items-end gap-2">
+            <button type="submit"
+                    class="btn btn-primary">
+                Apply Filters
+            </button>
+
+            <a asp-controller="Classes"
+               asp-action="Index"
+               class="btn btn-outline-secondary">
+                Clear
+            </a>
+        </div>
+    </form>
+
+    @if (Model.Classes.Count == 0)
+    {
+        <div class="alert alert-info">
+            No available classes match the selected filters.
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var item in Model.Classes)
+            {
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <h4 class="card-title">
+                                    @item.SubjectName
+                                </h4>
+
+                                <span class="badge bg-primary">
+                                    @item.AcademicLevel
+                                </span>
+                            </div>
+
+                            <p class="text-muted">
+                                @item.ClassCode
+                            </p>
+
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Tutor</dt>
+                                <dd class="col-sm-8">
+                                    @item.TutorName
+                                </dd>
+
+                                <dt class="col-sm-4">Schedule</dt>
+                                <dd class="col-sm-8">
+                                    @item.Day,
+                                    @item.StartTime - @item.EndTime
+                                </dd>
+
+                                <dt class="col-sm-4">Venue</dt>
+                                <dd class="col-sm-8">
+                                    @item.Venue
+                                </dd>
+
+                                <dt class="col-sm-4">Monthly Fee</dt>
+                                <dd class="col-sm-8">
+                                    RM @item.MonthlyFee.ToString("0.00")
+                                </dd>
+
+                                <dt class="col-sm-4">Seats</dt>
+                                <dd class="col-sm-8">
+                                    @item.SeatsRemaining remaining
+                                    out of @item.Capacity
+                                </dd>
+                            </dl>
+                        </div>
+
+                        <div class="card-footer bg-white">
+                            <button class="btn btn-primary"
+                                    disabled="@(item.SeatsRemaining <= 0)">
+                                Enrol Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
