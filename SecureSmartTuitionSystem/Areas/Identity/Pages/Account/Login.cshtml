@@ -1,0 +1,63 @@
+﻿@page
+@model SecureSmartTuitionSystem.Areas.Identity.Pages.Account.LoginModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Login";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-4">
+        <h1 class="mb-3">Login</h1>
+
+        <p class="text-muted">
+            Enter your User ID and password.
+        </p>
+
+        @if (!string.IsNullOrEmpty(Model.StatusMessage))
+        {
+            <div class="alert alert-info" role="status">
+                @Model.StatusMessage
+            </div>
+        }
+
+        <form method="post">
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger mb-3 login-errors"></div>
+
+            <div class="mb-3">
+                <label asp-for="Input.UserId"
+                       class="form-label"></label>
+
+                <input asp-for="Input.UserId"
+                       class="form-control"
+                       autocomplete="username" />
+
+                <span asp-validation-for="Input.UserId"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.Password"
+                       class="form-label"></label>
+
+                <input asp-for="Input.Password"
+                       class="form-control"
+                       autocomplete="current-password" />
+
+                <span asp-validation-for="Input.Password"
+                      class="text-danger"></span>
+            </div>
+
+            <button type="submit"
+                    class="btn btn-primary w-100">
+                Login
+            </button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="/Views/Shared/_ValidationScriptsPartial.cshtml" />
+}
