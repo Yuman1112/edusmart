@@ -11,189 +11,191 @@
 
         <partial name="_EnrollmentSteps" model="@(1)" />
 
-        <h1 class="mb-3">Student Details</h1>
+        <div class="enrollment-card">
 
-        <p class="text-muted mb-4">
-            Tell us about the student who will be attending classes.
-        </p>
+            <h1 class="mb-3">Student Details</h1>
 
-        @if (TempData["EnrollmentMessage"] is string enrollmentMessage)
-        {
-            <div class="alert alert-warning" role="alert">
-                @enrollmentMessage
-            </div>
-        }
+            <p class="text-muted mb-4">
+                Tell us about the student who will be attending classes.
+            </p>
 
-        <form asp-controller="Enrollment"
-              asp-action="StudentDetails"
-              method="post">
-
-            <div asp-validation-summary="ModelOnly"
-                 class="text-danger mb-3"
-                 role="alert">
-            </div>
-
-            <!-- ==========================================
-                 STUDENT FULL NAME
-                 ========================================== -->
-            <div class="mb-3">
-
-                <label asp-for="StudentName"
-                       class="form-label">
-                </label>
-
-                <input asp-for="StudentName"
-                       class="form-control"
-                       maxlength="100"
-                       placeholder="As per birth certificate / IC"
-                       autocomplete="off" />
-
-                <span asp-validation-for="StudentName"
-                      class="text-danger">
-                </span>
-
-            </div>
-
-            <!-- ==========================================
-                 IDENTIFICATION
-                 ========================================== -->
-            <!-- Identification Type -->
-            <div class="mb-3">
-                <label asp-for="StudentIdentificationType"
-                       class="form-label">
-                </label>
-
-                <select asp-for="StudentIdentificationType"
-                        class="form-select"
-                        id="studentIdentificationType">
-
-                    <option value="IC">IC Number</option>
-                    <option value="BirthCertificate">
-                        Birth Certificate Number
-                    </option>
-
-                </select>
-
-                <span asp-validation-for="StudentIdentificationType"
-                      class="text-danger">
-                </span>
-            </div>
-
-            <!-- Identification Number -->
-            <div class="mb-3">
-                <label asp-for="StudentIdentificationNumber"
-                       class="form-label"
-                       id="studentIdentificationNumberLabel">
-                    IC Number
-                </label>
-
-                <input asp-for="StudentIdentificationNumber"
-                       class="form-control"
-                       maxlength="30"
-                       placeholder="000000-00-0000"
-                       autocomplete="off"
-                       id="studentIdentificationNumber" />
-
-                <span asp-validation-for="StudentIdentificationNumber"
-                      class="text-danger">
-                </span>
-
-                <div class="form-text"
-                     id="studentIdentificationHelp">
-                    Enter the student's IC number in the format 000000-00-0000.
+            @if (TempData["EnrollmentMessage"] is string enrollmentMessage)
+            {
+                <div class="alert alert-warning" role="alert">
+                    @enrollmentMessage
                 </div>
-            </div>
+            }
 
-            <!-- ==========================================
-                 DATE OF BIRTH + GENDER
-                 ========================================== -->
-            <div class="row">
+            <form asp-controller="Enrollment"
+                  asp-action="StudentDetails"
+                  method="post">
 
-                <div class="col-md-6 mb-3">
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3"
+                     role="alert">
+                </div>
 
-                    <label asp-for="StudentDateOfBirth"
+                <!-- ==========================================
+                     STUDENT FULL NAME
+                     ========================================== -->
+                <div class="mb-3">
+
+                    <label asp-for="StudentName"
                            class="form-label">
                     </label>
 
-                    <input asp-for="StudentDateOfBirth"
+                    <input asp-for="StudentName"
                            class="form-control"
-                           type="date"
-                           max="@DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd")" />
+                           maxlength="100"
+                           placeholder="As per birth certificate / IC"
+                           autocomplete="off" />
 
-                    <span asp-validation-for="StudentDateOfBirth"
+                    <span asp-validation-for="StudentName"
                           class="text-danger">
                     </span>
 
                 </div>
 
-                <div class="col-md-6 mb-3">
-
-                    <label asp-for="StudentGender"
+                <!-- ==========================================
+                     IDENTIFICATION
+                     ========================================== -->
+                <!-- Identification Type -->
+                <div class="mb-3">
+                    <label asp-for="StudentIdentificationType"
                            class="form-label">
                     </label>
 
-                    <select asp-for="StudentGender"
-                            class="form-select">
+                    <select asp-for="StudentIdentificationType"
+                            class="form-select"
+                            id="studentIdentificationType">
 
-                        <option value="">
-                            Select gender
-                        </option>
-
-                        <option value="Male">
-                            Male
-                        </option>
-
-                        <option value="Female">
-                            Female
+                        <option value="IC">IC Number</option>
+                        <option value="BirthCertificate">
+                            Birth Certificate Number
                         </option>
 
                     </select>
 
-                    <span asp-validation-for="StudentGender"
+                    <span asp-validation-for="StudentIdentificationType"
+                          class="text-danger">
+                    </span>
+                </div>
+
+                <!-- Identification Number -->
+                <div class="mb-3">
+                    <label asp-for="StudentIdentificationNumber"
+                           class="form-label"
+                           id="studentIdentificationNumberLabel">
+                        IC Number
+                    </label>
+
+                    <input asp-for="StudentIdentificationNumber"
+                           class="form-control"
+                           maxlength="30"
+                           placeholder="000000-00-0000"
+                           autocomplete="off"
+                           id="studentIdentificationNumber" />
+
+                    <span asp-validation-for="StudentIdentificationNumber"
+                          class="text-danger">
+                    </span>
+
+                    <div class="form-text"
+                         id="studentIdentificationHelp">
+                        Enter the student's IC number in the format 000000-00-0000.
+                    </div>
+                </div>
+
+                <!-- ==========================================
+                     DATE OF BIRTH + GENDER
+                     ========================================== -->
+                <div class="row">
+
+                    <div class="col-md-6 mb-3">
+
+                        <label asp-for="StudentDateOfBirth"
+                               class="form-label">
+                        </label>
+
+                        <input asp-for="StudentDateOfBirth"
+                               class="form-control"
+                               type="date"
+                               max="@DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd")" />
+
+                        <span asp-validation-for="StudentDateOfBirth"
+                              class="text-danger">
+                        </span>
+
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+
+                        <label asp-for="StudentGender"
+                               class="form-label">
+                        </label>
+
+                        <select asp-for="StudentGender"
+                                class="form-select">
+
+                            <option value="">
+                                Select gender
+                            </option>
+
+                            <option value="Male">
+                                Male
+                            </option>
+
+                            <option value="Female">
+                                Female
+                            </option>
+
+                        </select>
+
+                        <span asp-validation-for="StudentGender"
+                              class="text-danger">
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <!-- ==========================================
+                     CURRENT SCHOOL
+                     ========================================== -->
+                <div class="mb-4">
+
+                    <label asp-for="StudentSchool"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="StudentSchool"
+                           class="form-control"
+                           maxlength="150"
+                           placeholder="School name"
+                           autocomplete="off" />
+
+                    <span asp-validation-for="StudentSchool"
                           class="text-danger">
                     </span>
 
                 </div>
 
-            </div>
+                <!-- ==========================================
+                     NAVIGATION
+                     ========================================== -->
+                <div class="d-flex justify-content-end">
 
-            <!-- ==========================================
-                 CURRENT SCHOOL
-                 ========================================== -->
-            <div class="mb-4">
+                    <button type="submit"
+                            class="btn btn-primary">
 
-                <label asp-for="StudentSchool"
-                       class="form-label">
-                </label>
+                        Next: Parent / Guardian Details
 
-                <input asp-for="StudentSchool"
-                       class="form-control"
-                       maxlength="150"
-                       placeholder="School name"
-                       autocomplete="off" />
+                    </button>
 
-                <span asp-validation-for="StudentSchool"
-                      class="text-danger">
-                </span>
+                </div>
 
-            </div>
-
-            <!-- ==========================================
-                 NAVIGATION
-                 ========================================== -->
-            <div class="d-flex justify-content-end">
-
-                <button type="submit"
-                        class="btn btn-primary">
-
-                    Next: Parent / Guardian Details
-
-                </button>
-
-            </div>
-
-        </form>
-
+            </form>
+        </div>
     </div>
 </div>
 
