@@ -168,8 +168,9 @@ namespace SecureSmartTuitionSystem.Data
             {
                 mathematics = new Subject
                 {
-                    SubjectName = "Mathematics",
+                    EducationStage = EducationStage.Secondary,
                     AcademicLevel = "Form 3",
+                    SubjectName = "Mathematics",
                     MonthlyFee = 200.00m,
                     IsActive = true
                 };
@@ -187,8 +188,9 @@ namespace SecureSmartTuitionSystem.Data
             {
                 science = new Subject
                 {
-                    SubjectName = "Science",
+                    EducationStage = EducationStage.Secondary,
                     AcademicLevel = "Form 3",
+                    SubjectName = "Science",
                     MonthlyFee = 220.00m,
                     IsActive = true
                 };
@@ -196,7 +198,25 @@ namespace SecureSmartTuitionSystem.Data
                 context.Subjects.Add(science);
             }
 
+            if (mathematics != null)
+            {
+                mathematics.EducationStage =
+                    EducationStage.Secondary;
+            }
+
+            if (science != null)
+            {
+                science.EducationStage =
+                    EducationStage.Secondary;
+            }
+
             await context.SaveChangesAsync();
+            
+            if (mathematics == null || science == null)
+            {
+                throw new InvalidOperationException(
+                    "Unable to initialise Mathematics and Science subjects.");
+            }
 
             var tutor =
                 await userManager.FindByEmailAsync(TutorEmail);
@@ -223,7 +243,7 @@ namespace SecureSmartTuitionSystem.Data
                         DayOfWeek = DayOfWeek.Monday,
                         StartTime = new TimeOnly(18, 0),
                         EndTime = new TimeOnly(20, 0),
-                        Venue = "Room A",
+                        Venue = "https://meet.google.com/math-f3-demo",
                         Capacity = 25,
                         Status = ClassSessionStatus.Active
                     });
@@ -245,13 +265,64 @@ namespace SecureSmartTuitionSystem.Data
                         DayOfWeek = DayOfWeek.Wednesday,
                         StartTime = new TimeOnly(18, 0),
                         EndTime = new TimeOnly(20, 0),
-                        Venue = "Room B",
+                        Venue = "https://meet.google.com/science-f3-demo",
                         Capacity = 25,
                         Status = ClassSessionStatus.Active
                     });
             }
 
+            var existingMathematicsClass =
+                await context.ClassSessions.FirstOrDefaultAsync(
+                    session =>
+                        session.ClassCode == "MATH-F3-01");
+
+            if (existingMathematicsClass != null)
+            {
+                if (string.IsNullOrWhiteSpace(
+                        existingMathematicsClass.Venue) ||
+                    !existingMathematicsClass.Venue.StartsWith(
+                        "https://meet.google.com/",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    existingMathematicsClass.Venue =
+                        "https://meet.google.com/math-f3-demo";
+                }
+
+                if (string.IsNullOrWhiteSpace(
+                        existingMathematicsClass.ClassName))
+                {
+                    existingMathematicsClass.ClassName =
+                        "FORM 3 - MM - Test Tutor - 06:00 PM";
+                }
+            }
+
+            var existingScienceClass =
+                await context.ClassSessions.FirstOrDefaultAsync(
+                    session =>
+                        session.ClassCode == "SCI-F3-01");
+
+            if (existingScienceClass != null)
+            {
+                if (string.IsNullOrWhiteSpace(
+                        existingScienceClass.Venue) ||
+                    !existingScienceClass.Venue.StartsWith(
+                        "https://meet.google.com/",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    existingScienceClass.Venue =
+                        "https://meet.google.com/science-f3-demo";
+                }
+
+                if (string.IsNullOrWhiteSpace(
+                        existingScienceClass.ClassName))
+                {
+                    existingScienceClass.ClassName =
+                        "FORM 3 - SCI - Test Tutor - 06:00 PM";
+                }
+            }
+
             await context.SaveChangesAsync();
+
         }
     }
 }

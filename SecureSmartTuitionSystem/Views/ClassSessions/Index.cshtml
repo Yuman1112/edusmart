@@ -1,0 +1,261 @@
+﻿@model IEnumerable<SecureSmartTuitionSystem.Models.Enrollment.ClassSession>
+
+@using SecureSmartTuitionSystem.Models.Enrollment
+
+@{
+    ViewData["Title"] = "Manage Class Sessions";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Class Sessions</h1>
+        <p>
+            Create and manage online tuition class schedules.
+        </p>
+    </div>
+
+    <a asp-controller="ClassSessions"
+       asp-action="Create"
+       class="primary-button">
+
+        <i class="bi bi-plus-lg"></i>
+        Create Class Session
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show"
+         role="alert">
+
+        <i class="bi bi-check-circle-fill me-2"></i>
+        @TempData["SuccessMessage"]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show"
+         role="alert">
+
+        <i class="bi bi-exclamation-circle-fill me-2"></i>
+        @TempData["ErrorMessage"]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+<div class="dashboard-card">
+
+    <div class="dashboard-card-header">
+        <h2>
+            <i class="bi bi-calendar3 me-2"></i>
+            All Class Sessions
+        </h2>
+
+        <span class="text-muted">
+            @Model.Count() session(s)
+        </span>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-calendar-x"></i>
+
+            <p>No class sessions have been created.</p>
+
+            <a asp-controller="ClassSessions"
+               asp-action="Create"
+               class="primary-button">
+
+                <i class="bi bi-plus-lg"></i>
+                Create First Class
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle class-session-table">
+                <thead>
+                    <tr>
+                        <th>Class Code</th>
+                        <th>Subject</th>
+                        <th>Monthly Fee</th>
+                        <th>Tutor</th>
+                        <th>Schedule</th>
+                        <th>Capacity</th>
+                        <th>Google Meet</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var session in Model)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@session.ClassCode</strong>
+                            </td>
+
+                            <td>
+                                <strong>
+                                    @session.Subject.SubjectName
+                                </strong>
+
+                                <div class="small text-muted">
+                                    @session.Subject.EducationStage
+                                    ·
+                                    @session.Subject.AcademicLevel
+                                </div>
+                            </td>
+
+                            <td>
+                                @if (session.Subject.MonthlyFee == 0)
+                                {
+                                    <span class="status-pill status-success">
+                                        Free
+                                    </span>
+                                }
+                                else
+                                {
+                                    <strong>
+                                        RM @session.Subject.MonthlyFee.ToString("F2")
+                                    </strong>
+                                }
+                        </td>
+
+                        <td>
+                            @(session.TutorUser.FullName
+                                                    ?? session.TutorUser.Email
+                                                    ?? "Tutor")
+                    </td>
+
+                            <td>
+                                <strong>@session.DayOfWeek</strong>
+
+                                <div class="small text-muted">
+                                    @session.StartTime.ToString("hh:mm tt")
+                                    -
+                                    @session.EndTime.ToString("hh:mm tt")
+                                </div>
+                            </td>
+
+                            <td>
+                                @session.Capacity students
+                            </td>
+
+                            <td>
+                        @if (session.Status ==
+                                                ClassSessionStatus.Active)
+                                {
+                                    <a href="@session.Venue"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="meet-link">
+
+                                        <i class="bi bi-camera-video-fill"></i>
+                                        Open Meet
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">
+                                        Unavailable
+                                    </span>
+                                }
+                            </td>
+
+                            <td>
+                                @if (session.Status ==
+                                                        ClassSessionStatus.Active)
+                                {
+                                    <span class="status-pill status-success">
+                                        Active
+                                    </span>
+                                }
+                                else if (session.Status ==
+                                ClassSessionStatus.Cancelled)
+                                {
+                                    <span class="status-pill status-danger">
+                                        Cancelled
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="status-pill status-warning">
+                                        Completed
+                                    </span>
+                                }
+                            </td>
+
+                            <td class="text-end">
+                                <div class="class-action-buttons">
+
+                                    <a asp-controller="ClassSessions"
+                                       asp-action="Edit"
+                                       asp-route-id="@session.ClassSessionId"
+                                       class="btn btn-sm btn-outline-primary">
+
+                                        <i class="bi bi-pencil-square"></i>
+                                        Edit
+                                    </a>
+
+                                    @if (session.Status ==
+                                                                ClassSessionStatus.Active)
+                                    {
+                                        <form asp-controller="ClassSessions"
+                                              asp-action="Cancel"
+                                              asp-route-id="@session.ClassSessionId"
+                                              method="post"
+                                              class="d-inline">
+
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Are you sure you want to cancel this class session?');">
+
+                                                <i class="bi bi-x-circle"></i>
+                                                Cancel
+                                            </button>
+                                        </form>
+                                    }
+                                    else if (session.Status ==
+                                    ClassSessionStatus.Cancelled)
+                                    {
+                                        <form asp-controller="ClassSessions"
+                                              asp-action="Activate"
+                                              asp-route-id="@session.ClassSessionId"
+                                              method="post"
+                                              class="d-inline">
+
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-outline-success"
+                                                    onclick="return confirm('Activate this class session?');">
+
+                                                <i class="bi bi-check-circle"></i>
+                                                Activate
+                                            </button>
+                                        </form>
+                                    }
+
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

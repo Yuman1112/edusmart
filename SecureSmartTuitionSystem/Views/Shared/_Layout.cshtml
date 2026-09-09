@@ -2,29 +2,43 @@
 @using SecureSmartTuitionSystem.Models.Identity
 
 @{
-    string currentPath = Context.Request.Path.Value?.ToLower() ?? "";
+    string currentPath =
+        Context.Request.Path.Value?.ToLower() ?? "";
 
     bool isAuthPage =
         currentPath.StartsWith("/identity/account/login") ||
         currentPath.StartsWith("/identity/account/register");
 
-    bool isAdmin = User.Identity?.IsAuthenticated == true &&
-                   User.IsInRole("Admin");
+    bool isAdmin =
+        User.Identity?.IsAuthenticated == true &&
+        User.IsInRole("Admin");
 
-    bool isTutor = User.Identity?.IsAuthenticated == true &&
-                   User.IsInRole("Tutor");
+    bool isTutor =
+        User.Identity?.IsAuthenticated == true &&
+        User.IsInRole("Tutor");
 
     bool useStaffLayout = isAdmin || isTutor;
 
-    string pageTitle = ViewData["Title"]?.ToString() ?? "EduSmart";
-    string userName = User.Identity?.Name ?? "User";
+    string currentController =
+        ViewContext.RouteData.Values["controller"]?
+            .ToString() ?? "";
 
-    string dashboardController = isAdmin ? "Admin" : "Tutor";
-    string roleDisplayName = isAdmin ? "Administrator" : "Tutor";
+    string dashboardController =
+        isAdmin ? "Admin" : "Tutor";
 
-    string userInitial = !string.IsNullOrWhiteSpace(userName)
-        ? userName.Substring(0, 1).ToUpper()
-        : "U";
+    string roleDisplayName =
+        isAdmin ? "Administrator" : "Tutor";
+
+    string pageTitle =
+        ViewData["Title"]?.ToString() ?? "EduSmart";
+
+    string userName =
+        User.Identity?.Name ?? "User";
+
+    string userInitial =
+        !string.IsNullOrWhiteSpace(userName)
+            ? userName.Substring(0, 1).ToUpper()
+            : "U";
 }
 
 <!DOCTYPE html>
@@ -67,6 +81,7 @@
 
             <aside class="staff-sidebar">
 
+                <!-- Logo -->
                 <div class="sidebar-brand">
                     <a asp-controller="@dashboardController"
                        asp-action="Index"
@@ -75,76 +90,125 @@
                         <img src="~/images/logo.png"
                              asp-append-version="true"
                              alt="EduSmart Logo"
-                             class="public-logo" />
+                             class="sidebar-logo" />
                     </a>
                 </div>
 
+
+                <!-- Sidebar Navigation -->
                 <nav class="sidebar-navigation"
                      aria-label="Staff navigation">
 
-                    <a asp-controller="@dashboardController"
-                       asp-action="Index"
-                       class="sidebar-link
-                              @(currentPath.StartsWith("/admin") ||
-                                                   currentPath.StartsWith("/tutor")
-                                                       ? "active"
-                                                       : "")">
+                    <!-- Dashboard -->
+                    <a class="sidebar-link
+                      @(currentController == dashboardController
+                                             ? "active"
+                                             : "")"
+                   asp-controller="@dashboardController"
+                   asp-action="Index">
 
                         <i class="bi bi-house-door-fill"></i>
                         <span>Dashboard</span>
                     </a>
 
-                    <a asp-controller="Classes"
-                       asp-action="Index"
-                       class="sidebar-link
-                              @(currentPath.StartsWith("/classes")
-                                                       ? "active"
-                                                       : "")">
-
-                    <i class="bi bi-people-fill"></i>
-                    <span>Class &amp; Enrollment</span>
-                </a>
-
-                    <a href="#"
-                       class="sidebar-link disabled-link"
-                       aria-disabled="true"
-                       title="This module will be developed later">
-
-                        <i class="bi bi-credit-card-fill"></i>
-                        <span>Payment &amp; Billing</span>
-                    </a>
-
-                    <a href="#"
-                       class="sidebar-link disabled-link"
-                       aria-disabled="true"
-                       title="This module will be developed later">
-
-                        <i class="bi bi-chat-dots-fill"></i>
-                        <span>Communication</span>
-                    </a>
-
-                    <a href="#"
-                       class="sidebar-link disabled-link"
-                       aria-disabled="true"
-                       title="This module will be developed later">
-
-                        <i class="bi bi-bar-chart-fill"></i>
-                        <span>Reports &amp; Analytics</span>
-                    </a>
 
                 @if (isAdmin)
                     {
-                        <a href="#"
-                           class="sidebar-link disabled-link"
-                           aria-disabled="true"
-                           title="This module will be developed later">
+                        <!-- Admin: Class Session Management -->
+                        <a class="sidebar-link
+                              @(currentController == "ClassSessions"
+                                                     ? "active"
+                                                     : "")"
+                   asp-controller="ClassSessions"
+                   asp-action="Index">
+
+                            <i class="bi bi-people-fill"></i>
+                            <span>Class &amp; Enrollment</span>
+                        </a>
+
+                        <!-- Future Payment Module -->
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-credit-card-fill"></i>
+                            <span>Payment &amp; Billing</span>
+                        </span>
+
+                        <!-- Future Communication Module -->
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-chat-dots-fill"></i>
+                            <span>Communication</span>
+                        </span>
+
+                        <!-- Future Reporting Module -->
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-bar-chart-fill"></i>
+                            <span>Reports &amp; Analytics</span>
+                        </span>
+
+                        <!-- Future Security Module -->
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
 
                             <i class="bi bi-shield-check"></i>
                             <span>System &amp; Security</span>
+                        </span>
+                                }
+                    else if (isTutor)
+                    {
+                        <!-- Tutor: Browse Assigned Classes -->
+                        <a class="sidebar-link
+                              @(currentController == "Classes"
+                                                     ? "active"
+                                                     : "")"
+                   asp-controller="Classes"
+                   asp-action="Index">
+
+                            <i class="bi bi-journal-bookmark-fill"></i>
+                            <span>My Classes</span>
                         </a>
-                    }
+
+                        <!-- Future Student Module -->
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-people-fill"></i>
+                            <span>Students</span>
+                        </span>
+
+                        <!-- Future Assignment Module -->
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-file-earmark-text-fill"></i>
+                            <span>Assignments</span>
+                        </span>
+
+                        <!-- Future Communication Module -->
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-chat-dots-fill"></i>
+                            <span>Messages</span>
+                        </span>
+
+                        <!-- Future Reporting Module -->
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-bar-chart-fill"></i>
+                            <span>Reports</span>
+                        </span>
+                                }
+
                 </nav>
 
+
+                <!-- Logout -->
                 <div class="sidebar-bottom">
 
                     <form asp-area="Identity"
@@ -161,6 +225,7 @@
                     </form>
 
                 </div>
+
             </aside>
 
             <div class="staff-main">

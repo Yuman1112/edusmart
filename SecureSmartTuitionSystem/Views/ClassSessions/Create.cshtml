@@ -1,0 +1,55 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.ClassSessionFormViewModel
+
+@{
+    ViewData["Title"] = "Create Class Session";
+}
+
+<div class="page-header">
+    <div>
+        <h1>Create Class Session</h1>
+
+        <p>
+            Create a new online tuition class.
+            Class Code will be generated automatically.
+        </p>
+    </div>
+
+    <a asp-controller="ClassSessions"
+       asp-action="Index"
+       class="outline-button">
+
+        <i class="bi bi-arrow-left"></i>
+        Back
+    </a>
+</div>
+
+<div class="class-form-card">
+
+    <form asp-controller="ClassSessions"
+          asp-action="Create"
+          method="post">
+
+        <partial name="_ClassSessionForm"
+                 model="Model" />
+
+        <div class="class-form-actions">
+            <a asp-controller="ClassSessions"
+               asp-action="Index"
+               class="outline-button">
+                Cancel
+            </a>
+
+            <button type="submit"
+                    class="primary-button">
+
+                <i class="bi bi-check-lg"></i>
+                Create Class Session
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_ClassSessionScripts" />
+}
