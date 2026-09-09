@@ -1,0 +1,124 @@
+﻿/* =========================================================
+   TUTOR MY CLASSES
+========================================================= */
+
+.tutor-class-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tutor-classes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.tutor-class-card {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--shadow);
+}
+
+.tutor-class-card-header {
+    display: flex;
+    min-height: 100px;
+    padding: 20px 22px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+    border-bottom: 1px solid var(--border);
+}
+
+    .tutor-class-card-header h2 {
+        margin: 6px 0 0;
+        color: var(--navy);
+        font-size: 1.15rem;
+        font-weight: 750;
+    }
+
+.tutor-class-card-body {
+    display: grid;
+    padding: 22px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 19px;
+}
+
+.tutor-class-detail {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 11px;
+}
+
+    .tutor-class-detail > i {
+        display: flex;
+        width: 42px;
+        height: 42px;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        border-radius: 11px;
+        color: var(--teal-dark);
+        background: #d9f9f7;
+        font-size: 1.1rem;
+    }
+
+    .tutor-class-detail div {
+        min-width: 0;
+    }
+
+    .tutor-class-detail span {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--muted);
+        font-size: 0.8rem;
+    }
+
+    .tutor-class-detail strong {
+        display: block;
+        overflow-wrap: anywhere;
+        color: var(--navy);
+        font-size: 0.93rem;
+    }
+
+.free-text {
+    color: var(--green) !important;
+}
+
+.tutor-class-card-footer {
+    display: flex;
+    padding: 17px 22px;
+    justify-content: flex-end;
+    border-top: 1px solid var(--border);
+    background: #fbfeff;
+}
+
+.disabled-meet-button {
+    border-color: #a9bcc4 !important;
+    color: #718792 !important;
+    background: #e8f0f2 !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+@media (max-width: 1100px) {
+    .tutor-classes-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .tutor-class-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .tutor-class-card-body {
+        grid-template-columns: 1fr;
+    }
+
+    .tutor-class-card-footer .primary-button {
+        width: 100%;
+    }
+}

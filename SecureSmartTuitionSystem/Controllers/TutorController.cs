@@ -9,117 +9,288 @@ using SecureSmartTuitionSystem.ViewModels.Tutor;
 
 namespace SecureSmartTuitionSystem.Controllers
 {
-	[Authorize(Roles = "Tutor")]
-	public class TutorController : Controller
-	{
-		private readonly ApplicationDbContext _context;
-		private readonly UserManager<ApplicationUser> _userManager;
+    [Authorize(Roles = "Tutor")]
+    public class TutorController : Controller
+    {
+        private readonly ApplicationDbContext _context;
 
-		public TutorController(
-			ApplicationDbContext context,
-			UserManager<ApplicationUser> userManager)
-		{
-			_context = context;
-			_userManager = userManager;
-		}
+        private readonly UserManager<ApplicationUser>
+            _userManager;
 
-		public async Task<IActionResult> Index()
-		{
-			var user = await _userManager.GetUserAsync(User);
+        public TutorController(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager)
+        {
+            _context = context;
+            _userManager = userManager;
+        }
 
-			if (user == null)
-			{
-				return Challenge();
-			}
+        /*
+         * Tutor Dashboard
+         */
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            var tutor =
+                await _userManager.GetUserAsync(User);
 
-			var assignedClasses =
-				_context.ClassSessions
-					.AsNoTracking()
-					.Where(session =>
-						session.TutorUserId == user.Id &&
-						session.Status ==
-							ClassSessionStatus.Active);
+            if (tutor == null)
+            {
+                return Challenge();
+            }
 
-			var classIds =
-				await assignedClasses
-					.Select(session =>
-						session.ClassSessionId)
-					.ToListAsync();
+            var activeClasses =
+                await _context.ClassSessions
+                    .AsNoTracking()
+                    .Include(session => session.Subject)
+                    .Where(session =>
+                        session.TutorUserId == tutor.Id &&
+                        session.Status ==
+                            ClassSessionStatus.Active)
+                    .OrderBy(session =>
+                        session.DayOfWeek)
+                    .ThenBy(session =>
+                        session.StartTime)
+                    .ToListAsync();
 
-			var model = new TutorDashboardViewModel
-			{
-				TutorName =
-					user.FullName ??
-					user.Email ??
-					"Tutor",
+            var classIds =
+                activeClasses
+                    .Select(session =>
+                        session.ClassSessionId)
+                    .ToList();
 
-				AssignedClassCount =
-					classIds.Count,
+            var studentCounts =
+                await _context.StudentEnrollments
+                    .AsNoTracking()
+                    .Where(enrollment =>
+                        classIds.Contains(
+                            enrollment.ClassSessionId) &&
+                        enrollment.Status ==
+                            StudentEnrollmentStatus.Active)
+                    .GroupBy(enrollment =>
+                        enrollment.ClassSessionId)
+                    .Select(group =>
+                        new
+                        {
+                            ClassSessionId = group.Key,
+                            StudentCount = group.Count()
+                        })
+                    .ToDictionaryAsync(
+                        item => item.ClassSessionId,
+                        item => item.StudentCount);
 
-				TodayClassCount =
-					await assignedClasses.CountAsync(
-						session =>
-							session.DayOfWeek ==
-								DateTime.Today.DayOfWeek),
+            int activeStudentCount =
+                await _context.StudentEnrollments
+                    .AsNoTracking()
+                    .Where(enrollment =>
+                        classIds.Contains(
+                            enrollment.ClassSessionId) &&
+                        enrollment.Status ==
+                            StudentEnrollmentStatus.Active)
+                    .Select(enrollment =>
+                        enrollment.StudentProfileId)
+                    .Distinct()
+                    .CountAsync();
 
-				ActiveStudentCount =
-					await _context.StudentEnrollments
-						.Where(enrollment =>
-							classIds.Contains(
-								enrollment.ClassSessionId) &&
-							enrollment.Status ==
-								StudentEnrollmentStatus.Active)
-						.Select(enrollment =>
-							enrollment.StudentProfileId)
-						.Distinct()
-						.CountAsync(),
+            var model = new TutorDashboardViewModel
+            {
+                TutorName =
+                    tutor.FullName ??
+                    tutor.Email ??
+                    "Tutor",
 
-				Classes =
-					await assignedClasses
-						.Include(session => session.Subject)
-						.OrderBy(session => session.DayOfWeek)
-						.ThenBy(session => session.StartTime)
-						.Select(session =>
-							new TutorClassItemViewModel
-							{
-								ClassSessionId =
-									session.ClassSessionId,
+                AssignedClassCount =
+                    activeClasses.Count,
 
-								ClassCode =
-									session.ClassCode,
+                TodayClassCount =
+                    activeClasses.Count(session =>
+                        session.DayOfWeek ==
+                            DateTime.Today.DayOfWeek),
 
-								SubjectName =
-									session.Subject.SubjectName,
+                ActiveStudentCount =
+                    activeStudentCount,
 
-								AcademicLevel =
-									session.Subject.AcademicLevel,
+                Classes =
+                    activeClasses
+                        .Select(session =>
+                            new TutorClassItemViewModel
+                            {
+                                ClassSessionId =
+                                    session.ClassSessionId,
 
-								Day =
-									session.DayOfWeek.ToString(),
+                                ClassCode =
+                                    session.ClassCode,
 
-								Time =
-									session.StartTime
-										.ToString("hh:mm tt") +
-									" - " +
-									session.EndTime
-										.ToString("hh:mm tt"),
+                                SubjectName =
+                                    session.Subject.SubjectName,
 
-								Venue =
-									session.Venue,
+                                AcademicLevel =
+                                    session.Subject.AcademicLevel,
 
-								StudentCount =
-									_context.StudentEnrollments
-										.Count(enrollment =>
-											enrollment.ClassSessionId ==
-												session.ClassSessionId &&
-											enrollment.Status ==
-												StudentEnrollmentStatus
-													.Active)
-							})
-						.ToListAsync()
-			};
+                                Day =
+                                    session.DayOfWeek.ToString(),
 
-			return View(model);
-		}
-	}
+                                Time =
+                                    session.StartTime
+                                        .ToString("hh:mm tt") +
+                                    " - " +
+                                    session.EndTime
+                                        .ToString("hh:mm tt"),
+
+                                Venue =
+                                    session.Venue,
+
+                                StudentCount =
+                                    studentCounts.TryGetValue(
+                                        session.ClassSessionId,
+                                        out int count)
+                                            ? count
+                                            : 0
+                            })
+                        .ToList()
+            };
+
+            return View(model);
+        }
+
+        /*
+         * Display every class assigned to the logged-in Tutor.
+         */
+        [HttpGet]
+        public async Task<IActionResult> MyClasses()
+        {
+            var tutor =
+                await _userManager.GetUserAsync(User);
+
+            if (tutor == null)
+            {
+                return Challenge();
+            }
+
+            var assignedClasses =
+                await _context.ClassSessions
+                    .AsNoTracking()
+                    .Include(session => session.Subject)
+                    .Where(session =>
+                        session.TutorUserId == tutor.Id)
+                    .OrderBy(session =>
+                        session.Status)
+                    .ThenBy(session =>
+                        session.DayOfWeek)
+                    .ThenBy(session =>
+                        session.StartTime)
+                    .ToListAsync();
+
+            var classIds =
+                assignedClasses
+                    .Select(session =>
+                        session.ClassSessionId)
+                    .ToList();
+
+            var studentCounts =
+                await _context.StudentEnrollments
+                    .AsNoTracking()
+                    .Where(enrollment =>
+                        classIds.Contains(
+                            enrollment.ClassSessionId) &&
+                        enrollment.Status ==
+                            StudentEnrollmentStatus.Active)
+                    .GroupBy(enrollment =>
+                        enrollment.ClassSessionId)
+                    .Select(group =>
+                        new
+                        {
+                            ClassSessionId = group.Key,
+                            StudentCount = group.Count()
+                        })
+                    .ToDictionaryAsync(
+                        item => item.ClassSessionId,
+                        item => item.StudentCount);
+
+            var model = new TutorMyClassesViewModel
+            {
+                TutorName =
+                    tutor.FullName ??
+                    tutor.Email ??
+                    "Tutor",
+
+                TotalClassCount =
+                    assignedClasses.Count,
+
+                ActiveClassCount =
+                    assignedClasses.Count(session =>
+                        session.Status ==
+                            ClassSessionStatus.Active),
+
+                TodayClassCount =
+                    assignedClasses.Count(session =>
+                        session.Status ==
+                            ClassSessionStatus.Active &&
+                        session.DayOfWeek ==
+                            DateTime.Today.DayOfWeek),
+
+                Classes =
+                    assignedClasses
+                        .Select(session =>
+                            new TutorMyClassItemViewModel
+                            {
+                                ClassSessionId =
+                                    session.ClassSessionId,
+
+                                ClassCode =
+                                    session.ClassCode,
+
+                                ClassName =
+                                    session.ClassName ??
+                                    session.Subject.AcademicLevel +
+                                    " - " +
+                                    session.Subject.SubjectName,
+
+                                EducationStage =
+                                    session.Subject
+                                        .EducationStage
+                                        .ToString(),
+
+                                AcademicLevel =
+                                    session.Subject.AcademicLevel,
+
+                                SubjectName =
+                                    session.Subject.SubjectName,
+
+                                Day =
+                                    session.DayOfWeek.ToString(),
+
+                                StartTime =
+                                    session.StartTime
+                                        .ToString("hh:mm tt"),
+
+                                EndTime =
+                                    session.EndTime
+                                        .ToString("hh:mm tt"),
+
+                                GoogleMeetLink =
+                                    session.Venue,
+
+                                MonthlyFee =
+                                    session.Subject.MonthlyFee,
+
+                                Capacity =
+                                    session.Capacity,
+
+                                StudentCount =
+                                    studentCounts.TryGetValue(
+                                        session.ClassSessionId,
+                                        out int count)
+                                            ? count
+                                            : 0,
+
+                                Status =
+                                    session.Status
+                            })
+                        .ToList()
+            };
+
+            return View(model);
+        }
+    }
 }

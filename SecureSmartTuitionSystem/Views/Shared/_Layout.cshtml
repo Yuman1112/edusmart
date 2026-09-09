@@ -6,8 +6,10 @@
         Context.Request.Path.Value?.ToLower() ?? "";
 
     bool isAuthPage =
-        currentPath.StartsWith("/identity/account/login") ||
-        currentPath.StartsWith("/identity/account/register");
+        currentPath.StartsWith(
+            "/identity/account/login") ||
+        currentPath.StartsWith(
+            "/identity/account/register");
 
     bool isAdmin =
         User.Identity?.IsAuthenticated == true &&
@@ -17,10 +19,15 @@
         User.Identity?.IsAuthenticated == true &&
         User.IsInRole("Tutor");
 
-    bool useStaffLayout = isAdmin || isTutor;
+    bool useStaffLayout =
+        isAdmin || isTutor;
 
     string currentController =
         ViewContext.RouteData.Values["controller"]?
+            .ToString() ?? "";
+
+    string currentAction =
+        ViewContext.RouteData.Values["action"]?
             .ToString() ?? "";
 
     string dashboardController =
@@ -30,7 +37,8 @@
         isAdmin ? "Administrator" : "Tutor";
 
     string pageTitle =
-        ViewData["Title"]?.ToString() ?? "EduSmart";
+        ViewData["Title"]?.ToString()
+        ?? "EduSmart";
 
     string userName =
         User.Identity?.Name ?? "User";
@@ -42,6 +50,7 @@
 }
 
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -62,26 +71,38 @@
           asp-append-version="true" />
 
     <link rel="stylesheet"
+          href="~/css/layout.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/components.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
           href="~/SecureSmartTuitionSystem.styles.css"
           asp-append-version="true" />
+
+    @await RenderSectionAsync("Styles", required: false)
+
 </head>
 
 <body>
 
     @if (isAuthPage)
     {
+        <!-- Login and Register pages -->
         <main class="auth-layout">
             @RenderBody()
         </main>
     }
     else if (useStaffLayout)
     {
-        <!-- Admin and Tutor layout -->
+        <!-- Admin and Tutor Layout -->
         <div class="staff-layout">
 
             <aside class="staff-sidebar">
 
-                <!-- Logo -->
+                <!-- Staff Logo -->
                 <div class="sidebar-brand">
                     <a asp-controller="@dashboardController"
                        asp-action="Index"
@@ -95,15 +116,17 @@
                 </div>
 
 
-                <!-- Sidebar Navigation -->
+                <!-- Staff Navigation -->
                 <nav class="sidebar-navigation"
                      aria-label="Staff navigation">
 
                     <!-- Dashboard -->
                     <a class="sidebar-link
-                      @(currentController == dashboardController
-                                             ? "active"
-                                             : "")"
+                              @(currentController ==
+                                                   dashboardController &&
+                                                   currentAction == "Index"
+                                                       ? "active"
+                                                       : "")"
                    asp-controller="@dashboardController"
                    asp-action="Index">
 
@@ -114,65 +137,80 @@
 
                 @if (isAdmin)
                     {
-                        <!-- Admin: Class Session Management -->
+                        <!-- Admin Class Management -->
                         <a class="sidebar-link
-                              @(currentController == "ClassSessions"
-                                                     ? "active"
-                                                     : "")"
+                                      @(currentController ==
+                                                           "ClassSessions"
+                                                               ? "active"
+                                                               : "")"
                    asp-controller="ClassSessions"
                    asp-action="Index">
 
                             <i class="bi bi-people-fill"></i>
-                            <span>Class &amp; Enrollment</span>
+
+                            <span>
+                                Class &amp; Enrollment
+                            </span>
                         </a>
 
-                        <!-- Future Payment Module -->
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
 
                             <i class="bi bi-credit-card-fill"></i>
-                            <span>Payment &amp; Billing</span>
+
+                            <span>
+                                Payment &amp; Billing
+                            </span>
                         </span>
 
-                        <!-- Future Communication Module -->
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
 
                             <i class="bi bi-chat-dots-fill"></i>
-                            <span>Communication</span>
+
+                            <span>
+                                Communication
+                            </span>
                         </span>
 
-                        <!-- Future Reporting Module -->
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
 
                             <i class="bi bi-bar-chart-fill"></i>
-                            <span>Reports &amp; Analytics</span>
+
+                            <span>
+                                Reports &amp; Analytics
+                            </span>
                         </span>
 
-                        <!-- Future Security Module -->
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
 
                             <i class="bi bi-shield-check"></i>
-                            <span>System &amp; Security</span>
+
+                            <span>
+                                System &amp; Security
+                            </span>
                         </span>
                                 }
                     else if (isTutor)
                     {
-                        <!-- Tutor: Browse Assigned Classes -->
+                        <!-- Tutor My Classes -->
                         <a class="sidebar-link
-                              @(currentController == "Classes"
-                                                     ? "active"
-                                                     : "")"
-                   asp-controller="Classes"
-                   asp-action="Index">
+                                      @(currentController == "Tutor" &&
+                                                           currentAction == "MyClasses"
+                                                               ? "active"
+                                                               : "")"
+                   asp-controller="Tutor"
+                   asp-action="MyClasses">
 
                             <i class="bi bi-journal-bookmark-fill"></i>
-                            <span>My Classes</span>
+
+                            <span>
+                                My Classes
+                            </span>
                         </a>
 
-                        <!-- Future Student Module -->
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
 
@@ -180,7 +218,6 @@
                             <span>Students</span>
                         </span>
 
-                        <!-- Future Assignment Module -->
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
 
@@ -188,7 +225,6 @@
                             <span>Assignments</span>
                         </span>
 
-                        <!-- Future Communication Module -->
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
 
@@ -196,7 +232,6 @@
                             <span>Messages</span>
                         </span>
 
-                        <!-- Future Reporting Module -->
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
 
@@ -228,6 +263,8 @@
 
             </aside>
 
+
+            <!-- Staff Main Page -->
             <div class="staff-main">
 
                 <header class="staff-topbar">
@@ -246,7 +283,9 @@
                             <strong>@userName</strong>
                             <span>@roleDisplayName</span>
                         </div>
+
                     </div>
+
                 </header>
 
                 <main class="staff-content">
@@ -254,17 +293,19 @@
                 </main>
 
             </div>
+
         </div>
     }
     else
     {
-        <!-- Public, Parent and Student layout -->
+        <!-- Guest, Parent and Student Layout -->
         <div class="public-layout">
 
             <header class="public-header">
 
                 <nav class="public-navbar">
 
+                    <!-- Public Logo -->
                     <a class="public-brand"
                        asp-controller="Home"
                        asp-action="Index"
@@ -276,6 +317,8 @@
                              class="public-logo" />
                     </a>
 
+
+                    <!-- Public Navigation -->
                     <div class="public-navigation">
 
                         <a asp-controller="Home"
@@ -293,8 +336,11 @@
                             <i class="bi bi-journal-bookmark-fill"></i>
                             <span>Classes</span>
                         </a>
+
                     </div>
 
+
+                    <!-- Public Account Buttons -->
                     <div class="public-account">
 
                         @if (User.Identity?.IsAuthenticated == true)
@@ -328,15 +374,21 @@
                                 Login
                             </a>
                         }
+
                     </div>
 
                 </nav>
+
             </header>
 
+
+            <!-- Public Page Content -->
             <main class="public-content">
                 @RenderBody()
             </main>
 
+
+            <!-- Public Footer -->
             <footer class="public-footer">
                 <div>
                     &copy; @DateTime.Now.Year EduSmart ·
@@ -347,14 +399,18 @@
         </div>
     }
 
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 
     <script src="~/js/site.js"
-            asp-append-version="true"></script>
+            asp-append-version="true">
+    </script>
 
-    @await RenderSectionAsync("Scripts", required: false)
+    @await RenderSectionAsync(
+    "Scripts",
+        required: false)
 
 </body>
 </html>

@@ -10,6 +10,12 @@
             : "Good evening";
 }
 
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/tutor.css"
+          asp-append-version="true" />
+}
+
 <div class="page-header">
     <div>
         <h1>@greeting, @Model.TutorName!</h1>
@@ -69,8 +75,8 @@
             My Class Schedule
         </h2>
 
-        <a asp-controller="Classes"
-           asp-action="Index">
+        <a asp-controller="Tutor"
+           asp-action="MyClasses">
             View all
             <i class="bi bi-chevron-right"></i>
         </a>

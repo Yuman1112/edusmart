@@ -1,0 +1,239 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorMyClassesViewModel
+
+@using SecureSmartTuitionSystem.Models.Enrollment
+
+@{
+    ViewData["Title"] = "My Classes";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/tutor.css"
+          asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>My Classes</h1>
+
+        <p>
+            View your assigned online tuition classes.
+        </p>
+    </div>
+
+    <a asp-controller="Tutor"
+       asp-action="Index"
+       class="outline-button">
+
+        <i class="bi bi-arrow-left"></i>
+        Dashboard
+    </a>
+</div>
+
+
+<section class="dashboard-grid tutor-class-summary">
+
+    <article class="metric-card">
+        <span class="metric-icon blue">
+            <i class="bi bi-journal-bookmark-fill"></i>
+        </span>
+
+        <div class="metric-content">
+            <span>Total Classes</span>
+            <strong>@Model.TotalClassCount</strong>
+            <small>All assigned classes</small>
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <span class="metric-icon green">
+            <i class="bi bi-check-circle-fill"></i>
+        </span>
+
+        <div class="metric-content">
+            <span>Active Classes</span>
+            <strong>@Model.ActiveClassCount</strong>
+            <small>Currently available</small>
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <span class="metric-icon orange">
+            <i class="bi bi-calendar-check-fill"></i>
+        </span>
+
+        <div class="metric-content">
+            <span>Classes Today</span>
+            <strong>@Model.TodayClassCount</strong>
+            <small>Today's active classes</small>
+        </div>
+    </article>
+
+</section>
+
+
+@if (Model.Classes.Count == 0)
+{
+    <section class="dashboard-card">
+        <div class="empty-state">
+
+            <i class="bi bi-calendar-x"></i>
+
+            <p>
+                No classes are currently assigned to you.
+            </p>
+
+        </div>
+    </section>
+}
+else
+{
+    <section class="tutor-classes-grid">
+
+        @foreach (var item in Model.Classes)
+        {
+            <article class="tutor-class-card">
+
+                <header class="tutor-class-card-header">
+
+                    <div>
+                        <span class="class-code">
+                            @item.ClassCode
+                        </span>
+
+                        <h2>
+                            @item.ClassName
+                        </h2>
+                    </div>
+
+                    @if (item.Status ==
+                                ClassSessionStatus.Active)
+                    {
+                        <span class="status-pill status-success">
+                            Active
+                        </span>
+                    }
+                    else if (item.Status ==
+                    ClassSessionStatus.Cancelled)
+                    {
+                        <span class="status-pill status-danger">
+                            Cancelled
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="status-pill status-warning">
+                            Completed
+                        </span>
+                    }
+
+                </header>
+
+
+                <div class="tutor-class-card-body">
+
+                    <div class="tutor-class-detail">
+                        <i class="bi bi-mortarboard-fill"></i>
+
+                        <div>
+                            <span>Education Level</span>
+
+                            <strong>
+                                @item.EducationStage ·
+                                @item.AcademicLevel
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="tutor-class-detail">
+                        <i class="bi bi-book-fill"></i>
+
+                        <div>
+                            <span>Subject</span>
+                            <strong>@item.SubjectName</strong>
+                        </div>
+                    </div>
+
+                    <div class="tutor-class-detail">
+                        <i class="bi bi-calendar3"></i>
+
+                        <div>
+                            <span>Schedule</span>
+
+                            <strong>
+                                @item.Day,
+                                @item.StartTime -
+                                @item.EndTime
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="tutor-class-detail">
+                        <i class="bi bi-people-fill"></i>
+
+                        <div>
+                            <span>Students</span>
+
+                            <strong>
+                                @item.StudentCount /
+                                @item.Capacity
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="tutor-class-detail">
+                        <i class="bi bi-cash-coin"></i>
+
+                        <div>
+                            <span>Monthly Fee</span>
+
+                            @if (item.MonthlyFee == 0)
+                            {
+                                <strong class="free-text">
+                                    Free
+                                </strong>
+                            }
+                            else
+                            {
+                                <strong>
+                                    RM @item.MonthlyFee.ToString("F2")
+                                </strong>
+                            }
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <footer class="tutor-class-card-footer">
+
+                    @if (item.Status ==
+                                ClassSessionStatus.Active)
+                    {
+                        <a href="@item.GoogleMeetLink"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="primary-button">
+
+                            <i class="bi bi-camera-video-fill"></i>
+                            Join Google Meet
+                        </a>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="primary-button disabled-meet-button"
+                                disabled>
+
+                            <i class="bi bi-camera-video-off-fill"></i>
+                            Meet Unavailable
+                        </button>
+                    }
+
+                </footer>
+
+            </article>
+        }
+
+    </section>
+}
