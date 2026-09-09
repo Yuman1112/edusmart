@@ -34,9 +34,21 @@ builder.Services
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
+// Store enrollment details temporarily during the multi-step form.
+builder.Services.AddDistributedMemoryCache();
+
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 var app = builder.Build();
 
-await DbInitializer.SeedRolesAsync(app.Services);
+await DbInitializer.SeedRolesAsync(
+    app.Services,
+    seedBasicAccounts: app.Environment.IsDevelopment());
 
 if (!app.Environment.IsDevelopment())
 {
@@ -46,6 +58,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseRouting();
+
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

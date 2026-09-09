@@ -1,0 +1,38 @@
+﻿@model int
+
+@{
+    var steps = new[]
+    {
+        "Student",
+        "Guardian",
+        "Enrolment",
+        "Payment",
+        "Done"
+    };
+}
+
+<nav aria-label="Enrollment progress" class="mb-4">
+    <ol class="enrollment-steps">
+        @for (var index = 0; index < steps.Length; index++)
+        {
+            var number = index + 1;
+
+            var state = number == Model
+            ? "is-current"
+            : number < Model
+            ? "is-complete"
+            : "";
+
+            <li class="enrollment-step @state"
+                aria-current="@(number == Model ? "step" : null)">
+                <span class="enrollment-step-number">
+                    @number
+                </span>
+
+                <span class="enrollment-step-label">
+                    @steps[index]
+                </span>
+            </li>
+        }
+    </ol>
+</nav>

@@ -15,8 +15,24 @@ namespace SecureSmartTuitionSystem.Models.Identity
         public string FullName { get; set; } = string.Empty;
 
         [Required]
+        [StringLength(30)]
+        public string IdentificationType { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(30)]
+        public string IdentificationNumber { get; set; } = string.Empty;
+
+        [Required]
         [DataType(DataType.Date)]
         public DateTime DateOfBirth { get; set; }
+
+        [Required]
+        [StringLength(10)]
+        public string Gender { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(150)]
+        public string School { get; set; } = string.Empty;
 
         [Required]
         [StringLength(30)]

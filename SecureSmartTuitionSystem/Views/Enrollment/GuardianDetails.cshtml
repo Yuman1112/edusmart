@@ -1,0 +1,342 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.GuardianDetailsViewModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@{
+    ViewData["Title"] = "Parent / Guardian Details";
+    Layout = "/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-md-10 col-lg-8">
+
+        <partial name="_EnrollmentSteps" model="@(2)" />
+
+        <h1 class="mb-3">Parent / Guardian Details</h1>
+
+        <p class="text-muted mb-4">
+            Enter the parent or guardian's contact information.
+        </p>
+
+        @if (TempData["SuccessMessage"] is string message)
+        {
+            <div class="alert alert-success" role="status">
+                @message
+            </div>
+        }
+
+        <form asp-controller="Enrollment"
+              asp-action="GuardianDetails"
+              method="post">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger mb-3"
+                 role="alert">
+            </div>
+
+            <!-- ==========================================
+                 EXISTING PARENT CHECKBOX
+                 ========================================== -->
+            <div class="form-check mb-4">
+
+                <input asp-for="UseExistingParentAccount"
+                       class="form-check-input"
+                       aria-controls="existing-parent-fields new-parent-fields" />
+
+                <label asp-for="UseExistingParentAccount"
+                       class="form-check-label">
+                    I already have an EduSmart parent / guardian account
+                </label>
+
+            </div>
+
+            <!-- ==========================================
+                 EXISTING PARENT VERIFICATION
+                 ========================================== -->
+            <div id="existing-parent-fields"
+                 class="mb-4"
+                 hidden>
+
+                <div class="alert alert-info">
+
+                    <strong>
+                        Verify your existing account
+                    </strong>
+
+                    <div class="mt-1">
+                        Enter the email and last 4 digits of the
+                        identification number registered with your
+                        EduSmart account.
+                    </div>
+
+                </div>
+
+                @if (Model.ExistingParentVerified)
+                {
+                    <!-- ==================================
+                         VERIFIED SUCCESS
+                         ================================== -->
+                    <div class="alert alert-success">
+
+                        <div class="fw-bold mb-2">
+                            ✓ Account verified
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(
+                                            Model.VerifiedParentName))
+                        {
+                            <div>
+                                <strong>Parent / Guardian:</strong>
+                                @Model.VerifiedParentName
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(
+                                            Model.VerifiedParentEmail))
+                        {
+                            <div>
+                                <strong>Email:</strong>
+                                @Model.VerifiedParentEmail
+                            </div>
+                        }
+
+                        <div class="mt-2">
+                            This student will be linked to your existing
+                            parent / guardian account after the
+                            enrollment is completed.
+                        </div>
+
+                    </div>
+
+                    <!-- Keep these values when Continue is clicked -->
+                    <input asp-for="ExistingParentEmail"
+                           type="hidden" />
+
+                    <input asp-for="ExistingParentIdentificationLast4"
+                           type="hidden" />
+                }
+                else
+                {
+                    <div class="row">
+
+                        <!-- Registered Email -->
+                        <div class="col-md-6 mb-3">
+
+                            <label asp-for="ExistingParentEmail"
+                                   class="form-label">
+                                Registered Email
+                            </label>
+
+                            <input asp-for="ExistingParentEmail"
+                                   class="form-control"
+                                   type="email"
+                                   maxlength="256"
+                                   autocomplete="email"
+                                   placeholder="Enter registered email" />
+
+                            <span asp-validation-for="ExistingParentEmail"
+                                  class="text-danger">
+                            </span>
+
+                        </div>
+
+                        <!-- Last 4 Digits -->
+                        <div class="col-md-6 mb-3">
+
+                            <label asp-for="ExistingParentIdentificationLast4"
+                                   class="form-label">
+                                Last 4 Digits of Identification Number
+                            </label>
+
+                            <input asp-for="ExistingParentIdentificationLast4"
+                                   class="form-control"
+                                   inputmode="numeric"
+                                   maxlength="4"
+                                   autocomplete="off"
+                                   placeholder="Last 4 digits" />
+
+                            <span asp-validation-for="ExistingParentIdentificationLast4"
+                                  class="text-danger">
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    <button type="submit"
+                            asp-controller="Enrollment"
+                            asp-action="VerifyExistingParent"
+                            class="btn btn-outline-primary">
+
+                        Verify Account
+
+                    </button>
+                }
+
+            </div>
+
+            <!-- ==========================================
+                 NEW PARENT / GUARDIAN
+                 ========================================== -->
+            <fieldset id="new-parent-fields">
+
+                <legend class="visually-hidden">
+                    New parent or guardian details
+                </legend>
+
+                <!-- Full Name -->
+                <div class="mb-3">
+
+                    <label asp-for="GuardianName"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="GuardianName"
+                           class="form-control"
+                           maxlength="100"
+                           autocomplete="name"
+                           placeholder="As per IC" />
+
+                    <span asp-validation-for="GuardianName"
+                          class="text-danger">
+                    </span>
+
+                </div>
+
+                <!-- Email -->
+                <div class="mb-3">
+
+                    <label asp-for="GuardianEmail"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="GuardianEmail"
+                           class="form-control"
+                           type="email"
+                           maxlength="256"
+                           autocomplete="email"
+                           placeholder="you@example.com" />
+
+                    <span asp-validation-for="GuardianEmail"
+                          class="text-danger">
+                    </span>
+
+                </div>
+
+                <!-- Phone -->
+                <div class="mb-3">
+
+                    <label asp-for="GuardianPhoneNumber"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="GuardianPhoneNumber"
+                           class="form-control"
+                           type="tel"
+                           maxlength="30"
+                           placeholder="012-3456789" />
+
+                    <span asp-validation-for="GuardianPhoneNumber"
+                          class="text-danger">
+                    </span>
+
+                </div>
+
+                <!-- Identification Number -->
+                <div class="mb-4">
+
+                    <label asp-for="GuardianIdentificationNumber"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="GuardianIdentificationNumber"
+                           class="form-control"
+                           maxlength="14"
+                           autocomplete="off"
+                           placeholder="000000-00-0000" />
+
+                    <span asp-validation-for="GuardianIdentificationNumber"
+                          class="text-danger">
+                    </span>
+
+                    <div class="form-text">
+                        Enter the parent or guardian's IC number
+                        in the format 000000-00-0000.
+                    </div>
+
+                </div>
+
+            </fieldset>
+
+            <!-- ==========================================
+                 NAVIGATION
+                 ========================================== -->
+            <div class="d-flex justify-content-between">
+
+                <button type="submit"
+                        asp-controller="Enrollment"
+                        asp-action="BackToStudentDetails"
+                        formnovalidate
+                        class="btn btn-outline-secondary">
+                    Back
+                </button>
+
+                <button type="submit"
+                        asp-controller="Enrollment"
+                        asp-action="GuardianDetails"
+                        class="btn btn-primary">
+                    Continue
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (() => {
+
+            const checkbox =
+                document.getElementById(
+                    "UseExistingParentAccount");
+
+            const existingFields =
+                document.getElementById(
+                    "existing-parent-fields");
+
+            const newFields =
+                document.getElementById(
+                    "new-parent-fields");
+
+            function updateGuardianFields() {
+
+                const useExisting =
+                    checkbox.checked;
+
+                // Show Existing Parent fields when checkbox is checked.
+                existingFields.hidden =
+                    !useExisting;
+
+                // Hide New Parent fields when checkbox is checked.
+                newFields.hidden =
+                    useExisting;
+
+                newFields.disabled =
+                    useExisting;
+            }
+
+            checkbox.addEventListener(
+                "change",
+                updateGuardianFields);
+
+            updateGuardianFields();
+
+        })();
+    </script>
+}

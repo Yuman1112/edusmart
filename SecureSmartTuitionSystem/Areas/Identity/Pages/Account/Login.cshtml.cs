@@ -60,7 +60,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return Page();
             }
 
-            // ??????????????????????
+            // Validate the password and count failed attempts toward account lockout.
             var result = await _signInManager.CheckPasswordSignInAsync(
                 user,
                 Input.Password,
@@ -84,11 +84,27 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return Page();
             }
 
-            StatusMessage = user.MustChangePassword
-                ? "Password verified. First-login password change is the next step."
-                : "Password verified. Email verification is the next step.";
+            // Accounts requiring additional verification must not bypass it.
+            if (user.MustChangePassword || user.TwoFactorEnabled)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "This account requires an additional login step that is not available yet.");
 
-            return Page();
+                return Page();
+            }
+
+            // Create the authentication cookie after successful password validation.
+            await _signInManager.SignInAsync(
+                user,
+                isPersistent: false);
+
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
+            {
+                return LocalRedirect("~/Admin");
+            }
+
+            return LocalRedirect("~/");
         }
     }
 }

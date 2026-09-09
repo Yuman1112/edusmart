@@ -35,3 +35,110 @@ body {
     padding-left: 0;
     margin-bottom: 0;
 }
+
+.validation-summary-errors ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+/* Shared enrollment progress indicator. */
+.enrollment-steps {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+}
+
+.enrollment-step {
+    display: flex;
+    align-items: center;
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 6px;
+    color: #5c7079;
+    font-size: 0.9rem;
+}
+
+.enrollment-step-label {
+    white-space: nowrap;
+}
+
+.enrollment-step:not(:last-child)::after {
+    content: "";
+    flex: 1 1 auto;
+    min-width: 8px;
+    height: 2px;
+    margin: 0 8px;
+    background-color: #dce6e8;
+}
+
+.enrollment-step:last-child {
+    flex: 0 0 auto;
+}
+
+.enrollment-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: 2px solid #dce6e8;
+    border-radius: 50%;
+    background-color: white;
+    font-weight: 600;
+}
+
+.enrollment-step.is-current,
+.enrollment-step.is-complete {
+    color: #14374a;
+}
+
+.enrollment-step.is-current .enrollment-step-number {
+    color: white;
+    background-color: #1e7f8c;
+    border-color: #1e7f8c;
+}
+
+.enrollment-step.is-complete .enrollment-step-number {
+    color: white;
+    background-color: #166670;
+    border-color: #166670;
+}
+
+@media (max-width: 767.98px) {
+    .enrollment-step {
+        gap: 4px;
+        font-size: 0.78rem;
+    }
+
+    .enrollment-step:not(:last-child)::after {
+        min-width: 6px;
+        margin: 0 4px;
+    }
+
+    .enrollment-step-number {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .enrollment-step-label {
+        display: none;
+    }
+
+    .enrollment-step:not(:last-child)::after {
+        min-width: 12px;
+        margin: 0 6px;
+    }
+
+    .enrollment-step-number {
+        width: 28px;
+        height: 28px;
+    }
+}

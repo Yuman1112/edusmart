@@ -1,0 +1,248 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.StudentDetailsViewModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@{
+    ViewData["Title"] = "Student Details";
+    Layout = "/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-md-10 col-lg-8">
+
+        <partial name="_EnrollmentSteps" model="@(1)" />
+
+        <h1 class="mb-3">Student Details</h1>
+
+        <p class="text-muted mb-4">
+            Tell us about the student who will be attending classes.
+        </p>
+
+        @if (TempData["EnrollmentMessage"] is string enrollmentMessage)
+        {
+            <div class="alert alert-warning" role="alert">
+                @enrollmentMessage
+            </div>
+        }
+
+        <form asp-controller="Enrollment"
+              asp-action="StudentDetails"
+              method="post">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger mb-3"
+                 role="alert">
+            </div>
+
+            <!-- ==========================================
+                 STUDENT FULL NAME
+                 ========================================== -->
+            <div class="mb-3">
+
+                <label asp-for="StudentName"
+                       class="form-label">
+                </label>
+
+                <input asp-for="StudentName"
+                       class="form-control"
+                       maxlength="100"
+                       placeholder="As per birth certificate / IC"
+                       autocomplete="off" />
+
+                <span asp-validation-for="StudentName"
+                      class="text-danger">
+                </span>
+
+            </div>
+
+            <!-- ==========================================
+                 IDENTIFICATION
+                 ========================================== -->
+            <!-- Identification Type -->
+            <div class="mb-3">
+                <label asp-for="StudentIdentificationType"
+                       class="form-label">
+                </label>
+
+                <select asp-for="StudentIdentificationType"
+                        class="form-select"
+                        id="studentIdentificationType">
+
+                    <option value="IC">IC Number</option>
+                    <option value="BirthCertificate">
+                        Birth Certificate Number
+                    </option>
+
+                </select>
+
+                <span asp-validation-for="StudentIdentificationType"
+                      class="text-danger">
+                </span>
+            </div>
+
+            <!-- Identification Number -->
+            <div class="mb-3">
+                <label asp-for="StudentIdentificationNumber"
+                       class="form-label"
+                       id="studentIdentificationNumberLabel">
+                    IC Number
+                </label>
+
+                <input asp-for="StudentIdentificationNumber"
+                       class="form-control"
+                       maxlength="30"
+                       placeholder="000000-00-0000"
+                       autocomplete="off"
+                       id="studentIdentificationNumber" />
+
+                <span asp-validation-for="StudentIdentificationNumber"
+                      class="text-danger">
+                </span>
+
+                <div class="form-text"
+                     id="studentIdentificationHelp">
+                    Enter the student's IC number in the format 000000-00-0000.
+                </div>
+            </div>
+
+            <!-- ==========================================
+                 DATE OF BIRTH + GENDER
+                 ========================================== -->
+            <div class="row">
+
+                <div class="col-md-6 mb-3">
+
+                    <label asp-for="StudentDateOfBirth"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="StudentDateOfBirth"
+                           class="form-control"
+                           type="date"
+                           max="@DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd")" />
+
+                    <span asp-validation-for="StudentDateOfBirth"
+                          class="text-danger">
+                    </span>
+
+                </div>
+
+                <div class="col-md-6 mb-3">
+
+                    <label asp-for="StudentGender"
+                           class="form-label">
+                    </label>
+
+                    <select asp-for="StudentGender"
+                            class="form-select">
+
+                        <option value="">
+                            Select gender
+                        </option>
+
+                        <option value="Male">
+                            Male
+                        </option>
+
+                        <option value="Female">
+                            Female
+                        </option>
+
+                    </select>
+
+                    <span asp-validation-for="StudentGender"
+                          class="text-danger">
+                    </span>
+
+                </div>
+
+            </div>
+
+            <!-- ==========================================
+                 CURRENT SCHOOL
+                 ========================================== -->
+            <div class="mb-4">
+
+                <label asp-for="StudentSchool"
+                       class="form-label">
+                </label>
+
+                <input asp-for="StudentSchool"
+                       class="form-control"
+                       maxlength="150"
+                       placeholder="School name"
+                       autocomplete="off" />
+
+                <span asp-validation-for="StudentSchool"
+                      class="text-danger">
+                </span>
+
+            </div>
+
+            <!-- ==========================================
+                 NAVIGATION
+                 ========================================== -->
+            <div class="d-flex justify-content-end">
+
+                <button type="submit"
+                        class="btn btn-primary">
+
+                    Next: Parent / Guardian Details
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                const typeSelect =
+                    document.getElementById(
+                        "studentIdentificationType");
+
+                const numberInput =
+                    document.getElementById(
+                        "studentIdentificationNumber");
+
+                const numberLabel =
+                    document.getElementById(
+                        "studentIdentificationNumberLabel");
+
+                const helpText =
+                    document.getElementById(
+                        "studentIdentificationHelp");
+
+                function updateIdentificationField() {
+                    if (typeSelect.value === "IC") {
+                        numberLabel.textContent = "IC Number";
+
+                        numberInput.placeholder = "000000-00-0000";
+
+                        helpText.textContent = "Enter the student's IC number " + "in the format 000000-00-0000.";
+                    }
+                    else {
+                        numberLabel.textContent = "Birth Certificate Number";
+
+                        numberInput.placeholder = "Enter birth certificate number";
+
+                        helpText.textContent = "Enter the number exactly as shown " + "on the birth certificate.";
+                    }
+                }
+
+                typeSelect.addEventListener("change", updateIdentificationField);
+
+                updateIdentificationField();
+            });
+    </script>
+}
