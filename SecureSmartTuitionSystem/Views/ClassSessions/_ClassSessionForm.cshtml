@@ -1,0 +1,261 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.ClassSessionFormViewModel
+
+<div asp-validation-summary="ModelOnly"
+     class="alert alert-danger">
+</div>
+
+<input type="hidden"
+       id="InitialAcademicLevel"
+       value="@Model.AcademicLevel" />
+
+<input type="hidden"
+       id="InitialSubjectName"
+       value="@Model.SubjectName" />
+
+<div class="class-form-section">
+    <h2>
+        <i class="bi bi-book-fill"></i>
+        Subject Information
+    </h2>
+
+    <div class="row g-4">
+
+        <div class="col-md-6">
+            <label asp-for="EducationStage"
+                   class="form-label">
+            </label>
+
+            <select asp-for="EducationStage"
+                    asp-items="Model.EducationStages"
+                    id="EducationStage"
+                    class="form-select">
+
+                <option value="">
+                    -- Select Education Stage --
+                </option>
+            </select>
+
+            <span asp-validation-for="EducationStage"
+                  class="text-danger">
+            </span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="AcademicLevel"
+                   class="form-label">
+            </label>
+
+            <select asp-for="AcademicLevel"
+                    id="AcademicLevel"
+                    class="form-select">
+
+                <option value="">
+                    -- Select Academic Level --
+                </option>
+            </select>
+
+            <span asp-validation-for="AcademicLevel"
+                  class="text-danger">
+            </span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="SubjectName"
+                   class="form-label">
+            </label>
+
+            <select asp-for="SubjectName"
+                    id="SubjectName"
+                    class="form-select">
+
+                <option value="">
+                    -- Select Subject --
+                </option>
+            </select>
+
+            <span asp-validation-for="SubjectName"
+                  class="text-danger">
+            </span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="MonthlyFee"
+                   class="form-label">
+            </label>
+
+            <div class="input-group">
+                <span class="input-group-text">
+                    RM
+                </span>
+
+                <input asp-for="MonthlyFee"
+                       class="form-control"
+                       type="number"
+                       min="0"
+                       max="99999"
+                       step="0.01"
+                       placeholder="0.00" />
+            </div>
+
+            <span asp-validation-for="MonthlyFee"
+                  class="text-danger">
+            </span>
+
+            <div class="form-text">
+                Enter RM0 for a free class.
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="class-form-section">
+    <h2>
+        <i class="bi bi-calendar-check-fill"></i>
+        Class Session Information
+    </h2>
+
+    <div class="row g-4">
+
+        <div class="col-12">
+            <label asp-for="ClassName"
+                   class="form-label">
+            </label>
+
+            <div class="input-group">
+                <input asp-for="ClassName"
+                       id="ClassName"
+                       class="form-control"
+                       placeholder="Class Name will be suggested automatically" />
+
+                <button type="button"
+                        id="UseSuggestedName"
+                        class="btn btn-outline-secondary">
+
+                    <i class="bi bi-arrow-clockwise"></i>
+                    Use Suggested
+                </button>
+            </div>
+
+            <span asp-validation-for="ClassName"
+                  class="text-danger">
+            </span>
+
+            <div class="form-text">
+                Suggested format:
+                Academic Level - Subject - Tutor - Start Time.
+                You may enter another unique Class Name.
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="TutorUserId"
+                   class="form-label">
+            </label>
+
+            <select asp-for="TutorUserId"
+                    asp-items="Model.Tutors"
+                    id="TutorUserId"
+                    class="form-select">
+
+                <option value="">
+                    -- Select Tutor --
+                </option>
+            </select>
+
+            <span asp-validation-for="TutorUserId"
+                  class="text-danger">
+            </span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="Capacity"
+                   class="form-label">
+            </label>
+
+            <input asp-for="Capacity"
+                   class="form-control"
+                   type="number"
+                   min="1"
+                   max="100"
+                   step="1" />
+
+            <span asp-validation-for="Capacity"
+                  class="text-danger">
+            </span>
+        </div>
+
+        <div class="col-md-4">
+            <label asp-for="DayOfWeek"
+                   class="form-label">
+            </label>
+
+            <select asp-for="DayOfWeek"
+                    asp-items="Model.Days"
+                    class="form-select">
+
+                <option value="">
+                    -- Select Day --
+                </option>
+            </select>
+
+            <span asp-validation-for="DayOfWeek"
+                  class="text-danger">
+            </span>
+        </div>
+
+        <div class="col-md-4">
+            <label asp-for="StartTime"
+                   class="form-label">
+            </label>
+
+            <input asp-for="StartTime"
+                   id="StartTime"
+                   class="form-control"
+                   type="time"
+                   step="300" />
+
+            <span asp-validation-for="StartTime"
+                  class="text-danger">
+            </span>
+        </div>
+
+        <div class="col-md-4">
+            <label asp-for="EndTime"
+                   class="form-label">
+            </label>
+
+            <input asp-for="EndTime"
+                   class="form-control"
+                   type="time"
+                   step="300" />
+
+            <span asp-validation-for="EndTime"
+                  class="text-danger">
+            </span>
+        </div>
+
+        <div class="col-12">
+            <label asp-for="Venue"
+                   class="form-label">
+                Google Meet Link
+            </label>
+
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="bi bi-camera-video-fill"></i>
+                </span>
+
+                <input asp-for="Venue"
+                       class="form-control"
+                       type="url"
+                       placeholder="https://meet.google.com/abc-defg-hij" />
+            </div>
+
+            <span asp-validation-for="Venue"
+                  class="text-danger">
+            </span>
+        </div>
+
+    </div>
+</div>

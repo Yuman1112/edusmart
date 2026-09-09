@@ -1,144 +1,59 @@
+﻿/* =========================================================
+   EDUSMART - COMPLETE SITE.CSS
+========================================================= */
+
+
+/* =========================================================
+   1. GLOBAL
+========================================================= */
+
+:root {
+    --navy: #062f5f;
+    --navy-soft: #315676;
+    --teal: #0798a4;
+    --teal-dark: #056b7d;
+    --teal-deep: #034d68;
+    --page-background: #effdfe;
+    --white: #ffffff;
+    --border: #d5e7ea;
+    --muted: #69829a;
+    --green: #07945f;
+    --orange: #c87500;
+    --red: #d82c3a;
+    --blue: #08789a;
+    --shadow: 0 10px 30px rgba(7, 69, 92, 0.09);
+}
+
 html {
-  font-size: 14px;
-}
-
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+    min-height: 100%;
+    font-size: 15px;
 }
 
 body {
-  margin-bottom: 60px;
+    min-height: 100vh;
+    margin: 0;
+    color: var(--navy);
+    background: var(--page-background);
+    font-family: "Segoe UI", Arial, sans-serif;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+* {
+    box-sizing: border-box;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+a {
+    text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
 }
 
 .login-errors ul {
     list-style: none;
     padding-left: 0;
     margin-bottom: 0;
-}
-
-.validation-summary-errors ul {
-    list-style: none;
-    padding-left: 0;
-    margin: 0;
-}
-
-/* Shared enrollment progress indicator. */
-.enrollment-steps {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
-}
-
-.enrollment-step {
-    display: flex;
-    align-items: center;
-    flex: 1 1 0;
-    min-width: 0;
-    gap: 6px;
-    color: #5c7079;
-    font-size: 0.9rem;
-}
-
-.enrollment-step-label {
-    white-space: nowrap;
-}
-
-.enrollment-step:not(:last-child)::after {
-    content: "";
-    flex: 1 1 auto;
-    min-width: 8px;
-    height: 2px;
-    margin: 0 8px;
-    background-color: #dce6e8;
-}
-
-.enrollment-step:last-child {
-    flex: 0 0 auto;
-}
-
-.enrollment-step-number {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    flex-shrink: 0;
-    border: 2px solid #dce6e8;
-    border-radius: 50%;
-    background-color: white;
-    font-weight: 600;
-}
-
-.enrollment-step.is-current,
-.enrollment-step.is-complete {
-    color: #14374a;
-}
-
-.enrollment-step.is-current .enrollment-step-number {
-    color: white;
-    background-color: #1e7f8c;
-    border-color: #1e7f8c;
-}
-
-.enrollment-step.is-complete .enrollment-step-number {
-    color: white;
-    background-color: #166670;
-    border-color: #166670;
-}
-
-@media (max-width: 767.98px) {
-    .enrollment-step {
-        gap: 4px;
-        font-size: 0.78rem;
-    }
-
-    .enrollment-step:not(:last-child)::after {
-        min-width: 6px;
-        margin: 0 4px;
-    }
-
-    .enrollment-step-number {
-        width: 28px;
-        height: 28px;
-    }
-}
-
-@media (max-width: 575.98px) {
-    .enrollment-step-label {
-        display: none;
-    }
-
-    .enrollment-step:not(:last-child)::after {
-        min-width: 12px;
-        margin: 0 6px;
-    }
-
-    .enrollment-step-number {
-        width: 28px;
-        height: 28px;
-    }
 }

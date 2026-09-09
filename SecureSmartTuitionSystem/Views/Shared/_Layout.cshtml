@@ -1,4 +1,56 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Identity
+@using SecureSmartTuitionSystem.Models.Identity
+
+@{
+    string currentPath =
+        Context.Request.Path.Value?.ToLower() ?? "";
+
+    bool isAuthPage =
+        currentPath.StartsWith(
+            "/identity/account/login") ||
+        currentPath.StartsWith(
+            "/identity/account/register");
+
+    bool isAdmin =
+        User.Identity?.IsAuthenticated == true &&
+        User.IsInRole("Admin");
+
+    bool isTutor =
+        User.Identity?.IsAuthenticated == true &&
+        User.IsInRole("Tutor");
+
+    bool useStaffLayout =
+        isAdmin || isTutor;
+
+    string currentController =
+        ViewContext.RouteData.Values["controller"]?
+            .ToString() ?? "";
+
+    string currentAction =
+        ViewContext.RouteData.Values["action"]?
+            .ToString() ?? "";
+
+    string dashboardController =
+        isAdmin ? "Admin" : "Tutor";
+
+    string roleDisplayName =
+        isAdmin ? "Administrator" : "Tutor";
+
+    string pageTitle =
+        ViewData["Title"]?.ToString()
+        ?? "EduSmart";
+
+    string userName =
+        User.Identity?.Name ?? "User";
+
+    string userInitial =
+        !string.IsNullOrWhiteSpace(userName)
+            ? userName.Substring(0, 1).ToUpper()
+            : "U";
+}
+
+<!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -6,105 +58,359 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0" />
 
-    <title>
-        @ViewData["Title"] - Secure Smart Tuition System
-    </title>
+    <title>@pageTitle - EduSmart</title>
 
     <link rel="stylesheet"
           href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
     <link rel="stylesheet"
           href="~/css/site.css"
           asp-append-version="true" />
 
     <link rel="stylesheet"
+          href="~/css/layout.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/components.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
           href="~/SecureSmartTuitionSystem.styles.css"
           asp-append-version="true" />
+
+    @await RenderSectionAsync("Styles", required: false)
+
 </head>
 
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-light bg-white
-                    border-bottom box-shadow mb-3">
 
-            <div class="container-fluid">
-                <a class="navbar-brand"
-                   asp-controller="Home"
-                   asp-action="Index">
-                    Secure Smart Tuition System
-                </a>
-
-                <li class="nav-item">
-                    <a class="nav-link text-dark"
-                       asp-controller="Classes"
-                       asp-action="Index">
-                        Browse Classes
-                    </a>
-                </li>
-
-                <button class="navbar-toggler"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target=".navbar-collapse"
-                        aria-controls="navbarSupportedContent"
-                        aria-expanded="false"
-                        aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <div class="navbar-collapse collapse
-                            d-sm-inline-flex
-                            justify-content-between">
-
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark"
-                               asp-controller="Home"
-                               asp-action="Index">
-                                Home
-                            </a>
-                        </li>
-
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark"
-                                   asp-controller="Admin"
-                                   asp-action="Index">
-                                    Admin Dashboard
-                                </a>
-                            </li>
-                        }
-                    </ul>
-
-                    <partial name="_LoginPartial" />
-                </div>
-            </div>
-        </nav>
-    </header>
-
-    <div class="container">
-        <main role="main" class="pb-3">
+    @if (isAuthPage)
+    {
+        <!-- Login and Register pages -->
+        <main class="auth-layout">
             @RenderBody()
         </main>
-    </div>
+    }
+    else if (useStaffLayout)
+    {
+        <!-- Admin and Tutor Layout -->
+        <div class="staff-layout">
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - Secure Smart Tuition System
+            <aside class="staff-sidebar">
+
+                <!-- Staff Logo -->
+                <div class="sidebar-brand">
+                    <a asp-controller="@dashboardController"
+                       asp-action="Index"
+                       aria-label="Go to dashboard">
+
+                        <img src="~/images/logo.png"
+                             asp-append-version="true"
+                             alt="EduSmart Logo"
+                             class="sidebar-logo" />
+                    </a>
+                </div>
+
+
+                <!-- Staff Navigation -->
+                <nav class="sidebar-navigation"
+                     aria-label="Staff navigation">
+
+                    <!-- Dashboard -->
+                    <a class="sidebar-link
+                              @(currentController ==
+                                                   dashboardController &&
+                                                   currentAction == "Index"
+                                                       ? "active"
+                                                       : "")"
+                   asp-controller="@dashboardController"
+                   asp-action="Index">
+
+                        <i class="bi bi-house-door-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+
+
+                @if (isAdmin)
+                    {
+                        <!-- Admin Class Management -->
+                        <a class="sidebar-link
+                                      @(currentController ==
+                                                           "ClassSessions"
+                                                               ? "active"
+                                                               : "")"
+                   asp-controller="ClassSessions"
+                   asp-action="Index">
+
+                            <i class="bi bi-people-fill"></i>
+
+                            <span>
+                                Class &amp; Enrollment
+                            </span>
+                        </a>
+
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-credit-card-fill"></i>
+
+                            <span>
+                                Payment &amp; Billing
+                            </span>
+                        </span>
+
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-chat-dots-fill"></i>
+
+                            <span>
+                                Communication
+                            </span>
+                        </span>
+
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-bar-chart-fill"></i>
+
+                            <span>
+                                Reports &amp; Analytics
+                            </span>
+                        </span>
+
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-shield-check"></i>
+
+                            <span>
+                                System &amp; Security
+                            </span>
+                        </span>
+                                }
+                    else if (isTutor)
+                    {
+                        <!-- Tutor My Classes -->
+                        <a class="sidebar-link
+                                      @(currentController == "Tutor" &&
+                                                           currentAction == "MyClasses"
+                                                               ? "active"
+                                                               : "")"
+                   asp-controller="Tutor"
+                   asp-action="MyClasses">
+
+                            <i class="bi bi-journal-bookmark-fill"></i>
+
+                            <span>
+                                My Classes
+                            </span>
+                        </a>
+
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-people-fill"></i>
+                            <span>Students</span>
+                        </span>
+
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-file-earmark-text-fill"></i>
+                            <span>Assignments</span>
+                        </span>
+
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-chat-dots-fill"></i>
+                            <span>Messages</span>
+                        </span>
+
+                        <span class="sidebar-link disabled-link"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-bar-chart-fill"></i>
+                            <span>Reports</span>
+                        </span>
+                                }
+
+                </nav>
+
+
+                <!-- Logout -->
+                <div class="sidebar-bottom">
+
+                    <form asp-area="Identity"
+                          asp-page="/Account/Logout"
+                          asp-route-returnUrl="@Url.Action("Index", "Home")"
+                          method="post">
+
+                        <button type="submit"
+                                class="sidebar-logout">
+
+                            <i class="bi bi-box-arrow-left"></i>
+                            <span>Logout</span>
+                        </button>
+                    </form>
+
+                </div>
+
+            </aside>
+
+
+            <!-- Staff Main Page -->
+            <div class="staff-main">
+
+                <header class="staff-topbar">
+
+                    <div class="topbar-page-name">
+                        @pageTitle
+                    </div>
+
+                    <div class="topbar-user">
+
+                        <div class="user-avatar">
+                            @userInitial
+                        </div>
+
+                        <div class="user-information">
+                            <strong>@userName</strong>
+                            <span>@roleDisplayName</span>
+                        </div>
+
+                    </div>
+
+                </header>
+
+                <main class="staff-content">
+                    @RenderBody()
+                </main>
+
+            </div>
+
         </div>
-    </footer>
+    }
+    else
+    {
+        <!-- Guest, Parent and Student Layout -->
+        <div class="public-layout">
+
+            <header class="public-header">
+
+                <nav class="public-navbar">
+
+                    <!-- Public Logo -->
+                    <a class="public-brand"
+                       asp-controller="Home"
+                       asp-action="Index"
+                       aria-label="Go to EduSmart home page">
+
+                        <img src="~/images/logo.png"
+                             asp-append-version="true"
+                             alt="EduSmart Logo"
+                             class="public-logo" />
+                    </a>
+
+
+                    <!-- Public Navigation -->
+                    <div class="public-navigation">
+
+                        <a asp-controller="Home"
+                           asp-action="Index"
+                           class="public-nav-link">
+
+                            <i class="bi bi-house-door-fill"></i>
+                            <span>Home</span>
+                        </a>
+
+                        <a asp-controller="Classes"
+                           asp-action="Index"
+                           class="public-nav-link">
+
+                            <i class="bi bi-journal-bookmark-fill"></i>
+                            <span>Classes</span>
+                        </a>
+
+                    </div>
+
+
+                    <!-- Public Account Buttons -->
+                    <div class="public-account">
+
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <span class="public-user-email">
+                                @userName
+                            </span>
+
+                            <form asp-area="Identity"
+                                  asp-page="/Account/Logout"
+                                  asp-route-returnUrl="@Url.Action("Index", "Home")"
+                                  method="post">
+
+                                <button type="submit"
+                                        class="btn-public-login">
+
+                                    <i class="bi bi-box-arrow-left"></i>
+                                    Logout
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <a class="btn-public-register"
+                               href="/Identity/Account/Register">
+                                Register
+                            </a>
+
+                            <a class="btn-public-login"
+                               href="/Identity/Account/Login">
+                                Login
+                            </a>
+                        }
+
+                    </div>
+
+                </nav>
+
+            </header>
+
+
+            <!-- Public Page Content -->
+            <main class="public-content">
+                @RenderBody()
+            </main>
+
+
+            <!-- Public Footer -->
+            <footer class="public-footer">
+                <div>
+                    &copy; @DateTime.Now.Year EduSmart ·
+                    Secure Smart Tuition System
+                </div>
+            </footer>
+
+        </div>
+    }
+
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
 
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js">
-    </script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 
     <script src="~/js/site.js"
-            asp-append-version="true"></script>
+            asp-append-version="true">
+    </script>
 
     @await RenderSectionAsync(
     "Scripts",
         required: false)
+
 </body>
 </html>

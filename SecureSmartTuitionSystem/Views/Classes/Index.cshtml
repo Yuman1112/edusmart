@@ -108,9 +108,17 @@
                                     @item.StartTime - @item.EndTime
                                 </dd>
 
-                                <dt class="col-sm-4">Venue</dt>
+                                <dt class="col-sm-4">
+                                    Google Meet
+                                </dt>
+
                                 <dd class="col-sm-8">
-                                    @item.Venue
+                                    <a href="@item.Venue"
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        <i class="bi bi-camera-video-fill me-1"></i>
+                                        Join Online Class
+                                    </a>
                                 </dd>
 
                                 <dt class="col-sm-4">Monthly Fee</dt>
@@ -127,10 +135,23 @@
                         </div>
 
                         <div class="card-footer bg-white">
-                            <button class="btn btn-primary"
-                                    disabled="@(item.SeatsRemaining <= 0)">
-                                Enrol Now
-                            </button>
+                            @if (item.SeatsRemaining <= 0)
+                            {
+                                <button class="btn btn-secondary"
+                                        type="button"
+                                        disabled>
+                                    Class Full
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-primary"
+                                        type="button"
+                                        disabled
+                                        title="Enrollment form is being prepared">
+                                    Enrol Now
+                                </button>
+                            }
                         </div>
                     </div>
                 </div>

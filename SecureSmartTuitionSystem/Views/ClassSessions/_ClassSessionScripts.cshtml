@@ -1,0 +1,352 @@
+﻿<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const educationStage =
+            document.getElementById("EducationStage");
+
+        const academicLevel =
+            document.getElementById("AcademicLevel");
+
+        const subjectName =
+            document.getElementById("SubjectName");
+
+        const tutor =
+            document.getElementById("TutorUserId");
+
+        const startTime =
+            document.getElementById("StartTime");
+
+        const className =
+            document.getElementById("ClassName");
+
+        const useSuggestedButton =
+            document.getElementById("UseSuggestedName");
+
+        const initialAcademicLevel =
+            document.getElementById(
+                "InitialAcademicLevel"
+            ).value;
+
+        const initialSubjectName =
+            document.getElementById(
+                "InitialSubjectName"
+            ).value;
+
+        const primaryLevels = [
+            "YEAR 1",
+            "YEAR 2",
+            "YEAR 3",
+            "YEAR 4",
+            "YEAR 5",
+            "YEAR 6"
+        ];
+
+        const secondaryLevels = [
+            "FORM 1",
+            "FORM 2",
+            "FORM 3",
+            "FORM 4",
+            "FORM 5"
+        ];
+
+        const yearOneToThreeSubjects = [
+            "BC",
+            "BMP",
+            "BMK",
+            "BIP",
+            "BIK",
+            "MM",
+            "SCI"
+        ];
+
+        const yearFourToSixSubjects = [
+            "BC",
+            "BMP",
+            "BMK",
+            "BIP",
+            "BIK",
+            "MM",
+            "SCI",
+            "SEJ"
+        ];
+
+        const formOneToThreeSubjects = [
+            "BC",
+            "BMP",
+            "BMK",
+            "BIP",
+            "BIK",
+            "MM",
+            "SCI",
+            "SEJ",
+            "GEO",
+            "RBT",
+            "ASK"
+        ];
+
+        const formFourToFiveSubjects = [
+            "BC",
+            "BMP",
+            "BMK",
+            "BIP",
+            "BIK",
+            "MM",
+            "AM",
+            "BIO",
+            "CHE",
+            "PHY",
+            "SEJ",
+            "ACC",
+            "EKO",
+            "PER"
+        ];
+
+        let manualClassName = false;
+
+        function fillDropdown(
+            dropdown,
+            values,
+            placeholder,
+            selectedValue
+        ) {
+            dropdown.innerHTML = "";
+
+            const emptyOption =
+                document.createElement("option");
+
+            emptyOption.value = "";
+            emptyOption.textContent = placeholder;
+
+            dropdown.appendChild(emptyOption);
+
+            values.forEach(function (value) {
+                const option =
+                    document.createElement("option");
+
+                option.value = value;
+                option.textContent = value;
+
+                if (value === selectedValue) {
+                    option.selected = true;
+                }
+
+                dropdown.appendChild(option);
+            });
+        }
+
+        function loadAcademicLevels(
+            selectedValue = ""
+        ) {
+            let levels = [];
+
+            if (educationStage.value === "Primary") {
+                levels = primaryLevels;
+            }
+            else if (
+                educationStage.value === "Secondary"
+            ) {
+                levels = secondaryLevels;
+            }
+
+            fillDropdown(
+                academicLevel,
+                levels,
+                "-- Select Academic Level --",
+                selectedValue
+            );
+        }
+
+        function getSubjects() {
+            const level = academicLevel.value;
+
+            if (
+                level === "YEAR 1" ||
+                level === "YEAR 2" ||
+                level === "YEAR 3"
+            ) {
+                return yearOneToThreeSubjects;
+            }
+
+            if (
+                level === "YEAR 4" ||
+                level === "YEAR 5" ||
+                level === "YEAR 6"
+            ) {
+                return yearFourToSixSubjects;
+            }
+
+            if (
+                level === "FORM 1" ||
+                level === "FORM 2" ||
+                level === "FORM 3"
+            ) {
+                return formOneToThreeSubjects;
+            }
+
+            if (
+                level === "FORM 4" ||
+                level === "FORM 5"
+            ) {
+                return formFourToFiveSubjects;
+            }
+
+            return [];
+        }
+
+        function loadSubjects(
+            selectedValue = ""
+        ) {
+            fillDropdown(
+                subjectName,
+                getSubjects(),
+                "-- Select Subject --",
+                selectedValue
+            );
+        }
+
+        function formatTime(value) {
+            if (!value) {
+                return "";
+            }
+
+            const parts = value.split(":");
+
+            let hour = Number(parts[0]);
+            const minute = parts[1];
+
+            const period =
+                hour >= 12 ? "PM" : "AM";
+
+            hour = hour % 12;
+
+            if (hour === 0) {
+                hour = 12;
+            }
+
+            return String(hour).padStart(2, "0") +
+                ":" +
+                minute +
+                " " +
+                period;
+        }
+
+        function buildSuggestedName() {
+            const level =
+                academicLevel.value;
+
+            const subject =
+                subjectName.value;
+
+            const tutorOption =
+                tutor.options[
+                    tutor.selectedIndex
+                ];
+
+            const tutorName =
+                tutorOption &&
+                tutorOption.value
+                    ? tutorOption.text.trim()
+                    : "";
+
+            const time =
+                formatTime(startTime.value);
+
+            if (
+                !level ||
+                !subject ||
+                !tutorName ||
+                !time
+            ) {
+                return "";
+            }
+
+            return level +
+                " - " +
+                subject +
+                " - " +
+                tutorName +
+                " - " +
+                time;
+        }
+
+        function updateClassName() {
+            if (manualClassName) {
+                return;
+            }
+
+            className.value =
+                buildSuggestedName();
+        }
+
+        educationStage.addEventListener(
+            "change",
+            function () {
+                loadAcademicLevels();
+                loadSubjects();
+                updateClassName();
+            }
+        );
+
+        academicLevel.addEventListener(
+            "change",
+            function () {
+                loadSubjects();
+                updateClassName();
+            }
+        );
+
+        subjectName.addEventListener(
+            "change",
+            updateClassName
+        );
+
+        tutor.addEventListener(
+            "change",
+            updateClassName
+        );
+
+        startTime.addEventListener(
+            "change",
+            updateClassName
+        );
+
+        className.addEventListener(
+            "input",
+            function () {
+                manualClassName = true;
+            }
+        );
+
+        useSuggestedButton.addEventListener(
+            "click",
+            function () {
+                manualClassName = false;
+                className.value =
+                    buildSuggestedName();
+
+                className.focus();
+            }
+        );
+
+        loadAcademicLevels(
+            initialAcademicLevel
+        );
+
+        loadSubjects(
+            initialSubjectName
+        );
+
+        const suggestedName =
+            buildSuggestedName();
+
+        if (
+            className.value.trim() === "" ||
+            className.value.trim() === suggestedName
+        ) {
+            manualClassName = false;
+            className.value = suggestedName;
+        }
+        else {
+            manualClassName = true;
+        }
+    });
+</script>

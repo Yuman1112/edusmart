@@ -1,0 +1,65 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.ClassSessionFormViewModel
+
+@{
+    ViewData["Title"] = "Edit Class Session";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/class-sessions.css"
+          asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>Edit Class Session</h1>
+
+        <p>
+            Update the class information and schedule.
+            Class Code remains unchanged.
+        </p>
+    </div>
+
+    <a asp-controller="ClassSessions"
+       asp-action="Index"
+       class="outline-button">
+
+        <i class="bi bi-arrow-left"></i>
+        Back
+    </a>
+</div>
+
+<div class="class-form-card">
+
+    <form asp-controller="ClassSessions"
+          asp-action="Edit"
+          asp-route-id="@Model.ClassSessionId"
+          method="post">
+
+        <input asp-for="ClassSessionId"
+               type="hidden" />
+
+        <partial name="_ClassSessionForm"
+                 model="Model" />
+
+        <div class="class-form-actions">
+            <a asp-controller="ClassSessions"
+               asp-action="Index"
+               class="outline-button">
+                Cancel
+            </a>
+
+            <button type="submit"
+                    class="primary-button">
+
+                <i class="bi bi-check-lg"></i>
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_ClassSessionScripts" />
+}

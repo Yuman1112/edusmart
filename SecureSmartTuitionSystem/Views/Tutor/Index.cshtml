@@ -1,0 +1,127 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorDashboardViewModel
+
+@{
+    ViewData["Title"] = "Tutor Dashboard";
+
+    string greeting = DateTime.Now.Hour < 12
+        ? "Good morning"
+        : DateTime.Now.Hour < 18
+            ? "Good afternoon"
+            : "Good evening";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/tutor.css"
+          asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>@greeting, @Model.TutorName!</h1>
+
+        <p>
+            Here's what's happening with your classes today.
+        </p>
+    </div>
+
+    <span class="status-pill status-success">
+        @DateTime.Today.ToString("ddd, dd MMM yyyy")
+    </span>
+</div>
+
+<section class="dashboard-grid">
+    <article class="metric-card">
+        <span class="metric-icon green">
+            <i class="bi bi-calendar-check-fill"></i>
+        </span>
+
+        <div class="metric-content">
+            <span>Classes Today</span>
+            <strong>@Model.TodayClassCount</strong>
+            <small>Your schedule today</small>
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <span class="metric-icon blue">
+            <i class="bi bi-journal-bookmark-fill"></i>
+        </span>
+
+        <div class="metric-content">
+            <span>Assigned Classes</span>
+            <strong>@Model.AssignedClassCount</strong>
+            <small>Active class sessions</small>
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <span class="metric-icon orange">
+            <i class="bi bi-people-fill"></i>
+        </span>
+
+        <div class="metric-content">
+            <span>Students</span>
+            <strong>@Model.ActiveStudentCount</strong>
+            <small>Across your classes</small>
+        </div>
+    </article>
+</section>
+
+<section class="dashboard-card">
+    <header class="dashboard-card-header">
+        <h2>
+            <i class="bi bi-calendar3 me-2"></i>
+            My Class Schedule
+        </h2>
+
+        <a asp-controller="Tutor"
+           asp-action="MyClasses">
+            View all
+            <i class="bi bi-chevron-right"></i>
+        </a>
+    </header>
+
+    <div class="dashboard-card-body">
+        @if (Model.Classes.Count == 0)
+        {
+        <div class="empty-state">
+            <i class="bi bi-calendar-x"></i>
+            No classes are currently assigned to you.
+        </div>
+        }
+        else
+        {
+        <ul class="dashboard-list">
+            @foreach (var item in Model.Classes)
+                {
+            <li class="dashboard-list-item">
+                <span class="list-icon">
+                    <i class="bi bi-book-half"></i>
+                </span>
+
+                <div class="list-content">
+                    <strong>
+                        @item.SubjectName -
+                        @item.AcademicLevel
+                    </strong>
+                     <small>
+                         @item.Day | @item.Time |
+
+                         <a href="@item.Venue"
+                            target="_blank"
+                            rel="noopener noreferrer">
+                                Join Google Meet
+                         </a>
+                     </small>
+                </div>
+
+                <span class="status-pill status-success">
+                    @item.StudentCount students
+                </span>
+            </li>
+                }
+        </ul>
+        }
+    </div>
+</section>

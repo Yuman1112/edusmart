@@ -10,12 +10,16 @@
   <ItemGroup>
     <Compile Remove="NewFolder1\**" />
     <Compile Remove="NewFolder2\**" />
+    <Compile Remove="wwwroot\NewFolder1\**" />
     <Content Remove="NewFolder1\**" />
     <Content Remove="NewFolder2\**" />
+    <Content Remove="wwwroot\NewFolder1\**" />
     <EmbeddedResource Remove="NewFolder1\**" />
     <EmbeddedResource Remove="NewFolder2\**" />
+    <EmbeddedResource Remove="wwwroot\NewFolder1\**" />
     <None Remove="NewFolder1\**" />
     <None Remove="NewFolder2\**" />
+    <None Remove="wwwroot\NewFolder1\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,7 +32,6 @@
     <Folder Include="Services\Enrollment\" />
     <Folder Include="Services\Reporting\" />
     <Folder Include="Services\Security\" />
-    <Folder Include="wwwroot\NewFolder1\" />
     <Folder Include="wwwroot\images\" />
   </ItemGroup>
 

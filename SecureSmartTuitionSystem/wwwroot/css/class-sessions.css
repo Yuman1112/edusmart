@@ -1,0 +1,258 @@
+﻿/* =========================================================
+   CLASS SESSION MANAGEMENT
+========================================================= */
+
+/* Main Create/Edit form card */
+
+.class-form-card {
+    width: 100%;
+    max-width: 1050px;
+    padding: 30px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--shadow);
+}
+
+
+/* Form sections */
+
+.class-form-section {
+    margin-bottom: 30px;
+}
+
+    .class-form-section + .class-form-section {
+        padding-top: 25px;
+        border-top: 1px solid var(--border);
+    }
+
+    .class-form-section h2 {
+        display: flex;
+        margin: 0 0 22px;
+        align-items: center;
+        gap: 10px;
+        color: var(--navy);
+        font-size: 1.2rem;
+        font-weight: 750;
+    }
+
+        .class-form-section h2 i {
+            color: var(--teal);
+        }
+
+
+/* Validation */
+
+.class-form-card .validation-summary-valid {
+    display: none;
+}
+
+.class-form-card .validation-summary-errors {
+    display: block;
+    margin-bottom: 22px;
+    border-radius: 12px;
+}
+
+    .class-form-card .validation-summary-errors ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+
+.class-form-card .text-danger {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.85rem;
+}
+
+
+/* Form inputs */
+
+.class-form-card .form-label {
+    margin-bottom: 7px;
+    color: var(--navy);
+    font-weight: 700;
+}
+
+.class-form-card .form-control,
+.class-form-card .form-select {
+    min-height: 48px;
+}
+
+.class-form-card .input-group .form-control {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.class-form-card .input-group-text {
+    min-width: 48px;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--border);
+    color: var(--teal-dark);
+    background: #edfbfc;
+}
+
+.class-form-card .form-text {
+    margin-top: 6px;
+    color: var(--muted);
+}
+
+
+/* Subject details */
+
+.subject-details-panel {
+    display: grid;
+    margin-top: 22px;
+    padding: 20px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    border: 1px solid #c5e8e9;
+    border-radius: 14px;
+    background: #effcfc;
+}
+
+.subject-detail-item {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: #ffffff;
+}
+
+    .subject-detail-item span {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--muted);
+        font-size: 0.83rem;
+    }
+
+    .subject-detail-item strong {
+        display: block;
+        overflow-wrap: anywhere;
+        color: var(--navy);
+        font-size: 1rem;
+    }
+
+
+/* Create/Edit form buttons */
+
+.class-form-actions {
+    display: flex;
+    padding-top: 24px;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid var(--border);
+}
+
+
+/* Class Session Index action buttons */
+
+.class-action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+    .class-action-buttons form {
+        margin: 0;
+    }
+
+    .class-action-buttons .btn {
+        display: inline-flex;
+        min-height: 35px;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        border-radius: 8px;
+        white-space: nowrap;
+    }
+
+
+/* Class Session table */
+
+.class-session-table th {
+    white-space: nowrap;
+}
+
+.class-session-table td {
+    vertical-align: middle;
+}
+
+.class-code {
+    color: var(--navy);
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+
+/* Google Meet link */
+
+.meet-link {
+    display: inline-flex;
+    min-height: 36px;
+    padding: 7px 11px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--teal);
+    border-radius: 8px;
+    color: var(--teal-dark);
+    background: #ffffff;
+    font-size: 0.88rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+    .meet-link:hover {
+        color: #ffffff;
+        background: var(--teal);
+    }
+
+
+/* =========================================================
+   CLASS SESSION RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+    .subject-details-panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .class-form-card {
+        max-width: 100%;
+        padding: 22px 18px;
+    }
+
+    .class-form-actions {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+        .class-form-actions .primary-button,
+        .class-form-actions .outline-button {
+            width: 100%;
+        }
+
+    .class-action-buttons {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+        .class-action-buttons .btn,
+        .class-action-buttons form,
+        .class-action-buttons form button {
+            width: 100%;
+        }
+}
+
+@media (max-width: 520px) {
+    .subject-details-panel {
+        padding: 14px;
+        grid-template-columns: 1fr;
+    }
+}
