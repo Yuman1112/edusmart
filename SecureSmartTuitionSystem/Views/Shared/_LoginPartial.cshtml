@@ -3,23 +3,44 @@
 
 @inject SignInManager<ApplicationUser> SignInManager
 
-<ul class="navbar-nav ms-auto align-items-center">
+<ul class="navbar-nav public-account-links">
     @if (SignInManager.IsSignedIn(User))
     {
-        <li class="nav-item me-2">
-            <span class="nav-link text-dark">
-                @User.Identity?.Name
+        <li class="nav-item account-summary">
+            <span class="account-avatar">
+                @((User.Identity?.Name ?? "U")
+                            .Substring(0, 1)
+                            .ToUpper())
+        </span>
+
+            <span class="account-text">
+                <strong>@User.Identity?.Name</strong>
+
+                <small>
+                @if (User.IsInRole("Parent"))
+                    {
+                        <text>Parent</text>
+                    }
+                    else if (User.IsInRole("Student"))
+                    {
+                        <text>Student</text>
+                    }
+                    else
+                    {
+                        <text>User</text>
+                    }
+                </small>
             </span>
         </li>
 
         <li class="nav-item">
-            <form asp-area="Identity"
-                  asp-page="/Account/Logout"
-                  asp-route-returnUrl="/"
+            <form action="/Identity/Account/Logout"
                   method="post">
 
+                @Html.AntiForgeryToken()
+
                 <button type="submit"
-                        class="btn btn-outline-danger">
+                        class="outline-button">
                     Logout
                 </button>
             </form>
@@ -27,18 +48,16 @@
     }
     else
     {
-        <li class="nav-item me-2">
-            <a class="btn btn-outline-primary"
-               asp-area="Identity"
-               asp-page="/Account/Register">
+        <li class="nav-item">
+            <a class="outline-button"
+               href="/Identity/Account/Register">
                 Register
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="btn btn-primary"
-               asp-area="Identity"
-               asp-page="/Account/Login">
+            <a class="primary-button"
+               href="/Identity/Account/Login">
                 Login
             </a>
         </li>

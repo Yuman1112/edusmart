@@ -1,32 +1,179 @@
-﻿@{
+﻿@model SecureSmartTuitionSystem.ViewModels.Admin.AdminDashboardViewModel
+
+@{
     ViewData["Title"] = "Admin Dashboard";
+
+    string greeting = DateTime.Now.Hour < 12
+        ? "Good morning"
+        : DateTime.Now.Hour < 18
+            ? "Good afternoon"
+            : "Good evening";
 }
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between
-                align-items-center mb-4">
+<div class="page-header">
+    <div>
+        <h1>@greeting, Admin!</h1>
 
-        <div>
-            <h1>Admin Dashboard</h1>
-
-            <p class="text-muted">
-                Welcome, @User.Identity?.Name
-            </p>
-        </div>
-
-        <form asp-area="Identity"
-              asp-page="/Account/Logout"
-              asp-route-returnUrl="/"
-              method="post">
-
-            <button type="submit"
-                    class="btn btn-outline-danger">
-                Logout
-            </button>
-        </form>
+        <p>
+            Here's what's happening at EduSmart today.
+        </p>
     </div>
 
-    <div class="alert alert-success">
-        You are successfully logged in as an Admin.
-    </div>
+    <a class="primary-button"
+       asp-controller="Classes"
+       asp-action="Index">
+
+        <i class="bi bi-plus-lg"></i>
+        View Classes
+    </a>
 </div>
+
+<section class="dashboard-grid">
+    <article class="metric-card">
+        <span class="metric-icon blue">
+            <i class="bi bi-people-fill"></i>
+        </span>
+
+        <div class="metric-content">
+            <span>Active Students</span>
+            <strong>@Model.StudentCount</strong>
+            <small>Registered students</small>
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <span class="metric-icon green">
+            <i class="bi bi-person-fill"></i>
+        </span>
+
+        <div class="metric-content">
+            <span>Tutors</span>
+            <strong>@Model.TutorCount</strong>
+            <small>Registered tutors</small>
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <span class="metric-icon blue">
+            <i class="bi bi-book-half"></i>
+        </span>
+
+        <div class="metric-content">
+            <span>Active Classes</span>
+            <strong>@Model.ActiveClassCount</strong>
+            <small>Available class sessions</small>
+        </div>
+    </article>
+
+    <article class="metric-card">
+        <span class="metric-icon orange">
+            <i class="bi bi-person-plus-fill"></i>
+        </span>
+
+        <div class="metric-content">
+            <span>Pending Enrollments</span>
+            <strong>@Model.PendingEnrollmentCount</strong>
+            <small>Waiting for review</small>
+        </div>
+    </article>
+</section>
+
+<section class="dashboard-columns">
+    <article class="dashboard-card">
+        <header class="dashboard-card-header">
+            <h2>
+                <i class="bi bi-journal-bookmark me-2"></i>
+                Recent Classes
+            </h2>
+
+            <a asp-controller="Classes"
+               asp-action="Index">
+                View all
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </header>
+
+        <div class="dashboard-card-body">
+            @if (Model.RecentClasses.Count == 0)
+            {
+            <div class="empty-state">
+                <i class="bi bi-journal-x"></i>
+                No class sessions are available.
+            </div>
+            }
+            else
+            {
+            <ul class="dashboard-list">
+                @foreach (var item in Model.RecentClasses)
+                    {
+                <li class="dashboard-list-item">
+                    <span class="list-icon">
+                        <i class="bi bi-book-half"></i>
+                    </span>
+
+                    <div class="list-content">
+                        <strong>
+                            @item.SubjectName -
+                            @item.AcademicLevel
+                        </strong>
+
+                        <small>
+                            @item.ClassCode · @item.Schedule
+                        </small>
+                    </div>
+
+                    <span class="status-pill status-success">
+                        Active
+                    </span>
+                </li>
+                    }
+            </ul>
+            }
+        </div>
+    </article>
+
+    <article class="dashboard-card">
+        <header class="dashboard-card-header">
+            <h2>
+                <i class="bi bi-list-check me-2"></i>
+                Pending Actions
+            </h2>
+        </header>
+
+        <div class="dashboard-card-body">
+            @if (Model.PendingEnrollments.Count == 0)
+            {
+            <div class="empty-state">
+                <i class="bi bi-check-circle"></i>
+                No enrollment requests need review.
+            </div>
+            }
+            else
+            {
+            <ul class="dashboard-list">
+                @foreach (var item in Model.PendingEnrollments)
+                    {
+                <li class="dashboard-list-item">
+                    <span class="list-icon">
+                        <i class="bi bi-file-earmark-person"></i>
+                    </span>
+
+                    <div class="list-content">
+                        <strong>@item.StudentName</strong>
+
+                        <small>
+                            @item.ApplicationNumber ·
+                            @item.GuardianName
+                        </small>
+                    </div>
+
+                    <span class="status-pill status-warning">
+                        Review
+                    </span>
+                </li>
+                    }
+            </ul>
+            }
+        </div>
+    </article>
+</section>

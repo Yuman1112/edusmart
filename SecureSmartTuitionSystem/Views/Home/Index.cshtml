@@ -3,42 +3,97 @@
 
 @inject SignInManager<ApplicationUser> SignInManager
 
-@{
+
+    @{
     ViewData["Title"] = "Home";
-}
+    }
 
-<div class="text-center py-5">
-    <h1 class="display-4">
-        Secure Smart Tuition System
-    </h1>
+    <section class="feature-card p-4 p-lg-5">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <span class="status-pill status-success mb-3">
+                    Secure Learning Platform
+                </span>
 
-    <p class="lead mt-3">
-        Manage classes, enrollments, payments,
-        communication and reports in one secure platform.
-    </p>
+                <h1 class="display-4 fw-bold">
+                    Learn smarter with EduSmart
+                </h1>
 
-    <div class="mt-4">
-        @if (!SignInManager.IsSignedIn(User))
-        {
-            <a class="btn btn-primary btn-lg me-2"
-               asp-area="Identity"
-               asp-page="/Account/Register">
-                Register
-            </a>
+                <p class="lead mt-3 text-secondary">
+                    Browse classes, submit enrollment requests,
+                    manage payments and monitor learning progress
+                    through one secure platform.
+                </p>
 
-            <a class="btn btn-outline-primary btn-lg"
-               asp-area="Identity"
-               asp-page="/Account/Login">
-                Login
-            </a>
-        }
-        else if (User.IsInRole("Admin"))
-        {
-            <a class="btn btn-primary btn-lg"
-               asp-controller="Admin"
-               asp-action="Index">
-                Go to Admin Dashboard
-            </a>
-        }
-    </div>
-</div>
+                <div class="d-flex flex-wrap gap-3 mt-4">
+                    <a class="primary-button"
+                       asp-controller="Classes"
+                       asp-action="Index">
+
+                        <i class="bi bi-search"></i>
+                        Browse Classes
+                    </a>
+
+                    @if (!SignInManager.IsSignedIn(User))
+                {
+                    <a class="outline-button"
+                       asp-area="Identity"
+                       asp-page="/Account/Register">
+                        Register
+                    </a>
+
+                    <a class="outline-button"
+                       asp-area="Identity"
+                       asp-page="/Account/Login">
+                        Login
+                    </a>
+                }
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="dashboard-card">
+                    <header class="dashboard-card-header">
+                        <h2>EduSmart Services</h2>
+                    </header>
+
+                    <div class="dashboard-card-body">
+                        <ul class="dashboard-list">
+                            <li class="dashboard-list-item">
+                                <span class="list-icon">
+                                    <i class="bi bi-journal-bookmark"></i>
+                                </span>
+
+                                <div class="list-content">
+                                    <strong>Browse Classes</strong>
+                                    <small>View subjects and schedules</small>
+                                </div>
+                            </li>
+
+                            <li class="dashboard-list-item">
+                                <span class="list-icon">
+                                    <i class="bi bi-person-plus"></i>
+                                </span>
+
+                                <div class="list-content">
+                                    <strong>Online Enrollment</strong>
+                                    <small>Apply without visiting the centre</small>
+                                </div>
+                            </li>
+
+                            <li class="dashboard-list-item">
+                                <span class="list-icon">
+                                    <i class="bi bi-shield-check"></i>
+                                </span>
+
+                                <div class="list-content">
+                                    <strong>Secure Access</strong>
+                                    <small>Role-based information protection</small>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>

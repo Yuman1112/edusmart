@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -7,88 +6,164 @@ using SecureSmartTuitionSystem.Models.Identity;
 
 namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
 {
-    [AllowAnonymous]
     public class LoginModel : PageModel
     {
-        private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public LoginModel(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+            SignInManager<ApplicationUser> signInManager,
+            UserManager<ApplicationUser> userManager)
         {
-            _userManager = userManager;
             _signInManager = signInManager;
+            _userManager = userManager;
         }
 
         [BindProperty]
         public InputModel Input { get; set; } = new();
 
-        public string? StatusMessage { get; set; }
+        [BindProperty(SupportsGet = true)]
+        public string? ReturnUrl { get; set; }
 
         public class InputModel
         {
-            [Required(ErrorMessage = "Please enter your User ID.")]
-            [Display(Name = "User ID")]
+            [Required(ErrorMessage = "User ID or Email is required.")]
+            [Display(Name = "User ID or Email")]
             public string UserId { get; set; } = string.Empty;
 
-            [Required(ErrorMessage = "Please enter your password.")]
+            [Required(ErrorMessage = "Password is required.")]
             [DataType(DataType.Password)]
             public string Password { get; set; } = string.Empty;
         }
 
-        public void OnGet()
+        public async Task<IActionResult> OnGetAsync(
+            string? returnUrl = null)
         {
+            ReturnUrl = returnUrl;
+
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                return await RedirectToDashboardAsync();
+            }
+
+            return Page();
         }
 
-        public async Task<IActionResult> OnPostAsync()
+        public async Task<IActionResult> OnPostAsync(
+            string? returnUrl = null)
         {
+            ReturnUrl = returnUrl ?? ReturnUrl;
+
             if (!ModelState.IsValid)
             {
                 return Page();
             }
 
-            var user = await _userManager.FindByNameAsync(
-                Input.UserId.Trim());
+            ApplicationUser? user;
 
-            if (user == null || !user.IsActive)
+            if (Input.UserId.Contains('@'))
+            {
+                user = await _userManager.FindByEmailAsync(
+                    Input.UserId.Trim());
+            }
+            else
+            {
+                user = await _userManager.FindByNameAsync(
+                    Input.UserId.Trim());
+            }
+
+            if (user == null)
             {
                 ModelState.AddModelError(
                     string.Empty,
-                    "Invalid login attempt.");
+                    "Invalid User ID, email, or password.");
 
                 return Page();
             }
 
-            // ??????????????????????
-            var result = await _signInManager.CheckPasswordSignInAsync(
-                user,
-                Input.Password,
-                lockoutOnFailure: true);
+            if (!user.IsActive)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "This account is currently inactive.");
+
+                return Page();
+            }
+
+            var result =
+                await _signInManager.PasswordSignInAsync(
+                    user,
+                    Input.Password,
+                    isPersistent: false,
+                    lockoutOnFailure: true);
+
+            if (result.Succeeded)
+            {
+                if (!string.IsNullOrWhiteSpace(ReturnUrl) &&
+                    Url.IsLocalUrl(ReturnUrl))
+                {
+                    return LocalRedirect(ReturnUrl);
+                }
+
+                return await RedirectToDashboardAsync();
+            }
 
             if (result.IsLockedOut)
             {
                 ModelState.AddModelError(
                     string.Empty,
-                    "Account temporarily locked. Please try again later.");
+                    "Your account has been temporarily locked. " +
+                    "Please try again later.");
 
                 return Page();
             }
 
-            if (!result.Succeeded)
+            if (result.IsNotAllowed)
             {
                 ModelState.AddModelError(
                     string.Empty,
-                    "Invalid login attempt.");
+                    "This account is not allowed to log in.");
 
                 return Page();
             }
 
-            StatusMessage = user.MustChangePassword
-                ? "Password verified. First-login password change is the next step."
-                : "Password verified. Email verification is the next step.";
+            ModelState.AddModelError(
+                string.Empty,
+                "Invalid User ID, email, or password.");
 
             return Page();
+        }
+
+        private async Task<IActionResult> RedirectToDashboardAsync()
+        {
+            ApplicationUser? user =
+                await _userManager.GetUserAsync(User);
+
+            if (user == null)
+            {
+                return RedirectToPage("/Account/Login");
+            }
+
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
+            {
+                return RedirectToAction(
+                    "Index",
+                    "Admin",
+                    new { area = "" });
+            }
+
+            if (await _userManager.IsInRoleAsync(user, "Tutor"))
+            {
+                return RedirectToAction(
+                    "Index",
+                    "Tutor",
+                    new { area = "" });
+            }
+
+            return RedirectToAction(
+                "Index",
+                "Home",
+                new { area = "" });
         }
     }
 }
