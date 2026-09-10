@@ -36,11 +36,15 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             public string Password { get; set; } = string.Empty;
         }
 
+        // =========================================================
+        // GET - LOGIN
+        // =========================================================
         public async Task<IActionResult> OnGetAsync(
             string? returnUrl = null)
         {
             ReturnUrl = returnUrl;
 
+            // If already logged in, redirect to the appropriate page.
             if (User.Identity?.IsAuthenticated == true)
             {
                 return await RedirectToDashboardAsync();
@@ -49,6 +53,9 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             return Page();
         }
 
+        // =========================================================
+        // POST - LOGIN
+        // =========================================================
         public async Task<IActionResult> OnPostAsync(
             string? returnUrl = null)
         {
@@ -59,17 +66,23 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return Page();
             }
 
+            // Remove accidental spaces before/after User ID or Email.
+            string loginIdentifier = Input.UserId.Trim();
+
             ApplicationUser? user;
 
-            if (Input.UserId.Contains('@'))
+            // =====================================================
+            // FIND USER BY EMAIL OR USER ID
+            // =====================================================
+            if (loginIdentifier.Contains('@'))
             {
                 user = await _userManager.FindByEmailAsync(
-                    Input.UserId.Trim());
+                    loginIdentifier);
             }
             else
             {
                 user = await _userManager.FindByNameAsync(
-                    Input.UserId.Trim());
+                    loginIdentifier);
             }
 
             if (user == null)
@@ -81,6 +94,9 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return Page();
             }
 
+            // =====================================================
+            // CHECK ACCOUNT STATUS
+            // =====================================================
             if (!user.IsActive)
             {
                 ModelState.AddModelError(
@@ -90,24 +106,21 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return Page();
             }
 
+            // =====================================================
+            // VALIDATE PASSWORD
+            // =====================================================
+            // CheckPasswordSignInAsync validates the password and
+            // counts failed attempts toward account lockout.
+            // It does not create the login cookie yet.
             var result =
-                await _signInManager.PasswordSignInAsync(
+                await _signInManager.CheckPasswordSignInAsync(
                     user,
                     Input.Password,
-                    isPersistent: false,
                     lockoutOnFailure: true);
 
-            if (result.Succeeded)
-            {
-                if (!string.IsNullOrWhiteSpace(ReturnUrl) &&
-                    Url.IsLocalUrl(ReturnUrl))
-                {
-                    return LocalRedirect(ReturnUrl);
-                }
-
-                return await RedirectToDashboardAsync();
-            }
-
+            // =====================================================
+            // ACCOUNT LOCKOUT
+            // =====================================================
             if (result.IsLockedOut)
             {
                 ModelState.AddModelError(
@@ -118,6 +131,9 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return Page();
             }
 
+            // =====================================================
+            // LOGIN NOT ALLOWED
+            // =====================================================
             if (result.IsNotAllowed)
             {
                 ModelState.AddModelError(
@@ -127,13 +143,62 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return Page();
             }
 
-            ModelState.AddModelError(
-                string.Empty,
-                "Invalid User ID, email, or password.");
+            // =====================================================
+            // INVALID PASSWORD
+            // =====================================================
+            if (!result.Succeeded)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "Invalid User ID, email, or password.");
 
-            return Page();
+                return Page();
+            }
+
+            // =====================================================
+            // ADDITIONAL LOGIN STEPS
+            // =====================================================
+            // Forced password change and 2FA will be implemented
+            // later. Accounts requiring these steps must not
+            // bypass them.
+            if (user.MustChangePassword ||
+                user.TwoFactorEnabled)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "This account requires an additional login " +
+                    "step that is not available yet.");
+
+                return Page();
+            }
+
+            // =====================================================
+            // SIGN IN
+            // =====================================================
+            // All checks have passed. Create the authentication
+            // cookie and sign the user in.
+            await _signInManager.SignInAsync(
+                user,
+                isPersistent: false);
+
+            // =====================================================
+            // RETURN URL
+            // =====================================================
+            // If the user was redirected to Login from a protected
+            // local page, return to that page after successful login.
+            if (!string.IsNullOrWhiteSpace(ReturnUrl) &&
+                Url.IsLocalUrl(ReturnUrl))
+            {
+                return LocalRedirect(ReturnUrl);
+            }
+
+            // Otherwise redirect according to the user's role.
+            return await RedirectToDashboardAsync();
         }
 
+        // =========================================================
+        // ROLE-BASED REDIRECTION
+        // =========================================================
         private async Task<IActionResult> RedirectToDashboardAsync()
         {
             ApplicationUser? user =
@@ -144,7 +209,10 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return RedirectToPage("/Account/Login");
             }
 
-            if (await _userManager.IsInRoleAsync(user, "Admin"))
+            // Admin
+            if (await _userManager.IsInRoleAsync(
+                    user,
+                    "Admin"))
             {
                 return RedirectToAction(
                     "Index",
@@ -152,7 +220,10 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     new { area = "" });
             }
 
-            if (await _userManager.IsInRoleAsync(user, "Tutor"))
+            // Tutor
+            if (await _userManager.IsInRoleAsync(
+                    user,
+                    "Tutor"))
             {
                 return RedirectToAction(
                     "Index",
@@ -160,6 +231,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     new { area = "" });
             }
 
+            // Student and Parent currently return to Home.
             return RedirectToAction(
                 "Index",
                 "Home",

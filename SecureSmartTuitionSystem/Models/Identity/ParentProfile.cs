@@ -13,6 +13,11 @@ namespace SecureSmartTuitionSystem.Models.Identity
         [StringLength(100)]
         public string FullName { get; set; } = string.Empty;
 
+        // Full IC number
+        [StringLength(14)]
+        public string? IdentificationNumber { get; set; }
+
+        // Used for existing-parent verification
         [StringLength(4, MinimumLength = 4)]
         public string? IdentificationLast4 { get; set; }
 

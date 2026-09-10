@@ -11,7 +11,8 @@ namespace SecureSmartTuitionSystem.Data
         private const string TutorEmail = "tutor@gmail.com";
 
         public static async Task SeedRolesAsync(
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            bool seedBasicAccounts = false)
         {
             using var scope = serviceProvider.CreateScope();
 
@@ -29,6 +30,15 @@ namespace SecureSmartTuitionSystem.Data
 
             await CreateRolesAsync(roleManager);
 
+            if (seedBasicAccounts)
+            {
+                await SeedBasicAccountsAsync(userManager);
+
+                await SeedDemoParentProfileAsync(
+                    context,
+                    userManager);
+            }
+
             await AssignRoleAsync(
                 userManager,
                 AdminEmail,
@@ -44,8 +54,206 @@ namespace SecureSmartTuitionSystem.Data
             await SeedClassDataAsync(context, userManager);
         }
 
-        private static async Task CreateRolesAsync(
-            RoleManager<IdentityRole> roleManager)
+        private static async Task SeedBasicAccountsAsync(
+            UserManager<ApplicationUser> userManager)
+        {
+            const string initialPassword = "Password123!";
+
+            await CreateBasicAccountAsync(
+                userManager,
+                "AD00001",
+                AdminEmail,
+                "System Administrator",
+                "Admin",
+                initialPassword);
+
+            await CreateBasicAccountAsync(
+                userManager,
+                "TU00001",
+                TutorEmail,
+                "Test Tutor",
+                "Tutor",
+                initialPassword);
+
+            await CreateBasicAccountAsync(
+                userManager,
+                "PA00001",
+                "parent@gmail.com",
+                "Test Parent",
+                "Parent",
+                initialPassword);
+
+            await CreateBasicAccountAsync(
+                userManager,
+                "ST00001",
+                "student@gmail.com",
+                "Test Student",
+                "Student",
+                initialPassword);
+        }
+
+        private static async Task CreateBasicAccountAsync(
+            UserManager<ApplicationUser> userManager,
+            string userName,
+            string email,
+            string fullName,
+            string roleName,
+            string initialPassword)
+        {
+            var existingUser =
+                await userManager.FindByNameAsync(userName);
+
+            if (existingUser != null)
+            {
+                // Keep existing passwords and account settings unchanged.
+                if (!string.Equals(
+                        existingUser.Email,
+                        email,
+                        StringComparison.OrdinalIgnoreCase) ||
+                    !await userManager.IsInRoleAsync(existingUser, roleName))
+                {
+                    throw new InvalidOperationException(
+                        $"Demo account {userName} conflicts with an existing account.");
+                }
+
+                return;
+            }
+
+            var existingEmail =
+                await userManager.FindByEmailAsync(email);
+
+            if (existingEmail != null)
+            {
+                // Do not automatically promote an account based on its email.
+                throw new InvalidOperationException(
+                    $"Cannot create {userName}: email {email} is already in use.");
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = userName,
+                Email = email,
+                FullName = fullName,
+                IsActive = true,
+                LockoutEnabled = true,
+
+                // Email verification and first-login changes are deferred
+                // for these local demo accounts.
+                EmailConfirmed = false,
+                MustChangePassword = false,
+                TwoFactorEnabled = false
+            };
+
+            var createResult =
+                await userManager.CreateAsync(user, initialPassword);
+
+            if (!createResult.Succeeded)
+            {
+                var errors = string.Join(
+                    ", ",
+                    createResult.Errors.Select(error => error.Description));
+
+                throw new InvalidOperationException(
+                    $"Unable to create {userName}: {errors}");
+            }
+
+            var roleResult =
+                await userManager.AddToRoleAsync(user, roleName);
+
+            if (!roleResult.Succeeded)
+            {
+                var errors = string.Join(
+                    ", ",
+                    roleResult.Errors.Select(error => error.Description));
+
+                // Remove the newly created account if role assignment fails.
+                var deleteResult = await userManager.DeleteAsync(user);
+
+                if (!deleteResult.Succeeded)
+                {
+                    errors += "; Account cleanup failed: " +
+                        string.Join(
+                            ", ",
+                            deleteResult.Errors.Select(error => error.Description));
+                }
+
+                throw new InvalidOperationException(
+                    $"Unable to assign {roleName} to {userName}: {errors}");
+            }
+        }
+
+        private static async Task SeedDemoParentProfileAsync(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager)
+        {
+            var parentUser =
+                await userManager.FindByNameAsync("PA00001");
+
+            if (parentUser == null)
+            {
+                return;
+            }
+
+            var existingParentProfile =
+                await context.ParentProfiles
+                    .FirstOrDefaultAsync(
+                        parentProfile =>
+                            parentProfile.ApplicationUserId ==
+                            parentUser.Id);
+
+            // ParentProfile does not exist yet.
+            if (existingParentProfile == null)
+            {
+                var parentProfile =
+                    new ParentProfile
+                    {
+                        ApplicationUserId = parentUser.Id,
+
+                        FullName =
+                            parentUser.FullName
+                            ?? "Test Parent",
+
+                        IdentificationNumber = "000000-00-1234",
+                        IdentificationLast4 = "1234",
+
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                context.ParentProfiles.Add(
+                    parentProfile);
+
+                await context.SaveChangesAsync();
+
+                return;
+            }
+
+            bool hasChanges = false;
+
+            if (string.IsNullOrWhiteSpace(
+                    existingParentProfile.IdentificationNumber))
+            {
+                existingParentProfile.IdentificationNumber =
+                    "000000-00-1234";
+
+                hasChanges = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                    existingParentProfile.IdentificationLast4))
+            {
+                existingParentProfile.IdentificationLast4 =
+                    "1234";
+
+                hasChanges = true;
+            }
+
+            if (hasChanges)
+            {
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task CreateRolesAsync(RoleManager<IdentityRole> roleManager)
         {
             string[] roles =
             {
