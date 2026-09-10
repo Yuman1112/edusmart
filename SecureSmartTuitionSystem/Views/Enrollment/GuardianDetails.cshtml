@@ -154,7 +154,8 @@
                                        inputmode="numeric"
                                        maxlength="4"
                                        autocomplete="off"
-                                       placeholder="Last 4 digits" />
+                                       placeholder="Last 4 digits"
+                                       oninput="this.value = this.value.replace(/\D/g, '').slice(0, 4)" />
 
                                 <span asp-validation-for="ExistingParentIdentificationLast4"
                                       class="text-danger">
@@ -234,7 +235,10 @@
                         <input asp-for="GuardianPhoneNumber"
                                class="form-control"
                                type="tel"
-                               maxlength="30"
+                               id="guardianPhone"
+                               inputmode="numeric"
+                               maxlength="12"
+                               autocomplete="tel"
                                placeholder="012-3456789" />
 
                         <span asp-validation-for="GuardianPhoneNumber"
@@ -252,6 +256,8 @@
 
                         <input asp-for="GuardianIdentificationNumber"
                                class="form-control"
+                               id="guardianIc"
+                               inputmode="numeric"
                                maxlength="14"
                                autocomplete="off"
                                placeholder="000000-00-0000" />
@@ -320,6 +326,15 @@
                 document.getElementById(
                     "new-parent-fields");
 
+            const guardianPhone =
+                document.getElementById(
+                    "guardianPhone");
+
+            const guardianIc =
+                document.getElementById(
+                    "guardianIc");
+
+
             function updateGuardianFields() {
 
                 const useExisting =
@@ -336,6 +351,81 @@
                 newFields.disabled =
                     useExisting;
             }
+
+
+            function formatIcNumber(value) {
+
+                let digits =
+                    value.replace(/\D/g, "");
+
+                digits =
+                    digits.substring(0, 12);
+
+                if (digits.length > 8) {
+                    return (
+                        digits.substring(0, 6) +
+                        "-" +
+                        digits.substring(6, 8) +
+                        "-" +
+                        digits.substring(8)
+                    );
+                }
+
+                if (digits.length > 6) {
+                    return (
+                        digits.substring(0, 6) +
+                        "-" +
+                        digits.substring(6)
+                    );
+                }
+
+                return digits;
+            }
+
+
+            function formatPhoneNumber(value) {
+
+                let digits =
+                    value.replace(/\D/g, "");
+
+                digits =
+                    digits.substring(0, 11);
+
+                if (digits.length > 3) {
+                    return (
+                        digits.substring(0, 3) +
+                        "-" +
+                        digits.substring(3)
+                    );
+                }
+
+                return digits;
+            }
+
+
+            if (guardianIc) {
+                guardianIc.addEventListener(
+                    "input",
+                    function () {
+
+                        this.value =
+                            formatIcNumber(
+                                this.value);
+                    });
+            }
+
+
+            if (guardianPhone) {
+                guardianPhone.addEventListener(
+                    "input",
+                    function () {
+
+                        this.value =
+                            formatPhoneNumber(
+                                this.value);
+                    });
+            }
+
 
             checkbox.addEventListener(
                 "change",

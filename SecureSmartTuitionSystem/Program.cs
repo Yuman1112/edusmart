@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Services.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
@@ -33,6 +34,8 @@ builder.Services
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+
+builder.Services.AddScoped<AccountProvisioningService>();
 
 // Store enrollment details temporarily during the multi-step form.
 builder.Services.AddDistributedMemoryCache();
