@@ -61,6 +61,7 @@
                      ========================================== -->
                 <!-- Identification Type -->
                 <div class="mb-3">
+
                     <label asp-for="StudentIdentificationType"
                            class="form-label">
                     </label>
@@ -69,7 +70,10 @@
                             class="form-select"
                             id="studentIdentificationType">
 
-                        <option value="IC">IC Number</option>
+                        <option value="IC">
+                            IC Number
+                        </option>
+
                         <option value="BirthCertificate">
                             Birth Certificate Number
                         </option>
@@ -79,10 +83,12 @@
                     <span asp-validation-for="StudentIdentificationType"
                           class="text-danger">
                     </span>
+
                 </div>
 
                 <!-- Identification Number -->
                 <div class="mb-3">
+
                     <label asp-for="StudentIdentificationNumber"
                            class="form-label"
                            id="studentIdentificationNumberLabel">
@@ -94,6 +100,7 @@
                            maxlength="30"
                            placeholder="000000-00-0000"
                            autocomplete="off"
+                           inputmode="numeric"
                            id="studentIdentificationNumber" />
 
                     <span asp-validation-for="StudentIdentificationNumber"
@@ -104,6 +111,7 @@
                          id="studentIdentificationHelp">
                         Enter the student's IC number in the format 000000-00-0000.
                     </div>
+
                 </div>
 
                 <!-- ==========================================
@@ -111,6 +119,7 @@
                      ========================================== -->
                 <div class="row">
 
+                    <!-- Date of Birth -->
                     <div class="col-md-6 mb-3">
 
                         <label asp-for="StudentDateOfBirth"
@@ -128,6 +137,7 @@
 
                     </div>
 
+                    <!-- Gender -->
                     <div class="col-md-6 mb-3">
 
                         <label asp-for="StudentGender"
@@ -195,6 +205,7 @@
                 </div>
 
             </form>
+
         </div>
     </div>
 </div>
@@ -225,26 +236,116 @@
                     document.getElementById(
                         "studentIdentificationHelp");
 
+                function formatIcNumber(value) {
+
+                    let digits =
+                        value.replace(/\D/g, "");
+
+                    digits =
+                        digits.substring(0, 12);
+
+                    if (digits.length > 8) {
+
+                        return (
+                            digits.substring(0, 6) +
+                            "-" +
+                            digits.substring(6, 8) +
+                            "-" +
+                            digits.substring(8)
+                        );
+                    }
+
+                    if (digits.length > 6) {
+
+                        return (
+                            digits.substring(0, 6) +
+                            "-" +
+                            digits.substring(6)
+                        );
+                    }
+
+                    return digits;
+                }
+
+                // ==========================================
+                // UPDATE IDENTIFICATION FIELD
+                // ==========================================
                 function updateIdentificationField() {
+
                     if (typeSelect.value === "IC") {
-                        numberLabel.textContent = "IC Number";
 
-                        numberInput.placeholder = "000000-00-0000";
+                        numberLabel.textContent =
+                            "IC Number";
 
-                        helpText.textContent = "Enter the student's IC number " + "in the format 000000-00-0000.";
+                        numberInput.placeholder =
+                            "000000-00-0000";
+
+                        numberInput.maxLength =
+                            14;
+
+                        numberInput.inputMode =
+                            "numeric";
+
+                        helpText.textContent =
+                            "Enter the student's IC number in the format 000000-00-0000.";
+
+                        numberInput.value =
+                            formatIcNumber(
+                                numberInput.value);
                     }
                     else {
-                        numberLabel.textContent = "Birth Certificate Number";
 
-                        numberInput.placeholder = "Enter birth certificate number";
+                        numberLabel.textContent =
+                            "Birth Certificate Number";
 
-                        helpText.textContent = "Enter the number exactly as shown " + "on the birth certificate.";
+                        numberInput.placeholder =
+                            "Enter birth certificate number";
+
+                        numberInput.maxLength =
+                            30;
+
+                        numberInput.inputMode =
+                            "text";
+
+                        helpText.textContent =
+                            "Enter the number exactly as shown on the birth certificate.";
                     }
                 }
 
-                typeSelect.addEventListener("change", updateIdentificationField);
+                // ==========================================
+                // AUTO FORMAT WHILE USER TYPES
+                // ==========================================
+                numberInput.addEventListener(
+                    "input",
+                    function () {
 
+                        if (typeSelect.value === "IC") {
+
+                            this.value =
+                                formatIcNumber(
+                                    this.value);
+                        }
+                    });
+
+                // ==========================================
+                // IDENTIFICATION TYPE CHANGED
+                // ==========================================
+                typeSelect.addEventListener(
+                    "change",
+                    function () {
+
+                        // Clear the old value when switching
+                        // between IC and Birth Certificate.
+                        numberInput.value = "";
+
+                        updateIdentificationField();
+                    });
+
+                // ==========================================
+                // INITIAL PAGE LOAD
+                // ==========================================
                 updateIdentificationField();
+
             });
     </script>
 }
