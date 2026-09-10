@@ -159,6 +159,38 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.AdminProfile", b =>
+                {
+                    b.Property<int>("AdminProfileId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AdminProfileId"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Position")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("AdminProfileId");
+
+                    b.HasIndex("ApplicationUserId")
+                        .IsUnique();
+
+                    b.ToTable("AdminProfiles");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", b =>
                 {
                     b.Property<int>("ClassSessionId")
@@ -675,6 +707,54 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("StudentProfiles");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorProfile", b =>
+                {
+                    b.Property<int>("TutorProfileId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TutorProfileId"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AreaOfExpertise")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Qualification")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TeachingExperience")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("TutorProfileId");
+
+                    b.HasIndex("ApplicationUserId")
+                        .IsUnique();
+
+                    b.ToTable("TutorProfiles");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -724,6 +804,17 @@ namespace SecureSmartTuitionSystem.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.AdminProfile", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "ApplicationUser")
+                        .WithOne()
+                        .HasForeignKey("SecureSmartTuitionSystem.Models.AdminProfile", "ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApplicationUser");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", b =>
@@ -866,6 +957,17 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("ApplicationUser");
 
                     b.Navigation("ParentProfile");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorProfile", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "ApplicationUser")
+                        .WithOne()
+                        .HasForeignKey("SecureSmartTuitionSystem.Models.TutorProfile", "ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApplicationUser");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.EnrollmentApplication", b =>

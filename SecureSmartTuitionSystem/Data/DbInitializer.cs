@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using SecureSmartTuitionSystem.Models;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Models.Identity;
 
@@ -33,6 +34,14 @@ namespace SecureSmartTuitionSystem.Data
             if (seedBasicAccounts)
             {
                 await SeedBasicAccountsAsync(userManager);
+
+                await SeedDemoAdminProfileAsync(
+                    context,
+                    userManager);
+
+                await SeedDemoTutorProfileAsync(
+                    context,
+                    userManager);
 
                 await SeedDemoParentProfileAsync(
                     context,
@@ -180,6 +189,97 @@ namespace SecureSmartTuitionSystem.Data
                 throw new InvalidOperationException(
                     $"Unable to assign {roleName} to {userName}: {errors}");
             }
+        }
+
+        private static async Task SeedDemoAdminProfileAsync(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager)
+        {
+            var adminUser =
+                await userManager.FindByNameAsync("AD00001");
+
+            if (adminUser == null)
+            {
+                return;
+            }
+
+            var existingAdminProfile =
+                await context.AdminProfiles
+                    .FirstOrDefaultAsync(
+                        adminProfile =>
+                            adminProfile.ApplicationUserId ==
+                            adminUser.Id);
+
+            if (existingAdminProfile != null)
+            {
+                return;
+            }
+
+            var adminProfile = new AdminProfile
+            {
+                ApplicationUserId = adminUser.Id,
+
+                FullName =
+                    adminUser.FullName
+                    ?? "System Administrator",
+
+                Position = "Administrator",
+
+                CreatedAt = DateTime.UtcNow
+            };
+
+            context.AdminProfiles.Add(adminProfile);
+
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedDemoTutorProfileAsync(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager)
+        {
+            var tutorUser =
+                await userManager.FindByNameAsync("TU00001");
+
+            if (tutorUser == null)
+            {
+                return;
+            }
+
+            var existingTutorProfile =
+                await context.TutorProfiles
+                    .FirstOrDefaultAsync(
+                        tutorProfile =>
+                            tutorProfile.ApplicationUserId ==
+                            tutorUser.Id);
+
+            if (existingTutorProfile != null)
+            {
+                return;
+            }
+
+            var tutorProfile = new TutorProfile
+            {
+                ApplicationUserId = tutorUser.Id,
+
+                FullName =
+                    tutorUser.FullName
+                    ?? "Test Tutor",
+
+                Qualification = "Bachelor's Degree",
+
+                TeachingExperience =
+                    "3 years teaching experience",
+
+                AreaOfExpertise = "Mathematics",
+
+                IsActive = true,
+
+                CreatedAt = DateTime.UtcNow
+            };
+
+            context.TutorProfiles.Add(tutorProfile);
+
+            await context.SaveChangesAsync();
         }
 
         private static async Task SeedDemoParentProfileAsync(
