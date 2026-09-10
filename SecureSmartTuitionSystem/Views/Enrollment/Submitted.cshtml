@@ -1,0 +1,45 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.EnrollmentSubmittedViewModel
+
+@{
+    ViewData["Title"] = "Application Submitted";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/enrollment-submission.css"
+          asp-append-version="true" />
+}
+
+<div class="public-content enrollment-page">
+    <partial name="_EnrollmentSteps" model="5" />
+
+    <div class="enrollment-card submitted-card">
+        <div class="submitted-icon"><i class="bi bi-check-circle"></i></div>
+        <span class="enrollment-eyebrow">Application received</span>
+        <h1>Enrollment Application Submitted</h1>
+        <p>
+            Your application has been sent for administrator review.
+            Payment is only required after the application is approved.
+        </p>
+
+        <div class="submission-reference">
+            <span>Application Number</span>
+            <strong>@Model.ApplicationNumber</strong>
+        </div>
+
+        <div class="submission-detail-grid">
+            <div><span>Student</span><strong>@Model.StudentName</strong></div>
+            <div><span>Guardian</span><strong>@Model.GuardianName</strong></div>
+            <div><span>Selected Classes</span><strong>@Model.SelectedClassCount</strong></div>
+            <div><span>Enrollment Plan</span><strong>@Model.EnrollmentDurationMonths month(s)</strong></div>
+            <div><span>Requested Start Date</span><strong>@Model.RequestedStartDate.ToString("dd MMM yyyy")</strong></div>
+            <div><span>Estimated Total</span><strong>RM @Model.EstimatedTotal.ToString("F2")</strong></div>
+            <div><span>Status</span><strong>@Model.Status</strong></div>
+            <div><span>Submitted</span><strong>@Model.SubmittedAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</strong></div>
+        </div>
+
+        <a asp-controller="Home" asp-action="Index" class="primary-button">
+            <i class="bi bi-house"></i> Return Home
+        </a>
+    </div>
+</div>

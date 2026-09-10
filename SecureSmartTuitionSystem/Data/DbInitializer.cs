@@ -7,38 +7,59 @@ namespace SecureSmartTuitionSystem.Data
 {
     public static class DbInitializer
     {
-        private const string AdminEmail = "admin@gmail.com";
-        private const string TutorEmail = "tutor@gmail.com";
+        private const string AdminEmail =
+            "admin@gmail.com";
+
+        private const string TutorEmail =
+            "tutor@gmail.com";
+
+        /*
+         * =====================================================
+         * MAIN SEED METHOD
+         * =====================================================
+         */
 
         public static async Task SeedRolesAsync(
             IServiceProvider serviceProvider,
             bool seedBasicAccounts = false)
         {
-            using var scope = serviceProvider.CreateScope();
+            using var scope =
+                serviceProvider.CreateScope();
 
             var roleManager =
                 scope.ServiceProvider
-                    .GetRequiredService<RoleManager<IdentityRole>>();
+                    .GetRequiredService<
+                        RoleManager<IdentityRole>>();
 
             var userManager =
                 scope.ServiceProvider
-                    .GetRequiredService<UserManager<ApplicationUser>>();
+                    .GetRequiredService<
+                        UserManager<ApplicationUser>>();
 
             var context =
                 scope.ServiceProvider
-                    .GetRequiredService<ApplicationDbContext>();
+                    .GetRequiredService<
+                        ApplicationDbContext>();
 
             await CreateRolesAsync(roleManager);
 
+            /*
+             * This only creates the four demo accounts when
+             * seedBasicAccounts is set to true in Program.cs.
+             */
             if (seedBasicAccounts)
             {
-                await SeedBasicAccountsAsync(userManager);
+                await SeedBasicAccountsAsync(
+                    userManager);
 
                 await SeedDemoParentProfileAsync(
                     context,
                     userManager);
             }
 
+            /*
+             * Assign roles to accounts that already exist.
+             */
             await AssignRoleAsync(
                 userManager,
                 AdminEmail,
@@ -49,15 +70,30 @@ namespace SecureSmartTuitionSystem.Data
                 TutorEmail,
                 "Tutor");
 
-            await UpdateTestUserNamesAsync(userManager);
+            await UpdateTestUserNamesAsync(
+                userManager);
 
-            await SeedClassDataAsync(context, userManager);
+            /*
+             * Class Sessions are now managed by Admin.
+             * Do not automatically create legacy demo classes because
+             * CS00001 and CS00002 may already exist.
+             */
+
+            await SeedTestEnrollmentApplicationsAsync(
+                context);
         }
+
+        /*
+         * =====================================================
+         * BASIC DEMO ACCOUNTS
+         * =====================================================
+         */
 
         private static async Task SeedBasicAccountsAsync(
             UserManager<ApplicationUser> userManager)
         {
-            const string initialPassword = "Password123!";
+            const string initialPassword =
+                "Password123!";
 
             await CreateBasicAccountAsync(
                 userManager,
@@ -101,93 +137,124 @@ namespace SecureSmartTuitionSystem.Data
             string initialPassword)
         {
             var existingUser =
-                await userManager.FindByNameAsync(userName);
+                await userManager.FindByNameAsync(
+                    userName);
 
             if (existingUser != null)
             {
-                // Keep existing passwords and account settings unchanged.
-                if (!string.Equals(
+                bool sameEmail =
+                    string.Equals(
                         existingUser.Email,
                         email,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    !await userManager.IsInRoleAsync(existingUser, roleName))
+                        StringComparison.OrdinalIgnoreCase);
+
+                bool hasExpectedRole =
+                    await userManager.IsInRoleAsync(
+                        existingUser,
+                        roleName);
+
+                if (!sameEmail ||
+                    !hasExpectedRole)
                 {
                     throw new InvalidOperationException(
-                        $"Demo account {userName} conflicts with an existing account.");
+                        $"Demo account {userName} conflicts " +
+                        "with an existing account.");
                 }
 
                 return;
             }
 
             var existingEmail =
-                await userManager.FindByEmailAsync(email);
+                await userManager.FindByEmailAsync(
+                    email);
 
             if (existingEmail != null)
             {
-                // Do not automatically promote an account based on its email.
                 throw new InvalidOperationException(
-                    $"Cannot create {userName}: email {email} is already in use.");
+                    $"Cannot create {userName}: email " +
+                    $"{email} is already in use.");
             }
 
-            var user = new ApplicationUser
-            {
-                UserName = userName,
-                Email = email,
-                FullName = fullName,
-                IsActive = true,
-                LockoutEnabled = true,
-
-                // Email verification and first-login changes are deferred
-                // for these local demo accounts.
-                EmailConfirmed = false,
-                MustChangePassword = false,
-                TwoFactorEnabled = false
-            };
+            var user =
+                new ApplicationUser
+                {
+                    UserName = userName,
+                    Email = email,
+                    FullName = fullName,
+                    IsActive = true,
+                    LockoutEnabled = true,
+                    EmailConfirmed = false,
+                    MustChangePassword = false,
+                    TwoFactorEnabled = false
+                };
 
             var createResult =
-                await userManager.CreateAsync(user, initialPassword);
+                await userManager.CreateAsync(
+                    user,
+                    initialPassword);
 
             if (!createResult.Succeeded)
             {
-                var errors = string.Join(
-                    ", ",
-                    createResult.Errors.Select(error => error.Description));
+                string errors =
+                    string.Join(
+                        ", ",
+                        createResult.Errors.Select(
+                            error =>
+                                error.Description));
 
                 throw new InvalidOperationException(
-                    $"Unable to create {userName}: {errors}");
+                    $"Unable to create {userName}: " +
+                    $"{errors}");
             }
 
             var roleResult =
-                await userManager.AddToRoleAsync(user, roleName);
+                await userManager.AddToRoleAsync(
+                    user,
+                    roleName);
 
             if (!roleResult.Succeeded)
             {
-                var errors = string.Join(
-                    ", ",
-                    roleResult.Errors.Select(error => error.Description));
+                string errors =
+                    string.Join(
+                        ", ",
+                        roleResult.Errors.Select(
+                            error =>
+                                error.Description));
 
-                // Remove the newly created account if role assignment fails.
-                var deleteResult = await userManager.DeleteAsync(user);
+                var deleteResult =
+                    await userManager.DeleteAsync(
+                        user);
 
                 if (!deleteResult.Succeeded)
                 {
-                    errors += "; Account cleanup failed: " +
+                    errors +=
+                        "; Account cleanup failed: " +
                         string.Join(
                             ", ",
-                            deleteResult.Errors.Select(error => error.Description));
+                            deleteResult.Errors.Select(
+                                error =>
+                                    error.Description));
                 }
 
                 throw new InvalidOperationException(
-                    $"Unable to assign {roleName} to {userName}: {errors}");
+                    $"Unable to assign {roleName} to " +
+                    $"{userName}: {errors}");
             }
         }
+
+        /*
+         * =====================================================
+         * DEMO PARENT PROFILE
+         * =====================================================
+         */
 
         private static async Task SeedDemoParentProfileAsync(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager)
         {
             var parentUser =
-                await userManager.FindByNameAsync("PA00001");
+                await userManager.FindByNameAsync(
+                    "PA00001");
 
             if (parentUser == null)
             {
@@ -198,25 +265,30 @@ namespace SecureSmartTuitionSystem.Data
                 await context.ParentProfiles
                     .FirstOrDefaultAsync(
                         parentProfile =>
-                            parentProfile.ApplicationUserId ==
+                            parentProfile
+                                .ApplicationUserId ==
                             parentUser.Id);
 
-            // ParentProfile does not exist yet.
             if (existingParentProfile == null)
             {
                 var parentProfile =
                     new ParentProfile
                     {
-                        ApplicationUserId = parentUser.Id,
+                        ApplicationUserId =
+                            parentUser.Id,
 
                         FullName =
-                            parentUser.FullName
-                            ?? "Test Parent",
+                            parentUser.FullName ??
+                            "Test Parent",
 
-                        IdentificationNumber = "000000-00-1234",
-                        IdentificationLast4 = "1234",
+                        IdentificationNumber =
+                            "000000-00-1234",
 
-                        CreatedAt = DateTime.UtcNow
+                        IdentificationLast4 =
+                            "1234",
+
+                        CreatedAt =
+                            DateTime.UtcNow
                     };
 
                 context.ParentProfiles.Add(
@@ -230,18 +302,22 @@ namespace SecureSmartTuitionSystem.Data
             bool hasChanges = false;
 
             if (string.IsNullOrWhiteSpace(
-                    existingParentProfile.IdentificationNumber))
+                existingParentProfile
+                    .IdentificationNumber))
             {
-                existingParentProfile.IdentificationNumber =
+                existingParentProfile
+                    .IdentificationNumber =
                     "000000-00-1234";
 
                 hasChanges = true;
             }
 
             if (string.IsNullOrWhiteSpace(
-                    existingParentProfile.IdentificationLast4))
+                existingParentProfile
+                    .IdentificationLast4))
             {
-                existingParentProfile.IdentificationLast4 =
+                existingParentProfile
+                    .IdentificationLast4 =
                     "1234";
 
                 hasChanges = true;
@@ -253,7 +329,14 @@ namespace SecureSmartTuitionSystem.Data
             }
         }
 
-        private static async Task CreateRolesAsync(RoleManager<IdentityRole> roleManager)
+        /*
+         * =====================================================
+         * ROLE CREATION
+         * =====================================================
+         */
+
+        private static async Task CreateRolesAsync(
+            RoleManager<IdentityRole> roleManager)
         {
             string[] roles =
             {
@@ -263,58 +346,84 @@ namespace SecureSmartTuitionSystem.Data
                 "Student"
             };
 
-            foreach (var roleName in roles)
+            foreach (string roleName in roles)
             {
-                if (await roleManager.RoleExistsAsync(roleName))
+                bool roleExists =
+                    await roleManager.RoleExistsAsync(
+                        roleName);
+
+                if (roleExists)
                 {
                     continue;
                 }
 
-                var result = await roleManager.CreateAsync(
-                    new IdentityRole(roleName));
+                var result =
+                    await roleManager.CreateAsync(
+                        new IdentityRole(roleName));
 
                 if (!result.Succeeded)
                 {
-                    var errors = string.Join(
-                        ", ",
-                        result.Errors.Select(error =>
-                            error.Description));
+                    string errors =
+                        string.Join(
+                            ", ",
+                            result.Errors.Select(
+                                error =>
+                                    error.Description));
 
                     throw new InvalidOperationException(
-                        $"Unable to create role {roleName}: {errors}");
+                        $"Unable to create role " +
+                        $"{roleName}: {errors}");
                 }
             }
         }
+
+        /*
+         * =====================================================
+         * ROLE ASSIGNMENT
+         * =====================================================
+         */
 
         private static async Task AssignRoleAsync(
             UserManager<ApplicationUser> userManager,
             string email,
             string roleName)
         {
-            var user = await userManager.FindByEmailAsync(email);
+            var user =
+                await userManager.FindByEmailAsync(
+                    email);
 
-            // The account must be registered before
-            // the role can be assigned.
+            /*
+             * The account must already be registered before
+             * the role can be assigned.
+             */
             if (user == null)
             {
                 return;
             }
 
-            if (await userManager.IsInRoleAsync(user, roleName))
+            bool alreadyInRole =
+                await userManager.IsInRoleAsync(
+                    user,
+                    roleName);
+
+            if (alreadyInRole)
             {
                 return;
             }
 
-            var result = await userManager.AddToRoleAsync(
-                user,
-                roleName);
+            var result =
+                await userManager.AddToRoleAsync(
+                    user,
+                    roleName);
 
             if (!result.Succeeded)
             {
-                var errors = string.Join(
-                    ", ",
-                    result.Errors.Select(error =>
-                        error.Description));
+                string errors =
+                    string.Join(
+                        ", ",
+                        result.Errors.Select(
+                            error =>
+                                error.Description));
 
                 throw new InvalidOperationException(
                     $"Unable to assign {roleName} role " +
@@ -322,19 +431,29 @@ namespace SecureSmartTuitionSystem.Data
             }
         }
 
+        /*
+         * =====================================================
+         * UPDATE TEST USER DISPLAY NAMES
+         * =====================================================
+         */
+
         private static async Task UpdateTestUserNamesAsync(
             UserManager<ApplicationUser> userManager)
         {
             var admin =
-                await userManager.FindByEmailAsync(AdminEmail);
+                await userManager.FindByEmailAsync(
+                    AdminEmail);
 
             if (admin != null &&
-                string.IsNullOrWhiteSpace(admin.FullName))
+                string.IsNullOrWhiteSpace(
+                    admin.FullName))
             {
-                admin.FullName = "System Administrator";
+                admin.FullName =
+                    "System Administrator";
 
                 var result =
-                    await userManager.UpdateAsync(admin);
+                    await userManager.UpdateAsync(
+                        admin);
 
                 if (!result.Succeeded)
                 {
@@ -344,15 +463,19 @@ namespace SecureSmartTuitionSystem.Data
             }
 
             var tutor =
-                await userManager.FindByEmailAsync(TutorEmail);
+                await userManager.FindByEmailAsync(
+                    TutorEmail);
 
             if (tutor != null &&
-                string.IsNullOrWhiteSpace(tutor.FullName))
+                string.IsNullOrWhiteSpace(
+                    tutor.FullName))
             {
-                tutor.FullName = "Test Tutor";
+                tutor.FullName =
+                    "Test Tutor";
 
                 var result =
-                    await userManager.UpdateAsync(tutor);
+                    await userManager.UpdateAsync(
+                        tutor);
 
                 if (!result.Succeeded)
                 {
@@ -362,175 +485,530 @@ namespace SecureSmartTuitionSystem.Data
             }
         }
 
+        /*
+         * =====================================================
+         * SUBJECT AND CLASS SESSION DATA
+         * =====================================================
+         */
+
         private static async Task SeedClassDataAsync(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager)
         {
             var mathematics =
-                await context.Subjects.FirstOrDefaultAsync(
-                    subject =>
-                        subject.SubjectName == "Mathematics" &&
-                        subject.AcademicLevel == "Form 3");
+                await context.Subjects
+                    .FirstOrDefaultAsync(
+                        subject =>
+                            subject.SubjectName ==
+                                "Mathematics" &&
+                            subject.AcademicLevel ==
+                                "Form 3");
 
             if (mathematics == null)
             {
-                mathematics = new Subject
-                {
-                    EducationStage = EducationStage.Secondary,
-                    AcademicLevel = "Form 3",
-                    SubjectName = "Mathematics",
-                    MonthlyFee = 200.00m,
-                    IsActive = true
-                };
+                mathematics =
+                    new Subject
+                    {
+                        EducationStage =
+                            EducationStage.Secondary,
 
-                context.Subjects.Add(mathematics);
+                        AcademicLevel =
+                            "Form 3",
+
+                        SubjectName =
+                            "Mathematics",
+
+                        MonthlyFee =
+                            200.00m,
+
+                        IsActive =
+                            true
+                    };
+
+                context.Subjects.Add(
+                    mathematics);
             }
-
-            var science =
-                await context.Subjects.FirstOrDefaultAsync(
-                    subject =>
-                        subject.SubjectName == "Science" &&
-                        subject.AcademicLevel == "Form 3");
-
-            if (science == null)
-            {
-                science = new Subject
-                {
-                    EducationStage = EducationStage.Secondary,
-                    AcademicLevel = "Form 3",
-                    SubjectName = "Science",
-                    MonthlyFee = 220.00m,
-                    IsActive = true
-                };
-
-                context.Subjects.Add(science);
-            }
-
-            if (mathematics != null)
+            else
             {
                 mathematics.EducationStage =
                     EducationStage.Secondary;
+
+                mathematics.IsActive =
+                    true;
             }
 
-            if (science != null)
+            var science =
+                await context.Subjects
+                    .FirstOrDefaultAsync(
+                        subject =>
+                            subject.SubjectName ==
+                                "Science" &&
+                            subject.AcademicLevel ==
+                                "Form 3");
+
+            if (science == null)
+            {
+                science =
+                    new Subject
+                    {
+                        EducationStage =
+                            EducationStage.Secondary,
+
+                        AcademicLevel =
+                            "Form 3",
+
+                        SubjectName =
+                            "Science",
+
+                        MonthlyFee =
+                            220.00m,
+
+                        IsActive =
+                            true
+                    };
+
+                context.Subjects.Add(
+                    science);
+            }
+            else
             {
                 science.EducationStage =
                     EducationStage.Secondary;
+
+                science.IsActive =
+                    true;
             }
 
             await context.SaveChangesAsync();
-            
-            if (mathematics == null || science == null)
-            {
-                throw new InvalidOperationException(
-                    "Unable to initialise Mathematics and Science subjects.");
-            }
 
             var tutor =
-                await userManager.FindByEmailAsync(TutorEmail);
+                await userManager.FindByEmailAsync(
+                    TutorEmail);
 
-            // ClassSession requires an existing Tutor account.
+            /*
+             * ClassSession requires an existing Tutor.
+             */
             if (tutor == null)
             {
                 return;
             }
 
-            bool mathematicsClassExists =
-                await context.ClassSessions.AnyAsync(
-                    session =>
-                        session.ClassCode == "MATH-F3-01");
+            var mathematicsClass =
+                await context.ClassSessions
+                    .FirstOrDefaultAsync(
+                        session =>
+                            session.ClassCode ==
+                                "CS00001");
 
-            if (!mathematicsClassExists)
+            if (mathematicsClass == null)
             {
-                context.ClassSessions.Add(
+                mathematicsClass =
                     new ClassSession
                     {
-                        ClassCode = "MATH-F3-01",
-                        SubjectId = mathematics.SubjectId,
-                        TutorUserId = tutor.Id,
-                        DayOfWeek = DayOfWeek.Monday,
-                        StartTime = new TimeOnly(18, 0),
-                        EndTime = new TimeOnly(20, 0),
-                        Venue = "https://meet.google.com/math-f3-demo",
-                        Capacity = 25,
-                        Status = ClassSessionStatus.Active
-                    });
-            }
+                        ClassCode =
+                            "CS00001",
 
-            bool scienceClassExists =
-                await context.ClassSessions.AnyAsync(
-                    session =>
-                        session.ClassCode == "SCI-F3-01");
+                        ClassName =
+                            "FORM 3 - MM - " +
+                            "Test Tutor - 06:00 PM",
 
-            if (!scienceClassExists)
-            {
+                        SubjectId =
+                            mathematics.SubjectId,
+
+                        TutorUserId =
+                            tutor.Id,
+
+                        DayOfWeek =
+                            DayOfWeek.Monday,
+
+                        StartTime =
+                            new TimeOnly(18, 0),
+
+                        EndTime =
+                            new TimeOnly(20, 0),
+
+                        Venue =
+                            "https://meet.google.com/" +
+                            "math-f3-demo",
+
+                        Capacity =
+                            25,
+
+                        Status =
+                            ClassSessionStatus.Active
+                    };
+
                 context.ClassSessions.Add(
-                    new ClassSession
-                    {
-                        ClassCode = "SCI-F3-01",
-                        SubjectId = science.SubjectId,
-                        TutorUserId = tutor.Id,
-                        DayOfWeek = DayOfWeek.Wednesday,
-                        StartTime = new TimeOnly(18, 0),
-                        EndTime = new TimeOnly(20, 0),
-                        Venue = "https://meet.google.com/science-f3-demo",
-                        Capacity = 25,
-                        Status = ClassSessionStatus.Active
-                    });
+                    mathematicsClass);
             }
-
-            var existingMathematicsClass =
-                await context.ClassSessions.FirstOrDefaultAsync(
-                    session =>
-                        session.ClassCode == "MATH-F3-01");
-
-            if (existingMathematicsClass != null)
+            else
             {
                 if (string.IsNullOrWhiteSpace(
-                        existingMathematicsClass.Venue) ||
-                    !existingMathematicsClass.Venue.StartsWith(
+                    mathematicsClass.Venue) ||
+                    !mathematicsClass.Venue.StartsWith(
                         "https://meet.google.com/",
                         StringComparison.OrdinalIgnoreCase))
                 {
-                    existingMathematicsClass.Venue =
-                        "https://meet.google.com/math-f3-demo";
+                    mathematicsClass.Venue =
+                        "https://meet.google.com/" +
+                        "math-f3-demo";
                 }
 
                 if (string.IsNullOrWhiteSpace(
-                        existingMathematicsClass.ClassName))
+                    mathematicsClass.ClassName))
                 {
-                    existingMathematicsClass.ClassName =
-                        "FORM 3 - MM - Test Tutor - 06:00 PM";
+                    mathematicsClass.ClassName =
+                        "FORM 3 - MM - " +
+                        "Test Tutor - 06:00 PM";
                 }
             }
 
-            var existingScienceClass =
-                await context.ClassSessions.FirstOrDefaultAsync(
-                    session =>
-                        session.ClassCode == "SCI-F3-01");
+            var scienceClass =
+                await context.ClassSessions
+                    .FirstOrDefaultAsync(
+                        session =>
+                            session.ClassCode ==
+                                "CS00002");
 
-            if (existingScienceClass != null)
+            if (scienceClass == null)
+            {
+                scienceClass =
+                    new ClassSession
+                    {
+                        ClassCode =
+                            "CS00002",
+
+                        ClassName =
+                            "FORM 3 - SCI - " +
+                            "Test Tutor - 06:00 PM",
+
+                        SubjectId =
+                            science.SubjectId,
+
+                        TutorUserId =
+                            tutor.Id,
+
+                        DayOfWeek =
+                            DayOfWeek.Wednesday,
+
+                        StartTime =
+                            new TimeOnly(18, 0),
+
+                        EndTime =
+                            new TimeOnly(20, 0),
+
+                        Venue =
+                            "https://meet.google.com/" +
+                            "science-f3-demo",
+
+                        Capacity =
+                            25,
+
+                        Status =
+                            ClassSessionStatus.Active
+                    };
+
+                context.ClassSessions.Add(
+                    scienceClass);
+            }
+            else
             {
                 if (string.IsNullOrWhiteSpace(
-                        existingScienceClass.Venue) ||
-                    !existingScienceClass.Venue.StartsWith(
+                    scienceClass.Venue) ||
+                    !scienceClass.Venue.StartsWith(
                         "https://meet.google.com/",
                         StringComparison.OrdinalIgnoreCase))
                 {
-                    existingScienceClass.Venue =
-                        "https://meet.google.com/science-f3-demo";
+                    scienceClass.Venue =
+                        "https://meet.google.com/" +
+                        "science-f3-demo";
                 }
 
                 if (string.IsNullOrWhiteSpace(
-                        existingScienceClass.ClassName))
+                    scienceClass.ClassName))
                 {
-                    existingScienceClass.ClassName =
-                        "FORM 3 - SCI - Test Tutor - 06:00 PM";
+                    scienceClass.ClassName =
+                        "FORM 3 - SCI - " +
+                        "Test Tutor - 06:00 PM";
                 }
             }
 
             await context.SaveChangesAsync();
+        }
 
+        /*
+         * =====================================================
+         * TEST ENROLLMENT APPLICATIONS
+         * =====================================================
+         */
+
+        private static async Task
+            SeedTestEnrollmentApplicationsAsync(
+                ApplicationDbContext context)
+        {
+            /*
+             * Find two active classes for testing.
+             */
+            var availableClasses =
+                await context.ClassSessions
+                    .AsNoTracking()
+                    .Include(session =>
+                        session.Subject)
+                    .Where(session =>
+                        session.Status ==
+                        ClassSessionStatus.Active)
+                    .OrderBy(session =>
+                        session.ClassSessionId)
+                    .Take(2)
+                    .ToListAsync();
+
+            /*
+             * EnrollmentApplicationSubject requires an
+             * existing ClassSession.
+             */
+            if (availableClasses.Count == 0)
+            {
+                return;
+            }
+
+            /*
+             * =================================================
+             * TEST APPLICATION 1 - PENDING REVIEW
+             * =================================================
+             */
+
+            const string pendingApplicationNumber =
+                "EA00001";
+
+            bool pendingApplicationExists =
+                await context.EnrollmentApplications
+                    .AnyAsync(
+                        application =>
+                            application
+                                .ApplicationNumber ==
+                            pendingApplicationNumber);
+
+            if (!pendingApplicationExists)
+            {
+                var firstClass =
+                    availableClasses[0];
+
+                var pendingApplication =
+                    new EnrollmentApplication
+                    {
+                        ApplicationNumber =
+                            pendingApplicationNumber,
+
+                        GuardianName =
+                            "Sample Guardian",
+
+                        GuardianEmail =
+                            "guardian.sample@gmail.com",
+
+                        GuardianPhoneNumber =
+                            "012-3456789",
+
+                        GuardianIdentificationLast4 =
+                            "5678",
+
+                        StudentName =
+                            "Sample Student",
+
+                        StudentDateOfBirth =
+                            new DateTime(
+                                2013,
+                                5,
+                                15),
+
+                        AcademicLevel =
+                            firstClass.Subject
+                                .AcademicLevel,
+
+                        RequestedStartDate =
+                            DateTime.Today.AddDays(14),
+
+                        HardcopyMaterialsRequested =
+                            false,
+
+                        FinalTwoWeeksConfirmed =
+                            false,
+
+                        PotentialDuplicateStudent =
+                            false,
+
+                        PotentialDuplicateGuardian =
+                            false,
+
+                        Status =
+                            EnrollmentStatus.PendingReview,
+
+                        ApplicantNotes =
+                            "Test enrollment application " +
+                            "for the Admin review workflow.",
+
+                        SubmittedAt =
+                            DateTime.UtcNow.AddDays(-2)
+                    };
+
+                pendingApplication
+                    .SelectedSubjects.Add(
+                        new EnrollmentApplicationSubject
+                        {
+                            ClassSessionId =
+                                firstClass
+                                    .ClassSessionId,
+
+                            MonthlyFeeAtApplication =
+                                firstClass.Subject
+                                    .MonthlyFee
+                        });
+
+                pendingApplication
+                    .StatusHistories.Add(
+                        new EnrollmentStatusHistory
+                        {
+                            PreviousStatus =
+                                null,
+
+                            NewStatus =
+                                EnrollmentStatus
+                                    .PendingReview,
+
+                            ChangedAt =
+                                pendingApplication
+                                    .SubmittedAt,
+
+                            Remarks =
+                                "Enrollment application " +
+                                "submitted."
+                        });
+
+                context.EnrollmentApplications.Add(
+                    pendingApplication);
+            }
+
+            /*
+             * =================================================
+             * TEST APPLICATION 2 - DUPLICATE REVIEW
+             * =================================================
+             */
+
+            const string duplicateApplicationNumber =
+                "EA00002";
+
+            bool duplicateApplicationExists =
+                await context.EnrollmentApplications
+                    .AnyAsync(
+                        application =>
+                            application
+                                .ApplicationNumber ==
+                            duplicateApplicationNumber);
+
+            if (!duplicateApplicationExists)
+            {
+                var selectedClass =
+                    availableClasses.Count > 1
+                        ? availableClasses[1]
+                        : availableClasses[0];
+
+                var duplicateApplication =
+                    new EnrollmentApplication
+                    {
+                        ApplicationNumber =
+                            duplicateApplicationNumber,
+
+                        GuardianName =
+                            "Existing Guardian Test",
+
+                        GuardianEmail =
+                            "existing.guardian@gmail.com",
+
+                        GuardianPhoneNumber =
+                            "013-8765432",
+
+                        GuardianIdentificationLast4 =
+                            "4321",
+
+                        StudentName =
+                            "Existing Student Test",
+
+                        StudentDateOfBirth =
+                            new DateTime(
+                                2012,
+                                8,
+                                20),
+
+                        AcademicLevel =
+                            selectedClass.Subject
+                                .AcademicLevel,
+
+                        RequestedStartDate =
+                            DateTime.Today.AddDays(21),
+
+                        HardcopyMaterialsRequested =
+                            true,
+
+                        FinalTwoWeeksConfirmed =
+                            false,
+
+                        PotentialDuplicateStudent =
+                            true,
+
+                        PotentialDuplicateGuardian =
+                            true,
+
+                        Status =
+                            EnrollmentStatus
+                                .DuplicateReview,
+
+                        ApplicantNotes =
+                            "Test application containing " +
+                            "possible duplicate student and " +
+                            "guardian records.",
+
+                        SubmittedAt =
+                            DateTime.UtcNow.AddDays(-1)
+                    };
+
+                duplicateApplication
+                    .SelectedSubjects.Add(
+                        new EnrollmentApplicationSubject
+                        {
+                            ClassSessionId =
+                                selectedClass
+                                    .ClassSessionId,
+
+                            MonthlyFeeAtApplication =
+                                selectedClass.Subject
+                                    .MonthlyFee
+                        });
+
+                duplicateApplication
+                    .StatusHistories.Add(
+                        new EnrollmentStatusHistory
+                        {
+                            PreviousStatus =
+                                null,
+
+                            NewStatus =
+                                EnrollmentStatus
+                                    .DuplicateReview,
+
+                            ChangedAt =
+                                duplicateApplication
+                                    .SubmittedAt,
+
+                            Remarks =
+                                "Potential duplicate records " +
+                                "detected during application " +
+                                "submission."
+                        });
+
+                context.EnrollmentApplications.Add(
+                    duplicateApplication);
+            }
+
+            await context.SaveChangesAsync();
         }
     }
 }

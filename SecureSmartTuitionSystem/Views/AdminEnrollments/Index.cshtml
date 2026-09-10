@@ -1,0 +1,677 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.AdminEnrollmentIndexViewModel
+
+@using SecureSmartTuitionSystem.Models.Enrollment
+
+@{
+    ViewData["Title"] = "Enrollment Requests";
+
+    string StatusText(EnrollmentStatus status)
+    {
+        return status switch
+        {
+            EnrollmentStatus.PendingReview =>
+                "Pending Review",
+
+            EnrollmentStatus.DuplicateReview =>
+                "Duplicate Review",
+
+            EnrollmentStatus.ApprovedPendingPayment =>
+                "Pending Payment",
+
+            EnrollmentStatus.PaymentConfirmed =>
+                "Payment Confirmed",
+
+            EnrollmentStatus.Enrolled =>
+                "Enrolled",
+
+            EnrollmentStatus.Rejected =>
+                "Rejected",
+
+            EnrollmentStatus.Cancelled =>
+                "Cancelled",
+
+            _ => status.ToString()
+        };
+    }
+
+    string StatusClass(EnrollmentStatus status)
+    {
+        return status switch
+        {
+            EnrollmentStatus.PendingReview =>
+                "status-pending",
+
+            EnrollmentStatus.DuplicateReview =>
+                "status-duplicate",
+
+            EnrollmentStatus.ApprovedPendingPayment =>
+                "status-payment",
+
+            EnrollmentStatus.PaymentConfirmed =>
+                "status-confirmed",
+
+            EnrollmentStatus.Enrolled =>
+                "status-enrolled",
+
+            EnrollmentStatus.Rejected =>
+                "status-rejected",
+
+            EnrollmentStatus.Cancelled =>
+                "status-cancelled",
+
+            _ => "status-default"
+        };
+    }
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/enrollment.css"
+          asp-append-version="true" />
+}
+
+<div class="page-header">
+
+    <div>
+        <h1>Enrollment Requests</h1>
+
+        <p>
+            Review and manage student enrollment applications.
+        </p>
+    </div>
+
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show"
+         role="alert"
+         data-auto-dismiss="true">
+
+        <i class="bi bi-check-circle-fill me-2"></i>
+
+        @TempData["SuccessMessage"]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show"
+         role="alert"
+         data-auto-dismiss="true">
+
+        <i class="bi bi-exclamation-circle-fill me-2"></i>
+
+        @TempData["ErrorMessage"]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+<!-- Summary cards -->
+<div class="enrollment-summary-grid">
+
+    <div class="enrollment-summary-card">
+
+        <div class="summary-icon summary-icon-total">
+            <i class="bi bi-files"></i>
+        </div>
+
+        <div>
+            <span>Total Applications</span>
+
+            <strong>
+                @Model.TotalApplicationCount
+            </strong>
+        </div>
+
+    </div>
+
+    <div class="enrollment-summary-card">
+
+        <div class="summary-icon summary-icon-pending">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+
+        <div>
+            <span>Pending Review</span>
+
+            <strong>
+                @Model.PendingReviewCount
+            </strong>
+        </div>
+
+    </div>
+
+    <div class="enrollment-summary-card">
+
+        <div class="summary-icon summary-icon-duplicate">
+            <i class="bi bi-exclamation-triangle"></i>
+        </div>
+
+        <div>
+            <span>Duplicate Review</span>
+
+            <strong>
+                @Model.DuplicateReviewCount
+            </strong>
+        </div>
+
+    </div>
+
+    <div class="enrollment-summary-card">
+
+        <div class="summary-icon summary-icon-payment">
+            <i class="bi bi-credit-card"></i>
+        </div>
+
+        <div>
+            <span>Pending Payment</span>
+
+            <strong>
+                @Model.ApprovedPendingPaymentCount
+            </strong>
+        </div>
+
+    </div>
+
+    <div class="enrollment-summary-card">
+
+        <div class="summary-icon summary-icon-enrolled">
+            <i class="bi bi-person-check"></i>
+        </div>
+
+        <div>
+            <span>Enrolled</span>
+
+            <strong>
+                @Model.EnrolledCount
+            </strong>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Filter card -->
+<form asp-controller="AdminEnrollments"
+      asp-action="Index"
+      method="get"
+      id="enrollmentFilterForm"
+      class="enrollment-filter-card">
+
+    <input asp-for="SortBy"
+           id="SortBy"
+           type="hidden" />
+
+    <input asp-for="SortDirection"
+           id="SortDirection"
+           type="hidden" />
+
+    <div class="enrollment-filter-heading">
+
+        <div>
+            <h2>
+                <i class="bi bi-funnel"></i>
+                Filter Applications
+            </h2>
+
+            <p>
+                The application list updates automatically.
+            </p>
+        </div>
+
+        @if (Model.Status.HasValue ||
+                Model.DuplicateOnly)
+        {
+            <a asp-controller="AdminEnrollments"
+               asp-action="Index"
+               class="clear-filter-link">
+
+                <i class="bi bi-x-circle"></i>
+                Clear Filters
+            </a>
+        }
+
+    </div>
+
+    <div class="enrollment-filter-grid">
+
+        <div>
+            <label asp-for="Status"
+                   class="form-label">
+                Application Status
+            </label>
+
+            <select asp-for="Status"
+                    class="form-select auto-filter">
+
+                <option value="">
+                    All Statuses
+                </option>
+
+                @foreach (
+                                EnrollmentStatus enrollmentStatus
+                                in Enum.GetValues<EnrollmentStatus>())
+                {
+                    <option value="@enrollmentStatus">
+                        @StatusText(enrollmentStatus)
+                    </option>
+                }
+
+            </select>
+        </div>
+
+        <div class="duplicate-filter-wrapper">
+
+            <label class="form-label">
+                Duplicate Checking
+            </label>
+
+            <label class="duplicate-filter-option">
+
+                <input asp-for="DuplicateOnly"
+                       class="form-check-input auto-filter" />
+
+                <span>
+                    Show potential duplicates only
+                </span>
+
+            </label>
+
+        </div>
+
+    </div>
+</form>
+
+<!-- Application list -->
+<div class="dashboard-card enrollment-list-card">
+
+    <div class="dashboard-card-header">
+
+        <h2>
+            <i class="bi bi-clipboard-check me-2"></i>
+            All Applications
+        </h2>
+
+        <span class="text-muted">
+            @Model.Applications.Count application(s)
+        </span>
+
+    </div>
+
+    @if (!Model.Applications.Any())
+    {
+        <div class="empty-state">
+
+            <i class="bi bi-inbox"></i>
+
+            <h3>No applications found</h3>
+
+            <p>
+                There are currently no enrollment applications
+                matching the selected filters.
+            </p>
+
+            @if (Model.Status.HasValue ||
+                    Model.DuplicateOnly)
+            {
+                <a asp-controller="AdminEnrollments"
+                   asp-action="Index"
+                   class="outline-button">
+
+                    Clear Filters
+                </a>
+            }
+
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+
+            <table class="table align-middle enrollment-table">
+
+                <colgroup>
+                    <col class="column-application" />
+                    <col class="column-student" />
+                    <col class="column-guardian" />
+                    <col class="column-classes" />
+                    <col class="column-fee" />
+                    <col class="column-submitted" />
+                    <col class="column-status" />
+                    <col class="column-action" />
+                </colgroup>
+
+                <thead>
+                    <tr>
+
+                        <th>
+                            <button type="button"
+                                    class="enrollment-sort-button"
+                                    data-sort="applicationNumber">
+
+                                Application
+
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="enrollment-sort-button"
+                                    data-sort="studentName">
+
+                                Student
+
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="enrollment-sort-button"
+                                    data-sort="guardianName">
+
+                                Guardian
+
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            Classes
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="enrollment-sort-button"
+                                    data-sort="totalFee">
+
+                                Monthly Fee
+
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="enrollment-sort-button"
+                                    data-sort="submittedAt">
+
+                                Submitted
+
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="enrollment-sort-button"
+                                    data-sort="status">
+
+                                Status
+
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th class="text-start">
+                            Action
+                        </th>
+
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @foreach (
+                                    var application
+                                    in Model.Applications)
+                    {
+                        DateTime submittedLocal =
+                        application.SubmittedAt
+                        .ToLocalTime();
+
+                        string submittedDate =
+                        submittedLocal.ToString(
+                        "dd MMM yyyy");
+
+                        string submittedTime =
+                        submittedLocal.ToString(
+                        "hh:mm tt");
+
+                        string formattedFee =
+                        application.TotalMonthlyFee
+                        .ToString("F2");
+
+                        string applicationStatusText =
+                        StatusText(application.Status);
+
+                        string applicationStatusClass =
+                        StatusClass(application.Status);
+
+                        <tr>
+
+                            <!-- Application -->
+                            <td>
+                                <strong class="application-number">
+                                    @application.ApplicationNumber
+                                </strong>
+
+                                @if (
+                                                        application
+                                                        .HasPotentialDuplicate)
+                                {
+                                    <span class="duplicate-warning"
+                                          title="Potential duplicate record">
+
+                                        <i class="bi bi-exclamation-triangle-fill">
+                                        </i>
+
+                                        Duplicate
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- Student -->
+                            <td>
+                                <strong class="table-primary-text">
+                                    @application.StudentName
+                                </strong>
+
+                                <span class="table-secondary-text">
+                                    @application.AcademicLevel
+                                </span>
+                            </td>
+
+                            <!-- Guardian -->
+                            <td>
+                                <strong class="table-primary-text">
+                                    @application.GuardianName
+                                </strong>
+
+                                <span class="table-secondary-text">
+                                    @application.GuardianEmail
+                                </span>
+                            </td>
+
+                            <!-- Classes -->
+                            <td>
+                                <span class="class-count-badge">
+                                    @application.SelectedClassCount
+                                    class(es)
+                                </span>
+                            </td>
+
+                            <!-- Monthly fee -->
+                            <td>
+                                @if (
+                                                        application.TotalMonthlyFee == 0)
+                                {
+                                    <span class="free-fee-badge">
+                                        Free
+                                    </span>
+                                }
+                                else
+                                {
+                                    <strong>
+                                        RM @formattedFee
+                                    </strong>
+                                }
+                            </td>
+
+                            <!-- Submitted date -->
+                            <td>
+                                <strong class="table-primary-text">
+                                    @submittedDate
+                                </strong>
+
+                                <span class="table-secondary-text">
+                                    @submittedTime
+                                </span>
+                            </td>
+
+                            <!-- Status -->
+                            <td>
+                                <span class="enrollment-status-pill
+                                                     @applicationStatusClass">
+
+                                    @applicationStatusText
+                                </span>
+                            </td>
+
+                            <!-- Action -->
+                            <td>
+                                <a asp-controller="AdminEnrollments"
+                                   asp-action="Details"
+                                   asp-route-id="@application.EnrollmentApplicationId"
+                                   class="table-details-button">
+
+                                    <i class="bi bi-eye"></i>
+                                    Details
+                                </a>
+                            </td>
+
+                        </tr>
+                    }
+
+                </tbody>
+            </table>
+
+        </div>
+    }
+
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+                const filterForm =
+                    document.getElementById(
+                        "enrollmentFilterForm");
+
+                const sortByInput =
+                    document.getElementById(
+                        "SortBy");
+
+                const sortDirectionInput =
+                    document.getElementById(
+                        "SortDirection");
+
+                /*
+                 * Automatically apply filters.
+                 */
+                document
+                    .querySelectorAll(".auto-filter")
+                    .forEach(function (filter) {
+                        filter.addEventListener(
+                            "change",
+                            function () {
+                                if (filterForm) {
+                                    filterForm.requestSubmit();
+                                }
+                            });
+                    });
+
+                /*
+                 * Apply sorting.
+                 */
+                document
+                    .querySelectorAll(
+                        ".enrollment-sort-button")
+                    .forEach(function (button) {
+                        button.addEventListener(
+                            "click",
+                            function () {
+                                const selectedSort =
+                                    button.dataset.sort;
+
+                                if (!selectedSort ||
+                                    !sortByInput ||
+                                    !sortDirectionInput ||
+                                    !filterForm) {
+                                    return;
+                                }
+
+                                if (
+                                    sortByInput.value ===
+                                    selectedSort) {
+                                    sortDirectionInput.value =
+                                        sortDirectionInput
+                                            .value === "asc"
+                                            ? "desc"
+                                            : "asc";
+                                }
+                                else {
+                                    sortByInput.value =
+                                        selectedSort;
+
+                                    sortDirectionInput.value =
+                                        "asc";
+                                }
+
+                                filterForm.requestSubmit();
+                            });
+                    });
+
+                /*
+                 * Close messages automatically after
+                 * three seconds.
+                 */
+                document
+                    .querySelectorAll(
+                        '[data-auto-dismiss="true"]')
+                    .forEach(function (alertElement) {
+                        window.setTimeout(
+                            function () {
+                                if (
+                                    typeof bootstrap ===
+                                    "undefined") {
+                                    return;
+                                }
+
+                                const alert =
+                                    bootstrap.Alert
+                                        .getOrCreateInstance(
+                                            alertElement);
+
+                                alert.close();
+                            },
+                            3000);
+                    });
+            });
+    </script>
+}

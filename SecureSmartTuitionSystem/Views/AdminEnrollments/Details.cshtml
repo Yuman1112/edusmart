@@ -1,0 +1,1012 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.AdminEnrollmentDetailsViewModel
+
+@using SecureSmartTuitionSystem.Models.Enrollment
+
+@{
+    ViewData["Title"] = "Enrollment Details";
+
+    string StatusText(EnrollmentStatus status)
+    {
+        return status switch
+        {
+            EnrollmentStatus.PendingReview =>
+                "Pending Review",
+
+            EnrollmentStatus.DuplicateReview =>
+                "Duplicate Review",
+
+            EnrollmentStatus.ApprovedPendingPayment =>
+                "Pending Payment",
+
+            EnrollmentStatus.PaymentConfirmed =>
+                "Payment Confirmed",
+
+            EnrollmentStatus.Enrolled =>
+                "Enrolled",
+
+            EnrollmentStatus.Rejected =>
+                "Rejected",
+
+            EnrollmentStatus.Cancelled =>
+                "Cancelled",
+
+            _ => status.ToString()
+        };
+    }
+
+    string StatusClass(EnrollmentStatus status)
+    {
+        return status switch
+        {
+            EnrollmentStatus.PendingReview =>
+                "status-pending",
+
+            EnrollmentStatus.DuplicateReview =>
+                "status-duplicate",
+
+            EnrollmentStatus.ApprovedPendingPayment =>
+                "status-payment",
+
+            EnrollmentStatus.PaymentConfirmed =>
+                "status-confirmed",
+
+            EnrollmentStatus.Enrolled =>
+                "status-enrolled",
+
+            EnrollmentStatus.Rejected =>
+                "status-rejected",
+
+            EnrollmentStatus.Cancelled =>
+                "status-cancelled",
+
+            _ => "status-default"
+        };
+    }
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/enrollment.css"
+          asp-append-version="true" />
+}
+
+<div class="page-header">
+
+    <div>
+        <h1>Enrollment Details</h1>
+
+        <p>
+            Review application @Model.ApplicationNumber.
+        </p>
+    </div>
+
+    <a asp-controller="AdminEnrollments"
+       asp-action="Index"
+       class="outline-button">
+
+        <i class="bi bi-arrow-left"></i>
+        Back to Applications
+    </a>
+
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show"
+         role="alert"
+         data-auto-dismiss="true">
+
+        <i class="bi bi-check-circle-fill me-2"></i>
+
+        @TempData["SuccessMessage"]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show"
+         role="alert"
+         data-auto-dismiss="true">
+
+        <i class="bi bi-exclamation-circle-fill me-2"></i>
+
+        @TempData["ErrorMessage"]
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+    </div>
+}
+
+<div class="enrollment-details-container">
+
+    <div class="enrollment-details-grid">
+
+        <!-- Main content -->
+        <div class="enrollment-details-main">
+
+            <!-- Application information -->
+            <section class="enrollment-details-card">
+
+                <div class="enrollment-details-card-header">
+
+                    <h2>
+                        <i class="bi bi-file-earmark-text"></i>
+                        Application Information
+                    </h2>
+
+                    <span class="enrollment-status-pill
+                                 @StatusClass(Model.Status)">
+
+                        @StatusText(Model.Status)
+                    </span>
+
+                </div>
+
+                <div class="enrollment-details-card-body">
+
+                    <div class="enrollment-information-grid">
+
+                        <div class="enrollment-information-item">
+                            <span>Application Number</span>
+
+                            <strong>
+                                @Model.ApplicationNumber
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>Application Status</span>
+
+                            <strong>
+                                @StatusText(Model.Status)
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>Submitted Date</span>
+
+                            <strong>
+                                @(Model.SubmittedAt
+                                                                .ToLocalTime()
+                                                                .ToString(
+                                                                "dd MMM yyyy, hh:mm tt"))
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>Requested Start Date</span>
+
+                            <strong>
+                                @(Model.RequestedStartDate
+                                                                .ToString("dd MMM yyyy"))
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>Hardcopy Materials</span>
+
+                            <strong>
+                                @(Model.HardcopyMaterialsRequested
+                                                                ? "Requested"
+                                                                : "Not requested")
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>
+                                Final Two Weeks Confirmed
+                            </span>
+
+                            <strong>
+                                @(Model.FinalTwoWeeksConfirmed
+                                                                ? "Yes"
+                                                                : "No")
+                            </strong>
+                        </div>
+
+                        @if (Model.ReviewedAt.HasValue)
+                        {
+                            <div class="enrollment-information-item">
+                                <span>Reviewed Date</span>
+
+                                <strong>
+                                    @(Model.ReviewedAt.Value
+                                                                    .ToLocalTime()
+                                                                    .ToString(
+                                                                    "dd MMM yyyy, hh:mm tt"))
+                                                                                         </strong>
+                                                                                     </div>
+
+                            <div class="enrollment-information-item">
+                                <span>Reviewed By</span>
+
+                                <strong>
+                                    @(Model.ReviewedByName ??
+                                                                    "Administrator")
+                            </strong>
+                        </div>
+                                                }
+
+                        @if (!string.IsNullOrWhiteSpace(
+                                                Model.ApplicantNotes))
+                        {
+                            <div class="enrollment-information-item
+                                            full-width">
+
+                                <span>Applicant Notes</span>
+
+                                <strong>
+                                    @Model.ApplicantNotes
+                                </strong>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(
+                                                Model.RejectionReason))
+                        {
+                            <div class="enrollment-information-item
+                                            full-width">
+
+                                <span>Rejection Reason</span>
+
+                                <strong>
+                                    @Model.RejectionReason
+                                </strong>
+                            </div>
+                        }
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- Student information -->
+            <section class="enrollment-details-card">
+
+                <div class="enrollment-details-card-header">
+
+                    <h2>
+                        <i class="bi bi-person"></i>
+                        Student Information
+                    </h2>
+
+                </div>
+
+                <div class="enrollment-details-card-body">
+
+                    <div class="enrollment-information-grid">
+
+                        <div class="enrollment-information-item">
+                            <span>Student Name</span>
+
+                            <strong>
+                                @Model.StudentName
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>Date of Birth</span>
+
+                            <strong>
+                                @(Model.StudentDateOfBirth
+                                                                .ToString("dd MMM yyyy"))
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>Academic Level</span>
+
+                            <strong>
+                                @Model.AcademicLevel
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>Existing Student Record</span>
+
+                            <strong>
+                                @(Model.ExistingStudentProfileId
+                                                                .HasValue
+                                                                ? "Matched existing student"
+                                                                : "New student")
+                            </strong>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- Guardian information -->
+            <section class="enrollment-details-card">
+
+                <div class="enrollment-details-card-header">
+
+                    <h2>
+                        <i class="bi bi-people"></i>
+                        Guardian Information
+                    </h2>
+
+                </div>
+
+                <div class="enrollment-details-card-body">
+
+                    <div class="enrollment-information-grid">
+
+                        <div class="enrollment-information-item">
+                            <span>Guardian Name</span>
+
+                            <strong>
+                                @Model.GuardianName
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>Email Address</span>
+
+                            <strong>
+                                @Model.GuardianEmail
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>Phone Number</span>
+
+                            <strong>
+                                @Model.GuardianPhoneNumber
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>
+                                Identification Last 4 Digits
+                            </span>
+
+                            <strong>
+                                @(Model.GuardianIdentificationLast4 ??
+                                                                "Not provided")
+                            </strong>
+                        </div>
+
+                        <div class="enrollment-information-item">
+                            <span>Existing Guardian Record</span>
+
+                            <strong>
+                                @(Model.ExistingParentProfileId
+                                                                .HasValue
+                                                                ? "Matched existing guardian"
+                                                                : "New guardian")
+                            </strong>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- Duplicate checking -->
+            @if (Model.HasPotentialDuplicate)
+            {
+                <section class="enrollment-details-card">
+
+                    <div class="enrollment-details-card-header">
+
+                        <h2>
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Duplicate Checking
+                        </h2>
+
+                    </div>
+
+                    <div class="enrollment-details-card-body">
+
+                        <div class="duplicate-alert">
+
+                            <i class="bi bi-exclamation-triangle-fill">
+                            </i>
+
+                            <div>
+                                <strong>
+                                    Potential duplicate record detected
+                                </strong>
+
+                                @if (
+                                                            Model.PotentialDuplicateStudent &&
+                                                            Model.PotentialDuplicateGuardian)
+                                {
+                                    <p>
+                                        Both the student and guardian
+                                        may already exist in the system.
+                                    </p>
+                                }
+                                else if (
+                                Model.PotentialDuplicateStudent)
+                                {
+                                    <p>
+                                        The student may already exist
+                                        in the system.
+                                    </p>
+                                }
+                                else
+                                {
+                                    <p>
+                                        The guardian may already exist
+                                        in the system.
+                                    </p>
+                                }
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+            }
+
+            <!-- Selected classes -->
+            <section class="enrollment-details-card">
+
+                <div class="enrollment-details-card-header">
+
+                    <h2>
+                        <i class="bi bi-journal-bookmark"></i>
+                        Selected Classes
+                    </h2>
+
+                    <strong>
+                        RM @(Model.TotalMonthlyFee
+                                                .ToString("F2")) / month
+                    </strong>
+
+                </div>
+
+                <div class="enrollment-details-card-body">
+
+                    @if (!Model.SelectedClasses.Any())
+                    {
+                        <div class="empty-state">
+
+                            <i class="bi bi-calendar-x"></i>
+
+                            <p>
+                                No classes were selected.
+                            </p>
+
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="selected-class-list">
+
+                            @foreach (
+                                                    var classItem
+                                                    in Model.SelectedClasses)
+                            {
+                                <div class="selected-class-item">
+
+                                    <div>
+                                        <strong>
+                                            @classItem.ClassName
+                                        </strong>
+
+                                        <span>
+                                            @classItem.SubjectName ·
+                                            @classItem.EducationStage ·
+                                            @classItem.AcademicLevel
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <strong>
+                                            @classItem.Day
+                                        </strong>
+
+                                        <span>
+                                            @classItem.StartTime –
+                                            @classItem.EndTime
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        @if (
+                                                                        classItem
+                                                                        .MonthlyFeeAtApplication ==
+                                                                        0)
+                                        {
+                                            <strong>Free</strong>
+                                        }
+                                        else
+                                        {
+                                            <strong>
+                                                RM
+                                                @(classItem
+                                                                                    .MonthlyFeeAtApplication
+                                                                                    .ToString("F2"))
+                                </strong>
+                                                                }
+
+                                        <span>
+                                            @classItem.EnrolledStudentCount
+                                            /
+                                            @classItem.Capacity
+                                            student(s)
+                                        </span>
+
+                                        @if (classItem.IsAvailable)
+                                        {
+                                            <span class="class-availability
+                                                                     class-available">
+
+                                                @classItem.AvailableSeatCount
+                                                seat(s) available
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="class-availability
+                                                                     class-unavailable">
+
+                                                @(classItem.IsFull
+                                                                                    ? "Class full"
+                                                                                    : "Class unavailable")
+                                </span>
+                                                                }
+                                    </div>
+
+                                </div>
+                            }
+
+                        </div>
+                    }
+
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Right sidebar -->
+        <aside class="enrollment-details-side">
+
+            <!-- Review actions -->
+            <section class="enrollment-details-card">
+
+                <div class="enrollment-details-card-header">
+
+                    <h2>
+                        <i class="bi bi-check2-square"></i>
+                        Review Actions
+                    </h2>
+
+                </div>
+
+                <div class="enrollment-details-card-body">
+
+                    @if (Model.CanApprove ||
+                                        Model.CanReject ||
+                                        Model.CanCancel)
+                    {
+                        <div class="enrollment-review-actions">
+
+                            @if (Model.CanApprove)
+                            {
+                                <button type="button"
+                                        class="enrollment-action-button
+                                                       enrollment-approve-button"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#approveModal">
+
+                                    <i class="bi bi-check-circle"></i>
+                                    Approve Application
+                                </button>
+                            }
+
+                            @if (Model.CanReject)
+                            {
+                                <button type="button"
+                                        class="enrollment-action-button
+                                                       enrollment-reject-button"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#rejectModal">
+
+                                    <i class="bi bi-x-circle"></i>
+                                    Reject Application
+                                </button>
+                            }
+
+                            @if (Model.CanCancel)
+                            {
+                                <button type="button"
+                                        class="enrollment-action-button
+                                                       enrollment-cancel-button"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#cancelModal">
+
+                                    <i class="bi bi-slash-circle"></i>
+                                    Cancel Application
+                                </button>
+                            }
+
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+
+                            <i class="bi bi-check-circle"></i>
+
+                            <p>
+                                No further review action is required.
+                            </p>
+
+                        </div>
+                    }
+
+                </div>
+            </section>
+
+            <!-- Status history -->
+            <section class="enrollment-details-card">
+
+                <div class="enrollment-details-card-header">
+
+                    <h2>
+                        <i class="bi bi-clock-history"></i>
+                        Status History
+                    </h2>
+
+                </div>
+
+                <div class="enrollment-details-card-body">
+
+                    @if (!Model.StatusHistories.Any())
+                    {
+                        <div class="empty-state">
+
+                            <i class="bi bi-clock"></i>
+
+                            <p>
+                                No status history is available.
+                            </p>
+
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="enrollment-history-list">
+
+                            @foreach (
+                                                    var history
+                                                    in Model.StatusHistories)
+                            {
+                                <div class="enrollment-history-item">
+
+                                    <strong>
+                                        @StatusText(
+                                        history.NewStatus)
+                            </strong>
+
+                            <span>
+                                @(history.ChangedAt
+                                                                .ToLocalTime()
+                                                                .ToString(
+                                                                "dd MMM yyyy, hh:mm tt"))
+                            </span>
+
+                                    <span>
+                                        Changed by:
+                                        @history.ChangedByName
+                                    </span>
+
+                            @if (
+                                                        !string.IsNullOrWhiteSpace(
+                                                        history.Remarks))
+                                    {
+                                        <p>
+                                            @history.Remarks
+                                        </p>
+                                    }
+
+                                </div>
+                            }
+
+                        </div>
+                    }
+
+                </div>
+            </section>
+
+        </aside>
+
+    </div>
+</div>
+
+<!-- Approve modal -->
+@if (Model.CanApprove)
+{
+    <div class="modal fade enrollment-modal"
+         id="approveModal"
+         tabindex="-1"
+         aria-labelledby="approveModalLabel"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <form asp-controller="AdminEnrollments"
+                      asp-action="Approve"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="EnrollmentApplicationId"
+                           value="@Model.EnrollmentApplicationId" />
+
+                    <div class="modal-header">
+
+                        <h2 class="modal-title"
+                            id="approveModalLabel">
+                            Approve Application
+                        </h2>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close">
+                        </button>
+
+                    </div>
+
+                    <div class="modal-body">
+
+                        <p>
+                            Approve application
+                            <strong>
+                                @Model.ApplicationNumber
+                            </strong>?
+                        </p>
+
+                        <p class="text-muted">
+                            The application will proceed to
+                            payment verification.
+                        </p>
+
+                        <label for="ApprovalRemarks"
+                               class="form-label">
+                            Approval Remarks (Optional)
+                        </label>
+
+                        <textarea id="ApprovalRemarks"
+                              name="Remarks"
+                              class="form-control"
+                              rows="3"
+                              maxlength="500"
+                              placeholder="Enter optional remarks"></textarea>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Back
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-success">
+                            Confirm Approval
+                        </button>
+
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Reject modal -->
+@if (Model.CanReject)
+{
+    <div class="modal fade enrollment-modal"
+         id="rejectModal"
+         tabindex="-1"
+         aria-labelledby="rejectModalLabel"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <form asp-controller="AdminEnrollments"
+                      asp-action="Reject"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="EnrollmentApplicationId"
+                           value="@Model.EnrollmentApplicationId" />
+
+                    <div class="modal-header">
+
+                        <h2 class="modal-title"
+                            id="rejectModalLabel">
+                            Reject Application
+                        </h2>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close">
+                        </button>
+
+                    </div>
+
+                    <div class="modal-body">
+
+                        <p>
+                            Reject application
+                            <strong>
+                                @Model.ApplicationNumber
+                            </strong>?
+                        </p>
+
+                        <label for="RejectionReason"
+                               class="form-label">
+                            Rejection Reason
+                        </label>
+
+                        <textarea id="RejectionReason"
+                              name="RejectionReason"
+                              class="form-control"
+                              rows="4"
+                              minlength="5"
+                              maxlength="500"
+                              required
+                              placeholder="Explain why the application is rejected"></textarea>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Back
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-danger">
+                            Confirm Rejection
+                        </button>
+
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Cancel modal -->
+@if (Model.CanCancel)
+{
+    <div class="modal fade enrollment-modal"
+         id="cancelModal"
+         tabindex="-1"
+         aria-labelledby="cancelModalLabel"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <form asp-controller="AdminEnrollments"
+                      asp-action="Cancel"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="EnrollmentApplicationId"
+                           value="@Model.EnrollmentApplicationId" />
+
+                    <div class="modal-header">
+
+                        <h2 class="modal-title"
+                            id="cancelModalLabel">
+                            Cancel Application
+                        </h2>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close">
+                        </button>
+
+                    </div>
+
+                    <div class="modal-body">
+
+                        <p>
+                            Cancel application
+                            <strong>
+                                @Model.ApplicationNumber
+                            </strong>?
+                        </p>
+
+                        <label for="CancellationReason"
+                               class="form-label">
+                            Cancellation Reason
+                        </label>
+
+                        <textarea id="CancellationReason"
+                              name="CancellationReason"
+                              class="form-control"
+                              rows="4"
+                              minlength="5"
+                              maxlength="500"
+                              required
+                              placeholder="Explain why the application is cancelled"></textarea>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Back
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-secondary">
+                            Confirm Cancellation
+                        </button>
+
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+                const alerts =
+                    document.querySelectorAll(
+                        '[data-auto-dismiss="true"]');
+
+                alerts.forEach(
+                    function (alertElement) {
+                        window.setTimeout(
+                            function () {
+                                if (
+                                    typeof bootstrap ===
+                                    "undefined") {
+                                    return;
+                                }
+
+                                const alert =
+                                    bootstrap.Alert
+                                        .getOrCreateInstance(
+                                            alertElement);
+
+                                alert.close();
+                            },
+                            3000);
+                    });
+            });
+    </script>
+}

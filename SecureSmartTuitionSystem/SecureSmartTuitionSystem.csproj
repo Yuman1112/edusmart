@@ -23,11 +23,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Models\Billing\" />
     <Folder Include="Models\Communication\" />
     <Folder Include="Models\Security\" />
     <Folder Include="Models\Reporting\" />
-    <Folder Include="Services\Billing\" />
     <Folder Include="Services\Communication\" />
     <Folder Include="Services\Enrollment\" />
     <Folder Include="Services\Reporting\" />

@@ -1,16 +1,47 @@
 ﻿/* =========================================================
-   2. AUTHENTICATION LAYOUT
+   EDUSMART - COMPLETE LAYOUT.CSS
 ========================================================= */
 
-.auth-layout {
+
+/* =========================================================
+   1. COMMON LAYOUT RULES
+========================================================= */
+
+.auth-layout,
+.staff-layout,
+.public-layout {
     width: 100%;
     min-height: 100vh;
 }
 
+    .auth-layout img,
+    .staff-layout img,
+    .public-layout img {
+        max-width: 100%;
+    }
+
+button,
+a {
+    transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
 
 /* =========================================================
+   2. AUTHENTICATION LAYOUT
+========================================================= */
+
+.auth-layout {
+    display: flex;
+    min-height: 100vh;
+    padding: 28px;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient( circle at right top, rgba(47, 220, 218, 0.28), transparent 35% ), radial-gradient( circle at left bottom, rgba(94, 229, 221, 0.2), transparent 35% ), #f4ffff;
+}
+
+
 /* =========================================================
-   4. STAFF LAYOUT
+   3. STAFF LAYOUT
 ========================================================= */
 
 .staff-layout {
@@ -21,7 +52,7 @@
 
 
 /* =========================================================
-   5. STAFF SIDEBAR - LIGHT COLOUR
+   4. STAFF SIDEBAR
 ========================================================= */
 
 .staff-sidebar {
@@ -34,29 +65,29 @@
     width: 250px;
     flex-direction: column;
     overflow: hidden;
+    border-right: 1px solid #b9e3e4;
     color: var(--navy);
     background: linear-gradient( 180deg, #eaffff 0%, #d8f8f6 55%, #c9f1f0 100% );
-    border-right: 1px solid #b9e3e4;
     box-shadow: 8px 0 24px rgba(3, 66, 86, 0.08);
 }
 
 
 /* =========================================================
-   6. STAFF LOGO - NO WHITE BOX
+   5. STAFF SIDEBAR LOGO
 ========================================================= */
 
 .sidebar-brand {
     display: flex;
-    min-height: 110px;
-    padding: 8px 20px 2px;
+    min-height: 108px;
+    padding: 8px 18px 4px;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
     .sidebar-brand a {
         display: flex;
         width: fit-content;
-        height: auto;
         margin: 0;
         padding: 0;
         align-items: center;
@@ -84,28 +115,25 @@
     object-fit: contain !important;
 }
 
-.sidebar-navigation {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 7px;
-    padding: 2px 18px 15px;
-}
-
 
 /* =========================================================
-   7. SIDEBAR NAVIGATION
+   6. STAFF SIDEBAR NAVIGATION
 ========================================================= */
+
 .sidebar-navigation {
     display: flex;
+    min-height: 0;
+    padding: 2px 13px 15px;
     flex: 1;
     flex-direction: column;
     gap: 7px;
-    padding: 2px 13px 15px;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .sidebar-link {
     display: flex;
+    width: 100%;
     min-height: 55px;
     padding: 12px 15px;
     align-items: center;
@@ -113,13 +141,20 @@
     border: 1px solid transparent;
     border-radius: 12px;
     color: #315f75;
+    background: transparent;
     font-size: 0.93rem;
-    font-weight: 600;
+    font-weight: 650;
+    line-height: 1.25;
+    text-align: left;
 }
+
+    .sidebar-link > span {
+        min-width: 0;
+    }
 
     .sidebar-link i {
         width: 27px;
-        flex-shrink: 0;
+        flex: 0 0 27px;
         color: #16859a;
         font-size: 1.3rem;
         text-align: center;
@@ -143,31 +178,145 @@
         }
 
 
-    /* Disabled Sidebar Items */
+/* =========================================================
+   7. EXPANDABLE SIDEBAR MODULE
+========================================================= */
 
-    .sidebar-link.disabled-link {
-        color: #7396a4;
-        cursor: not-allowed;
-        opacity: 0.72;
+.sidebar-module {
+    width: 100%;
+}
+
+.sidebar-module-button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    cursor: pointer;
+}
+
+.sidebar-link-content {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    align-items: center;
+    gap: 11px;
+}
+
+    .sidebar-link-content > i {
+        width: 27px;
+        flex: 0 0 27px;
     }
 
-        .sidebar-link.disabled-link i {
-            color: #78a7b1;
-        }
+    .sidebar-link-content > span {
+        display: block;
+        min-width: 0;
+        overflow: visible;
+        font-size: 0.86rem;
+        white-space: nowrap;
+    }
 
-        .sidebar-link.disabled-link:hover {
-            border-color: transparent;
-            color: #7396a4;
-            background: transparent;
+.sidebar-module-arrow {
+    width: auto !important;
+    margin-left: 4px;
+    flex: 0 0 auto !important;
+    font-size: 0.72rem !important;
+    transition: transform 0.2s ease;
+}
+
+.sidebar-module-button[aria-expanded="true"]
+.sidebar-module-arrow {
+    transform: rotate(180deg);
+}
+
+
+/* =========================================================
+   8. SIDEBAR SUBMENU
+========================================================= */
+
+.sidebar-submenu {
+    width: 100%;
+    padding: 5px 0 3px;
+}
+
+.sidebar-submenu-link {
+    display: flex;
+    min-height: 42px;
+    margin: 3px 0 3px 29px;
+    padding: 9px 11px;
+    align-items: center;
+    gap: 9px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: #416a7d;
+    background: transparent;
+    font-size: 0.79rem;
+    font-weight: 650;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+    .sidebar-submenu-link i {
+        width: 18px;
+        flex: 0 0 18px;
+        color: var(--teal);
+        font-size: 0.92rem;
+        text-align: center;
+    }
+
+    .sidebar-submenu-link span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sidebar-submenu-link:hover {
+        border-color: rgba(7, 152, 164, 0.12);
+        color: var(--teal-dark);
+        background: rgba(255, 255, 255, 0.62);
+    }
+
+    .sidebar-submenu-link.active {
+        border-color: #0e9cab;
+        color: #ffffff;
+        background: var(--teal);
+        box-shadow: 0 7px 17px rgba(7, 152, 164, 0.17);
+    }
+
+        .sidebar-submenu-link.active i {
+            color: #ffffff;
         }
 
 
 /* =========================================================
-   8. SIDEBAR LOGOUT
+   9. DISABLED SIDEBAR ITEMS
+========================================================= */
+
+.sidebar-link.disabled-link {
+    color: #7396a4;
+    cursor: not-allowed;
+    opacity: 0.72;
+}
+
+    .sidebar-link.disabled-link i {
+        color: #78a7b1;
+    }
+
+    .sidebar-link.disabled-link:hover {
+        border-color: transparent;
+        color: #7396a4;
+        background: transparent;
+        box-shadow: none;
+    }
+
+
+/* =========================================================
+   10. STAFF SIDEBAR LOGOUT
 ========================================================= */
 
 .sidebar-bottom {
-    padding: 14px 13px 25px;
+    padding: 13px 13px 22px;
+    flex-shrink: 0;
     border-top: 1px solid #acdcdc;
 }
 
@@ -178,8 +327,8 @@
 .sidebar-logout {
     display: flex;
     width: 100%;
-    min-height: 55px;
-    padding: 12px 15px;
+    min-height: 52px;
+    padding: 11px 15px;
     align-items: center;
     gap: 13px;
     border: 1px solid transparent;
@@ -187,12 +336,13 @@
     color: #315f75;
     background: transparent;
     font-size: 0.93rem;
-    font-weight: 600;
+    font-weight: 650;
     text-align: left;
 }
 
     .sidebar-logout i {
         width: 27px;
+        flex: 0 0 27px;
         color: #16859a;
         font-size: 1.3rem;
         text-align: center;
@@ -206,11 +356,12 @@
 
 
 /* =========================================================
-   9. STAFF MAIN CONTENT
+   11. STAFF MAIN CONTENT
 ========================================================= */
 
 .staff-main {
     width: calc(100% - 250px);
+    min-width: 0;
     min-height: 100vh;
     margin-left: 250px;
 }
@@ -221,18 +372,23 @@
     padding: 17px 38px;
     align-items: center;
     justify-content: space-between;
+    gap: 20px;
     border-bottom: 1px solid var(--border);
-    background: var(--white);
+    background: rgba(255, 255, 255, 0.98);
 }
 
 .topbar-page-name {
+    overflow: hidden;
     color: var(--navy);
     font-size: 1.35rem;
     font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .topbar-user {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 13px;
 }
@@ -241,9 +397,9 @@
     display: flex;
     width: 53px;
     height: 53px;
+    flex: 0 0 53px;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
     border-radius: 50%;
     color: var(--white);
     background: linear-gradient( 135deg, var(--teal), var(--teal-dark) );
@@ -253,6 +409,7 @@
 
 .user-information {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     line-height: 1.3;
 }
@@ -282,7 +439,7 @@
 
 
 /* =========================================================
-   10. PUBLIC LAYOUT
+   12. PUBLIC LAYOUT
 ========================================================= */
 
 .public-layout {
@@ -292,31 +449,43 @@
     background: radial-gradient( circle at right top, rgba(47, 220, 218, 0.25), transparent 27% ), radial-gradient( circle at left bottom, rgba(94, 229, 221, 0.18), transparent 28% ), #f5ffff;
 }
 
+
+/* =========================================================
+   13. PUBLIC HEADER
+========================================================= */
+
 .public-header {
     position: sticky;
     top: 0;
     z-index: 1000;
+    flex-shrink: 0;
     border-bottom: 1px solid var(--border);
-    background: var(--white);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 4px 18px rgba(7, 69, 92, 0.04);
 }
 
 .public-navbar {
     display: grid;
+    width: 100%;
+    max-width: 1600px;
     min-height: 100px;
+    margin: 0 auto;
     padding: 14px 45px;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: minmax(110px, 1fr) auto minmax(220px, 1fr);
     align-items: center;
     gap: 30px;
 }
+
+
+/* =========================================================
+   14. PUBLIC LOGO
+========================================================= */
 
 .public-brand {
     display: inline-flex;
     width: fit-content;
     align-items: center;
 }
-
-
-    /* Guest Logo */
 
     .public-logo,
     .public-brand img {
@@ -332,31 +501,47 @@
         object-fit: contain !important;
     }
 
+
+/* =========================================================
+   15. PUBLIC NAVIGATION
+========================================================= */
+
 .public-navigation {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 38px;
+    gap: 30px;
 }
 
 .public-nav-link {
     display: inline-flex;
-    padding: 11px 12px;
+    padding: 10px 12px;
     align-items: center;
-    gap: 9px;
+    gap: 8px;
     border-radius: 10px;
     color: var(--navy);
-    font-size: 1rem;
+    font-size: 0.98rem;
     font-weight: 650;
+    white-space: nowrap;
 }
+
+    .public-nav-link i {
+        color: var(--teal-dark);
+    }
 
     .public-nav-link:hover {
         color: var(--teal-dark);
         background: #ddfaf8;
     }
 
+
+/* =========================================================
+   16. PUBLIC ACCOUNT AREA
+========================================================= */
+
 .public-account {
     display: flex;
+    min-width: 0;
     align-items: center;
     justify-content: flex-end;
     gap: 11px;
@@ -374,20 +559,18 @@
     white-space: nowrap;
 }
 
-
-/* Public Login/Register Buttons */
-
 .btn-public-register,
 .btn-public-login {
     display: inline-flex;
-    min-height: 50px;
-    padding: 11px 23px;
+    min-height: 48px;
+    padding: 10px 21px;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border-radius: 12px;
-    font-size: 0.98rem;
+    border-radius: 11px;
+    font-size: 0.95rem;
     font-weight: 700;
+    white-space: nowrap;
 }
 
 .btn-public-register {
@@ -415,146 +598,489 @@
         transform: translateY(-1px);
     }
 
+
+/* =========================================================
+   17. PUBLIC CONTENT
+========================================================= */
+
 .public-content {
     width: 100%;
     max-width: 1600px;
-    flex: 1;
+    min-height: calc(100vh - 165px);
     margin: 0 auto;
-    padding: 36px 48px;
+    padding: 32px 45px 42px;
+    flex: 1;
 }
+
+    /*
+ * Keeps the Student Details and Guardian Details pages
+ * aligned with the public page layout.
+ */
+
+    .public-content > .row {
+        width: auto;
+        margin-right: -12px;
+        margin-left: -12px;
+    }
+
+    .public-content .enrollment-card {
+        width: 100%;
+        margin-right: auto;
+        margin-left: auto;
+    }
+
+        .public-content .enrollment-card h1 {
+            color: var(--navy);
+            font-size: clamp(1.65rem, 3vw, 2.15rem);
+            font-weight: 750;
+        }
+
+        .public-content .enrollment-card .form-label,
+        .public-content .enrollment-card .form-check-label {
+            color: var(--navy);
+            font-weight: 650;
+        }
+
+        .public-content .enrollment-card .form-control,
+        .public-content .enrollment-card .form-select {
+            min-height: 44px;
+            border-color: var(--border);
+            border-radius: 9px;
+            color: var(--navy);
+            background-color: #ffffff;
+        }
+
+        .public-content .enrollment-card textarea.form-control {
+            min-height: auto;
+        }
+
+        .public-content .enrollment-card .form-control:focus,
+        .public-content .enrollment-card .form-select:focus {
+            border-color: var(--teal);
+            box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.12);
+        }
+
+        .public-content .enrollment-card .btn-primary {
+            border-color: var(--teal);
+            background: var(--teal);
+        }
+
+            .public-content .enrollment-card .btn-primary:hover {
+                border-color: var(--teal-dark);
+                background: var(--teal-dark);
+            }
+
+        .public-content .enrollment-card .btn-outline-primary {
+            border-color: var(--teal);
+            color: var(--teal-dark);
+        }
+
+            .public-content .enrollment-card .btn-outline-primary:hover {
+                color: #ffffff;
+                background: var(--teal);
+            }
+
+
+/* =========================================================
+   18. PUBLIC FOOTER
+========================================================= */
 
 .public-footer {
     display: flex;
-    min-height: 72px;
-    padding: 18px 25px;
+    min-height: 65px;
+    padding: 18px 30px;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
     border-top: 1px solid var(--border);
     color: var(--muted);
-    background: var(--white);
+    background: rgba(255, 255, 255, 0.9);
+    font-size: 0.88rem;
     text-align: center;
 }
 
+
+/* =========================================================
+   19. SCROLLBAR
+========================================================= */
+
+.sidebar-navigation::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sidebar-navigation::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-navigation::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(7, 152, 164, 0.22);
+}
+
+
+/* =========================================================
+   20. RESPONSIVE - MEDIUM DESKTOP
+========================================================= */
+
+@media (max-width: 1200px) {
+    .staff-content {
+        padding: 30px 28px;
+    }
+
+    .public-navbar {
+        padding-right: 30px;
+        padding-left: 30px;
+    }
+
+    .public-content {
+        padding-right: 30px;
+        padding-left: 30px;
+    }
+}
+
+
+/* =========================================================
+   21. RESPONSIVE - TABLET
+========================================================= */
+
 @media (max-width: 992px) {
     .staff-sidebar {
-        position: relative;
         width: 220px;
-        min-width: 220px;
     }
 
     .staff-main {
         width: calc(100% - 220px);
-        margin-left: 0;
-    }
-
-    .sidebar-logo {
-        width: 95px !important;
-        max-width: 95px !important;
-    }
-
-    .public-navbar {
-        padding: 14px 25px;
-        grid-template-columns: auto 1fr;
-    }
-
-    .public-navigation {
-        display: none;
-    }
-
-    .public-account {
-        justify-self: end;
-    }
-
-    .public-content {
-        padding: 30px 25px;
-    }
-}
-
-@media (max-width: 768px) {
-    .staff-layout {
-        display: block;
-    }
-
-    .staff-sidebar {
-        position: relative;
-        width: 100%;
-        min-width: 100%;
-        min-height: auto;
-    }
-
-    .sidebar-brand {
-        min-height: 140px;
+        margin-left: 220px;
     }
 
     .sidebar-navigation {
-        flex: none;
+        padding-right: 10px;
+        padding-left: 10px;
     }
 
-    .sidebar-bottom {
-        padding-bottom: 20px;
+    .sidebar-link {
+        padding-right: 12px;
+        padding-left: 12px;
+        gap: 10px;
+        font-size: 0.86rem;
     }
 
-    .staff-main {
-        width: 100%;
-        margin-left: 0;
+    .sidebar-link-content {
+        gap: 8px;
+    }
+
+        .sidebar-link-content > span {
+            font-size: 0.78rem;
+        }
+
+    .sidebar-submenu-link {
+        margin-left: 22px;
+        font-size: 0.75rem;
     }
 
     .staff-topbar {
-        min-height: 83px;
-        padding: 14px 20px;
+        min-height: 86px;
+        padding: 15px 24px;
     }
 
     .staff-content {
-        min-height: auto;
-        padding: 25px 18px;
+        min-height: calc(100vh - 86px);
+        padding: 26px 24px;
     }
 
     .public-navbar {
-        min-height: 95px;
-        padding: 12px 18px;
+        min-height: 88px;
+        padding: 12px 24px;
+        grid-template-columns: minmax(90px, 1fr) auto minmax(180px, 1fr);
+        gap: 18px;
+    }
+
+    .public-navigation {
+        gap: 12px;
+    }
+
+    .public-nav-link {
+        padding: 9px;
+        font-size: 0.9rem;
+    }
+
+    .public-logo,
+    .public-brand img {
+        width: 75px !important;
+        max-width: 75px !important;
+    }
+
+    .btn-public-register,
+    .btn-public-login {
+        min-height: 43px;
+        padding: 9px 15px;
+        font-size: 0.88rem;
     }
 
     .public-user-email {
         display: none;
     }
 
-    .btn-public-register, .btn-public-login {
-        min-height: 43px;
-        padding: 9px 14px;
-        font-size: 0.9rem;
-    }
-
     .public-content {
-        padding: 25px 18px;
+        padding: 26px 24px 36px;
     }
 }
 
-@media (max-width: 520px) {
+
+/* =========================================================
+   22. RESPONSIVE - SMALL TABLET / MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+    .auth-layout {
+        padding: 18px;
+        align-items: flex-start;
+    }
+
+    .staff-layout {
+        display: block;
+    }
+
+    .staff-sidebar {
+        position: relative;
+        top: auto;
+        bottom: auto;
+        left: auto;
+        width: 100%;
+        min-height: auto;
+        max-height: none;
+        border-right: 0;
+        border-bottom: 1px solid #b9e3e4;
+        box-shadow: 0 7px 20px rgba(3, 66, 86, 0.07);
+    }
+
+    .sidebar-brand {
+        min-height: 86px;
+    }
+
+    .sidebar-logo {
+        width: 82px !important;
+        max-width: 82px !important;
+    }
+
+    .sidebar-navigation {
+        padding: 5px 16px 14px;
+        overflow: visible;
+    }
+
+    .sidebar-link {
+        min-height: 48px;
+        padding: 10px 13px;
+    }
+
+    .sidebar-link-content > span {
+        font-size: 0.88rem;
+    }
+
+    .sidebar-submenu-link {
+        margin-right: 0;
+        margin-left: 35px;
+    }
+
+    .sidebar-bottom {
+        padding: 8px 16px 15px;
+    }
+
+    .sidebar-logout {
+        min-height: 46px;
+        padding: 9px 13px;
+    }
+
+    .staff-main {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .staff-topbar {
+        min-height: 76px;
+        padding: 13px 18px;
+    }
+
+    .topbar-page-name {
+        font-size: 1.05rem;
+    }
+
+    .user-avatar {
+        width: 43px;
+        height: 43px;
+        flex-basis: 43px;
+        font-size: 1rem;
+    }
+
+    .user-information strong {
+        max-width: 140px;
+        font-size: 0.9rem;
+    }
+
+    .user-information span {
+        font-size: 0.78rem;
+    }
+
+    .staff-content {
+        min-height: auto;
+        padding: 23px 17px;
+    }
+
+    .public-header {
+        position: relative;
+    }
+
     .public-navbar {
         display: flex;
+        min-height: auto;
+        padding: 13px 18px;
         flex-wrap: wrap;
-        justify-content: center;
+        justify-content: space-between;
+        gap: 12px;
     }
 
     .public-brand {
+        order: 1;
+    }
+
+    .public-account {
+        order: 2;
+    }
+
+    .public-navigation {
         width: 100%;
+        order: 3;
+        justify-content: center;
+        gap: 12px;
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+    }
+
+    .public-logo,
+    .public-brand img {
+        width: 68px !important;
+        max-width: 68px !important;
+    }
+
+    .btn-public-register,
+    .btn-public-login {
+        min-height: 40px;
+        padding: 8px 13px;
+        border-radius: 9px;
+        font-size: 0.82rem;
+    }
+
+    .public-content {
+        min-height: auto;
+        padding: 20px 17px 30px;
+    }
+
+        .public-content > .row {
+            margin-right: 0;
+            margin-left: 0;
+        }
+
+            .public-content > .row > [class*="col-"] {
+                padding-right: 0;
+                padding-left: 0;
+            }
+
+        .public-content .enrollment-card {
+            padding: 25px 20px;
+            border-radius: 16px;
+        }
+
+    .public-footer {
+        min-height: 58px;
+        padding: 16px;
+    }
+}
+
+
+/* =========================================================
+   23. RESPONSIVE - SMALL MOBILE
+========================================================= */
+
+@media (max-width: 480px) {
+    .auth-layout {
+        padding: 12px;
+    }
+
+    .staff-topbar {
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+
+    .user-information {
+        display: none;
+    }
+
+    .staff-content {
+        padding: 19px 13px;
+    }
+
+    .public-navbar {
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+
+    .public-navigation {
+        justify-content: space-between;
+    }
+
+    .public-nav-link {
+        flex: 1;
         justify-content: center;
     }
 
     .public-account {
-        width: 100%;
-        justify-content: center;
+        gap: 7px;
     }
 
-    .topbar-page-name {
-        display: none;
+    .btn-public-register,
+    .btn-public-login {
+        padding-right: 11px;
+        padding-left: 11px;
     }
 
-    .staff-topbar {
-        justify-content: flex-end;
+    .public-content {
+        padding-right: 13px;
+        padding-left: 13px;
     }
 
-    .user-information strong {
-        max-width: 150px;
+        .public-content .enrollment-card {
+            padding: 22px 16px;
+        }
+}
+
+/* =========================================================
+   PUBLIC ENROLLMENT FORM ACTIONS
+========================================================= */
+
+.enrollment-form-actions {
+    display: flex;
+    margin-top: 24px;
+    align-items: center;
+    gap: 12px;
+}
+
+    .enrollment-form-actions .primary-button,
+    .enrollment-form-actions .outline-button {
+        min-height: 44px;
+        padding: 10px 18px;
+        border-radius: 9px;
+        font-size: 0.9rem;
+        font-weight: 700;
     }
+
+@media (max-width: 520px) {
+    .enrollment-form-actions {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+        .enrollment-form-actions .primary-button,
+        .enrollment-form-actions .outline-button {
+            width: 100%;
+        }
 }

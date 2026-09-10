@@ -1,0 +1,898 @@
+﻿/* =========================================================
+   EDUSMART - ADMIN ENROLLMENT MANAGEMENT
+========================================================= */
+
+
+/* =========================================================
+   1. SUMMARY CARDS
+========================================================= */
+
+.enrollment-summary-grid {
+    display: grid;
+    margin-bottom: 22px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.enrollment-summary-card {
+    display: flex;
+    min-width: 0;
+    padding: 18px;
+    align-items: center;
+    gap: 13px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--shadow);
+}
+
+    .enrollment-summary-card > div:last-child {
+        min-width: 0;
+    }
+
+    .enrollment-summary-card span {
+        display: block;
+        overflow: hidden;
+        margin-bottom: 3px;
+        color: var(--muted);
+        font-size: 0.8rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .enrollment-summary-card strong {
+        display: block;
+        color: var(--navy);
+        font-size: 1.45rem;
+        line-height: 1.1;
+    }
+
+.summary-icon {
+    display: inline-flex;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.25rem;
+}
+
+.summary-icon-total {
+    color: #08789a;
+    background: #cef5f8;
+}
+
+.summary-icon-pending {
+    color: #b56a00;
+    background: #fff0cf;
+}
+
+.summary-icon-duplicate {
+    color: #c87500;
+    background: #ffebc2;
+}
+
+.summary-icon-payment {
+    color: #6254c7;
+    background: #ece9ff;
+}
+
+.summary-icon-enrolled {
+    color: #07845a;
+    background: #d0f7e7;
+}
+
+
+/* =========================================================
+   2. FILTER CARD
+========================================================= */
+
+.enrollment-filter-card {
+    width: 100%;
+    margin-bottom: 22px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--shadow);
+}
+
+.enrollment-filter-heading {
+    display: flex;
+    margin-bottom: 18px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+    .enrollment-filter-heading h2 {
+        display: flex;
+        margin: 0 0 4px;
+        align-items: center;
+        gap: 8px;
+        color: var(--navy);
+        font-size: 1.08rem;
+        font-weight: 750;
+    }
+
+        .enrollment-filter-heading h2 i {
+            color: var(--teal);
+        }
+
+    .enrollment-filter-heading p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+    }
+
+.enrollment-filter-grid {
+    display: grid;
+    max-width: 760px;
+    grid-template-columns: minmax(220px, 1fr) minmax(260px, 1fr);
+    gap: 16px;
+}
+
+    .enrollment-filter-grid .form-label {
+        margin-bottom: 6px;
+        color: var(--navy);
+        font-size: 0.86rem;
+        font-weight: 700;
+    }
+
+    .enrollment-filter-grid .form-select {
+        min-height: 42px;
+        border-color: var(--border);
+        border-radius: 9px;
+        color: var(--navy);
+        background-color: #ffffff;
+    }
+
+        .enrollment-filter-grid .form-select:focus {
+            border-color: var(--teal);
+            box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.12);
+        }
+
+.duplicate-filter-wrapper {
+    min-width: 0;
+}
+
+.duplicate-filter-option {
+    display: flex;
+    min-height: 42px;
+    margin: 0;
+    padding: 9px 12px;
+    align-items: center;
+    gap: 9px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--navy);
+    background: #ffffff;
+    cursor: pointer;
+}
+
+    .duplicate-filter-option:hover {
+        border-color: var(--teal);
+        background: #f5fdfd;
+    }
+
+    .duplicate-filter-option .form-check-input {
+        width: 17px;
+        height: 17px;
+        margin: 0;
+        border-color: #9bbbc1;
+    }
+
+        .duplicate-filter-option .form-check-input:checked {
+            border-color: var(--teal);
+            background-color: var(--teal);
+        }
+
+.clear-filter-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--teal-dark);
+    font-size: 0.88rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+    .clear-filter-link:hover {
+        color: var(--teal);
+    }
+
+
+/* =========================================================
+   3. APPLICATION LIST CARD
+========================================================= */
+
+.enrollment-list-card {
+    width: 100%;
+    overflow: hidden;
+}
+
+    .enrollment-list-card .dashboard-card-header {
+        min-height: 72px;
+    }
+
+    .enrollment-list-card .table-responsive {
+        overflow-x: auto;
+    }
+
+
+/* =========================================================
+   4. APPLICATION TABLE
+========================================================= */
+
+.enrollment-table {
+    width: 100%;
+    min-width: 1180px;
+    margin: 0;
+    table-layout: fixed;
+}
+
+    .enrollment-table thead th {
+        padding: 13px 14px;
+        border-top: 0;
+        border-bottom: 1px solid var(--border);
+        color: var(--teal-dark);
+        background: #f3fbfc;
+        font-size: 0.72rem;
+        font-weight: 750;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .enrollment-table tbody td {
+        padding: 15px 14px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border);
+        color: var(--navy);
+        font-size: 0.86rem;
+    }
+
+    .enrollment-table tbody tr {
+        transition: background-color 0.18s ease;
+    }
+
+        .enrollment-table tbody tr:hover {
+            background: #f8fdfd;
+        }
+
+        .enrollment-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+
+    /* =========================================================
+   5. TABLE COLUMN WIDTHS
+========================================================= */
+
+    .enrollment-table .column-application {
+        width: 13%;
+    }
+
+    .enrollment-table .column-student {
+        width: 14%;
+    }
+
+    .enrollment-table .column-guardian {
+        width: 18%;
+    }
+
+    .enrollment-table .column-classes {
+        width: 9%;
+    }
+
+    .enrollment-table .column-fee {
+        width: 11%;
+    }
+
+    .enrollment-table .column-submitted {
+        width: 13%;
+    }
+
+    .enrollment-table .column-status {
+        width: 13%;
+    }
+
+    .enrollment-table .column-action {
+        width: 9%;
+    }
+
+
+/* =========================================================
+   6. TABLE CONTENT
+========================================================= */
+
+.application-number,
+.table-primary-text,
+.table-secondary-text {
+    display: block;
+}
+
+.application-number {
+    overflow: hidden;
+    margin-bottom: 5px;
+    color: var(--navy);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.table-primary-text {
+    overflow: hidden;
+    color: var(--navy);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.table-secondary-text {
+    overflow: hidden;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 0.76rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.duplicate-warning {
+    display: inline-flex;
+    padding: 4px 7px;
+    align-items: center;
+    gap: 4px;
+    border-radius: 999px;
+    color: #a55a00;
+    background: #fff0d4;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.class-count-badge,
+.free-fee-badge {
+    display: inline-flex;
+    padding: 5px 9px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.class-count-badge {
+    color: var(--teal-dark);
+    background: #ddf7f8;
+}
+
+.free-fee-badge {
+    color: var(--green);
+    background: #d4f7e7;
+}
+
+
+/* =========================================================
+   7. SORT BUTTON
+========================================================= */
+
+.enrollment-sort-button {
+    display: inline-flex;
+    padding: 0;
+    align-items: center;
+    gap: 4px;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    font-weight: inherit;
+    text-transform: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+    .enrollment-sort-button i {
+        color: #91a7b8;
+        font-size: 0.7rem;
+    }
+
+    .enrollment-sort-button:hover {
+        color: var(--teal);
+    }
+
+
+/* =========================================================
+   8. STATUS PILLS
+========================================================= */
+
+.enrollment-status-pill {
+    display: inline-flex;
+    max-width: 100%;
+    padding: 6px 10px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 750;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.status-pending {
+    color: #a45d00;
+    background: #fff0cf;
+}
+
+.status-duplicate {
+    color: #b55d00;
+    background: #ffe3bd;
+}
+
+.status-payment {
+    color: #5748b5;
+    background: #ece9ff;
+}
+
+.status-confirmed {
+    color: #08789a;
+    background: #d8f5fa;
+}
+
+.status-enrolled {
+    color: #087c53;
+    background: #d1f6e6;
+}
+
+.status-rejected {
+    color: #bd2634;
+    background: #ffe0e3;
+}
+
+.status-cancelled {
+    color: #5e7182;
+    background: #e9eff2;
+}
+
+.status-default {
+    color: var(--navy-soft);
+    background: #edf4f6;
+}
+
+
+/* =========================================================
+   9. TABLE ACTION
+========================================================= */
+
+.table-details-button {
+    display: inline-flex;
+    min-height: 34px;
+    padding: 7px 10px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 1px solid var(--teal);
+    border-radius: 8px;
+    color: var(--teal-dark);
+    background: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+
+    .table-details-button:hover {
+        border-color: var(--teal-dark);
+        color: #ffffff;
+        background: var(--teal-dark);
+    }
+
+
+/* =========================================================
+   10. EMPTY STATE
+========================================================= */
+
+.enrollment-list-card .empty-state {
+    min-height: 260px;
+}
+
+    .enrollment-list-card .empty-state h3 {
+        margin: 10px 0 6px;
+        color: var(--navy);
+        font-size: 1.1rem;
+    }
+
+    .enrollment-list-card .empty-state p {
+        max-width: 450px;
+        margin: 0 auto 16px;
+    }
+
+
+/* =========================================================
+   11. ENROLLMENT DETAILS PAGE
+========================================================= */
+
+.enrollment-details-container {
+    width: 100%;
+}
+
+.enrollment-details-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.7fr);
+    align-items: start;
+    gap: 20px;
+}
+
+.enrollment-details-main,
+.enrollment-details-side {
+    display: grid;
+    gap: 20px;
+}
+
+.enrollment-details-card {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--shadow);
+}
+
+.enrollment-details-card-header {
+    display: flex;
+    min-height: 62px;
+    padding: 16px 20px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+    .enrollment-details-card-header h2 {
+        display: flex;
+        margin: 0;
+        align-items: center;
+        gap: 8px;
+        color: var(--navy);
+        font-size: 1.05rem;
+        font-weight: 750;
+    }
+
+        .enrollment-details-card-header h2 i {
+            color: var(--teal);
+        }
+
+.enrollment-details-card-body {
+    padding: 20px;
+}
+
+.enrollment-information-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 24px;
+}
+
+.enrollment-information-item {
+    min-width: 0;
+}
+
+    .enrollment-information-item.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .enrollment-information-item span {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .enrollment-information-item strong {
+        display: block;
+        overflow-wrap: anywhere;
+        color: var(--navy);
+        font-size: 0.92rem;
+    }
+
+.duplicate-alert {
+    display: flex;
+    padding: 14px;
+    align-items: flex-start;
+    gap: 10px;
+    border: 1px solid #f2ce91;
+    border-radius: 11px;
+    color: #8b5100;
+    background: #fff7e7;
+}
+
+    .duplicate-alert i {
+        margin-top: 1px;
+        color: #c87500;
+        font-size: 1.1rem;
+    }
+
+    .duplicate-alert p {
+        margin: 0;
+        font-size: 0.84rem;
+    }
+
+
+/* =========================================================
+   12. SELECTED CLASS LIST
+========================================================= */
+
+.selected-class-list {
+    display: grid;
+    gap: 12px;
+}
+
+.selected-class-item {
+    display: grid;
+    padding: 14px;
+    grid-template-columns: minmax(180px, 1.4fr) minmax(120px, 0.8fr) minmax(125px, 0.8fr);
+    align-items: center;
+    gap: 14px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: #fbfefe;
+}
+
+    .selected-class-item strong {
+        display: block;
+        color: var(--navy);
+        font-size: 0.88rem;
+    }
+
+    .selected-class-item span {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 0.76rem;
+    }
+
+.class-availability {
+    display: inline-flex !important;
+    width: fit-content;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.class-available {
+    color: var(--green) !important;
+    background: #d5f7e8;
+}
+
+.class-unavailable {
+    color: var(--red) !important;
+    background: #ffe2e5;
+}
+
+
+/* =========================================================
+   13. STATUS HISTORY
+========================================================= */
+
+.enrollment-history-list {
+    display: grid;
+    gap: 0;
+}
+
+.enrollment-history-item {
+    position: relative;
+    padding: 0 0 20px 26px;
+}
+
+    .enrollment-history-item:last-child {
+        padding-bottom: 0;
+    }
+
+    .enrollment-history-item::before {
+        content: "";
+        position: absolute;
+        top: 7px;
+        left: 5px;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--teal);
+    }
+
+    .enrollment-history-item:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 17px;
+        bottom: 2px;
+        left: 9px;
+        width: 1px;
+        background: var(--border);
+    }
+
+    .enrollment-history-item strong {
+        display: block;
+        color: var(--navy);
+        font-size: 0.86rem;
+    }
+
+    .enrollment-history-item span {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 0.74rem;
+    }
+
+    .enrollment-history-item p {
+        margin: 6px 0 0;
+        color: var(--navy-soft);
+        font-size: 0.8rem;
+    }
+
+
+/* =========================================================
+   14. REVIEW ACTIONS
+========================================================= */
+
+.enrollment-review-actions {
+    display: grid;
+    gap: 10px;
+}
+
+    .enrollment-review-actions button {
+        width: 100%;
+    }
+
+.enrollment-action-button {
+    display: inline-flex;
+    min-height: 42px;
+    padding: 9px 14px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 9px;
+    font-weight: 700;
+}
+
+.enrollment-approve-button {
+    border: 1px solid var(--green);
+    color: #ffffff;
+    background: var(--green);
+}
+
+    .enrollment-approve-button:hover {
+        border-color: #05784d;
+        background: #05784d;
+    }
+
+.enrollment-reject-button {
+    border: 1px solid var(--red);
+    color: var(--red);
+    background: #ffffff;
+}
+
+    .enrollment-reject-button:hover {
+        color: #ffffff;
+        background: var(--red);
+    }
+
+.enrollment-cancel-button {
+    border: 1px solid #8195a5;
+    color: #5f7485;
+    background: #ffffff;
+}
+
+    .enrollment-cancel-button:hover {
+        color: #ffffff;
+        background: #5f7485;
+    }
+
+
+/* =========================================================
+   15. MODAL FORMS
+========================================================= */
+
+.enrollment-modal .modal-content {
+    border: 0;
+    border-radius: 15px;
+    box-shadow: 0 18px 50px rgba(7, 69, 92, 0.2);
+}
+
+.enrollment-modal .modal-header {
+    border-bottom-color: var(--border);
+}
+
+.enrollment-modal .modal-footer {
+    border-top-color: var(--border);
+}
+
+.enrollment-modal .modal-title {
+    color: var(--navy);
+    font-size: 1.05rem;
+    font-weight: 750;
+}
+
+.enrollment-modal .form-label {
+    color: var(--navy);
+    font-weight: 700;
+}
+
+.enrollment-modal .form-control {
+    border-color: var(--border);
+    border-radius: 9px;
+}
+
+    .enrollment-modal .form-control:focus {
+        border-color: var(--teal);
+        box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.12);
+    }
+
+
+/* =========================================================
+   16. RESPONSIVE DESIGN
+========================================================= */
+
+@media (max-width: 1280px) {
+    .enrollment-summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 992px) {
+    .enrollment-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .enrollment-details-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .enrollment-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .enrollment-filter-heading {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .enrollment-filter-grid {
+        max-width: none;
+        grid-template-columns: 1fr;
+    }
+
+    .enrollment-information-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .enrollment-information-item.full-width {
+        grid-column: auto;
+    }
+
+    .selected-class-item {
+        grid-template-columns: 1fr;
+    }
+
+    .enrollment-details-card-header,
+    .enrollment-details-card-body {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+}
+
+@media (max-width: 520px) {
+    .enrollment-filter-card {
+        padding: 17px;
+    }
+
+    .enrollment-summary-card {
+        padding: 15px;
+    }
+
+    .summary-icon {
+        width: 42px;
+        height: 42px;
+        flex-basis: 42px;
+    }
+}

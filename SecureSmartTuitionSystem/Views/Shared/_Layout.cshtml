@@ -137,21 +137,73 @@
 
                 @if (isAdmin)
                     {
-                        <!-- Admin Class Management -->
-                        <a class="sidebar-link
-                                      @(currentController ==
-                                                           "ClassSessions"
-                                                               ? "active"
-                                                               : "")"
-                   asp-controller="ClassSessions"
-                   asp-action="Index">
+                        <!-- Class and Enrollment Module -->
+                        <div class="sidebar-module">
 
+                            <button type="button"
+                                    class="sidebar-link sidebar-module-button
+                           @(currentController == "ClassSessions" ||
+                                                          currentController == "AdminEnrollments"
+                                                              ? "active"
+                                                              : "")"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#classEnrollmentMenu"
+                            aria-expanded="@(currentController == "ClassSessions" ||
+                                                          currentController == "AdminEnrollments"
+                                                              ? "true"
+                                                              : "false")"
+                                                                        aria-controls="classEnrollmentMenu">
+
+                        <span class="sidebar-link-content">
                             <i class="bi bi-people-fill"></i>
 
                             <span>
-                                Class &amp; Enrollment
+                                Class & Enrollment
+                            </span>
+                        </span>
+
+                        <i class="bi bi-chevron-down sidebar-module-arrow"></i>
+                    </button>
+
+                    <div id="classEnrollmentMenu"
+                         class="collapse sidebar-submenu
+                        @(currentController == "ClassSessions" ||
+                                            currentController == "AdminEnrollments"
+                                                ? "show"
+                                                : "")">
+
+                        <!-- Class Sessions -->
+                        <a class="sidebar-submenu-link
+                            @(currentController == "ClassSessions"
+                                                   ? "active"
+                                                   : "")"
+                                                        asp-controller="ClassSessions"
+                                                        asp-action="Index">
+
+                            <i class="bi bi-calendar3"></i>
+
+                            <span>
+                                Class Sessions
                             </span>
                         </a>
+
+                        <!-- Enrollment Requests -->
+                        <a class="sidebar-submenu-link
+                            @(currentController == "AdminEnrollments"
+                                                   ? "active"
+                                                   : "")"
+                           asp-controller="AdminEnrollments"
+                           asp-action="Index">
+
+                                    <i class="bi bi-clipboard-check-fill"></i>
+
+                                    <span>
+                                        Enrollment Requests
+                                    </span>
+                                </a>
+
+                            </div>
+                        </div>
 
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">

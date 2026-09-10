@@ -1,0 +1,1121 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.EnrollmentSelectionViewModel
+
+@{
+    ViewData["Title"] = "Select Classes";
+
+    string minimumStartDate =
+        DateTime.Today.ToString("yyyy-MM-dd");
+
+    string maximumStartDate =
+        DateTime.Today.AddYears(1).ToString("yyyy-MM-dd");
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/enrollment-submission.css"
+          asp-append-version="true" />
+}
+
+<div class="public-content enrollment-page">
+    <partial name="_EnrollmentSteps" model="3" />
+
+    <form asp-controller="EnrollmentSubmission"
+          asp-action="ContinueToOptions"
+          method="post"
+          id="selectClassesForm">
+
+        @Html.AntiForgeryToken()
+
+        <div class="enrollment-card">
+            <div class="enrollment-card-header">
+                <div>
+                    <span class="enrollment-eyebrow">
+                        Step 3 of 5
+                    </span>
+
+                    <h1>Select Classes</h1>
+
+                    <p>
+                        Choose the classes that the student would like
+                        to enrol in.
+                    </p>
+                </div>
+
+                <div class="enrollment-step-icon">
+                    <i class="bi bi-journal-check"></i>
+                </div>
+            </div>
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger validation-summary">
+            </div>
+
+            <!-- Applicant summary -->
+            <section class="enrollment-section">
+                <div class="enrollment-section-title">
+                    <i class="bi bi-person-check"></i>
+
+                    <div>
+                        <h2>Applicant Information</h2>
+
+                        <p>
+                            Confirm the student and guardian before
+                            selecting classes.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="applicant-summary-grid">
+                    <div class="applicant-summary-item">
+                        <span class="summary-label">
+                            Student
+                        </span>
+
+                        <strong>
+                            @Model.StudentName
+                        </strong>
+                    </div>
+
+                    <div class="applicant-summary-item">
+                        <span class="summary-label">
+                            Parent / Guardian
+                        </span>
+
+                        <strong>
+                            @Model.GuardianName
+                        </strong>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Class filters -->
+            <section class="enrollment-section">
+                <div class="enrollment-section-title">
+                    <i class="bi bi-funnel"></i>
+
+                    <div>
+                        <h2>Find Classes</h2>
+
+                        <p>
+                            Select an education stage, academic level
+                            and subject.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="enrollment-filter-grid">
+                    <div class="form-group">
+                        <label for="educationStageFilter"
+                               class="form-label">
+                            Education Stage
+                        </label>
+
+                        <select id="educationStageFilter"
+                                class="form-select">
+                            <option value="">
+                                All Education Stages
+                            </option>
+
+                            <option value="Primary">
+                                Primary
+                            </option>
+
+                            <option value="Secondary">
+                                Secondary
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="academicLevelFilter"
+                               class="form-label">
+                            Academic Level
+                        </label>
+
+                        <select id="academicLevelFilter"
+                                class="form-select"
+                                disabled>
+                            <option value="">
+                                Select education stage first
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="subjectFilter"
+                               class="form-label">
+                            Subject
+                        </label>
+
+                        <select id="subjectFilter"
+                                class="form-select"
+                                disabled>
+                            <option value="">
+                                Select academic level first
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Available classes -->
+            <section class="enrollment-section">
+                <div class="enrollment-section-title
+                            enrollment-section-title-row">
+                    <div class="section-title-content">
+                        <i class="bi bi-calendar-week"></i>
+
+                        <div>
+                            <h2>Available Classes</h2>
+
+                            <p>
+                                Select one or more classes.
+                            </p>
+                        </div>
+                    </div>
+
+                    <span class="selected-count-badge">
+                        <span id="visibleClassCount">
+                            @Model.AvailableClasses.Count
+                        </span>
+                        available
+                    </span>
+                </div>
+
+                <span asp-validation-for="SelectedClassSessionIds"
+                      class="text-danger">
+                </span>
+
+                @if (Model.AvailableClasses.Count == 0)
+                {
+                    <div class="enrollment-empty-state">
+                        <i class="bi bi-calendar-x"></i>
+
+                        <h3>No classes available</h3>
+
+                        <p>
+                            There are currently no active classes
+                            available for enrolment.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="available-class-grid"
+                         id="availableClassGrid">
+
+                        @foreach (var classItem in Model.AvailableClasses)
+                        {
+                            bool isSelected =
+                            Model.SelectedClassSessionIds.Contains(
+                            classItem.ClassSessionId);
+
+                            int remainingSeats =
+                            classItem.Capacity -
+                            classItem.StudentCount;
+
+                            <article class="selectable-class-card"
+                                     data-class-id="@classItem.ClassSessionId"
+                                     data-stage="@classItem.EducationStage"
+                                     data-level="@classItem.AcademicLevel"
+                                     data-subject="@classItem.SubjectName"
+                                     data-fee="@classItem.MonthlyFee">
+
+                                <label class="class-selection-label">
+                                    <input type="checkbox"
+                                           name="SelectedClassSessionIds"
+                                           value="@classItem.ClassSessionId"
+                                           class="class-selection-checkbox"
+                                           checked="@isSelected" />
+
+                                    <span class="custom-checkbox">
+                                        <i class="bi bi-check-lg"></i>
+                                    </span>
+
+                                    <span class="class-selection-content">
+                                        <span class="class-card-top">
+                                            <span>
+                                                <strong class="class-card-name">
+                                                    @classItem.ClassName
+                                                </strong>
+
+                                                <span class="class-card-subject">
+                                                    @classItem.SubjectName
+                                                </span>
+                                            </span>
+
+                                            @if (classItem.MonthlyFee == 0)
+                                            {
+                                                <span class="status-pill
+                                                                                     status-success">
+                                                    Free
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="class-fee">
+                                                    RM
+                                                    @(classItem.MonthlyFee.ToString("F2"))
+                                                    / month
+                                                </span>
+                                            }
+                                        </span>
+
+                                        <span class="class-card-information">
+                                            <span>
+                                                <i class="bi bi-mortarboard"></i>
+
+                                                @classItem.EducationStage ·
+                                                @classItem.AcademicLevel
+                                            </span>
+
+                                            <span>
+                                                <i class="bi bi-calendar3"></i>
+
+                                                @classItem.Day
+                                            </span>
+
+                                            <span>
+                                                <i class="bi bi-clock"></i>
+
+                                                @classItem.StartTime –
+                                                @classItem.EndTime
+                                            </span>
+
+                                            <span>
+                                                <i class="bi bi-people"></i>
+
+                                                @if (remainingSeats <= 0)
+                                                {
+                                                    <span class="text-danger">
+                                                        Class full
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span>
+                                                        @remainingSeats
+                                                        seat(s) available
+                                                    </span>
+                                                }
+                                            </span>
+                                        </span>
+                                    </span>
+                                </label>
+                            </article>
+                        }
+                    </div>
+
+                    <div id="noFilteredClasses"
+                         class="enrollment-empty-state"
+                         hidden>
+                        <i class="bi bi-calendar-x"></i>
+
+                        <h3>No matching classes</h3>
+
+                        <p>
+                            No active classes are available for the
+                            selected education stage, academic level
+                            and subject.
+                        </p>
+                    </div>
+                }
+            </section>
+
+            <!-- Selected class summary -->
+            <section class="enrollment-section selected-classes-section">
+                <div class="enrollment-section-title">
+                    <i class="bi bi-check2-square"></i>
+
+                    <div>
+                        <h2>Your Selected Classes</h2>
+
+                        <p>
+                            Your selection updates immediately.
+                        </p>
+                    </div>
+                </div>
+
+                <div id="selectedClassesEmpty" class="selected-classes-empty">
+                    No classes selected yet.
+                </div>
+                <div id="selectedClassesList" class="selected-classes-list"></div>
+            </section>
+
+            <!-- Selection total -->
+            <section class="class-selection-totals">
+                <div class="class-selection-total-row">
+                    <span>Selected Classes:</span>
+
+                    <strong id="selectedClassCount">
+                        0
+                    </strong>
+                </div>
+
+                <div class="class-selection-total-row">
+                    <span>Current Monthly Tuition:</span>
+
+                    <strong id="selectedMonthlyFee">
+                        RM 0.00
+                    </strong>
+                </div>
+            </section>
+
+            <div class="enrollment-form-actions">
+                <button type="submit"
+                        formaction="@Url.Action(
+                                                                            "BackToGuardianDetails",
+                                                                            "EnrollmentSubmission")"
+                        formmethod="post"
+                        class="outline-button"
+                        formnovalidate>
+                    <i class="bi bi-arrow-left"></i>
+                    Back: Guardian Details
+                </button>
+
+                <button type="submit"
+                        class="primary-button">
+                    Continue: Enrollment Options
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Review modal -->
+        <div class="enrollment-modal-backdrop"
+             id="reviewModal"
+             hidden>
+
+            <div class="enrollment-review-modal"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="reviewModalTitle">
+
+                <div class="review-modal-header">
+                    <div>
+                        <span class="enrollment-eyebrow">
+                            Final Review
+                        </span>
+
+                        <h2 id="reviewModalTitle">
+                            Review Enrollment Application
+                        </h2>
+                    </div>
+
+                    <button type="button"
+                            class="modal-close-button"
+                            id="closeReviewModal"
+                            aria-label="Close">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <div class="review-modal-body">
+                    <div class="review-applicant-grid">
+                        <div>
+                            <span>Student</span>
+                            <strong>@Model.StudentName</strong>
+                        </div>
+
+                        <div>
+                            <span>Parent / Guardian</span>
+                            <strong>@Model.GuardianName</strong>
+                        </div>
+                    </div>
+
+                    <div class="review-section">
+                        <h3>Selected Classes</h3>
+
+                        <div id="reviewSelectedClasses"
+                             class="review-class-list">
+                        </div>
+                    </div>
+
+                    <div class="review-total-row">
+                        <span>
+                            Estimated Monthly Fee
+                        </span>
+
+                        <strong id="reviewMonthlyFee">
+                            RM 0.00
+                        </strong>
+                    </div>
+
+                    <p class="review-information-message">
+                        <i class="bi bi-info-circle"></i>
+
+                        The application will be submitted for
+                        administrator review. Enrollment will only be
+                        confirmed after approval and successful payment.
+                    </p>
+                </div>
+
+                <div class="review-modal-actions">
+                    <button type="button"
+                            class="outline-button"
+                            id="continueEditingButton">
+                        Continue Editing
+                    </button>
+
+                    <button type="submit"
+                            class="primary-button"
+                            id="submitApplicationButton">
+                        <i class="bi bi-send-check"></i>
+                        Submit Application
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const form =
+                document.getElementById("selectClassesForm");
+
+            const stageSelect =
+                document.getElementById("educationStageFilter");
+
+            const levelSelect =
+                document.getElementById("academicLevelFilter");
+
+            const subjectSelect =
+                document.getElementById("subjectFilter");
+
+            const classCards =
+                Array.from(
+                    document.querySelectorAll(
+                        ".selectable-class-card"
+                    )
+                );
+
+            const classCheckboxes =
+                Array.from(
+                    document.querySelectorAll(
+                        ".class-selection-checkbox"
+                    )
+                );
+
+            const noFilteredClasses =
+                document.getElementById("noFilteredClasses");
+
+            const visibleClassCount =
+                document.getElementById("visibleClassCount");
+
+            const selectedClassCount =
+                document.getElementById("selectedClassCount");
+
+            const selectedMonthlyFee =
+                document.getElementById("selectedMonthlyFee");
+
+            const selectedClassesList =
+                document.getElementById("selectedClassesList");
+
+            const selectedClassesEmpty =
+                document.getElementById("selectedClassesEmpty");
+
+            const requestedStartDate =
+                document.getElementById("requestedStartDate");
+
+            const finalTwoWeeksSection =
+                document.getElementById("finalTwoWeeksSection");
+
+            const finalTwoWeeksConfirmed =
+                document.getElementById(
+                    "finalTwoWeeksConfirmed"
+                );
+
+            const reviewButton =
+                document.getElementById(
+                    "reviewApplicationButton"
+                );
+
+            const reviewModal =
+                document.getElementById("reviewModal");
+
+            const closeReviewModal =
+                document.getElementById("closeReviewModal");
+
+            const continueEditingButton =
+                document.getElementById(
+                    "continueEditingButton"
+                );
+
+            const reviewSelectedClasses =
+                document.getElementById(
+                    "reviewSelectedClasses"
+                );
+
+            const reviewMonthlyFee =
+                document.getElementById(
+                    "reviewMonthlyFee"
+                );
+
+            const academicLevels = {
+                Primary: [
+                    "Year 1",
+                    "Year 2",
+                    "Year 3",
+                    "Year 4",
+                    "Year 5",
+                    "Year 6"
+                ],
+
+                Secondary: [
+                    "Form 1",
+                    "Form 2",
+                    "Form 3",
+                    "Form 4",
+                    "Form 5"
+                ]
+            };
+
+            function normalizeValue(value) {
+                return (value ?? "")
+                    .trim()
+                    .toLowerCase();
+            }
+
+            function setFirstOption(
+                selectElement,
+                text,
+                disabled
+            ) {
+                if (!selectElement) {
+                    return;
+                }
+
+                selectElement.innerHTML = "";
+
+                const option =
+                    document.createElement("option");
+
+                option.value = "";
+                option.textContent = text;
+
+                selectElement.appendChild(option);
+                selectElement.disabled = disabled;
+            }
+
+            function addOption(
+                selectElement,
+                value,
+                text
+            ) {
+                const option =
+                    document.createElement("option");
+
+                option.value = value;
+                option.textContent = text;
+
+                selectElement.appendChild(option);
+            }
+
+            function populateAcademicLevels() {
+                const selectedStage =
+                    stageSelect.value;
+
+                setFirstOption(
+                    levelSelect,
+                    selectedStage
+                        ? "All Academic Levels"
+                        : "Select education stage first",
+                    !selectedStage
+                );
+
+                setFirstOption(
+                    subjectSelect,
+                    "Select academic level first",
+                    true
+                );
+
+                if (selectedStage) {
+                    const levels =
+                        academicLevels[selectedStage] ?? [];
+
+                    levels.forEach(function (level) {
+                        addOption(
+                            levelSelect,
+                            level,
+                            level
+                        );
+                    });
+                }
+
+                filterClassCards();
+            }
+
+            function populateSubjects() {
+                const selectedStage =
+                    normalizeValue(stageSelect.value);
+
+                const selectedLevel =
+                    normalizeValue(levelSelect.value);
+
+                setFirstOption(
+                    subjectSelect,
+                    selectedLevel
+                        ? "All Subjects"
+                        : "Select academic level first",
+                    !selectedLevel
+                );
+
+                if (!selectedStage ||
+                    !selectedLevel) {
+
+                    filterClassCards();
+                    return;
+                }
+
+                /*
+                 * Subjects are taken from existing classes.
+                 * Therefore, users will not see a subject that
+                 * currently has no available class.
+                 */
+                const subjects = classCards
+                    .filter(function (card) {
+                        return normalizeValue(
+                            card.dataset.stage
+                        ) === selectedStage &&
+                        normalizeValue(
+                            card.dataset.level
+                        ) === selectedLevel;
+                    })
+                    .map(function (card) {
+                        return (
+                            card.dataset.subject ?? ""
+                        ).trim();
+                    })
+                    .filter(function (subject) {
+                        return subject.length > 0;
+                    });
+
+                const uniqueSubjects =
+                    [...new Set(subjects)]
+                        .sort(function (first, second) {
+                            return first.localeCompare(
+                                second
+                            );
+                        });
+
+                uniqueSubjects.forEach(function (subject) {
+                    addOption(
+                        subjectSelect,
+                        subject,
+                        subject
+                    );
+                });
+
+                filterClassCards();
+            }
+
+            function filterClassCards() {
+                const selectedStage =
+                    normalizeValue(stageSelect.value);
+
+                const selectedLevel =
+                    normalizeValue(levelSelect.value);
+
+                const selectedSubject =
+                    normalizeValue(subjectSelect.value);
+
+                let numberOfVisibleClasses = 0;
+
+                classCards.forEach(function (card) {
+                    const cardStage =
+                        normalizeValue(
+                            card.dataset.stage
+                        );
+
+                    const cardLevel =
+                        normalizeValue(
+                            card.dataset.level
+                        );
+
+                    const cardSubject =
+                        normalizeValue(
+                            card.dataset.subject
+                        );
+
+                    const stageMatches =
+                        !selectedStage ||
+                        cardStage === selectedStage;
+
+                    const levelMatches =
+                        !selectedLevel ||
+                        cardLevel === selectedLevel;
+
+                    const subjectMatches =
+                        !selectedSubject ||
+                        cardSubject === selectedSubject;
+
+                    const shouldDisplay =
+                        stageMatches &&
+                        levelMatches &&
+                        subjectMatches;
+
+                    card.hidden = !shouldDisplay;
+
+                    if (shouldDisplay) {
+                        numberOfVisibleClasses++;
+                    }
+                });
+
+                if (visibleClassCount) {
+                    visibleClassCount.textContent =
+                        numberOfVisibleClasses;
+                }
+
+                if (noFilteredClasses) {
+                    noFilteredClasses.hidden =
+                        numberOfVisibleClasses !== 0;
+                }
+            }
+
+            function updateSelectedClassCard(
+                checkbox
+            ) {
+                const card =
+                    checkbox.closest(
+                        ".selectable-class-card"
+                    );
+
+                if (!card) {
+                    return;
+                }
+
+                card.classList.toggle(
+                    "selected",
+                    checkbox.checked
+                );
+            }
+
+            function getSelectedCards() {
+                return classCheckboxes
+                    .filter(function (checkbox) {
+                        return checkbox.checked;
+                    })
+                    .map(function (checkbox) {
+                        return checkbox.closest(
+                            ".selectable-class-card"
+                        );
+                    })
+                    .filter(function (card) {
+                        return card !== null;
+                    });
+            }
+
+            function calculateSelectedFee() {
+                return getSelectedCards()
+                    .reduce(function (total, card) {
+                        const fee =
+                            Number.parseFloat(
+                                card.dataset.fee ?? "0"
+                            );
+
+                        return total +
+                            (Number.isFinite(fee)
+                                ? fee
+                                : 0);
+                    }, 0);
+            }
+
+            function updateSelectionSummary() {
+                const selectedCards =
+                    getSelectedCards();
+
+                const totalFee =
+                    calculateSelectedFee();
+
+                if (selectedClassCount) {
+                    selectedClassCount.textContent =
+                        selectedCards.length;
+                }
+
+                if (selectedMonthlyFee) {
+                    selectedMonthlyFee.textContent =
+                        "RM " +
+                        totalFee.toFixed(2);
+                }
+
+                classCheckboxes.forEach(
+                    updateSelectedClassCard
+                );
+
+                if (selectedClassesList) {
+                    selectedClassesList.innerHTML = "";
+
+                    selectedCards.forEach(function (card) {
+                        const item = document.createElement("div");
+                        item.className = "selected-class-summary-item";
+
+                        const content = document.createElement("div");
+                        const name = document.createElement("strong");
+                        const details = document.createElement("span");
+                        const removeButton = document.createElement("button");
+
+                        name.textContent = card.querySelector(".class-card-name")
+                            ?.textContent.trim() ?? "Selected class";
+                        details.textContent =
+                            `${card.dataset.subject} · ${card.dataset.stage} · ${card.dataset.level}`;
+
+                        removeButton.type = "button";
+                        removeButton.className = "remove-selected-class";
+                        removeButton.innerHTML = '<i class="bi bi-x-lg"></i> Remove';
+                        removeButton.addEventListener("click", function () {
+                            const checkbox = card.querySelector(".class-selection-checkbox");
+                            checkbox.checked = false;
+                            updateSelectionSummary();
+                        });
+
+                        content.appendChild(name);
+                        content.appendChild(details);
+                        item.appendChild(content);
+                        item.appendChild(removeButton);
+                        selectedClassesList.appendChild(item);
+                    });
+                }
+
+                if (selectedClassesEmpty) {
+                    selectedClassesEmpty.hidden = selectedCards.length > 0;
+                }
+            }
+
+            function updateFinalTwoWeeksWarning() {
+                if (!requestedStartDate ||
+                    !finalTwoWeeksSection ||
+                    !finalTwoWeeksConfirmed) {
+                    return;
+                }
+
+                if (!requestedStartDate.value) {
+                    finalTwoWeeksSection.hidden = true;
+                    finalTwoWeeksConfirmed.required = false;
+                    return;
+                }
+
+                const selectedDate =
+                    new Date(
+                        requestedStartDate.value +
+                        "T00:00:00"
+                    );
+
+                const lastDayOfMonth =
+                    new Date(
+                        selectedDate.getFullYear(),
+                        selectedDate.getMonth() + 1,
+                        0
+                    );
+
+                const finalTwoWeeksStart =
+                    new Date(lastDayOfMonth);
+
+                finalTwoWeeksStart.setDate(
+                    lastDayOfMonth.getDate() - 13
+                );
+
+                const isFinalTwoWeeks =
+                    selectedDate >= finalTwoWeeksStart;
+
+                finalTwoWeeksSection.hidden =
+                    !isFinalTwoWeeks;
+
+                finalTwoWeeksConfirmed.required =
+                    isFinalTwoWeeks;
+
+                if (!isFinalTwoWeeks) {
+                    finalTwoWeeksConfirmed.checked =
+                        false;
+                }
+            }
+
+            function openReviewModal() {
+                const selectedCards =
+                    getSelectedCards();
+
+                if (selectedCards.length === 0) {
+                    alert(
+                        "Please select at least one class."
+                    );
+
+                    const firstVisibleCard =
+                        classCards.find(function (card) {
+                            return !card.hidden;
+                        });
+
+                    if (firstVisibleCard) {
+                        firstVisibleCard.scrollIntoView({
+                            behavior: "smooth",
+                            block: "center"
+                        });
+                    }
+
+                    return;
+                }
+
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                reviewSelectedClasses.innerHTML = "";
+
+                selectedCards.forEach(function (card) {
+                    const className =
+                        card.querySelector(
+                            ".class-card-name"
+                        )?.textContent.trim() ??
+                        "Selected class";
+
+                    const subject =
+                        card.dataset.subject ?? "";
+
+                    const stage =
+                        card.dataset.stage ?? "";
+
+                    const level =
+                        card.dataset.level ?? "";
+
+                    const fee =
+                        Number.parseFloat(
+                            card.dataset.fee ?? "0"
+                        );
+
+                    const item =
+                        document.createElement("div");
+
+                    item.className =
+                        "review-class-item";
+
+                    const information =
+                        document.createElement("div");
+
+                    const name =
+                        document.createElement("strong");
+
+                    const details =
+                        document.createElement("span");
+
+                    const price =
+                        document.createElement("strong");
+
+                    name.textContent = className;
+
+                    details.textContent =
+                        subject +
+                        " · " +
+                        stage +
+                        " · " +
+                        level;
+
+                    price.textContent =
+                        fee === 0
+                            ? "Free"
+                            : "RM " +
+                              fee.toFixed(2);
+
+                    information.appendChild(name);
+                    information.appendChild(details);
+
+                    item.appendChild(information);
+                    item.appendChild(price);
+
+                    reviewSelectedClasses.appendChild(
+                        item
+                    );
+                });
+
+                reviewMonthlyFee.textContent =
+                    "RM " +
+                    calculateSelectedFee().toFixed(2);
+
+                reviewModal.hidden = false;
+
+                document.body.classList.add(
+                    "modal-open"
+                );
+            }
+
+            function hideReviewModal() {
+                reviewModal.hidden = true;
+
+                document.body.classList.remove(
+                    "modal-open"
+                );
+            }
+
+            stageSelect?.addEventListener(
+                "change",
+                populateAcademicLevels
+            );
+
+            levelSelect?.addEventListener(
+                "change",
+                populateSubjects
+            );
+
+            subjectSelect?.addEventListener(
+                "change",
+                filterClassCards
+            );
+
+            classCheckboxes.forEach(
+                function (checkbox) {
+                    checkbox.addEventListener(
+                        "change",
+                        updateSelectionSummary
+                    );
+                }
+            );
+
+            requestedStartDate?.addEventListener(
+                "change",
+                updateFinalTwoWeeksWarning
+            );
+
+            reviewButton?.addEventListener(
+                "click",
+                openReviewModal
+            );
+
+            closeReviewModal?.addEventListener(
+                "click",
+                hideReviewModal
+            );
+
+            continueEditingButton?.addEventListener(
+                "click",
+                hideReviewModal
+            );
+
+            reviewModal?.addEventListener(
+                "click",
+                function (event) {
+                    if (event.target === reviewModal) {
+                        hideReviewModal();
+                    }
+                }
+            );
+
+            document.addEventListener(
+                "keydown",
+                function (event) {
+                    if (event.key === "Escape" &&
+                        reviewModal &&
+                        !reviewModal.hidden) {
+
+                        hideReviewModal();
+                    }
+                }
+            );
+
+            updateSelectionSummary();
+            updateFinalTwoWeeksWarning();
+            filterClassCards();
+        });
+    </script>
+}

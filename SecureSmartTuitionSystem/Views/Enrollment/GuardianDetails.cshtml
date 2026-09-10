@@ -13,10 +13,10 @@
 
         <div class="enrollment-card">
 
-            <h1 class="mb-3">Student Details</h1>
+            <h1 class="mb-3">Parent / Guardian Details</h1>
 
             <p class="text-muted mb-4">
-                Tell us about the student who will be attending classes.
+                Provide the details of the student's parent or guardian.
             </p>
 
             @if (TempData["EnrollmentMessage"] is string enrollmentMessage)
@@ -167,7 +167,7 @@
                         <button type="submit"
                                 asp-controller="Enrollment"
                                 asp-action="VerifyExistingParent"
-                                class="btn btn-outline-primary">
+                                class="outline-button">
 
                             Verify Account
 
@@ -272,21 +272,25 @@
                 <!-- ==========================================
                      NAVIGATION
                      ========================================== -->
-                <div class="d-flex justify-content-between">
+                <div class="enrollment-form-actions justify-content-between">
 
                     <button type="submit"
                             asp-controller="Enrollment"
                             asp-action="BackToStudentDetails"
                             formnovalidate
-                            class="btn btn-outline-secondary">
+                            class="outline-button">
+
+                        <i class="bi bi-arrow-left"></i>
                         Back
                     </button>
 
                     <button type="submit"
                             asp-controller="Enrollment"
                             asp-action="GuardianDetails"
-                            class="btn btn-primary">
+                            class="primary-button">
+
                         Continue
+                        <i class="bi bi-arrow-right"></i>
                     </button>
 
                 </div>
