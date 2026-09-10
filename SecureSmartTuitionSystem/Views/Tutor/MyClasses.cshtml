@@ -4,6 +4,17 @@
 
 @{
     ViewData["Title"] = "My Classes";
+
+    DayOfWeek[] orderedDays =
+    {
+        DayOfWeek.Monday,
+        DayOfWeek.Tuesday,
+        DayOfWeek.Wednesday,
+        DayOfWeek.Thursday,
+        DayOfWeek.Friday,
+        DayOfWeek.Saturday,
+        DayOfWeek.Sunday
+    };
 }
 
 @section Styles {
@@ -11,6 +22,7 @@
           href="~/css/tutor.css"
           asp-append-version="true" />
 }
+
 
 <div class="page-header">
     <div>
@@ -72,18 +84,142 @@
 </section>
 
 
+<form asp-controller="Tutor"
+      asp-action="MyClasses"
+      method="get"
+      id="tutorClassFilterForm"
+      class="tutor-class-filter-card">
+
+    <div class="tutor-filter-heading">
+        <div>
+            <h2>
+                <i class="bi bi-funnel"></i>
+                Filter Classes
+            </h2>
+
+            <p>
+                The class list updates automatically.
+            </p>
+        </div>
+
+        @if (Model.HasFilters)
+        {
+            <a asp-controller="Tutor"
+               asp-action="MyClasses"
+               class="clear-filter-link">
+
+                <i class="bi bi-x-circle"></i>
+                Clear Filters
+            </a>
+        }
+    </div>
+
+
+    <div class="tutor-filter-grid">
+
+        <div>
+            <label asp-for="SubjectName"
+                   class="form-label">
+                Subject
+            </label>
+
+            <select asp-for="SubjectName"
+                    class="form-select tutor-auto-filter">
+
+                <option value="">
+                    All Subjects
+                </option>
+
+                @foreach (var subject in Model.SubjectOptions)
+                {
+                    <option value="@subject">
+                        @subject
+                    </option>
+                }
+            </select>
+        </div>
+
+
+        <div>
+            <label asp-for="DayOfWeek"
+                   class="form-label">
+                Class Day
+            </label>
+
+            <select asp-for="DayOfWeek"
+                    class="form-select tutor-auto-filter">
+
+                <option value="">
+                    All Days
+                </option>
+
+                @foreach (var day in orderedDays)
+                {
+                    <option value="@day">
+                        @day
+                    </option>
+                }
+            </select>
+        </div>
+
+
+        <div>
+            <label asp-for="Status"
+                   class="form-label">
+                Status
+            </label>
+
+            <select asp-for="Status"
+                    class="form-select tutor-auto-filter">
+
+                <option value="">
+                    All Statuses
+                </option>
+
+                @foreach (var classStatus
+                                in Enum.GetValues<ClassSessionStatus>())
+                {
+                    <option value="@classStatus">
+                        @classStatus
+                    </option>
+                }
+            </select>
+        </div>
+
+    </div>
+</form>
+
+
 @if (Model.Classes.Count == 0)
 {
-    <section class="dashboard-card">
+    <section class="dashboard-card tutor-empty-card">
+
         <div class="empty-state">
 
             <i class="bi bi-calendar-x"></i>
 
-            <p>
-                No classes are currently assigned to you.
-            </p>
+            @if (Model.HasFilters)
+            {
+                <p>
+                    No assigned classes match the selected filters.
+                </p>
+
+                <a asp-controller="Tutor"
+                   asp-action="MyClasses"
+                   class="outline-button">
+
+                    Clear Filters
+                </a>
+            }
+            else
+            {
+                <p>
+                    No classes are currently assigned to you.
+                </p>
+            }
 
         </div>
+
     </section>
 }
 else
@@ -96,7 +232,8 @@ else
 
                 <header class="tutor-class-card-header">
 
-                    <div>
+                    <div class="tutor-class-title">
+
                         <span class="class-code">
                             @item.ClassCode
                         </span>
@@ -104,7 +241,9 @@ else
                         <h2>
                             @item.ClassName
                         </h2>
+
                     </div>
+
 
                     @if (item.Status ==
                                 ClassSessionStatus.Active)
@@ -133,6 +272,7 @@ else
                 <div class="tutor-class-card-body">
 
                     <div class="tutor-class-detail">
+
                         <i class="bi bi-mortarboard-fill"></i>
 
                         <div>
@@ -143,32 +283,58 @@ else
                                 @item.AcademicLevel
                             </strong>
                         </div>
+
                     </div>
 
+
                     <div class="tutor-class-detail">
+
                         <i class="bi bi-book-fill"></i>
 
                         <div>
                             <span>Subject</span>
-                            <strong>@item.SubjectName</strong>
+
+                            <strong>
+                                @item.SubjectName
+                            </strong>
                         </div>
+
                     </div>
 
+
                     <div class="tutor-class-detail">
+
                         <i class="bi bi-calendar3"></i>
 
                         <div>
-                            <span>Schedule</span>
+                            <span>Class Day</span>
 
                             <strong>
-                                @item.Day,
-                                @item.StartTime -
+                                @item.Day
+                            </strong>
+                        </div>
+
+                    </div>
+
+
+                    <div class="tutor-class-detail">
+
+                        <i class="bi bi-clock-fill"></i>
+
+                        <div>
+                            <span>Class Time</span>
+
+                            <strong>
+                                @item.StartTime –
                                 @item.EndTime
                             </strong>
                         </div>
+
                     </div>
 
+
                     <div class="tutor-class-detail">
+
                         <i class="bi bi-people-fill"></i>
 
                         <div>
@@ -179,33 +345,23 @@ else
                                 @item.Capacity
                             </strong>
                         </div>
-                    </div>
 
-                    <div class="tutor-class-detail">
-                        <i class="bi bi-cash-coin"></i>
-
-                        <div>
-                            <span>Monthly Fee</span>
-
-                            @if (item.MonthlyFee == 0)
-                            {
-                                <strong class="free-text">
-                                    Free
-                                </strong>
-                            }
-                            else
-                            {
-                                <strong>
-                                    RM @item.MonthlyFee.ToString("F2")
-                                </strong>
-                            }
-                        </div>
                     </div>
 
                 </div>
 
 
                 <footer class="tutor-class-card-footer">
+
+                    <a asp-controller="Tutor"
+                       asp-action="ClassDetails"
+                       asp-route-id="@item.ClassSessionId"
+                       class="outline-button">
+
+                        <i class="bi bi-eye"></i>
+                        Details
+                    </a>
+
 
                     @if (item.Status ==
                                 ClassSessionStatus.Active)
@@ -219,16 +375,6 @@ else
                             Join Google Meet
                         </a>
                     }
-                    else
-                    {
-                        <button type="button"
-                                class="primary-button disabled-meet-button"
-                                disabled>
-
-                            <i class="bi bi-camera-video-off-fill"></i>
-                            Meet Unavailable
-                        </button>
-                    }
 
                 </footer>
 
@@ -236,4 +382,38 @@ else
         }
 
     </section>
+}
+
+
+@section Scripts {
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                const filterForm =
+                    document.getElementById(
+                        "tutorClassFilterForm"
+                    );
+
+                if (!filterForm) {
+                    return;
+                }
+
+                document
+                    .querySelectorAll(
+                        ".tutor-auto-filter"
+                    )
+                    .forEach(function (filter) {
+
+                        filter.addEventListener(
+                            "change",
+                            function () {
+                                filterForm.requestSubmit();
+                            }
+                        );
+                    });
+            }
+        );
+    </script>
 }

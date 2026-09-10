@@ -34,6 +34,12 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         [Display(Name = "Class Name")]
         public string? ClassName { get; set; }
 
+        [StringLength(
+            500,
+            ErrorMessage = "Remark cannot exceed 500 characters.")]
+        [Display(Name = "Remark")]
+        public string? Remark { get; set; }
+
         [Required(ErrorMessage = "Please select a tutor.")]
         [Display(Name = "Tutor")]
         public string TutorUserId { get; set; } = string.Empty;
@@ -54,11 +60,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 
         [Required(ErrorMessage = "Google Meet link is required.")]
         [Url(ErrorMessage = "Please enter a valid URL.")]
-        [StringLength(100)]
-        [RegularExpression(
-            @"^https:\/\/meet\.google\.com\/[a-zA-Z0-9\-]+\/?$",
-            ErrorMessage =
-                "Please enter a valid Google Meet link, for example: https://meet.google.com/abc-defg-hij")]
+        [StringLength(250)]
         [Display(Name = "Google Meet Link")]
         public string Venue { get; set; } = string.Empty;
 

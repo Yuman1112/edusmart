@@ -103,26 +103,113 @@ namespace SecureSmartTuitionSystem.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(
+            ClassSessionIndexViewModel model)
         {
-            var sessions =
-                await _context.ClassSessions
+            model.SubjectName =
+                NormalizeOptionalFilter(model.SubjectName)?.ToUpperInvariant();
+
+            model.AcademicLevel =
+                NormalizeOptionalFilter(model.AcademicLevel)?.ToUpperInvariant();
+
+            model.FeeType =
+                NormalizeOptionalFilter(model.FeeType)?.ToLowerInvariant();
+
+            model.TutorUserId =
+                NormalizeOptionalFilter(model.TutorUserId);
+
+            model.SortBy = NormalizeSortColumn(model.SortBy);
+            model.SortDirection =
+                string.Equals(
+                    model.SortDirection,
+                    "desc",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? "desc"
+                    : "asc";
+
+            IQueryable<ClassSession> query =
+                _context.ClassSessions
                     .AsNoTracking()
                     .Include(session => session.Subject)
-                    .Include(session => session.TutorUser)
-                    .OrderBy(session =>
-                        session.Subject.EducationStage)
-                    .ThenBy(session =>
-                        session.Subject.AcademicLevel)
-                    .ThenBy(session =>
-                        session.Subject.SubjectName)
-                    .ThenBy(session =>
-                        session.DayOfWeek)
-                    .ThenBy(session =>
-                        session.StartTime)
-                    .ToListAsync();
+                    .Include(session => session.TutorUser);
 
-            return View(sessions);
+            if (!string.IsNullOrWhiteSpace(model.SubjectName))
+            {
+                query = query.Where(session =>
+                    session.Subject.SubjectName == model.SubjectName);
+            }
+
+            if (model.EducationStage.HasValue)
+            {
+                query = query.Where(session =>
+                    session.Subject.EducationStage ==
+                    model.EducationStage.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.AcademicLevel))
+            {
+                query = query.Where(session =>
+                    session.Subject.AcademicLevel == model.AcademicLevel);
+            }
+
+            if (model.FeeType == "free")
+            {
+                query = query.Where(session =>
+                    session.Subject.MonthlyFee == 0);
+            }
+            else if (model.FeeType == "paid")
+            {
+                query = query.Where(session =>
+                    session.Subject.MonthlyFee > 0);
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.TutorUserId))
+            {
+                query = query.Where(session =>
+                    session.TutorUserId == model.TutorUserId);
+            }
+
+            if (model.DayOfWeek.HasValue)
+            {
+                query = query.Where(session =>
+                    session.DayOfWeek == model.DayOfWeek.Value);
+            }
+
+            if (model.Status.HasValue)
+            {
+                query = query.Where(session =>
+                    session.Status == model.Status.Value);
+            }
+
+            query = ApplySorting(
+                query,
+                model.SortBy,
+                model.SortDirection);
+
+            model.Sessions = await query.ToListAsync();
+
+            await PopulateIndexSelectionsAsync(model);
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Details(int id)
+        {
+            var session =
+                await _context.ClassSessions
+                    .AsNoTracking()
+                    .Include(item => item.Subject)
+                    .Include(item => item.TutorUser)
+                    .FirstOrDefaultAsync(item =>
+                        item.ClassSessionId == id);
+
+            if (session == null)
+            {
+                return NotFound();
+            }
+
+            return View(session);
         }
 
         [HttpGet]
@@ -181,6 +268,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     EndTime = model.EndTime!.Value,
                     Venue = model.Venue,
                     Capacity = model.Capacity,
+                    Remark = model.Remark,
                     Status = ClassSessionStatus.Active,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -200,9 +288,9 @@ namespace SecureSmartTuitionSystem.Controllers
                 await transaction.RollbackAsync();
 
                 ModelState.AddModelError(
-                    nameof(model.ClassName),
-                    "The Class Name already exists. " +
-                    "Please enter another Class Name.");
+                    string.Empty,
+                    "The class session could not be saved. " +
+                    "The Class Name or Class Code may already exist.");
 
                 await PopulateSelectionsAsync(model);
 
@@ -238,7 +326,8 @@ namespace SecureSmartTuitionSystem.Controllers
                 StartTime = session.StartTime,
                 EndTime = session.EndTime,
                 Venue = session.Venue,
-                Capacity = session.Capacity
+                Capacity = session.Capacity,
+                Remark = session.Remark
             };
 
             await PopulateSelectionsAsync(model);
@@ -297,6 +386,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 session.EndTime = model.EndTime!.Value;
                 session.Venue = model.Venue;
                 session.Capacity = model.Capacity;
+                session.Remark = model.Remark;
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -312,9 +402,9 @@ namespace SecureSmartTuitionSystem.Controllers
                 await transaction.RollbackAsync();
 
                 ModelState.AddModelError(
-                    nameof(model.ClassName),
-                    "The Class Name already exists. " +
-                    "Please enter another Class Name.");
+                    string.Empty,
+                    "The class session could not be saved. " +
+                    "The Class Name may already exist.");
 
                 await PopulateSelectionsAsync(model);
 
@@ -336,12 +426,52 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            if (session.Status != ClassSessionStatus.Active)
+            {
+                TempData["ErrorMessage"] =
+                    "Only an active class can be cancelled.";
+
+                return RedirectToAction(nameof(Index));
+            }
+
             session.Status = ClassSessionStatus.Cancelled;
 
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] =
                 $"Class {session.ClassCode} was cancelled.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Complete(int id)
+        {
+            var session =
+                await _context.ClassSessions
+                    .FirstOrDefaultAsync(item =>
+                        item.ClassSessionId == id);
+
+            if (session == null)
+            {
+                return NotFound();
+            }
+
+            if (session.Status != ClassSessionStatus.Active)
+            {
+                TempData["ErrorMessage"] =
+                    "Only an active class can be marked as completed.";
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            session.Status = ClassSessionStatus.Completed;
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] =
+                $"Class {session.ClassCode} was marked as completed.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -360,6 +490,32 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            if (session.Status == ClassSessionStatus.Active)
+            {
+                TempData["ErrorMessage"] =
+                    "This class is already active.";
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            bool conflict =
+                await _context.ClassSessions.AnyAsync(item =>
+                    item.ClassSessionId != session.ClassSessionId &&
+                    item.TutorUserId == session.TutorUserId &&
+                    item.DayOfWeek == session.DayOfWeek &&
+                    item.Status == ClassSessionStatus.Active &&
+                    session.StartTime < item.EndTime &&
+                    session.EndTime > item.StartTime);
+
+            if (conflict)
+            {
+                TempData["ErrorMessage"] =
+                    "This class cannot be activated because the Tutor " +
+                    "already has another active class during this time.";
+
+                return RedirectToAction(nameof(Index));
+            }
+
             session.Status = ClassSessionStatus.Active;
 
             await _context.SaveChangesAsync();
@@ -369,7 +525,6 @@ namespace SecureSmartTuitionSystem.Controllers
 
             return RedirectToAction(nameof(Index));
         }
-
         private static void NormalizeInput(
             ClassSessionFormViewModel model)
         {
@@ -391,6 +546,11 @@ namespace SecureSmartTuitionSystem.Controllers
                 string.IsNullOrWhiteSpace(model.ClassName)
                     ? null
                     : NormalizeText(model.ClassName);
+
+            model.Remark =
+                string.IsNullOrWhiteSpace(model.Remark)
+                    ? null
+                    : model.Remark.Trim();
         }
 
         private static string NormalizeText(string? value)
@@ -408,6 +568,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 string.IsNullOrWhiteSpace(model.AcademicLevel) ||
                 string.IsNullOrWhiteSpace(model.SubjectName) ||
                 string.IsNullOrWhiteSpace(model.TutorUserId) ||
+                !model.DayOfWeek.HasValue ||
                 !model.StartTime.HasValue)
             {
                 return;
@@ -438,6 +599,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 $"{model.AcademicLevel} - " +
                 $"{model.SubjectName} - " +
                 $"{tutorName} - " +
+                $"{model.DayOfWeek.Value} - " +
                 $"{startTime}";
         }
 
@@ -448,6 +610,7 @@ namespace SecureSmartTuitionSystem.Controllers
             ValidateStageAndLevel(model);
             ValidateSubject(model);
             ValidateTime(model);
+            ValidateGoogleMeetLink(model);
 
             if (!string.IsNullOrWhiteSpace(
                     model.TutorUserId))
@@ -625,6 +788,35 @@ namespace SecureSmartTuitionSystem.Controllers
             }
         }
 
+        private void ValidateGoogleMeetLink(
+            ClassSessionFormViewModel model)
+        {
+            if (string.IsNullOrWhiteSpace(model.Venue))
+            {
+                return;
+            }
+
+            bool valid =
+                Uri.TryCreate(
+                    model.Venue,
+                    UriKind.Absolute,
+                    out Uri? uri) &&
+                uri.Scheme == Uri.UriSchemeHttps &&
+                string.Equals(
+                    uri.Host,
+                    "meet.google.com",
+                    StringComparison.OrdinalIgnoreCase) &&
+                uri.AbsolutePath.Trim('/').Length > 0;
+
+            if (!valid)
+            {
+                ModelState.AddModelError(
+                    nameof(model.Venue),
+                    "Please enter a valid Google Meet link, for example: " +
+                    "https://meet.google.com/abc-defg-hij");
+            }
+        }
+
         private static string[] GetSubjectsForLevel(
             string academicLevel)
         {
@@ -721,6 +913,186 @@ namespace SecureSmartTuitionSystem.Controllers
             }
 
             return $"CS{nextNumber:D5}";
+        }
+
+        private static string? NormalizeOptionalFilter(
+            string? value)
+        {
+            string normalized = NormalizeText(value);
+
+            return string.IsNullOrWhiteSpace(normalized)
+                ? null
+                : normalized;
+        }
+
+        private static string NormalizeSortColumn(
+            string? sortBy)
+        {
+            return sortBy?.Trim().ToLowerInvariant() switch
+            {
+                "subject" => "subject",
+                "educationstage" => "educationStage",
+                "academiclevel" => "academicLevel",
+                "monthlyfee" => "monthlyFee",
+                "tutor" => "tutor",
+                "schedule" => "schedule",
+                "capacity" => "capacity",
+                "status" => "status",
+                _ => "className"
+            };
+        }
+
+        private static IQueryable<ClassSession> ApplySorting(
+            IQueryable<ClassSession> query,
+            string sortBy,
+            string sortDirection)
+        {
+            bool descending = sortDirection == "desc";
+
+            return sortBy switch
+            {
+                "subject" => descending
+                    ? query
+                        .OrderByDescending(session =>
+                            session.Subject.SubjectName)
+                        .ThenByDescending(session =>
+                            session.Subject.AcademicLevel)
+                    : query
+                        .OrderBy(session =>
+                            session.Subject.SubjectName)
+                        .ThenBy(session =>
+                            session.Subject.AcademicLevel),
+
+                "educationStage" => descending
+                    ? query
+                        .OrderByDescending(session =>
+                            session.Subject.EducationStage)
+                        .ThenByDescending(session =>
+                            session.Subject.AcademicLevel)
+                    : query
+                        .OrderBy(session =>
+                            session.Subject.EducationStage)
+                        .ThenBy(session =>
+                            session.Subject.AcademicLevel),
+
+                "academicLevel" => descending
+                    ? query.OrderByDescending(session =>
+                        session.Subject.AcademicLevel)
+                    : query.OrderBy(session =>
+                        session.Subject.AcademicLevel),
+
+                "monthlyFee" => descending
+                    ? query.OrderByDescending(session =>
+                        session.Subject.MonthlyFee)
+                    : query.OrderBy(session =>
+                        session.Subject.MonthlyFee),
+
+                "tutor" => descending
+                    ? query.OrderByDescending(session =>
+                        session.TutorUser.FullName ??
+                        session.TutorUser.Email)
+                    : query.OrderBy(session =>
+                        session.TutorUser.FullName ??
+                        session.TutorUser.Email),
+
+                "schedule" => descending
+                    ? query
+                        .OrderByDescending(session =>
+                            session.DayOfWeek == DayOfWeek.Monday ? 1 :
+                            session.DayOfWeek == DayOfWeek.Tuesday ? 2 :
+                            session.DayOfWeek == DayOfWeek.Wednesday ? 3 :
+                            session.DayOfWeek == DayOfWeek.Thursday ? 4 :
+                            session.DayOfWeek == DayOfWeek.Friday ? 5 :
+                            session.DayOfWeek == DayOfWeek.Saturday ? 6 :
+                            session.DayOfWeek == DayOfWeek.Sunday ? 7 : 8)
+                        .ThenByDescending(session =>
+                            session.StartTime)
+                    : query
+                        .OrderBy(session =>
+                            session.DayOfWeek == DayOfWeek.Monday ? 1 :
+                            session.DayOfWeek == DayOfWeek.Tuesday ? 2 :
+                            session.DayOfWeek == DayOfWeek.Wednesday ? 3 :
+                            session.DayOfWeek == DayOfWeek.Thursday ? 4 :
+                            session.DayOfWeek == DayOfWeek.Friday ? 5 :
+                            session.DayOfWeek == DayOfWeek.Saturday ? 6 :
+                            session.DayOfWeek == DayOfWeek.Sunday ? 7 : 8)
+                        .ThenBy(session =>
+                            session.StartTime),
+
+                "capacity" => descending
+                    ? query.OrderByDescending(session =>
+                        session.Capacity)
+                    : query.OrderBy(session =>
+                        session.Capacity),
+
+                "status" => descending
+                    ? query.OrderByDescending(session =>
+                        session.Status)
+                    : query.OrderBy(session =>
+                        session.Status),
+
+                _ => descending
+                    ? query.OrderByDescending(session =>
+                        session.ClassName)
+                    : query.OrderBy(session =>
+                        session.ClassName)
+            };
+        }
+        private async Task PopulateIndexSelectionsAsync(
+            ClassSessionIndexViewModel model)
+        {
+            model.Subjects =
+                await _context.Subjects
+                    .AsNoTracking()
+                    .Where(subject => subject.IsActive)
+                    .Select(subject => subject.SubjectName)
+                    .Distinct()
+                    .OrderBy(name => name)
+                    .Select(name => new SelectListItem
+                    {
+                        Value = name,
+                        Text = name,
+                        Selected = name == model.SubjectName
+                    })
+                    .ToListAsync();
+
+            IEnumerable<string> levels =
+                model.EducationStage switch
+                {
+                    Models.Enrollment.EducationStage.Primary
+                        => PrimaryLevels,
+
+                    Models.Enrollment.EducationStage.Secondary
+                        => SecondaryLevels,
+
+                    _ => PrimaryLevels.Concat(SecondaryLevels)
+                };
+
+            model.AcademicLevels =
+                levels.Select(level => new SelectListItem
+                {
+                    Value = level,
+                    Text = level,
+                    Selected = level == model.AcademicLevel
+                }).ToList();
+
+            var tutors =
+                await _userManager.GetUsersInRoleAsync("Tutor");
+
+            model.Tutors =
+                tutors
+                    .Where(tutor => tutor.IsActive)
+                    .OrderBy(tutor =>
+                        tutor.FullName ?? tutor.Email)
+                    .Select(tutor => new SelectListItem
+                    {
+                        Value = tutor.Id,
+                        Text = tutor.FullName ??
+                            tutor.Email ??
+                            "Tutor",
+                        Selected = tutor.Id == model.TutorUserId
+                    })
+                    .ToList();
         }
 
         private async Task PopulateSelectionsAsync(

@@ -1,9 +1,20 @@
-﻿@model IEnumerable<SecureSmartTuitionSystem.Models.Enrollment.ClassSession>
+﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.ClassSessionIndexViewModel
 
 @using SecureSmartTuitionSystem.Models.Enrollment
 
 @{
     ViewData["Title"] = "Manage Class Sessions";
+
+    DayOfWeek[] orderedDays =
+    {
+        DayOfWeek.Monday,
+        DayOfWeek.Tuesday,
+        DayOfWeek.Wednesday,
+        DayOfWeek.Thursday,
+        DayOfWeek.Friday,
+        DayOfWeek.Saturday,
+        DayOfWeek.Sunday
+    };
 }
 
 @section Styles {
@@ -15,9 +26,7 @@
 <div class="page-header">
     <div>
         <h1>Class Sessions</h1>
-        <p>
-            Create and manage online tuition class schedules.
-        </p>
+        <p>Create and manage online tuition class schedules.</p>
     </div>
 
     <a asp-controller="ClassSessions"
@@ -61,7 +70,171 @@
     </div>
 }
 
-<div class="dashboard-card">
+<form asp-controller="ClassSessions"
+      asp-action="Index"
+      method="get"
+      id="classFilterForm"
+      class="class-filter-card">
+
+    <input asp-for="SortBy"
+           id="SortBy"
+           type="hidden" />
+
+    <input asp-for="SortDirection"
+           id="SortDirection"
+           type="hidden" />
+
+    <div class="class-filter-heading">
+        <div>
+            <h2>
+                <i class="bi bi-funnel"></i>
+                Filter Classes
+            </h2>
+
+            <p>
+                The class list updates automatically.
+            </p>
+        </div>
+
+        @if (Model.HasFilters)
+        {
+            <a asp-controller="ClassSessions"
+               asp-action="Index"
+               class="clear-filter-link">
+
+                <i class="bi bi-x-circle"></i>
+                Clear Filters
+            </a>
+        }
+    </div>
+
+    <div class="class-filter-grid">
+
+        <div>
+            <label asp-for="SubjectName"
+                   class="form-label">
+                Subject
+            </label>
+
+            <select asp-for="SubjectName"
+                    asp-items="Model.Subjects"
+                    class="form-select auto-filter">
+
+                <option value="">
+                    All Subjects
+                </option>
+            </select>
+        </div>
+
+        <div>
+            <label asp-for="EducationStage"
+                   class="form-label">
+                Education Stage
+            </label>
+
+            <select asp-for="EducationStage"
+                    id="FilterEducationStage"
+                    class="form-select auto-filter">
+
+                <option value="">All Stages</option>
+                <option value="Primary">Primary</option>
+                <option value="Secondary">Secondary</option>
+            </select>
+        </div>
+
+        <div>
+            <label asp-for="AcademicLevel"
+                   class="form-label">
+                Academic Level
+            </label>
+
+            <select asp-for="AcademicLevel"
+                    asp-items="Model.AcademicLevels"
+                    id="FilterAcademicLevel"
+                    class="form-select auto-filter">
+
+                <option value="">
+                    All Levels
+                </option>
+            </select>
+        </div>
+
+        <div>
+            <label asp-for="FeeType"
+                   class="form-label">
+                Monthly Fee
+            </label>
+
+            <select asp-for="FeeType"
+                    class="form-select auto-filter">
+
+                <option value="">All Fees</option>
+                <option value="free">Free</option>
+                <option value="paid">Paid</option>
+            </select>
+        </div>
+
+        <div>
+            <label asp-for="TutorUserId"
+                   class="form-label">
+                Tutor
+            </label>
+
+            <select asp-for="TutorUserId"
+                    asp-items="Model.Tutors"
+                    class="form-select auto-filter">
+
+                <option value="">
+                    All Tutors
+                </option>
+            </select>
+        </div>
+
+        <div>
+            <label asp-for="DayOfWeek"
+                   class="form-label">
+                Class Day
+            </label>
+
+            <select asp-for="DayOfWeek"
+                    class="form-select auto-filter">
+
+                <option value="">All Days</option>
+
+                @foreach (var day in orderedDays)
+                {
+                    <option value="@day">
+                        @day
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label asp-for="Status"
+                   class="form-label">
+                Status
+            </label>
+
+            <select asp-for="Status"
+                    class="form-select auto-filter">
+
+                <option value="">All Statuses</option>
+
+                @foreach (ClassSessionStatus status
+                                in Enum.GetValues<ClassSessionStatus>())
+                {
+                    <option value="@status">
+                        @status
+                    </option>
+                }
+            </select>
+        </div>
+
+    </div>
+</form>
+
+<div class="dashboard-card compact-class-card">
 
     <div class="dashboard-card-header">
         <h2>
@@ -70,61 +243,141 @@
         </h2>
 
         <span class="text-muted">
-            @Model.Count() session(s)
+            @Model.Sessions.Count session(s)
         </span>
     </div>
 
-    @if (!Model.Any())
+    @if (!Model.Sessions.Any())
     {
         <div class="empty-state">
             <i class="bi bi-calendar-x"></i>
 
-            <p>No class sessions have been created.</p>
+            <p>
+                No class sessions match the selected filters.
+            </p>
 
             <a asp-controller="ClassSessions"
-               asp-action="Create"
-               class="primary-button">
-
-                <i class="bi bi-plus-lg"></i>
-                Create First Class
+               asp-action="Index"
+               class="outline-button">
+                Clear Filters
             </a>
         </div>
     }
     else
     {
         <div class="table-responsive">
-            <table class="table align-middle class-session-table">
+            <table class="table align-middle compact-class-table">
+
+                <colgroup>
+                    <col class="column-class-name" />
+                    <col class="column-subject" />
+                    <col class="column-tutor" />
+                    <col class="column-schedule" />
+                    <col class="column-fee" />
+                    <col class="column-status" />
+                    <col class="column-actions" />
+                </colgroup>
+
                 <thead>
                     <tr>
-                        <th>Class Code</th>
-                        <th>Subject</th>
-                        <th>Monthly Fee</th>
-                        <th>Tutor</th>
-                        <th>Schedule</th>
-                        <th>Capacity</th>
-                        <th>Google Meet</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>
+                            <button type="button"
+                                    class="sort-button"
+                                    data-sort="className">
+                                Class Name
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="sort-button"
+                                    data-sort="subject">
+                                Subject &amp; Level
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="sort-button"
+                                    data-sort="tutor">
+                                Tutor
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="sort-button"
+                                    data-sort="schedule">
+                                Schedule
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="sort-button"
+                                    data-sort="monthlyFee">
+                                Fee
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="sort-button"
+                                    data-sort="status">
+                                Status
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th class="actions-heading">
+                            Actions
+                        </th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    @foreach (var session in Model)
+                    @foreach (var session in Model.Sessions)
                     {
                         <tr>
-                            <td>
-                                <strong>@session.ClassCode</strong>
-                            </td>
+                            <td class="class-name-column">
+                                <strong>
+                                    @(session.ClassName
+                                                                ?? "Unnamed Class")
+                        </strong>
+                    </td>
 
                             <td>
                                 <strong>
                                     @session.Subject.SubjectName
                                 </strong>
 
-                                <div class="small text-muted">
+                                <div class="class-secondary-text">
                                     @session.Subject.EducationStage
                                     ·
                                     @session.Subject.AcademicLevel
+                                </div>
+                            </td>
+
+                            <td class="tutor-column">
+                                @(session.TutorUser.FullName
+                                                        ?? session.TutorUser.Email
+                                                        ?? "Tutor")
+                            </td>
+
+                            <td>
+                                <strong>
+                                    @session.DayOfWeek
+                                </strong>
+
+                                <div class="class-secondary-text">
+                                    @session.StartTime.ToString("hh:mm tt")
+                                    –
+                                    @session.EndTime.ToString("hh:mm tt")
                                 </div>
                             </td>
 
@@ -137,50 +390,9 @@
                                 }
                                 else
                                 {
-                                    <strong>
+                                    <strong class="fee-text">
                                         RM @session.Subject.MonthlyFee.ToString("F2")
                                     </strong>
-                                }
-                        </td>
-
-                        <td>
-                            @(session.TutorUser.FullName
-                                                    ?? session.TutorUser.Email
-                                                    ?? "Tutor")
-                    </td>
-
-                            <td>
-                                <strong>@session.DayOfWeek</strong>
-
-                                <div class="small text-muted">
-                                    @session.StartTime.ToString("hh:mm tt")
-                                    -
-                                    @session.EndTime.ToString("hh:mm tt")
-                                </div>
-                            </td>
-
-                            <td>
-                                @session.Capacity students
-                            </td>
-
-                            <td>
-                        @if (session.Status ==
-                                                ClassSessionStatus.Active)
-                                {
-                                    <a href="@session.Venue"
-                                       target="_blank"
-                                       rel="noopener noreferrer"
-                                       class="meet-link">
-
-                                        <i class="bi bi-camera-video-fill"></i>
-                                        Open Meet
-                                    </a>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">
-                                        Unavailable
-                                    </span>
                                 }
                             </td>
 
@@ -207,54 +419,109 @@
                                 }
                             </td>
 
-                            <td class="text-end">
-                                <div class="class-action-buttons">
+                            <td class="action-column">
+                                <div class="class-action-group">
 
                                     <a asp-controller="ClassSessions"
-                                       asp-action="Edit"
+                                       asp-action="Details"
                                        asp-route-id="@session.ClassSessionId"
-                                       class="btn btn-sm btn-outline-primary">
+                                       class="btn btn-sm btn-outline-secondary class-details-button">
 
-                                        <i class="bi bi-pencil-square"></i>
-                                        Edit
+                                        <i class="bi bi-eye"></i>
+                                        Details
                                     </a>
 
-                                    @if (session.Status ==
-                                                                ClassSessionStatus.Active)
-                                    {
-                                        <form asp-controller="ClassSessions"
-                                              asp-action="Cancel"
-                                              asp-route-id="@session.ClassSessionId"
-                                              method="post"
-                                              class="d-inline">
+                                    <div class="dropdown class-action-dropdown">
 
-                                            <button type="submit"
-                                                    class="btn btn-sm btn-outline-danger"
-                                                    onclick="return confirm('Are you sure you want to cancel this class session?');">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary class-more-button"
+                                                data-bs-toggle="dropdown"
+                                                data-bs-boundary="viewport"
+                                                aria-expanded="false"
+                                                aria-label="More actions">
 
-                                                <i class="bi bi-x-circle"></i>
-                                                Cancel
-                                            </button>
-                                        </form>
-                                    }
-                                    else if (session.Status ==
-                                    ClassSessionStatus.Cancelled)
-                                    {
-                                        <form asp-controller="ClassSessions"
-                                              asp-action="Activate"
-                                              asp-route-id="@session.ClassSessionId"
-                                              method="post"
-                                              class="d-inline">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
 
-                                            <button type="submit"
-                                                    class="btn btn-sm btn-outline-success"
-                                                    onclick="return confirm('Activate this class session?');">
+                                        <ul class="dropdown-menu dropdown-menu-end class-action-menu">
 
-                                                <i class="bi bi-check-circle"></i>
-                                                Activate
-                                            </button>
-                                        </form>
-                                    }
+                                            <li>
+                                                <a asp-controller="ClassSessions"
+                                                   asp-action="Edit"
+                                                   asp-route-id="@session.ClassSessionId"
+                                                   class="dropdown-item">
+
+                                                    <i class="bi bi-pencil-square"></i>
+                                                    Edit Class
+                                                </a>
+                                            </li>
+
+                                            @if (session.Status == ClassSessionStatus.Active)
+                                            {
+                                                <li>
+                                                    <hr class="dropdown-divider" />
+                                                </li>
+
+                                                <li>
+                                                    <form asp-controller="ClassSessions"
+                                                          asp-action="Complete"
+                                                          asp-route-id="@session.ClassSessionId"
+                                                          method="post"
+                                                          class="dropdown-action-form">
+
+                                                        <button type="submit"
+                                                                class="dropdown-item action-complete"
+                                                                onclick="return confirm('Mark this class as completed?');">
+
+                                                            <i class="bi bi-check2-circle"></i>
+                                                            Mark as Completed
+                                                        </button>
+                                                    </form>
+                                                </li>
+
+                                                <li>
+                                                    <form asp-controller="ClassSessions"
+                                                          asp-action="Cancel"
+                                                          asp-route-id="@session.ClassSessionId"
+                                                          method="post"
+                                                          class="dropdown-action-form">
+
+                                                        <button type="submit"
+                                                                class="dropdown-item action-cancel"
+                                                                onclick="return confirm('Are you sure you want to cancel this class session?');">
+
+                                                            <i class="bi bi-x-circle"></i>
+                                                            Cancel Class
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            }
+                                            else
+                                            {
+                                                <li>
+                                                    <hr class="dropdown-divider" />
+                                                </li>
+
+                                                <li>
+                                                    <form asp-controller="ClassSessions"
+                                                          asp-action="Activate"
+                                                          asp-route-id="@session.ClassSessionId"
+                                                          method="post"
+                                                          class="dropdown-action-form">
+
+                                                        <button type="submit"
+                                                                class="dropdown-item action-activate"
+                                                                onclick="return confirm('Activate this class session?');">
+
+                                                            <i class="bi bi-check-circle"></i>
+                                                            Activate Class
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            }
+
+                                        </ul>
+                                    </div>
 
                                 </div>
                             </td>
@@ -265,3 +532,212 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                /*
+                 * =========================================
+                 * 1. REAL-TIME FILTER
+                 * =========================================
+                 */
+
+                const filterForm =
+                    document.getElementById(
+                        "classFilterForm"
+                    );
+
+                const sortByInput =
+                    document.getElementById(
+                        "SortBy"
+                    );
+
+                const sortDirectionInput =
+                    document.getElementById(
+                        "SortDirection"
+                    );
+
+                const academicLevelFilter =
+                    document.getElementById(
+                        "FilterAcademicLevel"
+                    );
+
+                document
+                    .querySelectorAll(".auto-filter")
+                    .forEach(function (filter) {
+
+                        filter.addEventListener(
+                            "change",
+                            function () {
+
+                                /*
+                                 * Clear Academic Level when
+                                 * Education Stage changes.
+                                 */
+                                if (
+                                    filter.id ===
+                                    "FilterEducationStage" &&
+                                    academicLevelFilter
+                                ) {
+                                    academicLevelFilter.value = "";
+                                }
+
+                                if (filterForm) {
+                                    filterForm.requestSubmit();
+                                }
+                            }
+                        );
+                    });
+
+
+                /*
+                 * =========================================
+                 * 2. COLUMN SORTING
+                 * =========================================
+                 */
+
+                document
+                    .querySelectorAll(".sort-button")
+                    .forEach(function (button) {
+
+                        const column =
+                            button.dataset.sort;
+
+                        if (
+                            sortByInput &&
+                            sortDirectionInput &&
+                            sortByInput.value === column
+                        ) {
+                            const icon =
+                                button.querySelector("i");
+
+                            if (icon) {
+                                icon.className =
+                                    sortDirectionInput.value === "asc"
+                                        ? "bi bi-sort-up"
+                                        : "bi bi-sort-down";
+                            }
+
+                            button.classList.add(
+                                "active-sort"
+                            );
+                        }
+
+                        button.addEventListener(
+                            "click",
+                            function () {
+
+                                if (
+                                    !filterForm ||
+                                    !sortByInput ||
+                                    !sortDirectionInput
+                                ) {
+                                    return;
+                                }
+
+                                const sameColumn =
+                                    sortByInput.value === column;
+
+                                const currentlyAscending =
+                                    sortDirectionInput.value === "asc";
+
+                                if (
+                                    sameColumn &&
+                                    currentlyAscending
+                                ) {
+                                    sortDirectionInput.value = "desc";
+                                }
+                                else {
+                                    sortDirectionInput.value = "asc";
+                                }
+
+                                sortByInput.value = column;
+
+                                filterForm.requestSubmit();
+                            }
+                        );
+                    });
+
+
+                /*
+                 * =========================================
+                 * 3. AUTOMATIC ALERT DISMISSAL
+                 * =========================================
+                 *
+                 * Success message: 3 seconds
+                 * Error message:   6 seconds
+                 *
+                 * The manual close button remains available.
+                 */
+
+                const alerts =
+                    document.querySelectorAll(
+                        ".alert.alert-dismissible"
+                    );
+
+                alerts.forEach(function (alertElement) {
+
+                    const isError =
+                        alertElement.classList.contains(
+                            "alert-danger"
+                        );
+
+                    const displayDuration =
+                        isError ? 6000 : 3000;
+
+                    const dismissTimer =
+                        window.setTimeout(
+                            function () {
+
+                                /*
+                                 * Do nothing if the user has
+                                 * already closed the alert.
+                                 */
+                                if (
+                                    !document.body.contains(
+                                        alertElement
+                                    )
+                                ) {
+                                    return;
+                                }
+
+                                if (
+                                    typeof bootstrap ===
+                                        "undefined" ||
+                                    !bootstrap.Alert
+                                ) {
+                                    alertElement.remove();
+                                    return;
+                                }
+
+                                const alertInstance =
+                                    bootstrap.Alert
+                                        .getOrCreateInstance(
+                                            alertElement
+                                        );
+
+                                alertInstance.close();
+                            },
+                            displayDuration
+                        );
+
+                    /*
+                     * Stop the timer if the alert is closed
+                     * manually before the time ends.
+                     */
+                    alertElement.addEventListener(
+                        "closed.bs.alert",
+                        function () {
+                            window.clearTimeout(
+                                dismissTimer
+                            );
+                        }
+                    );
+                });
+            }
+        );
+    </script>
+}

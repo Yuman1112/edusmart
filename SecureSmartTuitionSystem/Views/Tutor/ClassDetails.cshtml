@@ -1,0 +1,319 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorClassDetailsViewModel
+
+@using SecureSmartTuitionSystem.Models.Enrollment
+
+@{
+    ViewData["Title"] = "Class Details";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/tutor.css"
+          asp-append-version="true" />
+}
+
+
+<div class="page-header">
+
+    <div>
+        <h1>Class Details</h1>
+
+        <p>
+            View your assigned class information and schedule.
+        </p>
+    </div>
+
+    <a asp-controller="Tutor"
+       asp-action="MyClasses"
+       class="outline-button">
+
+        <i class="bi bi-arrow-left"></i>
+        Back to My Classes
+    </a>
+
+</div>
+
+
+<section class="tutor-details-card">
+
+    <header class="tutor-details-header">
+
+        <div class="tutor-details-title">
+
+            <span class="class-code">
+                @Model.ClassCode
+            </span>
+
+            <h2>
+                @Model.ClassName
+            </h2>
+
+            <p>
+                @Model.EducationStage ·
+                @Model.AcademicLevel ·
+                @Model.SubjectName
+            </p>
+
+        </div>
+
+
+        @if (Model.Status ==
+                ClassSessionStatus.Active)
+        {
+            <span class="status-pill status-success">
+                Active
+            </span>
+        }
+        else if (Model.Status ==
+        ClassSessionStatus.Cancelled)
+        {
+            <span class="status-pill status-danger">
+                Cancelled
+            </span>
+        }
+        else
+        {
+            <span class="status-pill status-warning">
+                Completed
+            </span>
+        }
+
+    </header>
+
+
+    <div class="tutor-details-body">
+
+        <section class="tutor-details-section">
+
+            <h3>
+                <i class="bi bi-book-fill"></i>
+                Class Information
+            </h3>
+
+
+            <div class="tutor-details-grid">
+
+                <div class="tutor-detail-item">
+
+                    <span class="tutor-detail-icon">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </span>
+
+                    <div>
+                        <span>Education Stage</span>
+
+                        <strong>
+                            @Model.EducationStage
+                        </strong>
+                    </div>
+
+                </div>
+
+
+                <div class="tutor-detail-item">
+
+                    <span class="tutor-detail-icon">
+                        <i class="bi bi-bar-chart-steps"></i>
+                    </span>
+
+                    <div>
+                        <span>Academic Level</span>
+
+                        <strong>
+                            @Model.AcademicLevel
+                        </strong>
+                    </div>
+
+                </div>
+
+
+                <div class="tutor-detail-item">
+
+                    <span class="tutor-detail-icon">
+                        <i class="bi bi-book-half"></i>
+                    </span>
+
+                    <div>
+                        <span>Subject</span>
+
+                        <strong>
+                            @Model.SubjectName
+                        </strong>
+                    </div>
+
+                </div>
+
+
+                <div class="tutor-detail-item">
+
+                    <span class="tutor-detail-icon">
+                        <i class="bi bi-people-fill"></i>
+                    </span>
+
+                    <div>
+                        <span>Students</span>
+
+                        <strong>
+                            @Model.StudentCount /
+                            @Model.Capacity
+                        </strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="tutor-details-section">
+
+            <h3>
+                <i class="bi bi-calendar-check-fill"></i>
+                Schedule Information
+            </h3>
+
+
+            <div class="tutor-details-grid">
+
+                <div class="tutor-detail-item">
+
+                    <span class="tutor-detail-icon">
+                        <i class="bi bi-calendar3"></i>
+                    </span>
+
+                    <div>
+                        <span>Class Day</span>
+
+                        <strong>
+                            @Model.Day
+                        </strong>
+                    </div>
+
+                </div>
+
+
+                <div class="tutor-detail-item">
+
+                    <span class="tutor-detail-icon">
+                        <i class="bi bi-clock-fill"></i>
+                    </span>
+
+                    <div>
+                        <span>Start Time</span>
+
+                        <strong>
+                            @Model.StartTime
+                        </strong>
+                    </div>
+
+                </div>
+
+
+                <div class="tutor-detail-item">
+
+                    <span class="tutor-detail-icon">
+                        <i class="bi bi-clock-history"></i>
+                    </span>
+
+                    <div>
+                        <span>End Time</span>
+
+                        <strong>
+                            @Model.EndTime
+                        </strong>
+                    </div>
+
+                </div>
+
+
+                <div class="tutor-detail-item">
+
+                    <span class="tutor-detail-icon">
+                        <i class="bi bi-info-circle-fill"></i>
+                    </span>
+
+                    <div>
+                        <span>Class Status</span>
+
+                        <strong>
+                            @Model.Status
+                        </strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="tutor-details-section">
+
+            <h3>
+                <i class="bi bi-chat-left-text-fill"></i>
+                Tutor Remark
+            </h3>
+
+
+            @if (string.IsNullOrWhiteSpace(Model.Remark))
+            {
+                <div class="tutor-remark-empty">
+
+                    <i class="bi bi-info-circle"></i>
+
+                    <span>
+                        No remark was provided for this class.
+                    </span>
+
+                </div>
+            }
+            else
+            {
+                <div class="tutor-remark-content">
+                    @Model.Remark
+                </div>
+            }
+
+        </section>
+
+    </div>
+
+
+    <footer class="tutor-details-footer">
+
+        <a asp-controller="Tutor"
+           asp-action="MyClasses"
+           class="outline-button">
+
+            <i class="bi bi-arrow-left"></i>
+            Back
+        </a>
+
+
+        @if (Model.CanJoinMeeting)
+        {
+            <a href="@Model.GoogleMeetLink"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="primary-button">
+
+                <i class="bi bi-camera-video-fill"></i>
+                Join Google Meet
+            </a>
+        }
+        else
+        {
+            <span class="tutor-meet-unavailable">
+
+                <i class="bi bi-camera-video-off-fill"></i>
+
+                Google Meet is unavailable because
+                this class is not active.
+
+            </span>
+        }
+
+    </footer>
+
+</section>

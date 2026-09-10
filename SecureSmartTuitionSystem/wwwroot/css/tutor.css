@@ -1,10 +1,101 @@
 ﻿/* =========================================================
-   TUTOR MY CLASSES
+   1. TUTOR DASHBOARD
 ========================================================= */
 
 .tutor-class-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+
+
+/* =========================================================
+   2. MY CLASSES FILTER
+========================================================= */
+
+.tutor-class-filter-card {
+    width: 100%;
+    margin-bottom: 24px;
+    padding: 22px 24px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--shadow);
+}
+
+.tutor-filter-heading {
+    display: flex;
+    margin-bottom: 18px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+    .tutor-filter-heading h2 {
+        display: flex;
+        margin: 0;
+        align-items: center;
+        gap: 9px;
+        color: var(--navy);
+        font-size: 1.05rem;
+        font-weight: 750;
+    }
+
+        .tutor-filter-heading h2 i {
+            color: var(--teal);
+        }
+
+    .tutor-filter-heading p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 0.87rem;
+    }
+
+.tutor-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+    .tutor-filter-grid .form-label {
+        margin-bottom: 7px;
+        color: var(--navy);
+        font-size: 0.86rem;
+        font-weight: 700;
+    }
+
+    .tutor-filter-grid .form-select {
+        min-height: 46px;
+        border-color: var(--border);
+        border-radius: 10px;
+        color: var(--navy);
+        background-color: #ffffff;
+    }
+
+        .tutor-filter-grid .form-select:focus {
+            border-color: var(--teal);
+            box-shadow: 0 0 0 0.2rem rgba(14, 165, 176, 0.13);
+        }
+
+.clear-filter-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--teal-dark);
+    font-size: 0.86rem;
+    font-weight: 650;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+    .clear-filter-link:hover {
+        color: var(--navy);
+        text-decoration: none;
+    }
+
+
+/* =========================================================
+   3. MY CLASSES GRID
+========================================================= */
 
 .tutor-classes-grid {
     display: grid;
@@ -13,7 +104,10 @@
 }
 
 .tutor-class-card {
+    display: flex;
+    min-width: 0;
     overflow: hidden;
+    flex-direction: column;
     border: 1px solid var(--border);
     border-radius: 17px;
     background: rgba(255, 255, 255, 0.97);
@@ -22,7 +116,7 @@
 
 .tutor-class-card-header {
     display: flex;
-    min-height: 100px;
+    min-height: 110px;
     padding: 20px 22px;
     align-items: flex-start;
     justify-content: space-between;
@@ -30,18 +124,42 @@
     border-bottom: 1px solid var(--border);
 }
 
-    .tutor-class-card-header h2 {
-        margin: 6px 0 0;
-        color: var(--navy);
-        font-size: 1.15rem;
-        font-weight: 750;
-    }
+.tutor-class-title {
+    min-width: 0;
+}
+
+.class-code {
+    display: inline-flex;
+    color: var(--teal-dark);
+    font-size: 0.76rem;
+    font-weight: 750;
+    letter-spacing: 0.04em;
+}
+
+.tutor-class-card-header h2 {
+    margin: 7px 0 0;
+    overflow-wrap: anywhere;
+    color: var(--navy);
+    font-size: 1.12rem;
+    font-weight: 750;
+    line-height: 1.4;
+}
+
+.tutor-class-card-header .status-pill {
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   4. MY CLASS CARD CONTENT
+========================================================= */
 
 .tutor-class-card-body {
     display: grid;
     padding: 22px;
+    flex: 1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 19px;
+    gap: 20px;
 }
 
 .tutor-class-detail {
@@ -61,10 +179,10 @@
         border-radius: 11px;
         color: var(--teal-dark);
         background: #d9f9f7;
-        font-size: 1.1rem;
+        font-size: 1.05rem;
     }
 
-    .tutor-class-detail div {
+    .tutor-class-detail > div {
         min-width: 0;
     }
 
@@ -72,35 +190,253 @@
         display: block;
         margin-bottom: 3px;
         color: var(--muted);
-        font-size: 0.8rem;
+        font-size: 0.79rem;
     }
 
     .tutor-class-detail strong {
         display: block;
         overflow-wrap: anywhere;
         color: var(--navy);
-        font-size: 0.93rem;
+        font-size: 0.91rem;
+        line-height: 1.4;
     }
 
-.free-text {
-    color: var(--green) !important;
-}
+
+/* =========================================================
+   5. MY CLASS CARD ACTIONS
+========================================================= */
 
 .tutor-class-card-footer {
     display: flex;
-    padding: 17px 22px;
+    min-height: 70px;
+    padding: 15px 22px;
+    align-items: center;
     justify-content: flex-end;
+    gap: 10px;
     border-top: 1px solid var(--border);
     background: #fbfeff;
 }
 
-.disabled-meet-button {
-    border-color: #a9bcc4 !important;
-    color: #718792 !important;
-    background: #e8f0f2 !important;
-    box-shadow: none !important;
-    cursor: not-allowed;
-    opacity: 0.8;
+    .tutor-class-card-footer .primary-button,
+    .tutor-class-card-footer .outline-button {
+        min-height: 40px;
+        padding: 9px 14px;
+    }
+
+
+/* =========================================================
+   6. EMPTY STATE
+========================================================= */
+
+.tutor-empty-card {
+    width: 100%;
+}
+
+    .tutor-empty-card .empty-state {
+        min-height: 250px;
+    }
+
+
+/* =========================================================
+   7. TUTOR CLASS DETAILS
+========================================================= */
+
+.tutor-details-card {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--shadow);
+}
+
+.tutor-details-header {
+    display: flex;
+    padding: 25px 28px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient( 135deg, #ffffff 0%, #f1fdfd 100% );
+}
+
+.tutor-details-title {
+    min-width: 0;
+}
+
+    .tutor-details-title h2 {
+        margin: 7px 0 5px;
+        overflow-wrap: anywhere;
+        color: var(--navy);
+        font-size: 1.45rem;
+        font-weight: 780;
+        line-height: 1.35;
+    }
+
+    .tutor-details-title p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+    }
+
+.tutor-details-header .status-pill {
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   8. DETAILS CONTENT
+========================================================= */
+
+.tutor-details-body {
+    padding: 0 28px;
+}
+
+.tutor-details-section {
+    padding: 26px 0;
+}
+
+    .tutor-details-section + .tutor-details-section {
+        border-top: 1px solid var(--border);
+    }
+
+    .tutor-details-section h3 {
+        display: flex;
+        margin: 0 0 20px;
+        align-items: center;
+        gap: 9px;
+        color: var(--navy);
+        font-size: 1.08rem;
+        font-weight: 750;
+    }
+
+        .tutor-details-section h3 i {
+            color: var(--teal);
+        }
+
+.tutor-details-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 15px;
+}
+
+.tutor-detail-item {
+    display: flex;
+    min-width: 0;
+    min-height: 92px;
+    padding: 16px;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: #fbfeff;
+}
+
+.tutor-detail-icon {
+    display: flex;
+    width: 43px;
+    height: 43px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 11px;
+    color: var(--teal-dark);
+    background: #d9f9f7;
+    font-size: 1.05rem;
+}
+
+.tutor-detail-item > div {
+    min-width: 0;
+}
+
+    .tutor-detail-item > div > span {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 0.78rem;
+    }
+
+.tutor-detail-item strong {
+    display: block;
+    overflow-wrap: anywhere;
+    color: var(--navy);
+    font-size: 0.92rem;
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   9. TUTOR REMARK
+========================================================= */
+
+.tutor-remark-content,
+.tutor-remark-empty {
+    min-height: 76px;
+    padding: 17px 19px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    line-height: 1.65;
+}
+
+.tutor-remark-content {
+    overflow-wrap: anywhere;
+    color: var(--navy);
+    background: #fbfeff;
+    white-space: pre-wrap;
+}
+
+.tutor-remark-empty {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--muted);
+    background: #f7fafb;
+}
+
+    .tutor-remark-empty i {
+        color: var(--teal);
+    }
+
+
+/* =========================================================
+   10. DETAILS FOOTER
+========================================================= */
+
+.tutor-details-footer {
+    display: flex;
+    min-height: 78px;
+    padding: 17px 28px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border-top: 1px solid var(--border);
+    background: #fbfeff;
+}
+
+.tutor-meet-unavailable {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 0.86rem;
+}
+
+    .tutor-meet-unavailable i {
+        color: #879ca5;
+    }
+
+
+/* =========================================================
+   11. RESPONSIVE - TABLET
+========================================================= */
+
+@media (max-width: 1200px) {
+    .tutor-details-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 1100px) {
@@ -109,16 +445,102 @@
     }
 }
 
+@media (max-width: 900px) {
+    .tutor-filter-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* =========================================================
+   12. RESPONSIVE - MOBILE
+========================================================= */
+
 @media (max-width: 768px) {
     .tutor-class-summary {
         grid-template-columns: 1fr;
+    }
+
+    .tutor-class-filter-card {
+        padding: 20px 17px;
+    }
+
+    .tutor-filter-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
     }
 
     .tutor-class-card-body {
         grid-template-columns: 1fr;
     }
 
-    .tutor-class-card-footer .primary-button {
-        width: 100%;
+    .tutor-class-card-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+        .tutor-class-card-footer .primary-button,
+        .tutor-class-card-footer .outline-button {
+            width: 100%;
+        }
+
+    .tutor-details-header {
+        padding: 22px 20px;
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .tutor-details-body {
+        padding: 0 20px;
+    }
+
+    .tutor-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tutor-details-footer {
+        padding: 17px 20px;
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+        .tutor-details-footer .primary-button,
+        .tutor-details-footer .outline-button {
+            width: 100%;
+        }
+
+    .tutor-meet-unavailable {
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+
+/* =========================================================
+   13. RESPONSIVE - SMALL MOBILE
+========================================================= */
+
+@media (max-width: 520px) {
+    .tutor-class-card-header {
+        padding: 18px;
+        flex-direction: column;
+    }
+
+    .tutor-class-card-body {
+        padding: 18px;
+    }
+
+    .tutor-class-card-footer {
+        padding: 15px 18px;
+    }
+
+    .tutor-details-title h2 {
+        font-size: 1.2rem;
+    }
+
+    .tutor-detail-item {
+        min-height: 82px;
+        padding: 14px;
     }
 }

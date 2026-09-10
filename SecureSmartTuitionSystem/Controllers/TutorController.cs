@@ -17,6 +17,7 @@ namespace SecureSmartTuitionSystem.Controllers
         private readonly UserManager<ApplicationUser>
             _userManager;
 
+
         public TutorController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager)
@@ -25,9 +26,13 @@ namespace SecureSmartTuitionSystem.Controllers
             _userManager = userManager;
         }
 
+
         /*
-         * Tutor Dashboard
+         * =====================================================
+         * TUTOR DASHBOARD
+         * =====================================================
          */
+
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -48,7 +53,20 @@ namespace SecureSmartTuitionSystem.Controllers
                         session.Status ==
                             ClassSessionStatus.Active)
                     .OrderBy(session =>
-                        session.DayOfWeek)
+                        session.DayOfWeek ==
+                            DayOfWeek.Monday ? 1 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Tuesday ? 2 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Wednesday ? 3 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Thursday ? 4 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Friday ? 5 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Saturday ? 6 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Sunday ? 7 : 8)
                     .ThenBy(session =>
                         session.StartTime)
                     .ToListAsync();
@@ -92,72 +110,80 @@ namespace SecureSmartTuitionSystem.Controllers
                     .Distinct()
                     .CountAsync();
 
-            var model = new TutorDashboardViewModel
-            {
-                TutorName =
-                    tutor.FullName ??
-                    tutor.Email ??
-                    "Tutor",
+            var model =
+                new TutorDashboardViewModel
+                {
+                    TutorName =
+                        tutor.FullName ??
+                        tutor.Email ??
+                        "Tutor",
 
-                AssignedClassCount =
-                    activeClasses.Count,
+                    AssignedClassCount =
+                        activeClasses.Count,
 
-                TodayClassCount =
-                    activeClasses.Count(session =>
-                        session.DayOfWeek ==
-                            DateTime.Today.DayOfWeek),
+                    TodayClassCount =
+                        activeClasses.Count(session =>
+                            session.DayOfWeek ==
+                                DateTime.Today.DayOfWeek),
 
-                ActiveStudentCount =
-                    activeStudentCount,
+                    ActiveStudentCount =
+                        activeStudentCount,
 
-                Classes =
-                    activeClasses
-                        .Select(session =>
-                            new TutorClassItemViewModel
-                            {
-                                ClassSessionId =
-                                    session.ClassSessionId,
-
-                                ClassCode =
-                                    session.ClassCode,
-
-                                SubjectName =
-                                    session.Subject.SubjectName,
-
-                                AcademicLevel =
-                                    session.Subject.AcademicLevel,
-
-                                Day =
-                                    session.DayOfWeek.ToString(),
-
-                                Time =
-                                    session.StartTime
-                                        .ToString("hh:mm tt") +
-                                    " - " +
-                                    session.EndTime
-                                        .ToString("hh:mm tt"),
-
-                                Venue =
-                                    session.Venue,
-
-                                StudentCount =
-                                    studentCounts.TryGetValue(
+                    Classes =
+                        activeClasses
+                            .Select(session =>
+                                new TutorClassItemViewModel
+                                {
+                                    ClassSessionId =
                                         session.ClassSessionId,
-                                        out int count)
-                                            ? count
-                                            : 0
-                            })
-                        .ToList()
-            };
+
+                                    ClassCode =
+                                        session.ClassCode,
+
+                                    SubjectName =
+                                        session.Subject.SubjectName,
+
+                                    AcademicLevel =
+                                        session.Subject.AcademicLevel,
+
+                                    Day =
+                                        session.DayOfWeek.ToString(),
+
+                                    Time =
+                                        session.StartTime
+                                            .ToString("hh:mm tt") +
+                                        " - " +
+                                        session.EndTime
+                                            .ToString("hh:mm tt"),
+
+                                    Venue =
+                                        session.Venue,
+
+                                    StudentCount =
+                                        studentCounts.TryGetValue(
+                                            session.ClassSessionId,
+                                            out int count)
+                                                ? count
+                                                : 0
+                                })
+                            .ToList()
+                };
 
             return View(model);
         }
 
+
         /*
-         * Display every class assigned to the logged-in Tutor.
+         * =====================================================
+         * TUTOR MY CLASSES
+         * =====================================================
          */
+
         [HttpGet]
-        public async Task<IActionResult> MyClasses()
+        public async Task<IActionResult> MyClasses(
+            string? subjectName,
+            DayOfWeek? dayOfWeek,
+            ClassSessionStatus? status)
         {
             var tutor =
                 await _userManager.GetUserAsync(User);
@@ -167,16 +193,104 @@ namespace SecureSmartTuitionSystem.Controllers
                 return Challenge();
             }
 
-            var assignedClasses =
-                await _context.ClassSessions
+            subjectName =
+                string.IsNullOrWhiteSpace(subjectName)
+                    ? null
+                    : subjectName.Trim();
+
+            /*
+             * This query always limits the records to the
+             * currently logged-in Tutor.
+             */
+            var tutorClassesQuery =
+                _context.ClassSessions
                     .AsNoTracking()
                     .Include(session => session.Subject)
                     .Where(session =>
-                        session.TutorUserId == tutor.Id)
+                        session.TutorUserId == tutor.Id);
+
+            /*
+             * Summary values use all classes assigned
+             * to the Tutor, before filters are applied.
+             */
+            int totalClassCount =
+                await tutorClassesQuery.CountAsync();
+
+            int activeClassCount =
+                await tutorClassesQuery.CountAsync(session =>
+                    session.Status ==
+                        ClassSessionStatus.Active);
+
+            DayOfWeek today =
+                DateTime.Today.DayOfWeek;
+
+            int todayClassCount =
+                await tutorClassesQuery.CountAsync(session =>
+                    session.Status ==
+                        ClassSessionStatus.Active &&
+                    session.DayOfWeek == today);
+
+            /*
+             * Subject filter options only include subjects
+             * belonging to this Tutor's assigned classes.
+             */
+            var subjectOptions =
+                await tutorClassesQuery
+                    .Select(session =>
+                        session.Subject.SubjectName)
+                    .Distinct()
+                    .OrderBy(name => name)
+                    .ToListAsync();
+
+            /*
+             * Apply filters.
+             */
+            if (subjectName != null)
+            {
+                tutorClassesQuery =
+                    tutorClassesQuery.Where(session =>
+                        session.Subject.SubjectName ==
+                            subjectName);
+            }
+
+            if (dayOfWeek.HasValue)
+            {
+                tutorClassesQuery =
+                    tutorClassesQuery.Where(session =>
+                        session.DayOfWeek ==
+                            dayOfWeek.Value);
+            }
+
+            if (status.HasValue)
+            {
+                tutorClassesQuery =
+                    tutorClassesQuery.Where(session =>
+                        session.Status ==
+                            status.Value);
+            }
+
+            /*
+             * Monday to Sunday schedule order.
+             */
+            var assignedClasses =
+                await tutorClassesQuery
                     .OrderBy(session =>
                         session.Status)
                     .ThenBy(session =>
-                        session.DayOfWeek)
+                        session.DayOfWeek ==
+                            DayOfWeek.Monday ? 1 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Tuesday ? 2 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Wednesday ? 3 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Thursday ? 4 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Friday ? 5 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Saturday ? 6 :
+                        session.DayOfWeek ==
+                            DayOfWeek.Sunday ? 7 : 8)
                     .ThenBy(session =>
                         session.StartTime)
                     .ToListAsync();
@@ -207,88 +321,201 @@ namespace SecureSmartTuitionSystem.Controllers
                         item => item.ClassSessionId,
                         item => item.StudentCount);
 
-            var model = new TutorMyClassesViewModel
-            {
-                TutorName =
-                    tutor.FullName ??
-                    tutor.Email ??
-                    "Tutor",
+            var model =
+                new TutorMyClassesViewModel
+                {
+                    TutorName =
+                        tutor.FullName ??
+                        tutor.Email ??
+                        "Tutor",
 
-                TotalClassCount =
-                    assignedClasses.Count,
+                    TotalClassCount =
+                        totalClassCount,
 
-                ActiveClassCount =
-                    assignedClasses.Count(session =>
-                        session.Status ==
-                            ClassSessionStatus.Active),
+                    ActiveClassCount =
+                        activeClassCount,
 
-                TodayClassCount =
-                    assignedClasses.Count(session =>
-                        session.Status ==
-                            ClassSessionStatus.Active &&
-                        session.DayOfWeek ==
-                            DateTime.Today.DayOfWeek),
+                    TodayClassCount =
+                        todayClassCount,
 
-                Classes =
-                    assignedClasses
-                        .Select(session =>
-                            new TutorMyClassItemViewModel
-                            {
-                                ClassSessionId =
-                                    session.ClassSessionId,
+                    SubjectName =
+                        subjectName,
 
-                                ClassCode =
-                                    session.ClassCode,
+                    DayOfWeek =
+                        dayOfWeek,
 
-                                ClassName =
-                                    session.ClassName ??
-                                    session.Subject.AcademicLevel +
-                                    " - " +
-                                    session.Subject.SubjectName,
+                    Status =
+                        status,
 
-                                EducationStage =
-                                    session.Subject
-                                        .EducationStage
-                                        .ToString(),
+                    SubjectOptions =
+                        subjectOptions,
 
-                                AcademicLevel =
-                                    session.Subject.AcademicLevel,
-
-                                SubjectName =
-                                    session.Subject.SubjectName,
-
-                                Day =
-                                    session.DayOfWeek.ToString(),
-
-                                StartTime =
-                                    session.StartTime
-                                        .ToString("hh:mm tt"),
-
-                                EndTime =
-                                    session.EndTime
-                                        .ToString("hh:mm tt"),
-
-                                GoogleMeetLink =
-                                    session.Venue,
-
-                                MonthlyFee =
-                                    session.Subject.MonthlyFee,
-
-                                Capacity =
-                                    session.Capacity,
-
-                                StudentCount =
-                                    studentCounts.TryGetValue(
+                    Classes =
+                        assignedClasses
+                            .Select(session =>
+                                new TutorMyClassItemViewModel
+                                {
+                                    ClassSessionId =
                                         session.ClassSessionId,
-                                        out int count)
-                                            ? count
-                                            : 0,
 
-                                Status =
-                                    session.Status
-                            })
-                        .ToList()
-            };
+                                    ClassCode =
+                                        session.ClassCode,
+
+                                    ClassName =
+                                        session.ClassName ??
+                                        session.Subject
+                                            .AcademicLevel +
+                                        " - " +
+                                        session.Subject
+                                            .SubjectName,
+
+                                    EducationStage =
+                                        session.Subject
+                                            .EducationStage
+                                            .ToString(),
+
+                                    AcademicLevel =
+                                        session.Subject
+                                            .AcademicLevel,
+
+                                    SubjectName =
+                                        session.Subject
+                                            .SubjectName,
+
+                                    Day =
+                                        session.DayOfWeek
+                                            .ToString(),
+
+                                    StartTime =
+                                        session.StartTime
+                                            .ToString("hh:mm tt"),
+
+                                    EndTime =
+                                        session.EndTime
+                                            .ToString("hh:mm tt"),
+
+                                    GoogleMeetLink =
+                                        session.Venue,
+
+                                    Capacity =
+                                        session.Capacity,
+
+                                    StudentCount =
+                                        studentCounts
+                                            .TryGetValue(
+                                                session
+                                                    .ClassSessionId,
+                                                out int count)
+                                                    ? count
+                                                    : 0,
+
+                                    Status =
+                                        session.Status
+                                })
+                            .ToList()
+                };
+
+            return View(model);
+        }
+
+
+        /*
+         * =====================================================
+         * TUTOR CLASS DETAILS
+         * =====================================================
+         */
+
+        [HttpGet]
+        public async Task<IActionResult> ClassDetails(
+            int id)
+        {
+            var tutor =
+                await _userManager.GetUserAsync(User);
+
+            if (tutor == null)
+            {
+                return Challenge();
+            }
+
+            /*
+             * TutorUserId is included in the query.
+             * Therefore, a Tutor cannot view another
+             * Tutor's class by changing the URL ID.
+             */
+            var session =
+                await _context.ClassSessions
+                    .AsNoTracking()
+                    .Include(item => item.Subject)
+                    .FirstOrDefaultAsync(item =>
+                        item.ClassSessionId == id &&
+                        item.TutorUserId == tutor.Id);
+
+            if (session == null)
+            {
+                return NotFound();
+            }
+
+            int studentCount =
+                await _context.StudentEnrollments
+                    .AsNoTracking()
+                    .CountAsync(enrollment =>
+                        enrollment.ClassSessionId ==
+                            session.ClassSessionId &&
+                        enrollment.Status ==
+                            StudentEnrollmentStatus.Active);
+
+            var model =
+                new TutorClassDetailsViewModel
+                {
+                    ClassSessionId =
+                        session.ClassSessionId,
+
+                    ClassCode =
+                        session.ClassCode,
+
+                    ClassName =
+                        session.ClassName ??
+                        session.Subject.AcademicLevel +
+                        " - " +
+                        session.Subject.SubjectName,
+
+                    EducationStage =
+                        session.Subject
+                            .EducationStage
+                            .ToString(),
+
+                    AcademicLevel =
+                        session.Subject.AcademicLevel,
+
+                    SubjectName =
+                        session.Subject.SubjectName,
+
+                    Day =
+                        session.DayOfWeek.ToString(),
+
+                    StartTime =
+                        session.StartTime
+                            .ToString("hh:mm tt"),
+
+                    EndTime =
+                        session.EndTime
+                            .ToString("hh:mm tt"),
+
+                    GoogleMeetLink =
+                        session.Venue,
+
+                    Capacity =
+                        session.Capacity,
+
+                    StudentCount =
+                        studentCount,
+
+                    Remark =
+                        session.Remark,
+
+                    Status =
+                        session.Status
+                };
 
             return View(model);
         }

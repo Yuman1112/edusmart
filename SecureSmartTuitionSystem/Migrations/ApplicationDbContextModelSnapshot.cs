@@ -188,6 +188,10 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("time");
 
+                    b.Property<string>("Remark")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("time");
 
@@ -203,13 +207,17 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.Property<string>("Venue")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
 
                     b.HasKey("ClassSessionId");
 
                     b.HasIndex("ClassCode")
                         .IsUnique();
+
+                    b.HasIndex("ClassName")
+                        .IsUnique()
+                        .HasFilter("[ClassName] IS NOT NULL");
 
                     b.HasIndex("SubjectId");
 
@@ -472,7 +480,7 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasKey("SubjectId");
 
-                    b.HasIndex("SubjectName", "AcademicLevel")
+                    b.HasIndex("EducationStage", "SubjectName", "AcademicLevel")
                         .IsUnique();
 
                     b.ToTable("Subjects");

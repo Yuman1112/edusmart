@@ -1,217 +1,294 @@
 ﻿<script>
     document.addEventListener("DOMContentLoaded", function () {
-        const educationStage =
+
+        const educationStageSelect =
             document.getElementById("EducationStage");
 
-        const academicLevel =
+        const academicLevelSelect =
             document.getElementById("AcademicLevel");
 
-        const subjectName =
+        const subjectNameSelect =
             document.getElementById("SubjectName");
 
-        const tutor =
+        const tutorSelect =
             document.getElementById("TutorUserId");
 
-        const startTime =
+        const daySelect =
+            document.getElementById("DayOfWeek");
+
+        const startTimeInput =
             document.getElementById("StartTime");
 
-        const className =
+        const classNameInput =
             document.getElementById("ClassName");
 
         const useSuggestedButton =
             document.getElementById("UseSuggestedName");
 
         const initialAcademicLevel =
-            document.getElementById(
-                "InitialAcademicLevel"
-            ).value;
+            document.getElementById("InitialAcademicLevel")?.value || "";
 
         const initialSubjectName =
-            document.getElementById(
-                "InitialSubjectName"
-            ).value;
+            document.getElementById("InitialSubjectName")?.value || "";
 
-        const primaryLevels = [
-            "YEAR 1",
-            "YEAR 2",
-            "YEAR 3",
-            "YEAR 4",
-            "YEAR 5",
-            "YEAR 6"
-        ];
+        const academicLevels = {
+            Primary: [
+                "YEAR 1",
+                "YEAR 2",
+                "YEAR 3",
+                "YEAR 4",
+                "YEAR 5",
+                "YEAR 6"
+            ],
 
-        const secondaryLevels = [
-            "FORM 1",
-            "FORM 2",
-            "FORM 3",
-            "FORM 4",
-            "FORM 5"
-        ];
+            Secondary: [
+                "FORM 1",
+                "FORM 2",
+                "FORM 3",
+                "FORM 4",
+                "FORM 5"
+            ]
+        };
 
-        const yearOneToThreeSubjects = [
-            "BC",
-            "BMP",
-            "BMK",
-            "BIP",
-            "BIK",
-            "MM",
-            "SCI"
-        ];
+        const subjectsByLevel = {
+            "YEAR 1": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "SCI"
+            ],
 
-        const yearFourToSixSubjects = [
-            "BC",
-            "BMP",
-            "BMK",
-            "BIP",
-            "BIK",
-            "MM",
-            "SCI",
-            "SEJ"
-        ];
+            "YEAR 2": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "SCI"
+            ],
 
-        const formOneToThreeSubjects = [
-            "BC",
-            "BMP",
-            "BMK",
-            "BIP",
-            "BIK",
-            "MM",
-            "SCI",
-            "SEJ",
-            "GEO",
-            "RBT",
-            "ASK"
-        ];
+            "YEAR 3": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "SCI"
+            ],
 
-        const formFourToFiveSubjects = [
-            "BC",
-            "BMP",
-            "BMK",
-            "BIP",
-            "BIK",
-            "MM",
-            "AM",
-            "BIO",
-            "CHE",
-            "PHY",
-            "SEJ",
-            "ACC",
-            "EKO",
-            "PER"
-        ];
+            "YEAR 4": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "SCI",
+                "SEJ"
+            ],
 
-        let manualClassName = false;
+            "YEAR 5": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "SCI",
+                "SEJ"
+            ],
 
-        function fillDropdown(
-            dropdown,
-            values,
-            placeholder,
-            selectedValue
-        ) {
-            dropdown.innerHTML = "";
+            "YEAR 6": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "SCI",
+                "SEJ"
+            ],
 
-            const emptyOption =
+            "FORM 1": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "SCI",
+                "SEJ",
+                "GEO",
+                "RBT",
+                "ASK"
+            ],
+
+            "FORM 2": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "SCI",
+                "SEJ",
+                "GEO",
+                "RBT",
+                "ASK"
+            ],
+
+            "FORM 3": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "SCI",
+                "SEJ",
+                "GEO",
+                "RBT",
+                "ASK"
+            ],
+
+            "FORM 4": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "AM",
+                "BIO",
+                "CHE",
+                "PHY",
+                "SEJ",
+                "ACC",
+                "EKO",
+                "PER"
+            ],
+
+            "FORM 5": [
+                "BC",
+                "BMP",
+                "BMK",
+                "BIP",
+                "BIK",
+                "MM",
+                "AM",
+                "BIO",
+                "CHE",
+                "PHY",
+                "SEJ",
+                "ACC",
+                "EKO",
+                "PER"
+            ]
+        };
+
+        let classNameManuallyEdited =
+            classNameInput &&
+            classNameInput.value.trim() !== "";
+
+        function resetSelect(selectElement, placeholder) {
+            if (!selectElement) {
+                return;
+            }
+
+            selectElement.innerHTML = "";
+
+            const defaultOption =
                 document.createElement("option");
 
-            emptyOption.value = "";
-            emptyOption.textContent = placeholder;
+            defaultOption.value = "";
+            defaultOption.textContent = placeholder;
 
-            dropdown.appendChild(emptyOption);
+            selectElement.appendChild(defaultOption);
+        }
 
+        function addOptions(
+            selectElement,
+            values,
+            selectedValue
+        ) {
             values.forEach(function (value) {
                 const option =
                     document.createElement("option");
 
                 option.value = value;
                 option.textContent = value;
+                option.selected =
+                    value === selectedValue;
 
-                if (value === selectedValue) {
-                    option.selected = true;
-                }
-
-                dropdown.appendChild(option);
+                selectElement.appendChild(option);
             });
         }
 
-        function loadAcademicLevels(
-            selectedValue = ""
-        ) {
-            let levels = [];
+        function populateAcademicLevels(selectedValue = "") {
+            resetSelect(
+                academicLevelSelect,
+                "-- Select Academic Level --"
+            );
 
-            if (educationStage.value === "Primary") {
-                levels = primaryLevels;
-            }
-            else if (
-                educationStage.value === "Secondary"
-            ) {
-                levels = secondaryLevels;
-            }
+            resetSelect(
+                subjectNameSelect,
+                "-- Select Subject --"
+            );
 
-            fillDropdown(
-                academicLevel,
+            const selectedStage =
+                educationStageSelect?.value || "";
+
+            const levels =
+                academicLevels[selectedStage] || [];
+
+            addOptions(
+                academicLevelSelect,
                 levels,
-                "-- Select Academic Level --",
                 selectedValue
             );
         }
 
-        function getSubjects() {
-            const level = academicLevel.value;
+        function populateSubjects(selectedValue = "") {
+            resetSelect(
+                subjectNameSelect,
+                "-- Select Subject --"
+            );
 
-            if (
-                level === "YEAR 1" ||
-                level === "YEAR 2" ||
-                level === "YEAR 3"
-            ) {
-                return yearOneToThreeSubjects;
-            }
+            const selectedLevel =
+                academicLevelSelect?.value || "";
 
-            if (
-                level === "YEAR 4" ||
-                level === "YEAR 5" ||
-                level === "YEAR 6"
-            ) {
-                return yearFourToSixSubjects;
-            }
+            const subjects =
+                subjectsByLevel[selectedLevel] || [];
 
-            if (
-                level === "FORM 1" ||
-                level === "FORM 2" ||
-                level === "FORM 3"
-            ) {
-                return formOneToThreeSubjects;
-            }
-
-            if (
-                level === "FORM 4" ||
-                level === "FORM 5"
-            ) {
-                return formFourToFiveSubjects;
-            }
-
-            return [];
-        }
-
-        function loadSubjects(
-            selectedValue = ""
-        ) {
-            fillDropdown(
-                subjectName,
-                getSubjects(),
-                "-- Select Subject --",
+            addOptions(
+                subjectNameSelect,
+                subjects,
                 selectedValue
             );
         }
 
-        function formatTime(value) {
-            if (!value) {
+        function formatTime(timeValue) {
+            if (!timeValue) {
                 return "";
             }
 
-            const parts = value.split(":");
+            const parts = timeValue.split(":");
 
-            let hour = Number(parts[0]);
+            if (parts.length < 2) {
+                return "";
+            }
+
+            let hour = parseInt(parts[0], 10);
             const minute = parts[1];
+
+            if (Number.isNaN(hour)) {
+                return "";
+            }
 
             const period =
                 hour >= 12 ? "PM" : "AM";
@@ -222,131 +299,183 @@
                 hour = 12;
             }
 
-            return String(hour).padStart(2, "0") +
+            return (
+                hour.toString().padStart(2, "0") +
                 ":" +
                 minute +
                 " " +
-                period;
+                period
+            );
         }
 
-        function buildSuggestedName() {
-            const level =
-                academicLevel.value;
+        function getSelectedTutorName() {
+            if (!tutorSelect || !tutorSelect.value) {
+                return "";
+            }
 
-            const subject =
-                subjectName.value;
-
-            const tutorOption =
-                tutor.options[
-                    tutor.selectedIndex
+            const selectedOption =
+                tutorSelect.options[
+                    tutorSelect.selectedIndex
                 ];
 
-            const tutorName =
-                tutorOption &&
-                tutorOption.value
-                    ? tutorOption.text.trim()
-                    : "";
+            return selectedOption
+                ? selectedOption.text.trim()
+                : "";
+        }
 
-            const time =
-                formatTime(startTime.value);
+        function buildSuggestedClassName() {
+            const academicLevel =
+                academicLevelSelect?.value || "";
+
+            const subjectName =
+                subjectNameSelect?.value || "";
+
+            const tutorName =
+                getSelectedTutorName();
+
+            const classDay =
+                daySelect?.value || "";
+
+            const startTime =
+                formatTime(startTimeInput?.value || "");
 
             if (
-                !level ||
-                !subject ||
+                !academicLevel ||
+                !subjectName ||
                 !tutorName ||
-                !time
+                !classDay ||
+                !startTime
             ) {
                 return "";
             }
 
-            return level +
+            return (
+                academicLevel +
                 " - " +
-                subject +
+                subjectName +
                 " - " +
                 tutorName +
                 " - " +
-                time;
+                classDay +
+                " - " +
+                startTime
+            );
         }
 
-        function updateClassName() {
-            if (manualClassName) {
+        function updateSuggestedClassName(forceUpdate = false) {
+            if (!classNameInput) {
                 return;
             }
 
-            className.value =
-                buildSuggestedName();
+            const suggestedName =
+                buildSuggestedClassName();
+
+            if (!suggestedName) {
+                if (!classNameManuallyEdited) {
+                    classNameInput.value = "";
+                }
+
+                return;
+            }
+
+            if (
+                forceUpdate ||
+                !classNameManuallyEdited
+            ) {
+                classNameInput.value =
+                    suggestedName;
+
+                classNameManuallyEdited = false;
+            }
         }
 
-        educationStage.addEventListener(
+        educationStageSelect?.addEventListener(
             "change",
             function () {
-                loadAcademicLevels();
-                loadSubjects();
-                updateClassName();
+                populateAcademicLevels();
+                populateSubjects();
+
+                classNameManuallyEdited = false;
+                updateSuggestedClassName();
             }
         );
 
-        academicLevel.addEventListener(
+        academicLevelSelect?.addEventListener(
             "change",
             function () {
-                loadSubjects();
-                updateClassName();
+                populateSubjects();
+
+                classNameManuallyEdited = false;
+                updateSuggestedClassName();
             }
         );
 
-        subjectName.addEventListener(
+        subjectNameSelect?.addEventListener(
             "change",
-            updateClassName
+            function () {
+                updateSuggestedClassName();
+            }
         );
 
-        tutor.addEventListener(
+        tutorSelect?.addEventListener(
             "change",
-            updateClassName
+            function () {
+                updateSuggestedClassName();
+            }
         );
 
-        startTime.addEventListener(
+        daySelect?.addEventListener(
             "change",
-            updateClassName
+            function () {
+                updateSuggestedClassName();
+            }
         );
 
-        className.addEventListener(
+        startTimeInput?.addEventListener(
+            "change",
+            function () {
+                updateSuggestedClassName();
+            }
+        );
+
+        startTimeInput?.addEventListener(
             "input",
             function () {
-                manualClassName = true;
+                updateSuggestedClassName();
             }
         );
 
-        useSuggestedButton.addEventListener(
+        classNameInput?.addEventListener(
+            "input",
+            function () {
+                classNameManuallyEdited =
+                    classNameInput.value.trim() !== "";
+            }
+        );
+
+        useSuggestedButton?.addEventListener(
             "click",
             function () {
-                manualClassName = false;
-                className.value =
-                    buildSuggestedName();
-
-                className.focus();
+                classNameManuallyEdited = false;
+                updateSuggestedClassName(true);
             }
         );
 
-        loadAcademicLevels(
-            initialAcademicLevel
-        );
+        /*
+         * Restore selected values when:
+         * 1. Editing an existing class.
+         * 2. Validation fails and the form reloads.
+         */
+        if (educationStageSelect?.value) {
+            populateAcademicLevels(
+                initialAcademicLevel
+            );
 
-        loadSubjects(
-            initialSubjectName
-        );
-
-        const suggestedName =
-            buildSuggestedName();
-
-        if (
-            className.value.trim() === "" ||
-            className.value.trim() === suggestedName
-        ) {
-            manualClassName = false;
-            className.value = suggestedName;
+            populateSubjects(
+                initialSubjectName
+            );
         }
-        else {
-            manualClassName = true;
-        }
+
+        updateSuggestedClassName();
     });
 </script>

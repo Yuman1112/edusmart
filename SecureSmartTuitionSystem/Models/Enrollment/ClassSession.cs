@@ -23,6 +23,12 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
         [Display(Name = "Class Name")]
         public string? ClassName { get; set; }
 
+        [StringLength(
+            500,
+            ErrorMessage = "Remark cannot exceed 500 characters.")]
+        [Display(Name = "Remark")]
+        public string? Remark { get; set; }
+
         [Required]
         public int SubjectId { get; set; }
 
@@ -45,7 +51,7 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
 
         [Required]
         [Url]
-        [StringLength(100)]
+        [StringLength(250)]
         [Display(Name = "Google Meet Link")]
         public string Venue { get; set; } = string.Empty;
 

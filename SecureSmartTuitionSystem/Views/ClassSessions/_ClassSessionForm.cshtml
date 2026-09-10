@@ -143,7 +143,7 @@
 
             <div class="form-text">
                 Suggested format:
-                Academic Level - Subject - Tutor - Start Time.
+                Academic Level - Subject - Tutor - Class Day - Start Time.
                 You may enter another unique Class Name.
             </div>
         </div>
@@ -192,6 +192,7 @@
 
             <select asp-for="DayOfWeek"
                     asp-items="Model.Days"
+                    id="DayOfWeek"
                     class="form-select">
 
                 <option value="">
@@ -255,6 +256,27 @@
             <span asp-validation-for="Venue"
                   class="text-danger">
             </span>
+        </div>
+
+        <div class="col-12">
+            <label asp-for="Remark"
+                   class="form-label">
+                Remark <span class="text-muted fw-normal">(Optional)</span>
+            </label>
+
+            <textarea asp-for="Remark"
+                      class="form-control"
+                      rows="4"
+                      maxlength="500"
+                      placeholder="Example: Trial class, replacement class, exam preparation or special instructions."></textarea>
+
+            <span asp-validation-for="Remark"
+                  class="text-danger">
+            </span>
+
+            <div class="form-text">
+                Maximum 500 characters. Tutor will be able to view this remark.
+            </div>
         </div>
 
     </div>

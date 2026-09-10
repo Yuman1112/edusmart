@@ -1,21 +1,108 @@
 ﻿/* =========================================================
-   CLASS SESSION MANAGEMENT
+   EDUSMART - CLASS SESSION MANAGEMENT
 ========================================================= */
 
-/* Main Create/Edit form card */
+
+/* =========================================================
+   1. CLASS SESSION FILTERS
+========================================================= */
+
+.class-filter-card {
+    width: 100%;
+    margin-bottom: 22px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--shadow);
+}
+
+.class-filter-heading {
+    display: flex;
+    margin-bottom: 18px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+    .class-filter-heading h2 {
+        display: flex;
+        margin: 0 0 4px;
+        align-items: center;
+        gap: 8px;
+        color: var(--navy);
+        font-size: 1.08rem;
+        font-weight: 750;
+    }
+
+        .class-filter-heading h2 i {
+            color: var(--teal);
+        }
+
+    .class-filter-heading p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+    }
+
+.class-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
+    gap: 14px;
+}
+
+    .class-filter-grid .form-label {
+        margin-bottom: 6px;
+        color: var(--navy);
+        font-size: 0.86rem;
+        font-weight: 700;
+    }
+
+    .class-filter-grid .form-select {
+        min-height: 42px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        border-color: var(--border);
+        border-radius: 9px;
+        color: var(--navy);
+        background-color: #ffffff;
+    }
+
+        .class-filter-grid .form-select:focus {
+            border-color: var(--teal);
+            box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.12);
+        }
+
+.clear-filter-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--teal-dark);
+    font-size: 0.88rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+    .clear-filter-link:hover {
+        color: var(--teal);
+    }
+
+
+/* =========================================================
+   2. CREATE AND EDIT FORM
+========================================================= */
 
 .class-form-card {
     width: 100%;
-    max-width: 1050px;
+    max-width: none;
+    margin: 0;
     padding: 30px;
+    box-sizing: border-box;
     border: 1px solid var(--border);
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.97);
     box-shadow: var(--shadow);
 }
-
-
-/* Form sections */
 
 .class-form-section {
     margin-bottom: 30px;
@@ -41,7 +128,9 @@
         }
 
 
-/* Validation */
+/* =========================================================
+   3. FORM VALIDATION
+========================================================= */
 
 .class-form-card .validation-summary-valid {
     display: none;
@@ -65,7 +154,9 @@
 }
 
 
-/* Form inputs */
+/* =========================================================
+   4. FORM INPUTS
+========================================================= */
 
 .class-form-card .form-label {
     margin-bottom: 7px;
@@ -76,6 +167,19 @@
 .class-form-card .form-control,
 .class-form-card .form-select {
     min-height: 48px;
+    border-color: var(--border);
+    border-radius: 9px;
+}
+
+.class-form-card textarea.form-control {
+    min-height: 110px;
+    resize: vertical;
+}
+
+.class-form-card .form-control:focus,
+.class-form-card .form-select:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.12);
 }
 
 .class-form-card .input-group .form-control {
@@ -84,6 +188,7 @@
 }
 
 .class-form-card .input-group-text {
+    display: flex;
     min-width: 48px;
     align-items: center;
     justify-content: center;
@@ -95,46 +200,13 @@
 .class-form-card .form-text {
     margin-top: 6px;
     color: var(--muted);
+    font-size: 0.84rem;
 }
 
 
-/* Subject details */
-
-.subject-details-panel {
-    display: grid;
-    margin-top: 22px;
-    padding: 20px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-    border: 1px solid #c5e8e9;
-    border-radius: 14px;
-    background: #effcfc;
-}
-
-.subject-detail-item {
-    min-width: 0;
-    padding: 14px;
-    border: 1px solid var(--border);
-    border-radius: 11px;
-    background: #ffffff;
-}
-
-    .subject-detail-item span {
-        display: block;
-        margin-bottom: 5px;
-        color: var(--muted);
-        font-size: 0.83rem;
-    }
-
-    .subject-detail-item strong {
-        display: block;
-        overflow-wrap: anywhere;
-        color: var(--navy);
-        font-size: 1rem;
-    }
-
-
-/* Create/Edit form buttons */
+/* =========================================================
+   5. CREATE AND EDIT ACTIONS
+========================================================= */
 
 .class-form-actions {
     display: flex;
@@ -146,49 +218,316 @@
 }
 
 
-/* Class Session Index action buttons */
+/* =========================================================
+   6. CLASS SESSION TABLE
+========================================================= */
 
-.class-action-buttons {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 7px;
+.compact-class-card {
+    overflow: hidden;
 }
 
-    .class-action-buttons form {
-        margin: 0;
+    .compact-class-card .table-responsive {
+        width: 100%;
+        overflow-x: auto;
     }
 
-    .class-action-buttons .btn {
-        display: inline-flex;
-        min-height: 35px;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        border-radius: 8px;
+.compact-class-table {
+    width: 100%;
+    min-width: 1180px;
+    margin-bottom: 0;
+    table-layout: fixed;
+}
+
+    .compact-class-table th {
+        padding: 13px 14px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border);
+        color: var(--navy-soft);
+        background: #f4fafb;
+        font-size: 0.76rem;
+        text-transform: uppercase;
         white-space: nowrap;
     }
 
+    .compact-class-table td {
+        padding: 15px 14px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border);
+        color: var(--navy);
+        font-size: 0.88rem;
+        white-space: nowrap;
+    }
 
-/* Class Session table */
+    .compact-class-table tbody tr {
+        transition: background-color 0.2s ease;
+    }
 
-.class-session-table th {
+        .compact-class-table tbody tr:hover {
+            background: #f8fdfd;
+        }
+
+        .compact-class-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+
+    /* =========================================================
+   7. BALANCED TABLE COLUMNS
+========================================================= */
+
+    .compact-class-table .column-class-name {
+        width: 27%;
+    }
+
+    .compact-class-table .column-subject {
+        width: 17%;
+    }
+
+    .compact-class-table .column-tutor {
+        width: 11%;
+    }
+
+    .compact-class-table .column-schedule {
+        width: 16%;
+    }
+
+    .compact-class-table .column-fee {
+        width: 8%;
+    }
+
+    .compact-class-table .column-status {
+        width: 8%;
+    }
+
+    .compact-class-table .column-actions {
+        width: 13%;
+    }
+
+/* =========================================================
+   8. TABLE CONTENT
+========================================================= */
+
+.class-name-column {
+    min-width: 0;
+}
+
+    .class-name-column strong {
+        display: block;
+        overflow: hidden;
+        color: var(--navy);
+        line-height: 1.35;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+.class-secondary-text {
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.class-session-table td {
-    vertical-align: middle;
-}
-
-.class-code {
+.tutor-column {
+    overflow: hidden;
     color: var(--navy);
-    font-weight: 750;
+    font-weight: 600;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.fee-text {
+    color: var(--navy);
+    font-weight: 700;
+    white-space: nowrap;
+}
 
-/* Google Meet link */
+.free-text {
+    color: var(--green) !important;
+}
+
+
+/* =========================================================
+   9. SORTING BUTTONS
+========================================================= */
+
+.sort-button {
+    display: inline-flex;
+    padding: 0;
+    align-items: center;
+    gap: 4px;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    font-weight: inherit;
+    text-transform: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+    .sort-button i {
+        color: #91a7b8;
+        font-size: 0.7rem;
+    }
+
+    .sort-button:hover,
+    .sort-button.active-sort {
+        color: var(--teal-dark);
+    }
+
+        .sort-button.active-sort i {
+            color: var(--teal);
+        }
+
+
+/* =========================================================
+   10. CLASS SESSION ACTIONS
+========================================================= */
+
+.actions-heading {
+    text-align: left;
+}
+
+.action-column {
+    position: relative;
+    overflow: visible;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.class-action-group {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.class-details-button,
+.class-more-button {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    line-height: 1;
+}
+
+.class-details-button {
+    padding: 5px 9px;
+    gap: 4px;
+}
+
+.class-more-button {
+    width: 34px;
+    padding: 5px;
+}
+
+    .class-more-button::after {
+        display: none;
+    }
+
+.class-action-dropdown {
+    position: relative;
+}
+
+.class-action-menu {
+    min-width: 205px;
+    padding: 7px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(6, 47, 95, 0.16);
+}
+
+    .class-action-menu .dropdown-item {
+        display: flex;
+        width: 100%;
+        min-height: 38px;
+        padding: 8px 10px;
+        align-items: center;
+        gap: 9px;
+        border: 0;
+        border-radius: 7px;
+        color: var(--navy);
+        background: transparent;
+        font-size: 0.86rem;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+        .class-action-menu .dropdown-item:hover,
+        .class-action-menu .dropdown-item:focus {
+            color: var(--navy);
+            background: #edfafa;
+        }
+
+        .class-action-menu .dropdown-item i {
+            width: 18px;
+            color: var(--teal);
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+    .class-action-menu .dropdown-divider {
+        margin: 6px 0;
+        border-color: var(--border);
+    }
+
+.dropdown-action-form {
+    display: block;
+    width: 100%;
+    margin: 0;
+}
+
+.class-action-menu .action-complete {
+    color: #087b55;
+}
+
+    .class-action-menu .action-complete i {
+        color: #087b55;
+    }
+
+    .class-action-menu .action-complete:hover,
+    .class-action-menu .action-complete:focus {
+        color: #087b55;
+        background: #e7f8f0;
+    }
+
+.class-action-menu .action-cancel {
+    color: #c83445;
+}
+
+    .class-action-menu .action-cancel i {
+        color: #c83445;
+    }
+
+    .class-action-menu .action-cancel:hover,
+    .class-action-menu .action-cancel:focus {
+        color: #c83445;
+        background: #fff0f2;
+    }
+
+.class-action-menu .action-activate {
+    color: #087b55;
+}
+
+    .class-action-menu .action-activate i {
+        color: #087b55;
+    }
+
+    .class-action-menu .action-activate:hover,
+    .class-action-menu .action-activate:focus {
+        color: #087b55;
+        background: #e7f8f0;
+    }
+
+/* =========================================================
+   11. GOOGLE MEET LINK
+========================================================= */
 
 .meet-link {
     display: inline-flex;
@@ -213,14 +552,131 @@
 
 
 /* =========================================================
-   CLASS SESSION RESPONSIVE
+   12. CLASS DETAILS PAGE
 ========================================================= */
 
-@media (max-width: 900px) {
-    .subject-details-panel {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+.class-detail-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.class-details-card {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--shadow);
+}
+.class-details-title {
+    display: flex;
+    padding: 24px 28px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+    .class-details-title h2 {
+        margin: 5px 0 0;
+        color: var(--navy);
+        font-size: 1.45rem;
+    }
+
+.class-code {
+    color: var(--teal-dark);
+    font-size: 0.86rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.class-details-section {
+    padding: 26px 28px;
+}
+
+    .class-details-section + .class-details-section {
+        border-top: 1px solid var(--border);
+    }
+
+    .class-details-section h3 {
+        display: flex;
+        margin: 0 0 20px;
+        align-items: center;
+        gap: 9px;
+        color: var(--navy);
+        font-size: 1.15rem;
+    }
+
+        .class-details-section h3 i {
+            color: var(--teal);
+        }
+
+.class-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.class-detail-item {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f8fdfd;
+}
+
+    .class-detail-item span {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 0.84rem;
+    }
+
+    .class-detail-item strong {
+        display: block;
+        overflow-wrap: anywhere;
+        color: var(--navy);
+    }
+
+.class-detail-wide {
+    grid-column: 1 / -1;
+}
+
+.class-remark {
+    color: var(--navy-soft) !important;
+    font-weight: 500;
+    white-space: pre-wrap;
+}
+
+
+/* =========================================================
+   13. RESPONSIVE - MEDIUM SCREEN
+========================================================= */
+
+@media (max-width: 1150px) {
+    .class-filter-grid {
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+    }
+
+    .compact-class-table {
+        min-width: 1280px;
     }
 }
+
+@media (max-width: 900px) {
+    .class-filter-grid {
+        grid-template-columns: repeat(2, minmax(150px, 1fr));
+    }
+}
+
+
+/* =========================================================
+   14. RESPONSIVE - MOBILE
+========================================================= */
 
 @media (max-width: 768px) {
     .class-form-card {
@@ -238,21 +694,55 @@
             width: 100%;
         }
 
-    .class-action-buttons {
-        align-items: stretch;
+    .class-detail-header-actions {
+        width: 100%;
+    }
+
+        .class-detail-header-actions .primary-button,
+        .class-detail-header-actions .outline-button {
+            flex: 1;
+        }
+
+    .class-details-title {
+        padding: 20px;
+        align-items: flex-start;
         flex-direction: column;
     }
 
-        .class-action-buttons .btn,
-        .class-action-buttons form,
-        .class-action-buttons form button {
-            width: 100%;
-        }
+    .class-details-section {
+        padding: 22px 20px;
+    }
+
+    .class-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .class-detail-wide {
+        grid-column: auto;
+    }
+
 }
 
+
+/* =========================================================
+   15. RESPONSIVE - SMALL MOBILE
+========================================================= */
+
 @media (max-width: 520px) {
-    .subject-details-panel {
-        padding: 14px;
+    .class-filter-card {
+        padding: 18px 14px;
+    }
+
+    .class-filter-heading {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .class-filter-grid {
         grid-template-columns: 1fr;
+    }
+
+    .compact-class-table {
+        min-width: 1280px;
     }
 }

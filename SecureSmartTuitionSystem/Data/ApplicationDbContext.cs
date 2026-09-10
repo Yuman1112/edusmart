@@ -103,6 +103,7 @@ namespace SecureSmartTuitionSystem.Data
             builder.Entity<Subject>()
                 .HasIndex(subject => new
                 {
+                    subject.EducationStage,
                     subject.SubjectName,
                     subject.AcademicLevel
                 })
@@ -111,6 +112,11 @@ namespace SecureSmartTuitionSystem.Data
             builder.Entity<ClassSession>()
                 .HasIndex(session => session.ClassCode)
                 .IsUnique();
+
+            builder.Entity<ClassSession>()
+                .HasIndex(session => session.ClassName)
+                .IsUnique()
+                .HasFilter("[ClassName] IS NOT NULL");
 
             builder.Entity<ClassSession>()
                 .HasOne(session => session.Subject)

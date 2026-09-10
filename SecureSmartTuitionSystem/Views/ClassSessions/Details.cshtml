@@ -1,0 +1,138 @@
+﻿@model SecureSmartTuitionSystem.Models.Enrollment.ClassSession
+
+@using SecureSmartTuitionSystem.Models.Enrollment
+
+@{
+    ViewData["Title"] = "Class Session Details";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/class-sessions.css"
+          asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>Class Session Details</h1>
+        <p>View the complete subject and class session information.</p>
+    </div>
+
+    <div class="class-detail-header-actions">
+        <a asp-controller="ClassSessions"
+           asp-action="Index"
+           class="outline-button">
+            <i class="bi bi-arrow-left"></i>
+            Back
+        </a>
+
+        <a asp-controller="ClassSessions"
+           asp-action="Edit"
+           asp-route-id="@Model.ClassSessionId"
+           class="primary-button">
+            <i class="bi bi-pencil-square"></i>
+            Edit
+        </a>
+    </div>
+</div>
+
+<div class="class-details-card">
+    <div class="class-details-title">
+        <div>
+            <span class="class-code">@Model.ClassCode</span>
+            <h2>@(Model.ClassName ?? "Unnamed Class")</h2>
+        </div>
+
+        @if (Model.Status == ClassSessionStatus.Active)
+        {
+            <span class="status-pill status-success">Active</span>
+        }
+        else if (Model.Status == ClassSessionStatus.Cancelled)
+        {
+            <span class="status-pill status-danger">Cancelled</span>
+        }
+        else
+        {
+            <span class="status-pill status-warning">Completed</span>
+        }
+    </div>
+
+    <section class="class-details-section">
+        <h3><i class="bi bi-book-fill"></i> Subject Information</h3>
+
+        <div class="class-details-grid">
+            <div class="class-detail-item">
+                <span>Education Stage</span>
+                <strong>@Model.Subject.EducationStage</strong>
+            </div>
+
+            <div class="class-detail-item">
+                <span>Academic Level</span>
+                <strong>@Model.Subject.AcademicLevel</strong>
+            </div>
+
+            <div class="class-detail-item">
+                <span>Subject</span>
+                <strong>@Model.Subject.SubjectName</strong>
+            </div>
+
+            <div class="class-detail-item">
+                <span>Monthly Fee</span>
+                @if (Model.Subject.MonthlyFee == 0)
+                {
+                    <strong class="free-text">Free</strong>
+                }
+                else
+                {
+                    <strong>RM @Model.Subject.MonthlyFee.ToString("F2")</strong>
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="class-details-section">
+        <h3><i class="bi bi-calendar-check-fill"></i> Class Session Information</h3>
+
+        <div class="class-details-grid">
+            <div class="class-detail-item">
+                <span>Tutor</span>
+                <strong>@(Model.TutorUser.FullName ?? Model.TutorUser.Email ?? "Tutor")</strong>
+            </div>
+
+            <div class="class-detail-item">
+                <span>Class Day</span>
+                <strong>@Model.DayOfWeek</strong>
+            </div>
+
+            <div class="class-detail-item">
+                <span>Time</span>
+                <strong>@Model.StartTime.ToString("hh:mm tt") – @Model.EndTime.ToString("hh:mm tt")</strong>
+            </div>
+
+            <div class="class-detail-item">
+                <span>Capacity</span>
+                <strong>@Model.Capacity students</strong>
+            </div>
+
+            <div class="class-detail-item class-detail-wide">
+                <span>Google Meet</span>
+                <a href="@Model.Venue"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="meet-link">
+                    <i class="bi bi-camera-video-fill"></i>
+                    Open Google Meet
+                </a>
+            </div>
+
+            <div class="class-detail-item class-detail-wide">
+                <span>Remark</span>
+                <strong class="class-remark">
+                    @(string.IsNullOrWhiteSpace(Model.Remark)
+                                        ? "No remark provided."
+                                        : Model.Remark)
+                </strong>
+            </div>
+        </div>
+    </section>
+</div>
