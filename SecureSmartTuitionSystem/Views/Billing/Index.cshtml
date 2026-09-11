@@ -1,5 +1,349 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model SecureSmartTuitionSystem.ViewModels.Billing.BillingIndexViewModel
+@using SecureSmartTuitionSystem.Models.Billing
+
 @{
+    ViewData["Title"] = "Payment & Billing";
+
+    string StatusText(BillStatus status)
+    {
+        return status switch
+        {
+            BillStatus.PendingPayment => "Pending Payment",
+            BillStatus.Paid => "Paid",
+            BillStatus.Overdue => "Overdue",
+            BillStatus.Cancelled => "Cancelled",
+            BillStatus.Refunded => "Refunded",
+            _ => status.ToString()
+        };
+    }
+
+    string StatusClass(BillStatus status)
+    {
+        return status switch
+        {
+            BillStatus.PendingPayment => "billing-status pending",
+            BillStatus.Paid => "billing-status paid",
+            BillStatus.Overdue => "billing-status overdue",
+            BillStatus.Cancelled => "billing-status cancelled",
+            BillStatus.Refunded => "billing-status refunded",
+            _ => "billing-status"
+        };
+    }
+
+    string NextDirection(string column)
+    {
+        return Model.SortBy == column &&
+               Model.SortDirection == "asc"
+            ? "desc"
+            : "asc";
+    }
+
+    string SortIcon(string column)
+    {
+        if (Model.SortBy != column)
+        {
+            return "bi-arrow-down-up";
+        }
+
+        return Model.SortDirection == "asc"
+            ? "bi-sort-up"
+            : "bi-sort-down";
+    }
 }
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/billing.css"
+          asp-append-version="true" />
+}
+
+<div class="billing-page">
+    <header class="billing-page-header">
+        <div>
+            <h1>Payment &amp; Billing</h1>
+            <p>
+                Review bills and monitor payment status.
+            </p>
+        </div>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success billing-alert"
+             role="alert">
+            <i class="bi bi-check-circle"></i>
+            <span>@TempData["SuccessMessage"]</span>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger billing-alert"
+             role="alert">
+            <i class="bi bi-exclamation-circle"></i>
+            <span>@TempData["ErrorMessage"]</span>
+        </div>
+    }
+
+    <section class="billing-summary-grid">
+        <article class="billing-summary-card">
+            <div class="billing-summary-icon total">
+                <i class="bi bi-receipt"></i>
+            </div>
+
+            <div>
+                <span>Total Bills</span>
+                <strong>@Model.TotalBillCount</strong>
+            </div>
+        </article>
+
+        <article class="billing-summary-card">
+            <div class="billing-summary-icon pending">
+                <i class="bi bi-clock-history"></i>
+            </div>
+
+            <div>
+                <span>Pending</span>
+                <strong>@Model.PendingBillCount</strong>
+            </div>
+        </article>
+
+        <article class="billing-summary-card">
+            <div class="billing-summary-icon paid">
+                <i class="bi bi-check-circle"></i>
+            </div>
+
+            <div>
+                <span>Paid</span>
+                <strong>@Model.PaidBillCount</strong>
+            </div>
+        </article>
+
+        <article class="billing-summary-card">
+            <div class="billing-summary-icon overdue">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+
+            <div>
+                <span>Overdue</span>
+                <strong>@Model.OverdueBillCount</strong>
+            </div>
+        </article>
+
+        <article class="billing-summary-card amount">
+            <div class="billing-summary-icon amount">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+
+            <div>
+                <span>Outstanding Amount</span>
+                <strong>
+                    RM @Model.TotalPendingAmount.ToString("F2")
+                </strong>
+            </div>
+        </article>
+    </section>
+
+    <section class="billing-filter-card">
+        <form asp-controller="Billing"
+              asp-action="Index"
+              method="get"
+              id="billingFilterForm">
+
+            <div class="billing-filter-row">
+                <div class="billing-filter-field">
+                    <label for="status">Bill Status</label>
+
+                    <select id="status"
+                            name="status"
+                            class="form-select"
+                            onchange="this.form.submit()">
+
+                        <option value="">
+                            All Statuses
+                        </option>
+
+                        @foreach (BillStatus status in
+                                                Enum.GetValues<BillStatus>())
+                        {
+                            <option value="@status"
+                                    selected="@(Model.SelectedStatus == status
+                                                                                      ? "selected"
+                                                                                      : null)">
+                            @StatusText(status)
+                        </option>
+                                                }
+                    </select>
+                </div>
+
+                @if (Model.SelectedStatus.HasValue)
+                {
+                    <a asp-controller="Billing"
+                       asp-action="Index"
+                       class="outline-button billing-clear-button">
+
+                        <i class="bi bi-x-lg"></i>
+                        Clear Filter
+                    </a>
+                }
+            </div>
+        </form>
+    </section>
+
+    <section class="billing-table-card">
+        <div class="billing-table-heading">
+            <div>
+                <i class="bi bi-receipt-cutoff"></i>
+                <h2>All Bills</h2>
+            </div>
+
+            <span>@Model.Bills.Count bill(s)</span>
+        </div>
+
+        @if (Model.Bills.Count == 0)
+        {
+            <div class="billing-empty-state">
+                <i class="bi bi-receipt"></i>
+                <h3>No bills found</h3>
+                <p>
+                    Bills will appear after an enrollment
+                    application is approved.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="billing-table-wrapper">
+                <table class="billing-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                <a asp-action="Index"
+                                   asp-route-status="@Model.SelectedStatus"
+                                   asp-route-sortBy="billNumber"
+                                   asp-route-sortDirection="@NextDirection("billNumber")">
+                                    Bill
+                                    <i class="bi @SortIcon("billNumber")"></i>
+                                </a>
+                            </th>
+
+                            <th>
+                                <a asp-action="Index"
+                                   asp-route-status="@Model.SelectedStatus"
+                                   asp-route-sortBy="applicationNumber"
+                                   asp-route-sortDirection="@NextDirection("applicationNumber")">
+                                    Application
+                                    <i class="bi @SortIcon("applicationNumber")"></i>
+                                </a>
+                            </th>
+
+                            <th>
+                                <a asp-action="Index"
+                                   asp-route-status="@Model.SelectedStatus"
+                                   asp-route-sortBy="studentName"
+                                   asp-route-sortDirection="@NextDirection("studentName")">
+                                    Student
+                                    <i class="bi @SortIcon("studentName")"></i>
+                                </a>
+                            </th>
+
+                            <th>Guardian</th>
+
+                            <th>
+                                <a asp-action="Index"
+                                   asp-route-status="@Model.SelectedStatus"
+                                   asp-route-sortBy="amount"
+                                   asp-route-sortDirection="@NextDirection("amount")">
+                                    Amount
+                                    <i class="bi @SortIcon("amount")"></i>
+                                </a>
+                            </th>
+
+                            <th>
+                                <a asp-action="Index"
+                                   asp-route-status="@Model.SelectedStatus"
+                                   asp-route-sortBy="dueAt"
+                                   asp-route-sortDirection="@NextDirection("dueAt")">
+                                    Due Date
+                                    <i class="bi @SortIcon("dueAt")"></i>
+                                </a>
+                            </th>
+
+                            <th>
+                                <a asp-action="Index"
+                                   asp-route-status="@Model.SelectedStatus"
+                                   asp-route-sortBy="status"
+                                   asp-route-sortDirection="@NextDirection("status")">
+                                    Status
+                                    <i class="bi @SortIcon("status")"></i>
+                                </a>
+                            </th>
+
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var bill in Model.Bills)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@bill.BillNumber</strong>
+
+                                    <small>
+                                        @(bill.IssuedAt
+                                         .ToLocalTime()
+                                         .ToString("dd MMM yyyy"))
+                                    </small>
+                                </td>
+
+                                <td>
+                                    @bill.ApplicationNumber
+                                </td>
+
+                                <td>
+                                    <strong>@bill.StudentName</strong>
+                                </td>
+
+                                <td>
+                                    <strong>@bill.GuardianName</strong>
+
+                                    <small>
+                                        @bill.GuardianEmail
+                                    </small>
+                                </td>
+
+                                <td class="billing-amount">
+                                    RM @bill.TotalAmount.ToString("F2")
+                                </td>
+
+                                <td>
+                                    @(bill.DueAt
+                                    .ToLocalTime()
+                                    .ToString("dd MMM yyyy"))
+                                </td>
+
+                                <td>
+                                    <span class="@StatusClass(bill.Status)">
+                                        @StatusText(bill.Status)
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <a asp-controller="Billing"
+                                       asp-action="Details"
+                                       asp-route-id="@bill.BillId"
+                                       class="billing-details-button">
+
+                                        <i class="bi bi-eye"></i>
+                                        Details
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

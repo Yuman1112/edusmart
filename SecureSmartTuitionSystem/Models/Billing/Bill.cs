@@ -17,6 +17,13 @@ namespace SecureSmartTuitionSystem.Models.Billing
         public string BillNumber { get; set; }
             = string.Empty;
 
+        /*
+         * Used for secure access to the payment page.
+         * It must not be generated from BillId.
+         */
+        [StringLength(64)]
+        public string? PaymentAccessToken { get; set; }
+
         public int EnrollmentApplicationId { get; set; }
 
         [Column(TypeName = "decimal(10,2)")]

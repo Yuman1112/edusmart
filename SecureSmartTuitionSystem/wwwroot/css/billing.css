@@ -1,0 +1,727 @@
+﻿/* =========================================================
+   EDUSMART - PAYMENT AND BILLING
+========================================================= */
+
+/* =========================================================
+   PAGE HEADER
+========================================================= */
+
+.billing-page {
+    width: 100%;
+}
+
+.billing-page-header {
+    display: flex;
+    margin-bottom: 24px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+    .billing-page-header h1 {
+        margin: 0 0 6px;
+        color: var(--navy);
+        font-size: clamp(2rem, 3vw, 2.8rem);
+        font-weight: 800;
+    }
+
+    .billing-page-header p {
+        margin: 0;
+        color: var(--muted);
+    }
+
+.billing-details-header {
+    align-items: center;
+}
+
+.billing-back-link {
+    display: inline-flex;
+    margin-bottom: 14px;
+    align-items: center;
+    gap: 7px;
+    color: var(--teal-dark);
+    font-weight: 700;
+}
+
+    .billing-back-link:hover {
+        color: var(--navy);
+    }
+
+
+/* =========================================================
+   ALERTS
+========================================================= */
+
+.billing-alert {
+    display: flex;
+    margin-bottom: 20px;
+    align-items: center;
+    gap: 10px;
+    border-radius: 12px;
+}
+
+
+/* =========================================================
+   SUMMARY CARDS
+========================================================= */
+
+.billing-summary-grid {
+    display: grid;
+    margin-bottom: 24px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.billing-summary-card {
+    display: flex;
+    min-width: 0;
+    min-height: 112px;
+    padding: 20px;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--white);
+    box-shadow: var(--shadow);
+}
+
+    .billing-summary-card > div:last-child {
+        min-width: 0;
+    }
+
+    .billing-summary-card span {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 0.88rem;
+    }
+
+    .billing-summary-card strong {
+        display: block;
+        color: var(--navy);
+        font-size: 1.55rem;
+        overflow-wrap: anywhere;
+    }
+
+    .billing-summary-card.amount strong {
+        font-size: 1.2rem;
+    }
+
+.billing-summary-icon {
+    display: inline-flex;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.25rem;
+}
+
+    .billing-summary-icon.total {
+        color: #08789a;
+        background: #cef6fa;
+    }
+
+    .billing-summary-icon.pending {
+        color: #a96300;
+        background: #fff0cc;
+    }
+
+    .billing-summary-icon.paid {
+        color: #078454;
+        background: #d2f7e6;
+    }
+
+    .billing-summary-icon.overdue {
+        color: #cc2936;
+        background: #ffe0e3;
+    }
+
+    .billing-summary-icon.amount {
+        color: var(--navy);
+        background: #e5eef8;
+    }
+
+
+/* =========================================================
+   COMMON CARDS
+========================================================= */
+
+.billing-filter-card,
+.billing-table-card,
+.billing-detail-card {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--white);
+    box-shadow: var(--shadow);
+}
+
+
+/* =========================================================
+   FILTER
+========================================================= */
+
+.billing-filter-card {
+    margin-bottom: 24px;
+    padding: 20px;
+}
+
+.billing-filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.billing-filter-field {
+    width: min(320px, 100%);
+}
+
+    .billing-filter-field label {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--navy);
+        font-weight: 700;
+    }
+
+    .billing-filter-field .form-select {
+        min-height: 48px;
+        border-color: var(--border);
+        border-radius: 10px;
+        color: var(--navy);
+        background-color: var(--white);
+    }
+
+        .billing-filter-field .form-select:focus {
+            border-color: var(--teal);
+            box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.13);
+        }
+
+.billing-clear-button {
+    display: inline-flex;
+    min-height: 48px;
+    padding: 0 18px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+
+
+/* =========================================================
+   TABLE CARD
+========================================================= */
+
+.billing-table-card {
+    overflow: hidden;
+}
+
+.billing-table-heading {
+    display: flex;
+    min-height: 78px;
+    padding: 20px 24px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    border-bottom: 1px solid var(--border);
+}
+
+    .billing-table-heading > div,
+    .billing-section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .billing-table-heading i,
+        .billing-section-title i {
+            color: var(--teal);
+            font-size: 1.2rem;
+        }
+
+        .billing-table-heading h2,
+        .billing-section-title h2 {
+            margin: 0;
+            color: var(--navy);
+            font-size: 1.2rem;
+            font-weight: 750;
+        }
+
+    .billing-table-heading > span {
+        color: var(--muted);
+        white-space: nowrap;
+    }
+
+.billing-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.billing-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .billing-table th,
+    .billing-table td {
+        padding: 16px 18px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+    }
+
+    .billing-table th {
+        color: var(--teal-dark);
+        background: #f4fbfc;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+        .billing-table th a {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: inherit;
+        }
+
+            .billing-table th a:hover {
+                color: var(--navy);
+            }
+
+    .billing-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .billing-table tbody tr:hover {
+        background: #fbfefe;
+    }
+
+    .billing-table td {
+        color: var(--navy);
+    }
+
+        .billing-table td small {
+            display: block;
+            margin-top: 4px;
+            color: var(--muted);
+            overflow-wrap: anywhere;
+        }
+
+
+/* =========================================================
+   BILL ITEM TABLE ALIGNMENT
+========================================================= */
+
+.billing-item-table th:first-child,
+.billing-item-table td:first-child {
+    width: auto;
+}
+
+.billing-item-table th:nth-child(2),
+.billing-item-table td:nth-child(2) {
+    width: 100px;
+    text-align: center;
+}
+
+.billing-item-table th:nth-child(3),
+.billing-item-table td:nth-child(3) {
+    width: 180px;
+    text-align: right;
+}
+
+.billing-item-table th:nth-child(4),
+.billing-item-table td:nth-child(4) {
+    width: 180px;
+    padding-right: 28px;
+    text-align: right;
+}
+
+
+/* =========================================================
+   AMOUNTS
+========================================================= */
+
+.billing-amount {
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+    .billing-amount.discount,
+    .billing-total-panel .discount {
+        color: var(--green);
+    }
+
+
+/* =========================================================
+   STATUS PILLS
+========================================================= */
+
+.billing-status,
+.billing-payment-status {
+    display: inline-flex;
+    min-height: 30px;
+    padding: 5px 11px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+    .billing-status.pending,
+    .billing-payment-status.pending {
+        color: #9a5b00;
+        background: #fff0cc;
+    }
+
+    .billing-status.paid,
+    .billing-payment-status.succeeded {
+        color: #08794f;
+        background: #d3f7e7;
+    }
+
+    .billing-status.overdue,
+    .billing-status.cancelled,
+    .billing-payment-status.failed,
+    .billing-payment-status.cancelled {
+        color: #c92e3b;
+        background: #ffe2e5;
+    }
+
+    .billing-status.refunded,
+    .billing-payment-status.refunded {
+        color: #4c6380;
+        background: #e8eef5;
+    }
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.billing-details-button {
+    display: inline-flex;
+    min-height: 38px;
+    padding: 7px 13px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--teal);
+    border-radius: 9px;
+    color: var(--teal-dark);
+    background: var(--white);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+    .billing-details-button:hover {
+        color: var(--white);
+        background: var(--teal);
+    }
+
+
+/* =========================================================
+   EMPTY STATES
+========================================================= */
+
+.billing-empty-state,
+.billing-empty-payment {
+    padding: 52px 24px;
+    color: var(--muted);
+    text-align: center;
+}
+
+    .billing-empty-state i,
+    .billing-empty-payment i {
+        display: block;
+        margin-bottom: 12px;
+        color: #83cdd2;
+        font-size: 2.2rem;
+    }
+
+    .billing-empty-state h3 {
+        margin: 0 0 6px;
+        color: var(--navy);
+    }
+
+    .billing-empty-state p,
+    .billing-empty-payment p {
+        margin: 0;
+    }
+
+
+/* =========================================================
+   BILL DETAILS
+========================================================= */
+
+.billing-detail-grid {
+    display: grid;
+    margin-bottom: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.billing-detail-card {
+    margin-bottom: 20px;
+    padding: 24px;
+}
+
+.billing-section-title {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.billing-information-list {
+    display: grid;
+    margin: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+    .billing-information-list > div {
+        min-width: 0;
+    }
+
+    .billing-information-list dt {
+        margin-bottom: 5px;
+        color: var(--muted);
+        font-size: 0.84rem;
+        font-weight: 600;
+    }
+
+    .billing-information-list dd {
+        margin: 0;
+        color: var(--navy);
+        font-weight: 700;
+        overflow-wrap: anywhere;
+    }
+
+        .billing-information-list dd a {
+            color: var(--teal-dark);
+        }
+
+            .billing-information-list dd a:hover {
+                color: var(--navy);
+            }
+
+
+/* =========================================================
+   BILL ITEMS CARD
+========================================================= */
+
+.billing-items-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+    .billing-items-card .billing-section-title {
+        margin: 0;
+        padding: 22px 24px;
+    }
+
+
+/* =========================================================
+   BILL TOTAL SUMMARY
+========================================================= */
+
+.billing-total-panel {
+    width: 490px;
+    max-width: 100%;
+    margin-left: auto;
+    padding: 22px 28px;
+}
+
+    .billing-total-panel > div {
+        display: grid;
+        padding: 8px 0;
+        grid-template-columns: minmax(0, 1fr) 180px;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .billing-total-panel span {
+        color: var(--muted);
+    }
+
+    .billing-total-panel strong {
+        min-width: 0;
+        color: var(--navy);
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .billing-total-panel .discount {
+        color: var(--green);
+    }
+
+    .billing-total-panel .billing-grand-total {
+        margin-top: 10px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
+    }
+
+        .billing-total-panel .billing-grand-total span,
+        .billing-total-panel .billing-grand-total strong {
+            color: var(--navy);
+            font-size: 1.15rem;
+            font-weight: 800;
+        }
+
+
+/* =========================================================
+   DELIVERY ADDRESS
+========================================================= */
+
+.billing-address {
+    display: flex;
+    margin: 0;
+    flex-direction: column;
+    gap: 5px;
+    color: var(--navy);
+    font-style: normal;
+}
+
+    .billing-address strong {
+        margin-bottom: 3px;
+    }
+
+    .billing-address small {
+        margin-top: 5px;
+        color: var(--muted);
+    }
+
+
+/* =========================================================
+   PAYMENT HISTORY
+========================================================= */
+
+.billing-failure-row td {
+    color: var(--red);
+    background: #fff7f8;
+    font-size: 0.88rem;
+}
+
+
+/* =========================================================
+   RESPONSIVE - LARGE TABLET
+========================================================= */
+
+@media (max-width: 1250px) {
+    .billing-summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+
+/* =========================================================
+   RESPONSIVE - TABLET
+========================================================= */
+
+@media (max-width: 850px) {
+    .billing-summary-grid,
+    .billing-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .billing-information-list {
+        grid-template-columns: 1fr;
+    }
+
+    .billing-table {
+        min-width: 850px;
+    }
+
+    .billing-item-table {
+        min-width: 650px;
+    }
+}
+
+
+/* =========================================================
+   RESPONSIVE - MOBILE
+========================================================= */
+
+@media (max-width: 576px) {
+    .billing-page-header,
+    .billing-filter-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .billing-details-header {
+        align-items: flex-start;
+    }
+
+    .billing-summary-grid,
+    .billing-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .billing-filter-field,
+    .billing-clear-button {
+        width: 100%;
+    }
+
+    .billing-table-heading {
+        padding: 18px;
+    }
+
+    .billing-detail-card {
+        padding: 18px;
+    }
+
+    .billing-items-card {
+        padding: 0;
+    }
+
+    .billing-total-panel {
+        width: 100%;
+        padding: 18px;
+    }
+
+        .billing-total-panel > div {
+            grid-template-columns: minmax(0, 1fr) 145px;
+            gap: 12px;
+        }
+
+        .billing-total-panel .billing-grand-total span,
+        .billing-total-panel .billing-grand-total strong {
+            font-size: 1rem;
+        }
+}
+
+.billing-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.payment-link-button {
+    display: inline-flex;
+    min-height: 42px;
+    padding: 8px 16px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 10px;
+    color: var(--white);
+    background: var(--teal);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+    .payment-link-button:hover {
+        color: var(--white);
+        background: var(--teal-dark);
+    }
+
+@media (max-width: 576px) {
+    .billing-header-actions {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

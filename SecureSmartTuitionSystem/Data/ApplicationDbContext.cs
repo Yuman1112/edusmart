@@ -16,15 +16,15 @@ namespace SecureSmartTuitionSystem.Data
         {
         }
 
-        // Identity profiles
+        /*
+         * Identity Profiles
+         */
         public DbSet<AdminProfile> AdminProfiles =>
             Set<AdminProfile>();
 
         public DbSet<TutorProfile> TutorProfiles =>
             Set<TutorProfile>();
-        /*
-         * Identity profiles
-         */
+
         public DbSet<ParentProfile> ParentProfiles =>
             Set<ParentProfile>();
 
@@ -80,41 +80,53 @@ namespace SecureSmartTuitionSystem.Data
             ConfigureBilling(builder);
         }
 
-        private static void ConfigureIdentityProfiles(ModelBuilder builder)
+        private static void ConfigureIdentityProfiles(
+            ModelBuilder builder)
         {
+            /*
+             * Admin Profile
+             */
+            builder.Entity<AdminProfile>(entity =>
+            {
+                entity.HasIndex(admin =>
+                        admin.ApplicationUserId)
+                    .IsUnique();
+
+                entity.HasOne(admin =>
+                        admin.ApplicationUser)
+                    .WithOne()
+                    .HasForeignKey<AdminProfile>(
+                        admin =>
+                            admin.ApplicationUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            /*
+             * Tutor Profile
+             */
+            builder.Entity<TutorProfile>(entity =>
+            {
+                entity.HasIndex(tutor =>
+                        tutor.ApplicationUserId)
+                    .IsUnique();
+
+                entity.HasOne(tutor =>
+                        tutor.ApplicationUser)
+                    .WithOne()
+                    .HasForeignKey<TutorProfile>(
+                        tutor =>
+                            tutor.ApplicationUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            /*
+             * Parent Profile
+             */
             builder.Entity<ParentProfile>(entity =>
             {
                 entity.HasIndex(parent =>
                         parent.ApplicationUserId)
                     .IsUnique();
-            // Admin Profile
-            builder.Entity<AdminProfile>()
-                .HasIndex(admin => admin.ApplicationUserId)
-                .IsUnique();
-
-            builder.Entity<AdminProfile>()
-                .HasOne(admin => admin.ApplicationUser)
-                .WithOne()
-                .HasForeignKey<AdminProfile>(
-                    admin => admin.ApplicationUserId)
-                .OnDelete(DeleteBehavior.Restrict);
-            
-            // Tutor Profile
-            builder.Entity<TutorProfile>()
-                .HasIndex(tutor => tutor.ApplicationUserId)
-                .IsUnique();
-
-            builder.Entity<TutorProfile>()
-                .HasOne(tutor => tutor.ApplicationUser)
-                .WithOne()
-                .HasForeignKey<TutorProfile>(
-                    tutor => tutor.ApplicationUserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Parent Profile
-            builder.Entity<ParentProfile>()
-                .HasIndex(parent => parent.ApplicationUserId)
-                .IsUnique();
 
                 entity.HasOne(parent =>
                         parent.ApplicationUser)
@@ -125,15 +137,14 @@ namespace SecureSmartTuitionSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            /*
+             * Student Profile
+             */
             builder.Entity<StudentProfile>(entity =>
             {
                 entity.HasIndex(student =>
                         student.StudentNumber)
                     .IsUnique();
-            // Student Profile
-            builder.Entity<StudentProfile>()
-                .HasIndex(student => student.StudentNumber)
-                .IsUnique();
 
                 entity.HasIndex(student =>
                         student.ApplicationUserId)
@@ -158,9 +169,13 @@ namespace SecureSmartTuitionSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }
+
         private static void ConfigureSubjectsAndClasses(
             ModelBuilder builder)
         {
+            /*
+             * Subject
+             */
             builder.Entity<Subject>(entity =>
             {
                 entity.Property(subject =>
@@ -176,6 +191,9 @@ namespace SecureSmartTuitionSystem.Data
                     .IsUnique();
             });
 
+            /*
+             * Class Session
+             */
             builder.Entity<ClassSession>(entity =>
             {
                 entity.HasIndex(session =>
@@ -185,8 +203,7 @@ namespace SecureSmartTuitionSystem.Data
                 entity.HasIndex(session =>
                         session.ClassName)
                     .IsUnique()
-                    .HasFilter(
-                        "[ClassName] IS NOT NULL");
+                    .HasFilter("[ClassName] IS NOT NULL");
 
                 entity.HasOne(session =>
                         session.Subject)
@@ -320,9 +337,6 @@ namespace SecureSmartTuitionSystem.Data
                  * the same student and class.
                  */
                 entity.HasIndex(enrollment => new
-            // Speeds up enrollment checks & prevents a student from having 2 active records for same class.
-            builder.Entity<StudentEnrollment>()
-                .HasIndex(enrollment => new
                 {
                     enrollment.StudentProfileId,
                     enrollment.ClassSessionId
@@ -386,16 +400,21 @@ namespace SecureSmartTuitionSystem.Data
         private static void ConfigureBilling(
             ModelBuilder builder)
         {
+            /*
+             * Bill
+             */
             builder.Entity<Bill>(entity =>
             {
                 entity.HasIndex(bill =>
                         bill.BillNumber)
                     .IsUnique();
 
-                /*
-                 * One enrollment application can only
-                 * generate one bill.
-                 */
+                entity.HasIndex(bill =>
+                        bill.PaymentAccessToken)
+                    .IsUnique()
+                    .HasFilter(
+                        "[PaymentAccessToken] IS NOT NULL");
+
                 entity.HasIndex(bill =>
                         bill.EnrollmentApplicationId)
                     .IsUnique();
@@ -436,6 +455,9 @@ namespace SecureSmartTuitionSystem.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            /*
+             * Bill Item
+             */
             builder.Entity<BillItem>(entity =>
             {
                 entity.Property(item =>
@@ -455,16 +477,15 @@ namespace SecureSmartTuitionSystem.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            /*
+             * Payment
+             */
             builder.Entity<Payment>(entity =>
             {
                 entity.HasIndex(payment =>
                         payment.PaymentNumber)
                     .IsUnique();
 
-                /*
-                 * Stripe identifiers are unique.
-                 * The filters allow multiple null values.
-                 */
                 entity.HasIndex(payment =>
                         payment.ProviderCheckoutSessionId)
                     .IsUnique()

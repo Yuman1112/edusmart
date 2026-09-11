@@ -205,15 +205,19 @@
                             </div>
                         </div>
 
-                        <span class="sidebar-link disabled-link"
-                              title="This module will be developed later">
+                        <a class="sidebar-link
+                                  @(currentController == "Billing"
+                                      ? "active"
+                                      : "")"
+                           asp-controller="Billing"
+                           asp-action="Index">
 
                             <i class="bi bi-credit-card-fill"></i>
 
                             <span>
                                 Payment &amp; Billing
                             </span>
-                        </span>
+                        </a>    
 
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">

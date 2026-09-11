@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Models.Identity;
+using SecureSmartTuitionSystem.Services.Billing;
 using SecureSmartTuitionSystem.ViewModels.Enrollment;
 
 namespace SecureSmartTuitionSystem.Controllers
@@ -14,14 +15,21 @@ namespace SecureSmartTuitionSystem.Controllers
     public class AdminEnrollmentsController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
+
+        private readonly UserManager<ApplicationUser>
+            _userManager;
+
+        private readonly IBillingService
+            _billingService;
 
         public AdminEnrollmentsController(
             ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IBillingService billingService)
         {
             _context = context;
             _userManager = userManager;
+            _billingService = billingService;
         }
 
         /*
@@ -396,7 +404,7 @@ namespace SecureSmartTuitionSystem.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(
-            ApproveEnrollmentViewModel model)
+    ApproveEnrollmentViewModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -450,8 +458,8 @@ namespace SecureSmartTuitionSystem.Controllers
                 if (application.SelectedSubjects.Count == 0)
                 {
                     TempData["ErrorMessage"] =
-                        "This application does not contain any " +
-                        "selected classes.";
+                        "This application does not contain " +
+                        "any selected classes.";
 
                     return RedirectToAction(
                         nameof(Details),
@@ -461,6 +469,9 @@ namespace SecureSmartTuitionSystem.Controllers
                         });
                 }
 
+                /*
+                 * Recheck every selected class before approval.
+                 */
                 foreach (var selected in
                          application.SelectedSubjects)
                 {
@@ -482,8 +493,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             new
                             {
                                 id =
-                                    model
-                                        .EnrollmentApplicationId
+                                    model.EnrollmentApplicationId
                             });
                     }
 
@@ -499,8 +509,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             new
                             {
                                 id =
-                                    model
-                                        .EnrollmentApplicationId
+                                    model.EnrollmentApplicationId
                             });
                     }
 
@@ -527,11 +536,14 @@ namespace SecureSmartTuitionSystem.Controllers
                             new
                             {
                                 id =
-                                    model
-                                        .EnrollmentApplicationId
+                                    model.EnrollmentApplicationId
                             });
                     }
 
+                    /*
+                     * Only check existing enrollment when the
+                     * application is linked to an existing student.
+                     */
                     if (application.ExistingStudentProfileId
                         .HasValue)
                     {
@@ -553,8 +565,8 @@ namespace SecureSmartTuitionSystem.Controllers
                         if (alreadyEnrolled)
                         {
                             TempData["ErrorMessage"] =
-                                $"{application.StudentName} is " +
-                                "already enrolled in class " +
+                                $"{application.StudentName} is already " +
+                                "enrolled in class " +
                                 $"{GetClassDisplayName(classSession)}.";
 
                             return RedirectToAction(
@@ -562,17 +574,16 @@ namespace SecureSmartTuitionSystem.Controllers
                                 new
                                 {
                                     id =
-                                        model
-                                            .EnrollmentApplicationId
+                                        model.EnrollmentApplicationId
                                 });
                         }
                     }
                 }
 
-                var previousStatus =
+                EnrollmentStatus previousStatus =
                     application.Status;
 
-                var adminUserId =
+                string? adminUserId =
                     _userManager.GetUserId(User);
 
                 application.Status =
@@ -613,18 +624,59 @@ namespace SecureSmartTuitionSystem.Controllers
                                 : model.Remarks.Trim()
                     });
 
+                /*
+                 * Generate the bill inside the same transaction.
+                 *
+                 * BillingService will reuse the current transaction.
+                 */
+                var bill =
+                    await _billingService.GenerateBillAsync(
+                        application.EnrollmentApplicationId);
+
                 await _context.SaveChangesAsync();
+
                 await transaction.CommitAsync();
 
                 TempData["SuccessMessage"] =
                     $"Application {application.ApplicationNumber} " +
-                    "was approved and is pending payment.";
+                    $"was approved. Bill {bill.BillNumber} " +
+                    "was generated and is pending payment.";
 
                 return RedirectToAction(
                     nameof(Details),
                     new
                     {
-                        id = application.EnrollmentApplicationId
+                        id =
+                            application.EnrollmentApplicationId
+                    });
+            }
+            catch (InvalidOperationException exception)
+            {
+                await transaction.RollbackAsync();
+
+                TempData["ErrorMessage"] =
+                    exception.Message;
+
+                return RedirectToAction(
+                    nameof(Details),
+                    new
+                    {
+                        id = model.EnrollmentApplicationId
+                    });
+            }
+            catch (DbUpdateException)
+            {
+                await transaction.RollbackAsync();
+
+                TempData["ErrorMessage"] =
+                    "The application could not be approved because " +
+                    "the database rejected the update.";
+
+                return RedirectToAction(
+                    nameof(Details),
+                    new
+                    {
+                        id = model.EnrollmentApplicationId
                     });
             }
             catch

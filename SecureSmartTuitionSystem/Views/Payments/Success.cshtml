@@ -1,0 +1,103 @@
+﻿@{
+    ViewData["Title"] = "Payment Result";
+
+    bool paymentVerified =
+        ViewBag.PaymentVerified == true;
+
+    string statusMessage =
+        ViewBag.StatusMessage as string
+        ?? "EduSmart is verifying the payment status.";
+
+    int? billId =
+        ViewBag.BillId as int?;
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/payment.css"
+          asp-append-version="true" />
+}
+
+<div class="payment-result-page">
+    <main class="payment-result-card">
+
+        @if (paymentVerified)
+        {
+            <div class="payment-result-icon success">
+                <i class="bi bi-check-lg"></i>
+            </div>
+
+            <span class="payment-eyebrow">
+                Payment Confirmed
+            </span>
+
+            <h1>Thank You</h1>
+
+            <p>
+                Your Stripe test payment was verified successfully.
+            </p>
+
+            <div class="payment-completed-message">
+                <i class="bi bi-check-circle-fill"></i>
+
+                <div>
+                    <strong>Payment Successful</strong>
+                    <span>@statusMessage</span>
+                </div>
+            </div>
+
+            @if (billId.HasValue)
+            {
+                <a asp-controller="Billing"
+                   asp-action="Details"
+                   asp-route-id="@billId.Value"
+                   class="payment-result-button">
+
+                    View Paid Bill
+                </a>
+            }
+            else
+            {
+                <a asp-controller="Home"
+                   asp-action="Index"
+                   class="payment-result-button">
+
+                    Return to Home
+                </a>
+            }
+        }
+        else
+        {
+            <div class="payment-result-icon cancelled">
+                <i class="bi bi-exclamation-lg"></i>
+            </div>
+
+            <span class="payment-eyebrow">
+                Verification Incomplete
+            </span>
+
+            <h1>Payment Not Updated</h1>
+
+            <p>
+                @statusMessage
+            </p>
+
+            <div class="payment-verification-note">
+                <i class="bi bi-clock-history"></i>
+
+                <span>
+                    Do not submit another payment.
+                    Return to the bill and check its status first.
+                </span>
+            </div>
+
+            <a asp-controller="Home"
+               asp-action="Index"
+               class="payment-result-button">
+
+                Return to Home
+            </a>
+        }
+
+    </main>
+</div>

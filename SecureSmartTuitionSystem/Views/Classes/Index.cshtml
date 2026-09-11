@@ -4,158 +4,350 @@
     ViewData["Title"] = "Browse Classes";
 }
 
-<div class="container mt-4">
-    <div class="mb-4">
-        <h1>Browse Available Classes</h1>
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/browse-classes.css"
+          asp-append-version="true" />
+}
 
-        <p class="text-muted">
-            View available subjects, schedules and class fees.
-        </p>
-    </div>
+<div class="browse-page">
 
-    <form method="get"
-          asp-controller="Classes"
-          asp-action="Index"
-          class="row g-3 mb-4">
+    <!-- Page header -->
+    <header class="browse-page-header">
+        <div>
+            <span class="browse-eyebrow">
+                <i class="bi bi-journal-bookmark"></i>
+                Class Catalogue
+            </span>
 
-        <div class="col-md-4">
-            <label class="form-label">Subject</label>
+            <h1>Browse Available Classes</h1>
 
-            <select name="subject"
-                    class="form-select">
-                <option value="">All subjects</option>
+            <p>
+                View available subjects, schedules,
+                tuition fees and remaining seats.
+            </p>
+        </div>
 
-                @foreach (var subject in Model.Subjects)
-                {
-                    <option value="@subject"
-                            selected="@(subject == Model.SelectedSubject)">
+        <a asp-controller="Enrollment"
+           asp-action="StudentDetails"
+           class="browse-primary-button">
+
+            <i class="bi bi-pencil-square"></i>
+            Start Enrollment
+        </a>
+    </header>
+
+    <!-- Filters -->
+    <section class="browse-card browse-filter-card">
+        <div class="browse-card-header">
+            <div>
+                <h2>
+                    <i class="bi bi-funnel"></i>
+                    Find a Class
+                </h2>
+
+                <p>
+                    Results update automatically when
+                    a filter is selected.
+                </p>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(
+                        Model.SelectedSubject) ||
+                        !string.IsNullOrWhiteSpace(
+                        Model.SelectedLevel))
+            {
+                <a asp-controller="Classes"
+                   asp-action="Index"
+                   class="browse-clear-link">
+
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    Clear Filters
+                </a>
+            }
+        </div>
+
+        <form method="get"
+              asp-controller="Classes"
+              asp-action="Index"
+              id="browseFilterForm"
+              class="browse-filter-grid">
+
+            <div class="browse-form-field">
+                <label for="subjectFilter">
+                    Subject
+                </label>
+
+                <select id="subjectFilter"
+                        name="subject"
+                        class="form-select browse-filter-input">
+
+                    <option value="">
+                        All Subjects
+                    </option>
+
+                    @foreach (var subject in Model.Subjects)
+                    {
+                        <option value="@subject"
+                                selected="@(subject ==
+                                                                    Model.SelectedSubject)">
                         @subject
                     </option>
-                }
-            </select>
-        </div>
+                                        }
+                </select>
+            </div>
 
-        <div class="col-md-4">
-            <label class="form-label">
-                Academic Level
-            </label>
+            <div class="browse-form-field">
+                <label for="levelFilter">
+                    Academic Level
+                </label>
 
-            <select name="level"
-                    class="form-select">
-                <option value="">All levels</option>
+                <select id="levelFilter"
+                        name="level"
+                        class="form-select browse-filter-input">
 
-                @foreach (var level in Model.AcademicLevels)
-                {
-                    <option value="@level"
-                            selected="@(level == Model.SelectedLevel)">
+                    <option value="">
+                        All Academic Levels
+                    </option>
+
+                    @foreach (var level in
+                                        Model.AcademicLevels)
+                    {
+                        <option value="@level"
+                                selected="@(level ==
+                                                                    Model.SelectedLevel)">
                         @level
                     </option>
-                }
-            </select>
+                                        }
+                </select>
+            </div>
+        </form>
+    </section>
+
+    <!-- Class list -->
+    <section class="browse-card browse-results-card">
+        <div class="browse-card-header">
+            <div>
+                <h2>
+                    <i class="bi bi-grid"></i>
+                    Available Classes
+                </h2>
+
+                <p>
+                    Select a suitable class before
+                    submitting an enrollment request.
+                </p>
+            </div>
+
+            <span class="browse-result-count">
+                @Model.Classes.Count
+                @(Model.Classes.Count == 1
+                                ? "class"
+                                : "classes")
+            </span>
         </div>
 
-        <div class="col-md-4 d-flex align-items-end gap-2">
-            <button type="submit"
-                    class="btn btn-primary">
-                Apply Filters
-            </button>
+        @if (Model.Classes.Count == 0)
+        {
+            <div class="browse-empty-state">
+                <div class="browse-empty-icon">
+                    <i class="bi bi-calendar-x"></i>
+                </div>
 
-            <a asp-controller="Classes"
-               asp-action="Index"
-               class="btn btn-outline-secondary">
-                Clear
-            </a>
-        </div>
-    </form>
+                <h3>No Classes Found</h3>
 
-    @if (Model.Classes.Count == 0)
-    {
-        <div class="alert alert-info">
-            No available classes match the selected filters.
-        </div>
-    }
-    else
-    {
-        <div class="row g-4">
-            @foreach (var item in Model.Classes)
-            {
-                <div class="col-md-6">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <h4 class="card-title">
-                                    @item.SubjectName
-                                </h4>
+                <p>
+                    No available classes match the selected
+                    filters. Try choosing another subject or
+                    academic level.
+                </p>
 
-                                <span class="badge bg-primary">
-                                    @item.AcademicLevel
+                <a asp-controller="Classes"
+                   asp-action="Index"
+                   class="browse-outline-button">
+
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    View All Classes
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="browse-class-grid">
+                @foreach (var item in Model.Classes)
+                {
+                    bool isFull =
+                    item.SeatsRemaining <= 0;
+
+                    <article class="browse-class-card
+                                            @(isFull ? "class-full" : "")">
+
+                        <div class="browse-class-card-header">
+                            <div class="browse-class-heading">
+                                <span class="browse-subject-icon">
+                                    <i class="bi bi-book"></i>
                                 </span>
+
+                                <div>
+                                    <h3>@item.SubjectName</h3>
+
+                                    <span class="browse-level-text">
+                                        @item.AcademicLevel
+                                    </span>
+                                </div>
                             </div>
 
-                            <p class="text-muted">
-                                @item.ClassCode
-                            </p>
-
-                            <dl class="row mb-0">
-                                <dt class="col-sm-4">Tutor</dt>
-                                <dd class="col-sm-8">
-                                    @item.TutorName
-                                </dd>
-
-                                <dt class="col-sm-4">Schedule</dt>
-                                <dd class="col-sm-8">
-                                    @item.Day,
-                                    @item.StartTime - @item.EndTime
-                                </dd>
-
-                                <dt class="col-sm-4">
-                                    Google Meet
-                                </dt>
-
-                                <dd class="col-sm-8">
-                                    <a href="@item.Venue"
-                                       target="_blank"
-                                       rel="noopener noreferrer">
-                                        <i class="bi bi-camera-video-fill me-1"></i>
-                                        Join Online Class
-                                    </a>
-                                </dd>
-
-                                <dt class="col-sm-4">Monthly Fee</dt>
-                                <dd class="col-sm-8">
-                                    RM @item.MonthlyFee.ToString("0.00")
-                                </dd>
-
-                                <dt class="col-sm-4">Seats</dt>
-                                <dd class="col-sm-8">
-                                    @item.SeatsRemaining remaining
-                                    out of @item.Capacity
-                                </dd>
-                            </dl>
+                            @if (isFull)
+                            {
+                                <span class="browse-status-pill full">
+                                    Full
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="browse-status-pill available">
+                                    Available
+                                </span>
+                            }
                         </div>
 
-                        <div class="card-footer bg-white">
-                            @if (item.SeatsRemaining <= 0)
+                        <div class="browse-class-information">
+                            <div class="browse-info-item">
+                                <span class="browse-info-icon">
+                                    <i class="bi bi-person"></i>
+                                </span>
+
+                                <div>
+                                    <span class="browse-info-label">
+                                        Tutor
+                                    </span>
+
+                                    <strong>
+                                        @item.TutorName
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <div class="browse-info-item">
+                                <span class="browse-info-icon">
+                                    <i class="bi bi-calendar-week"></i>
+                                </span>
+
+                                <div>
+                                    <span class="browse-info-label">
+                                        Class Day
+                                    </span>
+
+                                    <strong>
+                                        @item.Day
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <div class="browse-info-item">
+                                <span class="browse-info-icon">
+                                    <i class="bi bi-clock"></i>
+                                </span>
+
+                                <div>
+                                    <span class="browse-info-label">
+                                        Time
+                                    </span>
+
+                                    <strong>
+                                        @item.StartTime –
+                                        @item.EndTime
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <div class="browse-info-item">
+                                <span class="browse-info-icon">
+                                    <i class="bi bi-people"></i>
+                                </span>
+
+                                <div>
+                                    <span class="browse-info-label">
+                                        Remaining Seats
+                                    </span>
+
+                                    <strong>
+                                        @Math.Max(
+                                        item.SeatsRemaining,
+                                                                0)
+                                / @item.Capacity
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="browse-class-card-footer">
+                    <div class="browse-fee">
+                        <span>Monthly Fee</span>
+
+                        @if (item.MonthlyFee <= 0)
+                                {
+                                    <strong class="browse-free-fee">
+                                        Free
+                                    </strong>
+                                }
+                                else
+                                {
+                                    <strong>
+                                        RM @(item.MonthlyFee.ToString("F2"))
+                                    </strong>
+                                }
+                            </div>
+
+                            @if (isFull)
                             {
-                                <button class="btn btn-secondary"
-                                        type="button"
+                                <button type="button"
+                                        class="browse-disabled-button"
                                         disabled>
+                                    <i class="bi bi-x-circle"></i>
                                     Class Full
                                 </button>
                             }
                             else
                             {
-                                <button class="btn btn-primary"
-                                        type="button"
-                                        disabled
-                                        title="Enrollment form is being prepared">
+                                <a asp-controller="Enrollment"
+                                   asp-action="StudentDetails"
+                                   class="browse-primary-button
+                                                      browse-card-button">
+
                                     Enrol Now
-                                </button>
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
                             }
                         </div>
-                    </div>
-                </div>
-            }
-        </div>
-    }
+                    </article>
+                }
+            </div>
+        }
+    </section>
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+            "use strict";
+
+            const filterForm =
+                document.getElementById("browseFilterForm");
+
+            if (!filterForm) {
+                return;
+            }
+
+            const filters =
+                filterForm.querySelectorAll(
+                    ".browse-filter-input");
+
+            filters.forEach(filter => {
+                filter.addEventListener("change", () => {
+                    filterForm.submit();
+                });
+            });
+        })();
+    </script>
+}

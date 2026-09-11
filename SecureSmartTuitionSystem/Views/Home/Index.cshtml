@@ -3,97 +3,701 @@
 
 @inject SignInManager<ApplicationUser> SignInManager
 
-
-    @{
+@{
     ViewData["Title"] = "Home";
-    }
+}
 
-    <section class="feature-card p-4 p-lg-5">
-        <div class="row align-items-center g-5">
-            <div class="col-lg-7">
-                <span class="status-pill status-success mb-3">
-                    Secure Learning Platform
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/home.css"
+          asp-append-version="true" />
+}
+
+<div class="guest-home">
+
+    <!-- =====================================================
+         HERO
+    ====================================================== -->
+    <section class="guest-hero">
+        <div class="guest-hero-content">
+            <span class="guest-eyebrow">
+                <i class="bi bi-shield-check"></i>
+                Secure Online Tuition Platform
+            </span>
+
+            <h1>
+                Learn smarter.
+                <span>Grow with confidence.</span>
+            </h1>
+
+            <p class="guest-hero-description">
+                Discover suitable classes, submit enrollment
+                requests and manage your tuition journey through
+                one organised learning platform.
+            </p>
+
+            <div class="guest-hero-tags">
+                <span>
+                    <i class="bi bi-mortarboard"></i>
+                    Primary &amp; Secondary
                 </span>
 
-                <h1 class="display-4 fw-bold">
-                    Learn smarter with EduSmart
-                </h1>
+                <span>
+                    <i class="bi bi-camera-video"></i>
+                    Online Classes
+                </span>
 
-                <p class="lead mt-3 text-secondary">
-                    Browse classes, submit enrollment requests,
-                    manage payments and monitor learning progress
-                    through one secure platform.
-                </p>
-
-                <div class="d-flex flex-wrap gap-3 mt-4">
-                    <a class="primary-button"
-                       asp-controller="Classes"
-                       asp-action="Index">
-
-                        <i class="bi bi-search"></i>
-                        Browse Classes
-                    </a>
-
-                    @if (!SignInManager.IsSignedIn(User))
-                {
-                    <a class="outline-button"
-                       asp-area="Identity"
-                       asp-page="/Account/Register">
-                        Register
-                    </a>
-
-                    <a class="outline-button"
-                       asp-area="Identity"
-                       asp-page="/Account/Login">
-                        Login
-                    </a>
-                }
-                </div>
+                <span>
+                    <i class="bi bi-calendar-check"></i>
+                    Flexible Duration
+                </span>
             </div>
 
-            <div class="col-lg-5">
-                <div class="dashboard-card">
-                    <header class="dashboard-card-header">
-                        <h2>EduSmart Services</h2>
-                    </header>
+            <div class="guest-hero-actions">
+                <a asp-controller="Classes"
+                   asp-action="Index"
+                   class="guest-button guest-button-primary">
 
-                    <div class="dashboard-card-body">
-                        <ul class="dashboard-list">
-                            <li class="dashboard-list-item">
-                                <span class="list-icon">
-                                    <i class="bi bi-journal-bookmark"></i>
-                                </span>
+                    <i class="bi bi-search"></i>
+                    Browse Classes
+                </a>
 
-                                <div class="list-content">
-                                    <strong>Browse Classes</strong>
-                                    <small>View subjects and schedules</small>
-                                </div>
-                            </li>
+                <a asp-controller="Enrollment"
+                   asp-action="StudentDetails"
+                   class="guest-button guest-button-outline">
 
-                            <li class="dashboard-list-item">
-                                <span class="list-icon">
-                                    <i class="bi bi-person-plus"></i>
-                                </span>
+                    <i class="bi bi-pencil-square"></i>
+                    Start Enrollment
+                </a>
+            </div>
 
-                                <div class="list-content">
-                                    <strong>Online Enrollment</strong>
-                                    <small>Apply without visiting the centre</small>
-                                </div>
-                            </li>
+            @if (!SignInManager.IsSignedIn(User))
+            {
+                <p class="guest-login-note">
+                    Already registered?
 
-                            <li class="dashboard-list-item">
-                                <span class="list-icon">
-                                    <i class="bi bi-shield-check"></i>
-                                </span>
+                    <a asp-area="Identity"
+                       asp-page="/Account/Login">
+                        Sign in to your account
+                    </a>
+                </p>
+            }
+        </div>
 
-                                <div class="list-content">
-                                    <strong>Secure Access</strong>
-                                    <small>Role-based information protection</small>
-                                </div>
-                            </li>
-                        </ul>
+        <!-- HERO PREVIEW -->
+        <div class="guest-hero-visual">
+            <span class="guest-shape guest-shape-one"></span>
+            <span class="guest-shape guest-shape-two"></span>
+
+            <div class="guest-preview-card">
+                <header class="guest-preview-header">
+                    <div>
+                        <span>Learning Overview</span>
+                        <h2>Everything in one place</h2>
                     </div>
+
+                    <span class="guest-preview-main-icon">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </span>
+                </header>
+
+                <div class="guest-preview-item">
+                    <span class="guest-preview-item-icon">
+                        <i class="bi bi-journal-bookmark"></i>
+                    </span>
+
+                    <div>
+                        <strong>Explore Classes</strong>
+                        <small>
+                            Compare subjects, levels and schedules
+                        </small>
+                    </div>
+
+                    <i class="bi bi-chevron-right"></i>
+                </div>
+
+                <div class="guest-preview-item">
+                    <span class="guest-preview-item-icon yellow">
+                        <i class="bi bi-person-plus"></i>
+                    </span>
+
+                    <div>
+                        <strong>Online Enrollment</strong>
+                        <small>
+                            Complete a guided application
+                        </small>
+                    </div>
+
+                    <i class="bi bi-chevron-right"></i>
+                </div>
+
+                <div class="guest-preview-information">
+                    <article>
+                        <i class="bi bi-calendar-week"></i>
+
+                        <div>
+                            <strong>Clear Schedule</strong>
+                            <small>View class days and times</small>
+                        </div>
+                    </article>
+
+                    <article>
+                        <i class="bi bi-receipt"></i>
+
+                        <div>
+                            <strong>Fee Summary</strong>
+                            <small>Review fees before submitting</small>
+                        </div>
+                    </article>
                 </div>
             </div>
         </div>
     </section>
+
+
+    <!-- =====================================================
+         LEARNING PATHS
+    ====================================================== -->
+    <section class="guest-section">
+        <header class="guest-section-heading">
+            <br />
+            <span>Learning Pathways</span>
+
+            <h2>Support for every learning stage</h2>
+
+            <p>
+                Browse classes according to the student's current
+                education stage and academic level.
+            </p>
+        </header>
+
+        <div class="guest-path-grid">
+            <article class="guest-path-card primary-path">
+                <div class="guest-path-content">
+                    <span class="guest-path-label">
+                        Primary Education
+                    </span>
+
+                    <h3>Build strong learning foundations</h3>
+
+                    <p>
+                        Explore suitable subjects for students from
+                        Year 1 to Year 6.
+                    </p>
+
+                    <div class="guest-level-list">
+                        <span>Year 1</span>
+                        <span>Year 2</span>
+                        <span>Year 3</span>
+                        <span>Year 4</span>
+                        <span>Year 5</span>
+                        <span>Year 6</span>
+                    </div>
+
+                    <a asp-controller="Classes"
+                       asp-action="Index"
+                       class="guest-path-link">
+
+                        Browse Primary Classes
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+
+                <span class="guest-path-icon">
+                    <i class="bi bi-book-half"></i>
+                </span>
+            </article>
+
+            <article class="guest-path-card secondary-path">
+                <div class="guest-path-content">
+                    <span class="guest-path-label">
+                        Secondary Education
+                    </span>
+
+                    <h3>Prepare for the next academic goal</h3>
+
+                    <p>
+                        Find classes for secondary students from
+                        Form 1 to Form 5.
+                    </p>
+
+                    <div class="guest-level-list">
+                        <span>Form 1</span>
+                        <span>Form 2</span>
+                        <span>Form 3</span>
+                        <span>Form 4</span>
+                        <span>Form 5</span>
+                    </div>
+
+                    <a asp-controller="Classes"
+                       asp-action="Index"
+                       class="guest-path-link">
+
+                        Browse Secondary Classes
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+
+                <span class="guest-path-icon">
+                    <i class="bi bi-mortarboard"></i>
+                </span>
+            </article>
+        </div>
+    </section>
+
+
+    <!-- =====================================================
+         SUBJECT AREAS
+    ====================================================== -->
+    <section class="guest-subject-section">
+        <div class="guest-subject-introduction">
+            <span class="guest-eyebrow">
+                <i class="bi bi-grid"></i>
+                Subject Areas
+            </span>
+
+            <h2>Explore different areas of learning</h2>
+
+            <p>
+                Available subjects depend on the selected education
+                stage and academic level.
+            </p>
+
+            <a asp-controller="Classes"
+               asp-action="Index"
+               class="guest-button guest-button-primary">
+
+                View Available Classes
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="guest-subject-grid">
+            <article>
+                <span class="guest-subject-icon mathematics">
+                    <i class="bi bi-calculator"></i>
+                </span>
+
+                <div>
+                    <strong>Mathematics</strong>
+                    <small>
+                        Develop calculation and problem-solving skills.
+                    </small>
+                </div>
+            </article>
+
+            <article>
+                <span class="guest-subject-icon science">
+                    <i class="bi bi-lightbulb"></i>
+                </span>
+
+                <div>
+                    <strong>Science</strong>
+                    <small>
+                        Understand scientific concepts and applications.
+                    </small>
+                </div>
+            </article>
+
+            <article>
+                <span class="guest-subject-icon language">
+                    <i class="bi bi-translate"></i>
+                </span>
+
+                <div>
+                    <strong>Languages</strong>
+                    <small>
+                        Strengthen reading, writing and communication.
+                    </small>
+                </div>
+            </article>
+
+            <article>
+                <span class="guest-subject-icon humanities">
+                    <i class="bi bi-globe-asia-australia"></i>
+                </span>
+
+                <div>
+                    <strong>Humanities</strong>
+                    <small>
+                        Explore history, geography and society.
+                    </small>
+                </div>
+            </article>
+        </div>
+    </section>
+
+
+    <!-- =====================================================
+         FEATURES
+    ====================================================== -->
+    <section class="guest-section">
+        <header class="guest-section-heading">
+            <span>Platform Features</span>
+
+            <h2>A smoother tuition experience</h2>
+
+            <p>
+                EduSmart brings class discovery, enrollment,
+                billing and learning access into one platform.
+            </p>
+        </header>
+
+        <div class="guest-feature-grid">
+            <article class="guest-feature-card">
+                <span class="guest-feature-number">01</span>
+
+                <span class="guest-feature-icon">
+                    <i class="bi bi-search"></i>
+                </span>
+
+                <div>
+                    <h3>Browse Available Classes</h3>
+
+                    <p>
+                        Compare subjects, tutors, schedules, monthly
+                        fees and available seats before applying.
+                    </p>
+
+                    <a asp-controller="Classes"
+                       asp-action="Index">
+                        Explore Classes
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+
+            <article class="guest-feature-card">
+                <span class="guest-feature-number">02</span>
+
+                <span class="guest-feature-icon">
+                    <i class="bi bi-person-plus"></i>
+                </span>
+
+                <div>
+                    <h3>Guided Enrollment</h3>
+
+                    <p>
+                        Enter student and guardian information,
+                        select classes and review enrollment options.
+                    </p>
+
+                    <a asp-controller="Enrollment"
+                       asp-action="StudentDetails">
+                        Start Enrollment
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </article>
+
+            <article class="guest-feature-card">
+                <span class="guest-feature-number">03</span>
+
+                <span class="guest-feature-icon">
+                    <i class="bi bi-receipt"></i>
+                </span>
+
+                <div>
+                    <h3>Clear Fee Calculation</h3>
+
+                    <p>
+                        Review tuition, duration discount, learning
+                        material and delivery charges clearly.
+                    </p>
+                </div>
+            </article>
+
+            <article class="guest-feature-card">
+                <span class="guest-feature-number">04</span>
+
+                <span class="guest-feature-icon">
+                    <i class="bi bi-person-check"></i>
+                </span>
+
+                <div>
+                    <h3>Dedicated User Access</h3>
+
+                    <p>
+                        Approved students and parents receive
+                        appropriate access to their information.
+                    </p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+
+    <!-- =====================================================
+         PROCESS
+    ====================================================== -->
+    <section class="guest-process-section">
+        <header class="guest-section-heading">
+            <span>How It Works</span>
+
+            <h2>Begin in three simple steps</h2>
+
+            <p>
+                A clear process from finding a class to confirmed
+                enrollment.
+            </p>
+        </header>
+
+        <div class="guest-process-grid">
+            <article>
+                <span class="guest-process-number">1</span>
+
+                <span class="guest-process-icon">
+                    <i class="bi bi-search"></i>
+                </span>
+
+                <div>
+                    <h3>Find a Suitable Class</h3>
+
+                    <p>
+                        Browse available classes and compare the
+                        subject, level, tutor, schedule and fee.
+                    </p>
+                </div>
+            </article>
+
+            <span class="guest-process-line"></span>
+
+            <article>
+                <span class="guest-process-number">2</span>
+
+                <span class="guest-process-icon">
+                    <i class="bi bi-ui-checks"></i>
+                </span>
+
+                <div>
+                    <h3>Submit an Application</h3>
+
+                    <p>
+                        Complete the student, guardian, class and
+                        enrollment information.
+                    </p>
+                </div>
+            </article>
+
+            <span class="guest-process-line"></span>
+
+            <article>
+                <span class="guest-process-number">3</span>
+
+                <span class="guest-process-icon">
+                    <i class="bi bi-check-circle"></i>
+                </span>
+
+                <div>
+                    <h3>Complete Enrollment</h3>
+
+                    <p>
+                        After approval and payment confirmation,
+                        the student enrollment is activated.
+                    </p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+
+    <!-- =====================================================
+         STUDENT AND PARENT
+    ====================================================== -->
+    <section class="guest-section">
+        <header class="guest-section-heading">
+            <span>Designed for Families</span>
+
+            <h2>Clear access for students and parents</h2>
+
+            <p>
+                Each role receives relevant information and
+                functions after enrollment.
+            </p>
+        </header>
+
+        <div class="guest-role-grid">
+            <article class="guest-role-card student-role">
+                <header>
+                    <span>
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </span>
+
+                    <div>
+                        <small>Student Access</small>
+                        <h3>Focus on learning</h3>
+                    </div>
+                </header>
+
+                <ul>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        View enrolled classes
+                    </li>
+
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        Access class schedules
+                    </li>
+
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        Join authorised online classes
+                    </li>
+
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        Review learning information
+                    </li>
+                </ul>
+            </article>
+
+            <article class="guest-role-card parent-role">
+                <header>
+                    <span>
+                        <i class="bi bi-people-fill"></i>
+                    </span>
+
+                    <div>
+                        <small>Parent / Guardian Access</small>
+                        <h3>Stay informed</h3>
+                    </div>
+                </header>
+
+                <ul>
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        Manage student information
+                    </li>
+
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        Review enrollment status
+                    </li>
+
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        Access billing information
+                    </li>
+
+                    <li>
+                        <i class="bi bi-check-circle-fill"></i>
+                        Monitor relevant class details
+                    </li>
+                </ul>
+            </article>
+        </div>
+    </section>
+
+
+    <!-- =====================================================
+         FAQ
+    ====================================================== -->
+    <section class="guest-faq-section">
+        <div class="guest-faq-introduction">
+            <span class="guest-eyebrow">
+                <i class="bi bi-question-circle"></i>
+                Common Questions
+            </span>
+
+            <h2>Before you enroll</h2>
+
+            <p>
+                Find answers about applications, class selection
+                and account creation.
+            </p>
+
+            <a asp-controller="Enrollment"
+               asp-action="StudentDetails"
+               class="guest-button guest-button-outline">
+                Begin Application
+            </a>
+        </div>
+
+        <div class="guest-faq-list">
+            <details open>
+                <summary>
+                    Can I apply without an account?
+                    <i class="bi bi-plus-lg"></i>
+                </summary>
+
+                <p>
+                    Yes. A prospective applicant can submit an
+                    enrollment application before receiving a
+                    system account.
+                </p>
+            </details>
+
+            <details>
+                <summary>
+                    Can I select more than one class?
+                    <i class="bi bi-plus-lg"></i>
+                </summary>
+
+                <p>
+                    Yes. Multiple available classes can be selected
+                    within the same supported education stage and
+                    academic level.
+                </p>
+            </details>
+
+            <details>
+                <summary>
+                    When will the user accounts be created?
+                    <i class="bi bi-plus-lg"></i>
+                </summary>
+
+                <p>
+                    Student and parent accounts are created or linked
+                    after the application and payment are confirmed.
+                </p>
+            </details>
+
+            <details>
+                <summary>
+                    How are the fees calculated?
+                    <i class="bi bi-plus-lg"></i>
+                </summary>
+
+                <p>
+                    The fee summary considers the selected classes,
+                    enrollment duration, applicable tuition discount,
+                    materials and delivery charges.
+                </p>
+            </details>
+        </div>
+    </section>
+
+
+    <!-- =====================================================
+         CTA
+    ====================================================== -->
+    <section class="guest-final-cta">
+        <div>
+            <span>Ready to Begin?</span>
+
+            <h2>Find the right class with EduSmart.</h2>
+
+            <p>
+                Browse available tuition classes or begin a new
+                enrollment application.
+            </p>
+        </div>
+
+        <div class="guest-final-actions">
+            <a asp-controller="Classes"
+               asp-action="Index"
+               class="guest-cta-white-button">
+                Browse Classes
+            </a>
+
+            <a asp-controller="Enrollment"
+               asp-action="StudentDetails"
+               class="guest-cta-outline-button">
+
+                Start Enrollment
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </section>
+</div>

@@ -1,0 +1,305 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Billing.PaymentCheckoutViewModel
+@using SecureSmartTuitionSystem.Models.Billing
+
+@{
+    ViewData["Title"] = $"Payment - {Model.BillNumber}";
+
+    bool canPay =
+        Model.Status == BillStatus.PendingPayment ||
+        Model.Status == BillStatus.Overdue;
+
+    string statusText =
+        Model.Status switch
+        {
+            BillStatus.PendingPayment => "Pending Payment",
+            BillStatus.Paid => "Paid",
+            BillStatus.Overdue => "Overdue",
+            BillStatus.Cancelled => "Cancelled",
+            BillStatus.Refunded => "Refunded",
+            _ => Model.Status.ToString()
+        };
+
+    string statusClass =
+        Model.Status switch
+        {
+            BillStatus.PendingPayment => "pending",
+            BillStatus.Paid => "paid",
+            BillStatus.Overdue => "overdue",
+            BillStatus.Cancelled => "cancelled",
+            BillStatus.Refunded => "refunded",
+            _ => ""
+        };
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/payment.css"
+          asp-append-version="true" />
+}
+
+<div class="payment-page">
+    <div class="payment-shell">
+        <header class="payment-header">
+            <span class="payment-secure-label">
+                <i class="bi bi-shield-lock"></i>
+                Secure Test Payment
+            </span>
+        </header>
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success payment-alert">
+                <i class="bi bi-check-circle"></i>
+                <span>@TempData["SuccessMessage"]</span>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger payment-alert">
+                <i class="bi bi-exclamation-circle"></i>
+                <span>@TempData["ErrorMessage"]</span>
+            </div>
+        }
+
+        <main class="payment-card">
+            <section class="payment-introduction">
+                <div>
+                    <span class="payment-eyebrow">
+                        EduSmart Online Tuition
+                    </span>
+
+                    <h1>Complete Your Payment</h1>
+
+                    <p>
+                        Review the bill details before continuing
+                        to Stripe Test Checkout.
+                    </p>
+                </div>
+
+                <span class="payment-status @statusClass">
+                    @statusText
+                </span>
+            </section>
+
+            <section class="payment-reference-grid">
+                <div>
+                    <span>Bill Number</span>
+                    <strong>@Model.BillNumber</strong>
+                </div>
+
+                <div>
+                    <span>Application Number</span>
+                    <strong>@Model.ApplicationNumber</strong>
+                </div>
+
+                <div>
+                    <span>Student</span>
+                    <strong>@Model.StudentName</strong>
+                </div>
+
+                <div>
+                    <span>Guardian</span>
+                    <strong>@Model.GuardianName</strong>
+                </div>
+
+                <div>
+                    <span>Issued Date</span>
+                    <strong>
+                        @(Model.IssuedAt
+                                                .ToLocalTime()
+                                                .ToString("dd MMM yyyy"))
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Due Date</span>
+                    <strong>
+                        @(Model.DueAt
+                                                .ToLocalTime()
+                                                .ToString("dd MMM yyyy"))
+                    </strong>
+                </div>
+            </section>
+
+            <section class="payment-section">
+                <div class="payment-section-heading">
+                    <i class="bi bi-receipt"></i>
+
+                    <div>
+                        <h2>Bill Items</h2>
+                        <p>
+                            @Model.EnrollmentDurationMonths-month
+                            enrollment plan
+                        </p>
+                    </div>
+                </div>
+
+                <div class="payment-table-wrapper">
+                    <table class="payment-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Quantity</th>
+                                <th>Unit Amount</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            @item.Description
+                                        </strong>
+                                    </td>
+
+                                    <td>
+                                        @item.Quantity
+                                    </td>
+
+                                    <td>
+                                        RM @item.UnitAmount.ToString("F2")
+                                    </td>
+
+                                    <td class="payment-line-total
+                                                   @(item.LineTotal < 0
+                                                                                           ? "discount"
+                                                                                           : "")">
+                                    RM @item.LineTotal.ToString("F2")
+                                </td>
+                            </tr>
+                                                        }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="payment-total-section">
+                <div class="payment-total-row">
+                    <span>Tuition Subtotal</span>
+
+                    <strong>
+                        RM @Model.TuitionSubtotal.ToString("F2")
+                    </strong>
+                </div>
+
+                @if (Model.TuitionDiscountAmount > 0)
+                {
+                    <div class="payment-total-row">
+                        <span>Tuition Discount</span>
+
+                        <strong class="discount">
+                            − RM
+                            @Model.TuitionDiscountAmount.ToString("F2")
+                        </strong>
+                    </div>
+                }
+
+                @if (Model.HardcopyFee > 0)
+                {
+                    <div class="payment-total-row">
+                        <span>Hardcopy Materials</span>
+
+                        <strong>
+                            RM @Model.HardcopyFee.ToString("F2")
+                        </strong>
+                    </div>
+                }
+
+                @if (Model.DeliveryFee > 0)
+                {
+                    <div class="payment-total-row">
+                        <span>Delivery Fee</span>
+
+                        <strong>
+                            RM @Model.DeliveryFee.ToString("F2")
+                        </strong>
+                    </div>
+                }
+
+                <div class="payment-grand-total">
+                    <span>Total Payment</span>
+
+                    <strong>
+                        RM @Model.TotalAmount.ToString("F2")
+                    </strong>
+                </div>
+            </section>
+
+            @if (canPay)
+            {
+                <section class="payment-action-section">
+                    <div class="payment-security-note">
+                        <i class="bi bi-lock-fill"></i>
+
+                        <div>
+                            <strong>Secure Test Checkout</strong>
+
+                            <span>
+                                You will be redirected to Stripe.
+                                No real money will be charged in
+                                Test Mode.
+                            </span>
+                        </div>
+                    </div>
+
+                    <form asp-controller="Payments"
+                          asp-action="CreateCheckoutSession"
+                          method="post">
+
+                        <input type="hidden"
+                               name="token"
+                               value="@Model.PaymentAccessToken" />
+
+                        <button type="submit"
+                                class="payment-submit-button">
+
+                            <i class="bi bi-credit-card"></i>
+
+                            Pay RM
+                            @Model.TotalAmount.ToString("F2")
+                        </button>
+                    </form>
+                </section>
+            }
+            else if (Model.Status == BillStatus.Paid)
+            {
+                <div class="payment-completed-message">
+                    <i class="bi bi-check-circle-fill"></i>
+
+                    <div>
+                        <strong>This bill has been paid.</strong>
+                        <span>
+                            No further payment is required.
+                        </span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="payment-unavailable-message">
+                    <i class="bi bi-exclamation-circle"></i>
+
+                    <div>
+                        <strong>Payment unavailable</strong>
+                        <span>
+                            This bill cannot currently accept payment.
+                        </span>
+                    </div>
+                </div>
+            }
+        </main>
+
+        <footer class="payment-footer">
+            <span>
+                <i class="bi bi-shield-check"></i>
+                Protected payment access
+            </span>
+
+            <span>© @DateTime.Now.Year EduSmart</span>
+        </footer>
+    </div>
+</div>

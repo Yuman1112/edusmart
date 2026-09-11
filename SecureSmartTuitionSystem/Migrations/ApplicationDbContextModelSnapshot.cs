@@ -240,6 +240,10 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("PaymentAccessToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -266,6 +270,10 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasIndex("EnrollmentApplicationId")
                         .IsUnique();
+
+                    b.HasIndex("PaymentAccessToken")
+                        .IsUnique()
+                        .HasFilter("[PaymentAccessToken] IS NOT NULL");
 
                     b.ToTable("Bills");
                 });
@@ -1088,6 +1096,17 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.AdminProfile", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "ApplicationUser")
+                        .WithOne()
+                        .HasForeignKey("SecureSmartTuitionSystem.Models.AdminProfile", "ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApplicationUser");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Billing.Bill", b =>
                 {
                     b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.EnrollmentApplication", "EnrollmentApplication")
@@ -1106,17 +1125,6 @@ namespace SecureSmartTuitionSystem.Migrations
                         .HasForeignKey("BillId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("SecureSmartTuitionSystem.Models.AdminProfile", b =>
-                {
-                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "ApplicationUser")
-                        .WithOne()
-                        .HasForeignKey("SecureSmartTuitionSystem.Models.AdminProfile", "ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ApplicationUser");
 
                     b.Navigation("Bill");
                 });

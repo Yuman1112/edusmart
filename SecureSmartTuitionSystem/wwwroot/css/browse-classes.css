@@ -1,0 +1,593 @@
+﻿/* =========================================================
+   EDUSMART - BROWSE AVAILABLE CLASSES
+========================================================= */
+
+
+/* =========================================================
+   1. PAGE
+========================================================= */
+
+.browse-page {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 28px 30px 46px;
+    color: var(--navy);
+}
+
+    .browse-page *,
+    .browse-page *::before,
+    .browse-page *::after {
+        box-sizing: border-box;
+    }
+
+
+/* =========================================================
+   2. PAGE HEADER
+========================================================= */
+
+.browse-page-header {
+    display: flex;
+    margin-bottom: 24px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+    .browse-page-header h1 {
+        margin: 5px 0 6px;
+        color: var(--navy);
+        font-size: clamp(2rem, 4vw, 2.75rem);
+        font-weight: 800;
+        line-height: 1.12;
+        letter-spacing: -0.035em;
+    }
+
+    .browse-page-header p {
+        max-width: 650px;
+        margin: 0;
+        color: var(--navy-soft);
+        font-size: 0.96rem;
+        line-height: 1.6;
+    }
+
+.browse-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--teal-dark);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+    .browse-eyebrow i {
+        font-size: 0.9rem;
+    }
+
+
+/* =========================================================
+   3. COMMON CARD
+========================================================= */
+
+.browse-card {
+    width: 100%;
+    margin-bottom: 22px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 12px 30px rgba(4, 67, 88, 0.07);
+}
+
+.browse-card-header {
+    display: flex;
+    min-height: 82px;
+    padding: 19px 22px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+    .browse-card-header h2 {
+        display: flex;
+        margin: 0 0 4px;
+        align-items: center;
+        gap: 10px;
+        color: var(--navy);
+        font-size: 1.08rem;
+        font-weight: 780;
+    }
+
+        .browse-card-header h2 i {
+            color: var(--teal);
+            font-size: 1rem;
+        }
+
+    .browse-card-header p {
+        margin: 0;
+        color: var(--navy-soft);
+        font-size: 0.83rem;
+        line-height: 1.45;
+    }
+
+
+/* =========================================================
+   4. FILTERS
+========================================================= */
+
+.browse-filter-grid {
+    display: grid;
+    padding: 21px 22px 23px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.browse-form-field {
+    min-width: 0;
+}
+
+    .browse-form-field label {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--navy);
+        font-size: 0.84rem;
+        font-weight: 750;
+    }
+
+.browse-filter-input {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 40px 10px 13px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--navy);
+    background-color: #ffffff;
+    font-size: 0.93rem;
+}
+
+    .browse-filter-input:hover {
+        border-color: #8bcdd1;
+    }
+
+    .browse-filter-input:focus {
+        border-color: var(--teal);
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.12);
+    }
+
+.browse-clear-link {
+    display: inline-flex;
+    padding: 8px 0;
+    align-items: center;
+    gap: 7px;
+    color: var(--teal-dark);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+    .browse-clear-link:hover {
+        color: var(--teal);
+        text-decoration: none;
+    }
+
+
+/* =========================================================
+   5. RESULT COUNT
+========================================================= */
+
+.browse-result-count {
+    display: inline-flex;
+    min-height: 32px;
+    padding: 6px 12px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: var(--teal-dark);
+    background: #e8fafa;
+    font-size: 0.8rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   6. CLASS GRID
+========================================================= */
+
+.browse-class-grid {
+    display: grid;
+    padding: 22px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.browse-class-card {
+    display: flex;
+    min-width: 0;
+    min-height: 325px;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: #ffffff;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+    .browse-class-card:hover {
+        border-color: #8acdd1;
+        box-shadow: 0 12px 26px rgba(4, 85, 103, 0.09);
+        transform: translateY(-2px);
+    }
+
+    .browse-class-card.class-full {
+        background: #fbfcfd;
+    }
+
+        .browse-class-card.class-full:hover {
+            border-color: var(--border);
+            box-shadow: none;
+            transform: none;
+        }
+
+
+/* =========================================================
+   7. CLASS CARD HEADER
+========================================================= */
+
+.browse-class-card-header {
+    display: flex;
+    min-height: 82px;
+    padding: 17px 18px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border-bottom: 1px solid var(--border);
+    background: #fbffff;
+}
+
+.browse-class-heading {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+}
+
+.browse-subject-icon {
+    display: inline-flex;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    color: var(--teal-dark);
+    background: #e5fafa;
+    font-size: 1.05rem;
+}
+
+.browse-class-heading h3 {
+    margin: 0 0 3px;
+    overflow-wrap: anywhere;
+    color: var(--navy);
+    font-size: 1.02rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.browse-level-text {
+    color: var(--navy-soft);
+    font-size: 0.79rem;
+}
+
+
+/* =========================================================
+   8. STATUS
+========================================================= */
+
+.browse-status-pill {
+    display: inline-flex;
+    min-height: 29px;
+    padding: 5px 10px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 0.73rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+    .browse-status-pill.available {
+        color: #00764f;
+        background: #d5f7e8;
+    }
+
+    .browse-status-pill.full {
+        color: #b42335;
+        background: #ffe2e6;
+    }
+
+
+/* =========================================================
+   9. CLASS INFORMATION
+========================================================= */
+
+.browse-class-information {
+    display: grid;
+    padding: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 17px 18px;
+    flex: 1;
+}
+
+.browse-info-item {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.browse-info-icon {
+    display: inline-flex;
+    width: 31px;
+    height: 31px;
+    flex: 0 0 31px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: var(--teal-dark);
+    background: #edfafa;
+    font-size: 0.82rem;
+}
+
+.browse-info-item > div {
+    min-width: 0;
+}
+
+.browse-info-label {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--navy-soft);
+    font-size: 0.7rem;
+    line-height: 1.3;
+}
+
+.browse-info-item strong {
+    display: block;
+    overflow-wrap: anywhere;
+    color: var(--navy);
+    font-size: 0.82rem;
+    font-weight: 720;
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   10. CLASS CARD FOOTER
+========================================================= */
+
+.browse-class-card-footer {
+    display: flex;
+    min-height: 72px;
+    padding: 14px 18px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-top: 1px solid var(--border);
+    background: #fbffff;
+}
+
+.browse-fee {
+    min-width: 0;
+}
+
+    .browse-fee span {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--navy-soft);
+        font-size: 0.7rem;
+    }
+
+    .browse-fee strong {
+        color: var(--navy);
+        font-size: 0.94rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .browse-fee .browse-free-fee {
+        display: inline-flex;
+        padding: 4px 10px;
+        border-radius: 999px;
+        color: #00764f;
+        background: #d5f7e8;
+        font-size: 0.75rem;
+    }
+
+
+/* =========================================================
+   11. BUTTONS
+========================================================= */
+
+.browse-primary-button,
+.browse-outline-button,
+.browse-disabled-button {
+    display: inline-flex;
+    min-height: 43px;
+    padding: 10px 16px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    font-weight: 750;
+    line-height: 1;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.browse-primary-button {
+    border: 1px solid var(--teal-dark);
+    color: #ffffff;
+    background: linear-gradient( 135deg, var(--teal), var(--teal-dark) );
+    box-shadow: 0 8px 18px rgba(7, 128, 143, 0.16);
+}
+
+    .browse-primary-button:hover {
+        border-color: var(--teal-dark);
+        color: #ffffff;
+        background: var(--teal-dark);
+        box-shadow: 0 10px 21px rgba(7, 128, 143, 0.21);
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+
+.browse-card-button {
+    min-height: 39px;
+    padding: 9px 14px;
+    box-shadow: none;
+}
+
+.browse-outline-button {
+    border: 1px solid var(--teal);
+    color: var(--teal-dark);
+    background: #ffffff;
+}
+
+    .browse-outline-button:hover {
+        color: #ffffff;
+        background: var(--teal);
+        text-decoration: none;
+    }
+
+.browse-disabled-button {
+    border: 1px solid #cad8dc;
+    color: #82979f;
+    background: #edf2f4;
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   12. EMPTY STATE
+========================================================= */
+
+.browse-empty-state {
+    display: flex;
+    min-height: 320px;
+    padding: 48px 24px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.browse-empty-icon {
+    display: inline-flex;
+    width: 66px;
+    height: 66px;
+    margin-bottom: 17px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: var(--teal-dark);
+    background: #e8fafa;
+    font-size: 1.55rem;
+}
+
+.browse-empty-state h3 {
+    margin: 0 0 8px;
+    color: var(--navy);
+    font-size: 1.08rem;
+    font-weight: 800;
+}
+
+.browse-empty-state p {
+    max-width: 470px;
+    margin: 0 0 20px;
+    color: var(--navy-soft);
+    font-size: 0.86rem;
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   13. RESPONSIVE
+========================================================= */
+
+@media (max-width: 991.98px) {
+    .browse-page {
+        padding: 24px 22px 40px;
+    }
+
+    .browse-class-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .browse-page {
+        padding: 20px 16px 34px;
+    }
+
+    .browse-page-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+        .browse-page-header .browse-primary-button {
+            width: 100%;
+        }
+
+    .browse-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .browse-card-header {
+        align-items: flex-start;
+    }
+
+    .browse-class-information {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .browse-page {
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+
+    .browse-card {
+        border-radius: 14px;
+    }
+
+    .browse-card-header {
+        padding: 17px;
+        flex-direction: column;
+    }
+
+    .browse-filter-grid,
+    .browse-class-grid {
+        padding: 17px;
+    }
+
+    .browse-class-card-header {
+        align-items: flex-start;
+    }
+
+    .browse-class-card-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .browse-card-button,
+    .browse-disabled-button {
+        width: 100%;
+    }
+}

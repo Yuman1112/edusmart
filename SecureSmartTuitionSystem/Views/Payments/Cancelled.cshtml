@@ -1,0 +1,50 @@
+﻿@{
+    ViewData["Title"] = "Payment Cancelled";
+
+    string? paymentAccessToken =
+        ViewBag.PaymentAccessToken as string;
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/payment.css"
+          asp-append-version="true" />
+}
+
+<div class="payment-result-page">
+    <main class="payment-result-card">
+        <div class="payment-result-icon cancelled">
+            <i class="bi bi-x-lg"></i>
+        </div>
+
+        <span class="payment-eyebrow">
+            Payment Cancelled
+        </span>
+
+        <h1>No Payment Was Made</h1>
+
+        <p>
+            The Stripe Checkout process was cancelled.
+            Your bill remains unpaid.
+        </p>
+
+        @if (!string.IsNullOrWhiteSpace(
+                paymentAccessToken))
+        {
+            <a asp-controller="Payments"
+               asp-action="Checkout"
+               asp-route-token="@paymentAccessToken"
+               class="payment-result-button">
+
+                Try Again
+            </a>
+        }
+
+        <a asp-controller="Home"
+           asp-action="Index"
+           class="payment-secondary-link">
+
+            Return to Home
+        </a>
+    </main>
+</div>
