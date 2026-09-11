@@ -18,6 +18,9 @@ namespace SecureSmartTuitionSystem.Controllers
         private const string GuardianDetailsSessionKey =
             "Enrollment.GuardianDetails";
 
+        private const string ExistingStudentProfileIdSessionKey =
+            "Enrollment.ExistingStudentProfileId";
+
         private const string ExistingParentUserIdSessionKey =
             "Enrollment.ExistingParentUserId";
 
@@ -55,6 +58,9 @@ namespace SecureSmartTuitionSystem.Controllers
 
             HttpContext.Session.Remove(
                 GuardianDetailsSessionKey);
+
+            HttpContext.Session.Remove(
+                ExistingStudentProfileIdSessionKey);
 
             HttpContext.Session.Remove(
                 ExistingParentUserIdSessionKey);
@@ -97,7 +103,7 @@ namespace SecureSmartTuitionSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult StudentDetails(
+        public async Task<IActionResult> StudentDetails(
             StudentDetailsViewModel model)
         {
             if (!ModelState.IsValid)
@@ -105,20 +111,61 @@ namespace SecureSmartTuitionSystem.Controllers
                 return View(model);
             }
 
+            // Normalize identification number
+            var identificationNumber =
+                model.StudentIdentificationNumber.Trim();
+
+            // Keep Birth Certificate numbers in a consistent format
+            if (model.StudentIdentificationType == "BirthCertificate")
+            {
+                identificationNumber =
+                    identificationNumber.ToUpperInvariant();
+            }
+
+            // Check whether the same identification already exists
+            var existingStudent =
+                await _context.StudentProfiles
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        student =>
+                            student.IdentificationType ==
+                                model.StudentIdentificationType &&
+                            student.IdentificationNumber ==
+                                identificationNumber);
+
+            if (existingStudent != null)
+            {
+                HttpContext.Session.SetInt32(
+                    ExistingStudentProfileIdSessionKey,
+                    existingStudent.StudentProfileId);
+            }
+            else
+            {
+                HttpContext.Session.Remove(
+                    ExistingStudentProfileIdSessionKey);
+            }
+
+            // Save normalized value back into the model
+            model.StudentIdentificationNumber =
+                identificationNumber;
+
             model.StudentName =
                 model.StudentName.Trim();
 
             model.StudentIdentificationType =
                 model.StudentIdentificationType.Trim();
 
-            model.StudentIdentificationNumber =
-                model.StudentIdentificationNumber.Trim();
-
             model.StudentGender =
                 model.StudentGender.Trim();
 
             model.StudentSchool =
                 model.StudentSchool.Trim();
+
+            HttpContext.Session.Remove(
+                ExistingParentUserIdSessionKey);
+
+            HttpContext.Session.Remove(
+                GuardianDetailsSessionKey);
 
             HttpContext.Session.SetString(
                 StudentDetailsSessionKey,
@@ -310,6 +357,34 @@ namespace SecureSmartTuitionSystem.Controllers
                 return View(
                     "GuardianDetails",
                     model);
+            }
+
+            int? existingStudentProfileId =
+                HttpContext.Session.GetInt32(
+                    ExistingStudentProfileIdSessionKey);
+
+            if (existingStudentProfileId.HasValue)
+            {
+                bool relationshipExists =
+                    await _context.ParentStudents
+                        .AsNoTracking()
+                        .AnyAsync(link =>
+                            link.ParentProfileId ==
+                                parentProfile.ParentProfileId &&
+                            link.StudentProfileId ==
+                                existingStudentProfileId.Value &&
+                            link.IsActive);
+
+                if (!relationshipExists)
+                {
+                    ModelState.AddModelError(
+                        string.Empty,
+                        "The existing student is not linked to this parent or guardian account.");
+
+                    return View(
+                        "GuardianDetails",
+                        model);
+                }
             }
 
             /*

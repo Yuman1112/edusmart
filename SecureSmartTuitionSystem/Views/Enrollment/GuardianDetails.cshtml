@@ -9,7 +9,7 @@
 <div class="row justify-content-center py-4">
     <div class="col-md-10 col-lg-8">
 
-        <partial name="_EnrollmentSteps" model="@(1)" />
+        <partial name="_EnrollmentSteps" model="@(2)" />
 
         <div class="enrollment-card">
 
@@ -29,11 +29,6 @@
             <form asp-controller="Enrollment"
                   asp-action="GuardianDetails"
                   method="post">
-
-                <div asp-validation-summary="ModelOnly"
-                     class="text-danger mb-3"
-                     role="alert">
-                </div>
 
                 <!-- ==========================================
                      EXISTING PARENT CHECKBOX
@@ -173,6 +168,11 @@
                             Verify Account
 
                         </button>
+
+                        <div asp-validation-summary="ModelOnly"
+                             class="text-danger mt-2 mb-3 validation-summary-no-bullets"
+                             role="alert">
+                        </div>
                     }
 
                 </div>

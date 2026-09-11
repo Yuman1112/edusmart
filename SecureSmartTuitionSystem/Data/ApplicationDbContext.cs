@@ -31,6 +31,9 @@ namespace SecureSmartTuitionSystem.Data
         public DbSet<StudentProfile> StudentProfiles =>
             Set<StudentProfile>();
 
+        public DbSet<ParentStudent> ParentStudents =>
+            Set<ParentStudent>();
+
         /*
          * Class and Enrollment
          */
@@ -146,6 +149,13 @@ namespace SecureSmartTuitionSystem.Data
                         student.StudentNumber)
                     .IsUnique();
 
+                entity.HasIndex(student => new
+                {
+                    student.IdentificationType,
+                    student.IdentificationNumber
+                })
+                    .IsUnique();
+
                 entity.HasIndex(student =>
                         student.ApplicationUserId)
                     .IsUnique()
@@ -166,6 +176,32 @@ namespace SecureSmartTuitionSystem.Data
                     .HasForeignKey<StudentProfile>(
                         student =>
                             student.ApplicationUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<ParentStudent>(entity =>
+            {
+                entity.HasIndex(link => new
+                {
+                    link.ParentProfileId,
+                    link.StudentProfileId
+                })
+                    .IsUnique();
+
+                entity.HasOne(link =>
+                        link.ParentProfile)
+                    .WithMany(parent =>
+                        parent.ParentStudents)
+                    .HasForeignKey(link =>
+                        link.ParentProfileId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(link =>
+                        link.StudentProfile)
+                    .WithMany(student =>
+                        student.ParentStudents)
+                    .HasForeignKey(link =>
+                        link.StudentProfileId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

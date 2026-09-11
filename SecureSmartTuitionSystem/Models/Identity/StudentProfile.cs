@@ -42,9 +42,14 @@ namespace SecureSmartTuitionSystem.Models.Identity
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        // OLD relationship - temporarily kept during migration.
         public int ParentProfileId { get; set; }
 
         public ParentProfile ParentProfile { get; set; } = null!;
+
+        // NEW Parent-Student relationship.
+        public ICollection<ParentStudent> ParentStudents { get; set; }
+            = new List<ParentStudent>();
 
         public string? ApplicationUserId { get; set; }
 

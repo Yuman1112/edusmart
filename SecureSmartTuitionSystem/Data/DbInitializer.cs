@@ -45,7 +45,7 @@ namespace SecureSmartTuitionSystem.Data
             await CreateRolesAsync(roleManager);
 
             /*
-             * This only creates the four demo accounts when
+             * This only creates four demo accounts when
              * seedBasicAccounts is set to true in Program.cs.
              */
             if (seedBasicAccounts)
@@ -62,6 +62,10 @@ namespace SecureSmartTuitionSystem.Data
                     userManager);
 
                 await SeedDemoParentProfileAsync(
+                    context,
+                    userManager);
+
+                await SeedDemoStudentProfileAsync(
                     context,
                     userManager);
             }
@@ -431,10 +435,96 @@ namespace SecureSmartTuitionSystem.Data
 
         /*
          * =====================================================
-         * ROLE CREATION
+         * DEMO STUDENT PROFILE
          * =====================================================
          */
 
+        private static async Task SeedDemoStudentProfileAsync(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager)
+        {
+            var studentUser =
+                await userManager.FindByNameAsync(
+                    "ST00001");
+
+            if (studentUser == null)
+            {
+                return;
+            }
+
+            var existingStudentProfile =
+                await context.StudentProfiles
+                    .FirstOrDefaultAsync(
+                        student =>
+                            student.ApplicationUserId ==
+                            studentUser.Id);
+
+            if (existingStudentProfile != null)
+            {
+                return;
+            }
+
+            var parentProfile =
+                await context.ParentProfiles
+                    .FirstOrDefaultAsync();
+
+            if (parentProfile == null)
+            {
+                return;
+            }
+
+            var studentProfile =
+                new StudentProfile
+                {
+                    ApplicationUserId =
+                        studentUser.Id,
+
+                    StudentNumber =
+                        "ST00001",
+
+                    FullName =
+                        studentUser.FullName
+                        ?? "Test Student",
+
+                    IdentificationType =
+                        "IC",
+
+                    IdentificationNumber =
+                        "090101-10-1234",
+
+                    DateOfBirth =
+                        new DateTime(2009, 1, 1),
+
+                    Gender =
+                        "Female",
+
+                    School =
+                        "Test School",
+
+                    AcademicLevel =
+                        "Form 5",
+
+                    IsActive =
+                        true,
+
+                    CreatedAt =
+                        DateTime.UtcNow,
+
+                    ParentProfileId =
+                        parentProfile.ParentProfileId
+                };
+
+            context.StudentProfiles.Add(
+                studentProfile);
+
+            await context.SaveChangesAsync();
+        }
+
+        /*
+         * =====================================================
+         * ROLE CREATION
+         * =====================================================
+         */
         private static async Task CreateRolesAsync(
             RoleManager<IdentityRole> roleManager)
         {

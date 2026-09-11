@@ -104,12 +104,17 @@
                            id="studentIdentificationNumber" />
 
                     <span asp-validation-for="StudentIdentificationNumber"
-                          class="text-danger">
+                          class="text-danger"
+                          id="studentIdentificationNumberValidation">
                     </span>
+
+                    <div id="studentIcValidation"
+                         class="text-danger"
+                         style="display: none;">
+                    </div>
 
                     <div class="form-text"
                          id="studentIdentificationHelp">
-                        Enter the student's IC number in the format 000000-00-0000.
                     </div>
 
                 </div>
@@ -117,6 +122,11 @@
                 <!-- ==========================================
                      DATE OF BIRTH + GENDER
                      ========================================== -->
+                <div id="icAutoFillHelp"
+                     class="form-text mb-2">
+                    Date of birth and gender will be filled automatically from the IC number.
+                </div>
+
                 <div class="row">
 
                     <!-- Date of Birth -->
@@ -129,11 +139,18 @@
                         <input asp-for="StudentDateOfBirth"
                                class="form-control"
                                type="date"
+                               id="studentDateOfBirth"
                                max="@DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd")" />
 
                         <span asp-validation-for="StudentDateOfBirth"
-                              class="text-danger">
+                              class="text-danger"
+                              id="studentDateOfBirthValidation">
                         </span>
+
+                        <div id="studentAgeValidation"
+                             class="text-warning"
+                             style="display: none;">
+                        </div>
 
                     </div>
 
@@ -145,7 +162,8 @@
                         </label>
 
                         <select asp-for="StudentGender"
-                                class="form-select">
+                                class="form-select"
+                                id="studentGender">
 
                             <option value="">
                                 Select gender
@@ -211,7 +229,6 @@
     </div>
 </div>
 
-
 @section Scripts {
 
     <partial name="_ValidationScriptsPartial" />
@@ -236,6 +253,104 @@
                 const helpText =
                     document.getElementById(
                         "studentIdentificationHelp");
+
+                const dateOfBirthInput =
+                    document.getElementById(
+                        "studentDateOfBirth");
+
+                const genderSelect =
+                    document.getElementById(
+                        "studentGender");
+
+                const icAutoFillHelp =
+                    document.getElementById(
+                        "icAutoFillHelp");
+
+                const ageValidation =
+                    document.getElementById(
+                        "studentAgeValidation");
+
+                const dateOfBirthValidation =
+                    document.getElementById(
+                        "studentDateOfBirthValidation");
+
+                const identificationValidation =
+                    document.getElementById(
+                        "studentIdentificationNumberValidation");
+
+                const icValidation =
+                    document.getElementById(
+                        "studentIcValidation");
+
+                function calculateAge(dateOfBirth) {
+
+                    const today =
+                        new Date();
+
+                    let age =
+                        today.getFullYear() -
+                        dateOfBirth.getFullYear();
+
+                    const monthDifference =
+                        today.getMonth() -
+                        dateOfBirth.getMonth();
+
+                    if (
+                        monthDifference < 0 ||
+                        (
+                            monthDifference === 0 &&
+                            today.getDate() <
+                            dateOfBirth.getDate()
+                        )
+                    ) {
+                        age--;
+                    }
+
+                    return age;
+                }
+
+                function validateStudentAge() {
+
+                    if (!dateOfBirthInput.value) {
+
+                        ageValidation.textContent = "";
+                        ageValidation.style.display = "none";
+
+                        return true;
+                    }
+
+                    const dateOfBirth =
+                        new Date(
+                            dateOfBirthInput.value + "T00:00:00");
+
+                    const age =
+                        calculateAge(dateOfBirth);
+
+                    if (age < 5 || age > 19) {
+
+                        if (
+                            dateOfBirthValidation &&
+                            dateOfBirthValidation.textContent.trim() !== ""
+                        ) {
+                            ageValidation.textContent = "";
+                            ageValidation.style.display = "none";
+                        }
+                        else {
+                            ageValidation.textContent =
+                                "The student's age is not within the supported range for Year 1 to Form 5.";
+
+                            ageValidation.style.display =
+                                "block";
+                        }
+
+                        return false;
+                    }
+
+                    ageValidation.textContent = "";
+                    ageValidation.style.display = "none";
+
+                    return true;
+                }
 
                 function formatIcNumber(value) {
 
@@ -268,6 +383,113 @@
                     return digits;
                 }
 
+                function populateDetailsFromIc() {
+
+                    if (typeSelect.value !== "IC") {
+                        return;
+                    }
+
+                    const digits =
+                        numberInput.value.replace(/\D/g, "");
+
+                    if (digits.length !== 12) {
+
+                        dateOfBirthInput.value = "";
+                        genderSelect.value = "";
+
+                        // Clear IC validation
+                        icValidation.textContent = "";
+                        icValidation.style.display = "none";
+
+                        // Clear age validation
+                        ageValidation.textContent = "";
+                        ageValidation.style.display = "none";
+
+                        return;
+                    }
+
+                    const yy =
+                        parseInt(digits.substring(0, 2));
+
+                    const mm =
+                        parseInt(digits.substring(2, 4));
+
+                    const dd =
+                        parseInt(digits.substring(4, 6));
+
+                    const currentYear =
+                        new Date().getFullYear();
+
+                    const currentTwoDigitYear =
+                        currentYear % 100;
+
+                    const fullYear =
+                        yy <= currentTwoDigitYear
+                            ? 2000 + yy
+                            : 1900 + yy;
+
+                    const date =
+                        new Date(
+                            fullYear,
+                            mm - 1,
+                            dd);
+
+                    const validDate =
+                        date.getFullYear() === fullYear &&
+                        date.getMonth() === mm - 1 &&
+                        date.getDate() === dd;
+
+                        if (!validDate) {
+
+                            dateOfBirthInput.value = "";
+                            genderSelect.value = "";
+
+                            // Clear any previous age warning
+                            ageValidation.textContent = "";
+                            ageValidation.style.display = "none";
+
+                            if (
+                                identificationValidation &&
+                                identificationValidation.textContent.trim() !== ""
+                            ) {
+                                icValidation.textContent = "";
+                                icValidation.style.display = "none";
+                            }
+                            else {
+                                icValidation.textContent =
+                                    "The IC number contains an invalid date of birth.";
+
+                                icValidation.style.display =
+                                    "block";
+                            }
+
+                            return;
+                        }
+
+                        icValidation.textContent = "";
+                        icValidation.style.display = "none";
+
+                    const month =
+                        String(mm).padStart(2, "0");
+
+                    const day =
+                        String(dd).padStart(2, "0");
+
+                    dateOfBirthInput.value =
+                        `${fullYear}-${month}-${day}`;
+
+                    validateStudentAge();
+
+                    const lastDigit =
+                        parseInt(
+                            digits.charAt(11));
+
+                    genderSelect.value =
+                        lastDigit % 2 === 0
+                            ? "Female"
+                            : "Male";
+                }
+
                 // ==========================================
                 // UPDATE IDENTIFICATION FIELD
                 // ==========================================
@@ -288,11 +510,25 @@
                             "numeric";
 
                         helpText.textContent =
-                            "Enter the student's IC number in the format 000000-00-0000.";
+                            "";
 
                         numberInput.value =
                             formatIcNumber(
                                 numberInput.value);
+
+                        dateOfBirthInput.readOnly =
+                            true;
+
+                        genderSelect.style.pointerEvents =
+                            "none";
+
+                        genderSelect.tabIndex =
+                            -1;
+
+                        icAutoFillHelp.hidden = 
+                            false;
+
+                        populateDetailsFromIc();
                     }
                     else {
 
@@ -310,6 +546,18 @@
 
                         helpText.textContent =
                             "Enter the number exactly as shown on the birth certificate.";
+
+                        dateOfBirthInput.readOnly =
+                            false;
+
+                        genderSelect.style.pointerEvents =
+                            "";
+
+                        genderSelect.tabIndex =
+                            0;
+
+                        icAutoFillHelp.hidden =
+                            true;
                     }
                 }
 
@@ -325,6 +573,8 @@
                             this.value =
                                 formatIcNumber(
                                     this.value);
+
+                            populateDetailsFromIc();
                         }
                     });
 
@@ -335,11 +585,33 @@
                     "change",
                     function () {
 
-                        // Clear the old value when switching
-                        // between IC and Birth Certificate.
+                        // Clear the old value
                         numberInput.value = "";
+                        dateOfBirthInput.value = "";
+                        genderSelect.value = "";
+
+                        // Clear age validation message
+                        ageValidation.textContent = "";
+                        ageValidation.style.display = "none";
+
+                        // Clear IC validation message
+                        icValidation.textContent = "";
+                        icValidation.style.display = "none";
 
                         updateIdentificationField();
+                    });
+
+                // ==========================================
+                // BIRTH CERTIFICATE DOB AGE VALIDATION
+                // ==========================================
+                dateOfBirthInput.addEventListener(
+                    "change",
+                    function () {
+
+                        if (typeSelect.value === "BirthCertificate") {
+
+                            validateStudentAge();
+                        }
                     });
 
                 // ==========================================
