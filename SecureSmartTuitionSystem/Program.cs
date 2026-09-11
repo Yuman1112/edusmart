@@ -125,6 +125,14 @@ builder.Services.AddScoped<
     IPaymentCompletionService,
     PaymentCompletionService>();
 
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection(
+        EmailSettings.SectionName));
+
+builder.Services.AddScoped<
+    IFirstPaymentEmailService,
+    FirstPaymentEmailService>();
+
 /*
  * =====================================================
  * STRIPE TEST MODE

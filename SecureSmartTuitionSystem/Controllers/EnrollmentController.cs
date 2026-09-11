@@ -609,11 +609,6 @@ namespace SecureSmartTuitionSystem.Controllers
                     GuardianDetailsSessionKey,
                     JsonSerializer.Serialize(model));
 
-                TempData["SuccessMessage"] =
-                    "Existing parent or guardian account " +
-                    "selected. Please select the classes " +
-                    "for enrollment.";
-
                 /*
                  * Continue to Step 3 only after the
                  * Guardian form is submitted successfully.
@@ -707,10 +702,6 @@ namespace SecureSmartTuitionSystem.Controllers
             HttpContext.Session.SetString(
                 GuardianDetailsSessionKey,
                 JsonSerializer.Serialize(model));
-
-            TempData["SuccessMessage"] =
-                "Student and guardian details saved. " +
-                "Please select the classes for enrollment.";
 
             /*
              * Continue to Step 3.

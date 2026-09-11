@@ -1,0 +1,267 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Billing.PaymentReceiptViewModel
+
+@{
+    ViewData["Title"] =
+        $"Receipt {Model.PaymentNumber}";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/receipt.css"
+          asp-append-version="true" />
+}
+
+<div class="receipt-page">
+
+    <div class="receipt-toolbar">
+
+        <a asp-controller="Home"
+           asp-action="Index"
+           class="receipt-outline-button">
+
+            <i class="bi bi-arrow-left"></i>
+            Back
+        </a>
+
+        <button type="button"
+                class="receipt-print-button"
+                onclick="window.print()">
+
+            <i class="bi bi-printer"></i>
+            Print Receipt
+        </button>
+
+    </div>
+
+    <main class="receipt-card">
+
+        <header class="receipt-header">
+
+            <div>
+                <span class="receipt-brand">
+                    EDUSMART
+                </span>
+
+                <h1>Payment Receipt</h1>
+
+                <p>
+                    Secure Smart Tuition System
+                </p>
+            </div>
+
+            <div class="receipt-paid-stamp">
+                <i class="bi bi-check-circle-fill"></i>
+                PAID
+            </div>
+
+        </header>
+
+
+        <section class="receipt-reference-grid">
+
+            <div>
+                <span>Receipt Number</span>
+                <strong>@Model.PaymentNumber</strong>
+            </div>
+
+            <div>
+                <span>Bill Number</span>
+                <strong>@Model.BillNumber</strong>
+            </div>
+
+            <div>
+                <span>Application Number</span>
+                <strong>@Model.ApplicationNumber</strong>
+            </div>
+
+            <div>
+                <span>Payment Date</span>
+
+                <strong>
+                    @(Model.CompletedAt
+                                        .ToLocalTime()
+                                        .ToString(
+                                        "dd MMM yyyy, hh:mm tt"))
+                </strong>
+            </div>
+
+            <div>
+                <span>Payment Method</span>
+
+                <strong>
+                    @Model.PaymentProvider Test Payment
+                </strong>
+            </div>
+
+            <div>
+                <span>Payment Status</span>
+
+                <strong class="receipt-success-text">
+                    Succeeded
+                </strong>
+            </div>
+
+        </section>
+
+
+        <section class="receipt-party-section">
+
+            <div>
+                <span>Received From</span>
+
+                <strong>
+                    @Model.GuardianName
+                </strong>
+
+                <p>
+                    @Model.GuardianEmail
+                </p>
+            </div>
+
+            <div>
+                <span>Student</span>
+
+                <strong>
+                    @Model.StudentName
+                </strong>
+
+                <p>
+                    Enrollment @Model.ApplicationNumber
+                </p>
+            </div>
+
+        </section>
+
+
+        <div class="receipt-table-wrapper">
+
+            <table class="receipt-table">
+
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Quantity</th>
+                        <th>Unit Amount</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@item.Description</strong>
+                            </td>
+
+                            <td>@item.Quantity</td>
+
+                            <td>
+                                <span class="currency-amount">
+                                    <span class="currency-code">RM</span>
+                                    <span class="currency-value">
+                                        @item.UnitAmount.ToString("F2")
+                                    </span>
+                                </span>
+                            </td>
+
+                            <td class="receipt-line-total @(item.LineTotal < 0 ? "receipt-discount" : "")">
+                                <span class="currency-amount">
+                                    <span class="currency-code">RM</span>
+                                    <span class="currency-value">
+                                        @item.LineTotal.ToString("F2")
+                                    </span>
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <section class="receipt-total-panel">
+            <div>
+                <span>Tuition Subtotal</span>
+
+                <strong class="currency-amount">
+                    <span class="currency-code">RM</span>
+                    <span class="currency-value">
+                        @Model.TuitionSubtotal.ToString("F2")
+                    </span>
+                </strong>
+            </div>
+
+            @if (Model.TuitionDiscountAmount > 0)
+            {
+                <div class="receipt-discount">
+                    <span>
+                        Tuition Discount
+                    </span>
+
+                    <strong class="currency-amount">
+                        <span class="currency-code">RM</span>
+                        <span class="currency-value">
+                            −@Model.TuitionDiscountAmount.ToString("F2")
+                        </span>
+                    </strong>
+                </div>
+            }
+
+            @if (Model.HardcopyFee > 0)
+            {
+                <div>
+                    <span>Hardcopy Materials</span>
+
+                    <strong class="currency-amount">
+                        <span class="currency-code">RM</span>
+                        <span class="currency-value">
+                            @Model.HardcopyFee.ToString("F2")
+                        </span>
+                    </strong>
+                </div>
+            }
+
+            @if (Model.DeliveryFee > 0)
+            {
+                <div>
+                    <span>Delivery Fee</span>
+
+                    <strong class="currency-amount">
+                        <span class="currency-code">RM</span>
+                        <span class="currency-value">
+                            @Model.DeliveryFee.ToString("F2")
+                        </span>
+                    </strong>
+                </div>
+            }
+
+            <div class="receipt-grand-total">
+                <span>Amount Paid</span>
+
+                <strong class="currency-amount">
+                    <span class="currency-code">RM</span>
+                    <span class="currency-value">
+                        @Model.AmountPaid.ToString("F2")
+                    </span>
+                </strong>
+            </div>
+        </section>
+
+
+        <footer class="receipt-footer">
+
+            <i class="bi bi-shield-check"></i>
+
+            <p>
+                This receipt confirms a successful Stripe
+                Sandbox test payment. No real funds were transferred.
+            </p>
+
+        </footer>
+
+    </main>
+
+</div>

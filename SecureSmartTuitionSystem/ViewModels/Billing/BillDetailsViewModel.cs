@@ -98,13 +98,18 @@ namespace SecureSmartTuitionSystem.ViewModels.Billing
 
     public class BillPaymentViewModel
     {
-        public string PaymentNumber { get; set; } = string.Empty;
+        public int PaymentId { get; set; }
+
+        public string PaymentNumber { get; set; }
+            = string.Empty;
 
         public decimal Amount { get; set; }
 
-        public string Currency { get; set; } = "MYR";
+        public string Currency { get; set; }
+            = "MYR";
 
-        public string PaymentProvider { get; set; } = string.Empty;
+        public string PaymentProvider { get; set; }
+            = string.Empty;
 
         public PaymentStatus Status { get; set; }
 

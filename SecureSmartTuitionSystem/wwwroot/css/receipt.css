@@ -1,0 +1,458 @@
+﻿/* =========================================================
+   Receipt Page
+   ========================================================= */
+
+.receipt-page {
+    width: min(1050px, 100%);
+    margin: 0 auto;
+}
+
+
+/* =========================================================
+   Toolbar
+   ========================================================= */
+
+.receipt-toolbar {
+    display: flex;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.receipt-outline-button,
+.receipt-print-button {
+    display: inline-flex;
+    min-height: 42px;
+    padding: 9px 17px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid var(--teal);
+    border-radius: 10px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.receipt-outline-button {
+    color: var(--teal-dark);
+    background: var(--white);
+}
+
+    .receipt-outline-button:hover {
+        color: var(--white);
+        background: var(--teal);
+        transform: translateY(-1px);
+    }
+
+.receipt-print-button {
+    color: var(--white);
+    background: var(--teal);
+}
+
+    .receipt-print-button:hover {
+        color: var(--white);
+        background: var(--teal-dark);
+        border-color: var(--teal-dark);
+        transform: translateY(-1px);
+    }
+
+
+/* =========================================================
+   Main Receipt Card
+   ========================================================= */
+
+.receipt-card {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--white);
+    box-shadow: var(--shadow);
+}
+
+
+/* =========================================================
+   Receipt Header
+   ========================================================= */
+
+.receipt-header {
+    display: flex;
+    padding: 30px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #ffffff, #e9fbfb);
+}
+
+.receipt-brand {
+    color: var(--teal-dark);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.receipt-header h1 {
+    margin: 7px 0 4px;
+    color: var(--navy);
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.receipt-header p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.receipt-paid-stamp {
+    display: inline-flex;
+    min-height: 52px;
+    padding: 11px 22px;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border: 1px solid #83ddb8;
+    border-radius: 999px;
+    color: #05744a;
+    background: #cdf5e2;
+    font-size: 1.05rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+    .receipt-paid-stamp i {
+        font-size: 1.2rem;
+    }
+
+
+/* =========================================================
+   Reference Information
+   ========================================================= */
+
+.receipt-reference-grid,
+.receipt-party-section {
+    display: grid;
+    padding: 24px 30px;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.receipt-reference-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    background: #f7fcfd;
+}
+
+.receipt-party-section {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    background: var(--white);
+}
+
+    .receipt-reference-grid span,
+    .receipt-party-section span {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--muted);
+        font-size: 0.82rem;
+    }
+
+    .receipt-reference-grid strong,
+    .receipt-party-section strong {
+        display: block;
+        color: var(--navy);
+        overflow-wrap: anywhere;
+    }
+
+    .receipt-party-section p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+    }
+
+.receipt-success-text {
+    color: #08794f !important;
+}
+
+
+/* =========================================================
+   Receipt Table
+   ========================================================= */
+
+.receipt-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+    .receipt-table th,
+    .receipt-table td {
+        padding: 16px 30px;
+        border-bottom: 1px solid var(--border);
+        color: var(--navy);
+        vertical-align: middle;
+    }
+
+    .receipt-table th {
+        color: var(--teal-dark);
+        background: #f4fbfc;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+        .receipt-table th:first-child,
+        .receipt-table td:first-child {
+            width: auto;
+            text-align: left;
+        }
+
+            .receipt-table td:first-child strong {
+                display: block;
+                overflow-wrap: anywhere;
+            }
+
+        .receipt-table th:nth-child(2),
+        .receipt-table td:nth-child(2) {
+            width: 120px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .receipt-table th:nth-child(3),
+        .receipt-table td:nth-child(3),
+        .receipt-table th:nth-child(4),
+        .receipt-table td:nth-child(4) {
+            width: 165px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+    .receipt-table td .currency-amount {
+        margin-left: auto;
+    }
+
+.receipt-line-total {
+    font-weight: 800;
+}
+
+
+/* =========================================================
+   Currency Alignment
+   ========================================================= */
+
+.currency-amount {
+    display: inline-grid;
+    width: 100px;
+    grid-template-columns: 25px 75px;
+    align-items: center;
+    column-gap: 0;
+    white-space: nowrap;
+}
+
+.currency-code {
+    text-align: left;
+}
+
+.currency-value {
+    text-align: right;
+}
+
+
+/* =========================================================
+   Receipt Totals
+   ========================================================= */
+
+.receipt-total-panel {
+    width: 460px;
+    max-width: 100%;
+    margin-left: auto;
+    padding: 22px 30px 28px;
+}
+
+    .receipt-total-panel > div {
+        display: grid;
+        padding: 8px 0;
+        grid-template-columns: minmax(0, 1fr) 100px;
+        align-items: center;
+        column-gap: 14px;
+    }
+
+        .receipt-total-panel > div > span {
+            padding-right: 8px;
+            text-align: right;
+        }
+
+    .receipt-total-panel span {
+        color: var(--muted);
+    }
+
+    .receipt-total-panel strong {
+        color: var(--navy);
+        white-space: nowrap;
+    }
+
+    .receipt-total-panel .currency-amount {
+        justify-self: end;
+    }
+
+    .receipt-total-panel .currency-code,
+    .receipt-total-panel .currency-value {
+        color: var(--navy);
+        font-weight: 800;
+    }
+
+.receipt-discount,
+.receipt-discount .currency-code,
+.receipt-discount .currency-value {
+    color: #008f57 !important;
+}
+
+.receipt-grand-total {
+    margin-top: 10px;
+    padding-top: 17px !important;
+    border-top: 1px solid var(--border);
+    color: var(--navy);
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+    .receipt-grand-total span {
+        color: var(--navy);
+        font-weight: 800;
+    }
+
+    .receipt-grand-total .currency-code,
+    .receipt-grand-total .currency-value {
+        font-size: 1.15rem;
+        font-weight: 850;
+    }
+
+
+/* =========================================================
+   Receipt Footer
+   ========================================================= */
+
+.receipt-footer {
+    display: flex;
+    padding: 20px 30px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    background: #f7fcfd;
+    text-align: center;
+}
+
+    .receipt-footer i {
+        color: var(--teal);
+        font-size: 1.2rem;
+    }
+
+    .receipt-footer p {
+        margin: 0;
+    }
+
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+
+@media (max-width: 700px) {
+    .receipt-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .receipt-outline-button,
+    .receipt-print-button {
+        width: 100%;
+    }
+
+    .receipt-reference-grid,
+    .receipt-party-section {
+        grid-template-columns: 1fr;
+    }
+
+    .receipt-header {
+        padding: 24px;
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+        .receipt-header h1 {
+            font-size: 1.7rem;
+        }
+
+    .receipt-table {
+        min-width: 760px;
+    }
+
+    .receipt-total-panel {
+        width: 100%;
+        padding: 22px 24px 26px;
+    }
+
+        .receipt-total-panel > div {
+            column-gap: 12px;
+        }
+}
+
+
+/* =========================================================
+   Print
+   ========================================================= */
+
+@media print {
+    .staff-sidebar,
+    .staff-topbar,
+    .public-header,
+    .receipt-toolbar {
+        display: none !important;
+    }
+
+    .staff-main {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+
+    .staff-content {
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    .receipt-page {
+        width: 100%;
+    }
+
+    .receipt-card {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .receipt-header,
+    .receipt-reference-grid,
+    .receipt-footer {
+        background: #ffffff !important;
+    }
+
+    .receipt-table-wrapper {
+        overflow: visible;
+    }
+
+    .receipt-table {
+        min-width: 0;
+    }
+
+    .receipt-outline-button,
+    .receipt-print-button {
+        display: none !important;
+    }
+}

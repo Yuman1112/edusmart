@@ -122,11 +122,11 @@
 
                     <!-- Dashboard -->
                     <a class="sidebar-link
-                              @(currentController ==
-                                                   dashboardController &&
-                                                   currentAction == "Index"
-                                                       ? "active"
-                                                       : "")"
+                                  @(currentController ==
+                                                                          dashboardController &&
+                                                                          currentAction == "Index"
+                                                                              ? "active"
+                                                                              : "")"
                    asp-controller="@dashboardController"
                    asp-action="Index">
 
@@ -142,17 +142,17 @@
 
                             <button type="button"
                                     class="sidebar-link sidebar-module-button
-                           @(currentController == "ClassSessions" ||
-                                                          currentController == "AdminEnrollments"
-                                                              ? "active"
-                                                              : "")"
+                                   @(currentController == "ClassSessions" ||
+                                                                                              currentController == "AdminEnrollments"
+                                                                                                  ? "active"
+                                                                                                  : "")"
                             data-bs-toggle="collapse"
                             data-bs-target="#classEnrollmentMenu"
                             aria-expanded="@(currentController == "ClassSessions" ||
-                                                          currentController == "AdminEnrollments"
-                                                              ? "true"
-                                                              : "false")"
-                                                                        aria-controls="classEnrollmentMenu">
+                                                                                      currentController == "AdminEnrollments"
+                                                                                          ? "true"
+                                                                                          : "false")"
+                                                                                                    aria-controls="classEnrollmentMenu">
 
                         <span class="sidebar-link-content">
                             <i class="bi bi-people-fill"></i>
@@ -168,17 +168,17 @@
                     <div id="classEnrollmentMenu"
                          class="collapse sidebar-submenu
                         @(currentController == "ClassSessions" ||
-                                            currentController == "AdminEnrollments"
-                                                ? "show"
-                                                : "")">
+                                                                     currentController == "AdminEnrollments"
+                                                                         ? "show"
+                                                                         : "")">
 
                         <!-- Class Sessions -->
                         <a class="sidebar-submenu-link
                             @(currentController == "ClassSessions"
-                                                   ? "active"
-                                                   : "")"
-                                                        asp-controller="ClassSessions"
-                                                        asp-action="Index">
+                                                                              ? "active"
+                                                                              : "")"
+                                                                                   asp-controller="ClassSessions"
+                                                                                   asp-action="Index">
 
                             <i class="bi bi-calendar3"></i>
 
@@ -190,34 +190,34 @@
                         <!-- Enrollment Requests -->
                         <a class="sidebar-submenu-link
                             @(currentController == "AdminEnrollments"
-                                                   ? "active"
-                                                   : "")"
-                           asp-controller="AdminEnrollments"
-                           asp-action="Index">
+                                                                              ? "active"
+                                                                              : "")"
+                                                                                   asp-controller="AdminEnrollments"
+                                                                                   asp-action="Index">
 
-                                    <i class="bi bi-clipboard-check-fill"></i>
+                            <i class="bi bi-clipboard-check-fill"></i>
 
-                                    <span>
-                                        Enrollment Requests
-                                    </span>
-                                </a>
+                            <span>
+                                Enrollment Requests
+                            </span>
+                        </a>
 
-                            </div>
-                        </div>
+                    </div>
+                </div>
 
-                        <a class="sidebar-link
+                <a class="sidebar-link
                                   @(currentController == "Billing"
-                                      ? "active"
-                                      : "")"
-                           asp-controller="Billing"
-                           asp-action="Index">
+                                                         ? "active"
+                                                         : "")"
+                   asp-controller="Billing"
+                   asp-action="Index">
 
                             <i class="bi bi-credit-card-fill"></i>
 
                             <span>
                                 Payment &amp; Billing
                             </span>
-                        </a>    
+                        </a>
 
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
@@ -253,10 +253,10 @@
                     {
                         <!-- Tutor My Classes -->
                         <a class="sidebar-link
-                                      @(currentController == "Tutor" &&
-                                                           currentAction == "MyClasses"
-                                                               ? "active"
-                                                               : "")"
+                                              @(currentController == "Tutor" &&
+                                                                                      currentAction == "MyClasses"
+                                                                                          ? "active"
+                                                                                          : "")"
                    asp-controller="Tutor"
                    asp-action="MyClasses">
 
@@ -325,10 +325,6 @@
 
                 <header class="staff-topbar">
 
-                    <div class="topbar-page-name">
-                        @pageTitle
-                    </div>
-
                     <div class="topbar-user">
 
                         <div class="user-avatar">
@@ -392,6 +388,25 @@
                             <i class="bi bi-journal-bookmark-fill"></i>
                             <span>Classes</span>
                         </a>
+
+                        @if (User.Identity?.IsAuthenticated == true &&
+                                            (User.IsInRole("Parent") ||
+                                            User.IsInRole("Student")))
+                        {
+                            <a asp-controller="Billing"
+                               asp-action="Index"
+                               class="public-nav-link
+                                              @(currentController == "Billing"
+                                                                         ? "active"
+                                                                         : "")">
+
+                        <i class="bi bi-credit-card-fill"></i>
+
+                                <span>
+                                    Payment &amp; Billing
+                                </span>
+                            </a>
+                                        }
 
                     </div>
 

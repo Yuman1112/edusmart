@@ -8,8 +8,8 @@
         ViewBag.StatusMessage as string
         ?? "EduSmart is verifying the payment status.";
 
-    int? billId =
-        ViewBag.BillId as int?;
+    string? checkoutSessionId =
+        ViewBag.CheckoutSessionId as string;
 }
 
 @section Styles {
@@ -46,14 +46,15 @@
                 </div>
             </div>
 
-            @if (billId.HasValue)
+            @if (!string.IsNullOrWhiteSpace(checkoutSessionId))
             {
-                <a asp-controller="Billing"
-                   asp-action="Details"
-                   asp-route-id="@billId.Value"
+                <a asp-controller="Payments"
+                   asp-action="ReceiptBySession"
+                   asp-route-sessionId="@checkoutSessionId"
                    class="payment-result-button">
 
-                    View Paid Bill
+                    <i class="bi bi-receipt"></i>
+                    View Receipt
                 </a>
             }
             else
