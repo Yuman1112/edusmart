@@ -2,13 +2,13 @@
    EDUSMART - PAYMENT AND BILLING
 ========================================================= */
 
-/* =========================================================
-   PAGE HEADER
-========================================================= */
-
 .billing-page {
     width: 100%;
 }
+
+/* =========================================================
+   PAGE HEADER
+========================================================= */
 
 .billing-page-header {
     display: flex;
@@ -34,19 +34,16 @@
     align-items: center;
 }
 
-.billing-back-link {
-    display: inline-flex;
-    margin-bottom: 14px;
-    align-items: center;
-    gap: 7px;
-    color: var(--teal-dark);
-    font-weight: 700;
+.billing-details-title {
+    min-width: 0;
 }
 
-    .billing-back-link:hover {
-        color: var(--navy);
-    }
-
+.billing-header-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 12px;
+}
 
 /* =========================================================
    ALERTS
@@ -59,7 +56,6 @@
     gap: 10px;
     border-radius: 12px;
 }
-
 
 /* =========================================================
    SUMMARY CARDS
@@ -143,9 +139,8 @@
         background: #e5eef8;
     }
 
-
 /* =========================================================
-   COMMON CARDS
+   CARDS AND FILTER
 ========================================================= */
 
 .billing-filter-card,
@@ -156,11 +151,6 @@
     background: var(--white);
     box-shadow: var(--shadow);
 }
-
-
-/* =========================================================
-   FILTER
-========================================================= */
 
 .billing-filter-card {
     margin-bottom: 24px;
@@ -206,9 +196,8 @@
     gap: 7px;
 }
 
-
 /* =========================================================
-   TABLE CARD
+   TABLES
 ========================================================= */
 
 .billing-table-card {
@@ -266,6 +255,7 @@
         padding: 16px 18px;
         vertical-align: middle;
         border-bottom: 1px solid var(--border);
+        color: var(--navy);
         text-align: left;
     }
 
@@ -297,50 +287,74 @@
         background: #fbfefe;
     }
 
-    .billing-table td {
-        color: var(--navy);
+    .billing-table td small {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        overflow-wrap: anywhere;
     }
 
-        .billing-table td small {
-            display: block;
-            margin-top: 4px;
-            color: var(--muted);
-            overflow-wrap: anywhere;
-        }
-
-
 /* =========================================================
-   BILL ITEM TABLE ALIGNMENT
+   BILL ITEM COLUMN ALIGNMENT
 ========================================================= */
 
-.billing-item-table th:first-child,
-.billing-item-table td:first-child {
-    width: auto;
+.billing-item-table {
+    width: 100%;
+    table-layout: fixed;
 }
 
-.billing-item-table th:nth-child(2),
-.billing-item-table td:nth-child(2) {
+    .billing-item-table th:first-child,
+    .billing-item-table td:first-child {
+        width: auto;
+        text-align: left;
+    }
+
+    .billing-item-table th:nth-child(2),
+    .billing-item-table td:nth-child(2) {
+        width: 120px;
+        text-align: center;
+    }
+
+    .billing-item-table th:nth-child(3),
+    .billing-item-table td:nth-child(3) {
+        width: 200px;
+        padding-right: 30px;
+        text-align: right;
+    }
+
+    .billing-item-table th:nth-child(4),
+    .billing-item-table td:nth-child(4) {
+        width: 190px;
+        padding-right: 30px;
+        text-align: right;
+    }
+
+/* =========================================================
+   CURRENCY ALIGNMENT
+========================================================= */
+
+.currency-amount {
+    display: inline-grid;
     width: 100px;
-    text-align: center;
+    grid-template-columns: 25px 75px;
+    align-items: center;
+    column-gap: 0;
+    white-space: nowrap;
 }
 
-.billing-item-table th:nth-child(3),
-.billing-item-table td:nth-child(3) {
-    width: 180px;
+.currency-code {
+    text-align: left;
+}
+
+.currency-value {
     text-align: right;
 }
 
-.billing-item-table th:nth-child(4),
-.billing-item-table td:nth-child(4) {
-    width: 180px;
-    padding-right: 28px;
-    text-align: right;
+.billing-item-table td:nth-child(3) .currency-amount,
+.billing-item-table td:nth-child(4) .currency-amount,
+.billing-total-panel .currency-amount {
+    margin-left: auto;
 }
-
-
-/* =========================================================
-   AMOUNTS
-========================================================= */
 
 .billing-amount {
     font-weight: 750;
@@ -348,10 +362,17 @@
 }
 
     .billing-amount.discount,
-    .billing-total-panel .discount {
+    .billing-amount.discount .currency-code,
+    .billing-amount.discount .currency-value,
+    .billing-total-panel .discount,
+    .billing-total-panel .discount .currency-code,
+    .billing-total-panel .discount .currency-value {
         color: var(--green);
     }
 
+.payment-currency-amount {
+    width: 115px;
+}
 
 /* =========================================================
    STATUS PILLS
@@ -396,24 +417,43 @@
         background: #e8eef5;
     }
 
+.billing-details-header .billing-status.paid {
+    min-width: 86px;
+    min-height: 42px;
+    padding: 9px 20px;
+    border: 1px solid #83ddb8;
+    color: #05744a;
+    background: #cdf5e2;
+    box-shadow: 0 7px 18px rgba(8, 121, 79, 0.16);
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
 
 /* =========================================================
    BUTTONS
 ========================================================= */
 
-.billing-details-button {
+.billing-details-button,
+.billing-back-button,
+.payment-link-button {
     display: inline-flex;
-    min-height: 38px;
-    padding: 7px 13px;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 7px;
+    border-radius: 10px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: 0.18s ease;
+}
+
+.billing-details-button {
+    min-height: 38px;
+    padding: 7px 13px;
     border: 1px solid var(--teal);
-    border-radius: 9px;
     color: var(--teal-dark);
     background: var(--white);
-    font-weight: 700;
-    white-space: nowrap;
 }
 
     .billing-details-button:hover {
@@ -421,6 +461,35 @@
         background: var(--teal);
     }
 
+.billing-back-button {
+    min-height: 42px;
+    padding: 8px 18px;
+    border: 1px solid var(--teal);
+    color: var(--teal-dark);
+    background: var(--white);
+}
+
+    .billing-back-button:hover {
+        border-color: var(--teal-dark);
+        color: var(--white);
+        background: var(--teal-dark);
+        box-shadow: 0 8px 18px rgba(7, 141, 161, 0.18);
+        transform: translateY(-1px);
+    }
+
+.payment-link-button {
+    min-height: 42px;
+    padding: 8px 16px;
+    border: 1px solid var(--teal);
+    color: var(--white);
+    background: var(--teal);
+}
+
+    .payment-link-button:hover {
+        border-color: var(--teal-dark);
+        color: var(--white);
+        background: var(--teal-dark);
+    }
 
 /* =========================================================
    EMPTY STATES
@@ -450,7 +519,6 @@
     .billing-empty-payment p {
         margin: 0;
     }
-
 
 /* =========================================================
    BILL DETAILS
@@ -507,9 +575,8 @@
                 color: var(--navy);
             }
 
-
 /* =========================================================
-   BILL ITEMS CARD
+   BILL ITEMS AND TOTAL
 ========================================================= */
 
 .billing-items-card {
@@ -522,40 +589,30 @@
         padding: 22px 24px;
     }
 
-
-/* =========================================================
-   BILL TOTAL SUMMARY
-========================================================= */
-
 .billing-total-panel {
-    width: 490px;
+    width: 460px;
     max-width: 100%;
     margin-left: auto;
-    padding: 22px 28px;
+    padding: 22px 30px 28px;
 }
 
     .billing-total-panel > div {
         display: grid;
         padding: 8px 0;
-        grid-template-columns: minmax(0, 1fr) 180px;
+        grid-template-columns: minmax(0, 1fr) 190px;
         align-items: center;
         gap: 20px;
     }
 
-    .billing-total-panel span {
-        color: var(--muted);
-    }
+        .billing-total-panel > div > span {
+            color: var(--muted);
+            text-align: left;
+        }
 
-    .billing-total-panel strong {
-        min-width: 0;
-        color: var(--navy);
-        text-align: right;
-        white-space: nowrap;
-    }
-
-    .billing-total-panel .discount {
-        color: var(--green);
-    }
+        .billing-total-panel > div > strong {
+            min-width: 0;
+            color: var(--navy);
+        }
 
     .billing-total-panel .billing-grand-total {
         margin-top: 10px;
@@ -563,16 +620,15 @@
         border-top: 1px solid var(--border);
     }
 
-        .billing-total-panel .billing-grand-total span,
-        .billing-total-panel .billing-grand-total strong {
+        .billing-total-panel .billing-grand-total > span,
+        .billing-total-panel .billing-grand-total > strong {
             color: var(--navy);
             font-size: 1.15rem;
             font-weight: 800;
         }
 
-
 /* =========================================================
-   DELIVERY ADDRESS
+   DELIVERY AND PAYMENT HISTORY
 ========================================================= */
 
 .billing-address {
@@ -593,10 +649,14 @@
         color: var(--muted);
     }
 
+.billing-payment-table th:nth-child(3),
+.billing-payment-table td:nth-child(3) {
+    text-align: right;
+}
 
-/* =========================================================
-   PAYMENT HISTORY
-========================================================= */
+    .billing-payment-table td:nth-child(3) .currency-amount {
+        margin-left: auto;
+    }
 
 .billing-failure-row td {
     color: var(--red);
@@ -604,9 +664,8 @@
     font-size: 0.88rem;
 }
 
-
 /* =========================================================
-   RESPONSIVE - LARGE TABLET
+   RESPONSIVE
 ========================================================= */
 
 @media (max-width: 1250px) {
@@ -614,11 +673,6 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
-
-
-/* =========================================================
-   RESPONSIVE - TABLET
-========================================================= */
 
 @media (max-width: 850px) {
     .billing-summary-grid,
@@ -635,14 +689,9 @@
     }
 
     .billing-item-table {
-        min-width: 650px;
+        min-width: 700px;
     }
 }
-
-
-/* =========================================================
-   RESPONSIVE - MOBILE
-========================================================= */
 
 @media (max-width: 576px) {
     .billing-page-header,
@@ -651,8 +700,16 @@
         flex-direction: column;
     }
 
-    .billing-details-header {
-        align-items: flex-start;
+    .billing-header-actions {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .billing-back-button,
+    .payment-link-button,
+    .billing-details-header .billing-status {
+        width: 100%;
     }
 
     .billing-summary-grid,
@@ -665,10 +722,7 @@
         width: 100%;
     }
 
-    .billing-table-heading {
-        padding: 18px;
-    }
-
+    .billing-table-heading,
     .billing-detail-card {
         padding: 18px;
     }
@@ -683,45 +737,24 @@
     }
 
         .billing-total-panel > div {
-            grid-template-columns: minmax(0, 1fr) 145px;
-            gap: 12px;
+            display: grid;
+            padding: 8px 0;
+            grid-template-columns: minmax(0, 1fr) 100px;
+            align-items: center;
+            column-gap: 14px;
         }
 
-        .billing-total-panel .billing-grand-total span,
-        .billing-total-panel .billing-grand-total strong {
+            .billing-total-panel > div > span {
+                padding-right: 8px;
+                text-align: right;
+            }
+
+        .billing-total-panel .currency-amount {
+            width: 125px;
+        }
+
+        .billing-total-panel .billing-grand-total > span,
+        .billing-total-panel .billing-grand-total > strong {
             font-size: 1rem;
         }
-}
-
-.billing-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.payment-link-button {
-    display: inline-flex;
-    min-height: 42px;
-    padding: 8px 16px;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    border-radius: 10px;
-    color: var(--white);
-    background: var(--teal);
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-    .payment-link-button:hover {
-        color: var(--white);
-        background: var(--teal-dark);
-    }
-
-@media (max-width: 576px) {
-    .billing-header-actions {
-        width: 100%;
-        align-items: stretch;
-        flex-direction: column;
-    }
 }

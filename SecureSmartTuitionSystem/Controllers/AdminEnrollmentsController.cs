@@ -22,14 +22,27 @@ namespace SecureSmartTuitionSystem.Controllers
         private readonly IBillingService
             _billingService;
 
+        private readonly IFirstPaymentEmailService
+            _firstPaymentEmailService;
+
+        private readonly ILogger<AdminEnrollmentsController>
+            _logger;
+
         public AdminEnrollmentsController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            IBillingService billingService)
+            IBillingService billingService,
+            IFirstPaymentEmailService firstPaymentEmailService,
+            ILogger<AdminEnrollmentsController> logger)
         {
             _context = context;
             _userManager = userManager;
             _billingService = billingService;
+
+            _firstPaymentEmailService =
+                firstPaymentEmailService;
+
+            _logger = logger;
         }
 
         /*
@@ -404,7 +417,7 @@ namespace SecureSmartTuitionSystem.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(
-    ApproveEnrollmentViewModel model)
+            ApproveEnrollmentViewModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -637,10 +650,52 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 await transaction.CommitAsync();
 
+                string? paymentUrl = Url.Action(
+                    "Checkout",
+                    "Payments",
+                    new
+                    {
+                        token = bill.PaymentAccessToken
+                    },
+                    Request.Scheme);
+
+                bool paymentEmailSent = false;
+
+                if (!string.IsNullOrWhiteSpace(paymentUrl))
+                {
+                    try
+                    {
+                        await _firstPaymentEmailService.SendAsync(
+                            application.GuardianEmail,
+                            application.GuardianName,
+                            application.StudentName,
+                            application.ApplicationNumber,
+                            bill.BillNumber,
+                            bill.TotalAmount,
+                            bill.DueAt,
+                            paymentUrl,
+                            HttpContext.RequestAborted);
+
+                        paymentEmailSent = true;
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.LogError(
+                            exception,
+                            "First-payment email could not be sent " +
+                            "for bill {BillNumber}.",
+                            bill.BillNumber);
+                    }
+                }
+
                 TempData["SuccessMessage"] =
                     $"Application {application.ApplicationNumber} " +
                     $"was approved. Bill {bill.BillNumber} " +
-                    "was generated and is pending payment.";
+                    (paymentEmailSent
+                        ? "was generated and the payment link was " +
+                          "sent to the guardian email."
+                        : "was generated, but the payment email " +
+                          "could not be sent. Check the email settings.");
 
                 return RedirectToAction(
                     nameof(Details),

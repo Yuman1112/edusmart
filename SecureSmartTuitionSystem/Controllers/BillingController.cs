@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
@@ -7,7 +8,7 @@ using SecureSmartTuitionSystem.ViewModels.Billing;
 
 namespace SecureSmartTuitionSystem.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Parent,Student")]
     public class BillingController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -34,8 +35,11 @@ namespace SecureSmartTuitionSystem.Controllers
             /*
              * Mark expired pending bills as overdue.
              */
+            var accessibleBills =
+                GetAccessibleBillsQuery();
+
             var expiredBills =
-                await _context.Bills
+                await accessibleBills
                     .Where(bill =>
                         bill.Status ==
                             BillStatus.PendingPayment &&
@@ -54,7 +58,7 @@ namespace SecureSmartTuitionSystem.Controllers
             }
 
             var baseQuery =
-                _context.Bills
+                GetAccessibleBillsQuery()
                     .AsNoTracking();
 
             int totalBillCount =
@@ -186,7 +190,7 @@ namespace SecureSmartTuitionSystem.Controllers
             int id)
         {
             var bill =
-                await _context.Bills
+                await GetAccessibleBillsQuery()
                     .AsNoTracking()
                     .Include(item =>
                         item.EnrollmentApplication)
@@ -211,7 +215,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 bill.DueAt < DateTime.UtcNow)
             {
                 var trackedBill =
-                    await _context.Bills
+                    await GetAccessibleBillsQuery()
                         .FirstAsync(item =>
                             item.BillId == id);
 
@@ -376,6 +380,9 @@ namespace SecureSmartTuitionSystem.Controllers
                             .Select(payment =>
                                 new BillPaymentViewModel
                                 {
+                                    PaymentId =
+                                        payment.PaymentId,
+
                                     PaymentNumber =
                                         payment.PaymentNumber,
 
@@ -499,6 +506,52 @@ namespace SecureSmartTuitionSystem.Controllers
                 StringComparison.OrdinalIgnoreCase)
                 ? "asc"
                 : "desc";
+        }
+
+        private IQueryable<Bill>
+            GetAccessibleBillsQuery()
+        {
+            IQueryable<Bill> query =
+                _context.Bills;
+
+            if (User.IsInRole("Admin"))
+            {
+                return query;
+            }
+
+            string? currentUserId =
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrWhiteSpace(
+                    currentUserId))
+            {
+                return query.Where(bill => false);
+            }
+
+            if (User.IsInRole("Parent"))
+            {
+                return query.Where(bill =>
+                    bill.EnrollmentApplication
+                        .ExistingParentProfile != null &&
+                    bill.EnrollmentApplication
+                        .ExistingParentProfile
+                        .ApplicationUserId ==
+                    currentUserId);
+            }
+
+            if (User.IsInRole("Student"))
+            {
+                return query.Where(bill =>
+                    bill.EnrollmentApplication
+                        .ExistingStudentProfile != null &&
+                    bill.EnrollmentApplication
+                        .ExistingStudentProfile
+                        .ApplicationUserId ==
+                    currentUserId);
+            }
+
+            return query.Where(bill => false);
         }
     }
 }

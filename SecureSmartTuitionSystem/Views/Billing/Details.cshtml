@@ -75,20 +75,9 @@
 
 <div class="billing-page">
     <header class="billing-page-header billing-details-header">
-        <div>
-            <a asp-controller="Billing"
-               asp-action="Index"
-               class="billing-back-link">
-
-                <i class="bi bi-arrow-left"></i>
-                Back to Bills
-            </a>
-
+        <div class="billing-details-title">
             <h1>Bill @Model.BillNumber</h1>
-
-            <p>
-                Application @Model.ApplicationNumber
-            </p>
+            <p>Application @Model.ApplicationNumber</p>
         </div>
 
         <div class="billing-header-actions">
@@ -96,8 +85,9 @@
                 @StatusText(Model.Status)
             </span>
 
-            @if (Model.Status == BillStatus.PendingPayment ||
-                        Model.Status == BillStatus.Overdue)
+            @if (User.IsInRole("Parent") &&
+                        (Model.Status == BillStatus.PendingPayment ||
+                        Model.Status == BillStatus.Overdue))
             {
                 <a asp-controller="Payments"
                    asp-action="OpenBill"
@@ -105,9 +95,26 @@
                    class="payment-link-button">
 
                     <i class="bi bi-credit-card"></i>
-                    Open Payment Page
+                    Make Payment
                 </a>
             }
+            else if ((User.IsInRole("Admin") ||
+            User.IsInRole("Student")) &&
+            (Model.Status == BillStatus.PendingPayment ||
+            Model.Status == BillStatus.Overdue))
+            {
+                <span class="billing-status pending">
+                    Awaiting Parent Payment
+                </span>
+            }
+
+            <a asp-controller="Billing"
+               asp-action="Index"
+               class="billing-back-button">
+
+                <i class="bi bi-arrow-left"></i>
+                Back
+            </a>
         </div>
     </header>
 
@@ -127,11 +134,27 @@
                 <div>
                     <dt>Application</dt>
                     <dd>
-                        <a asp-controller="AdminEnrollments"
-                           asp-action="Details"
-                           asp-route-id="@Model.EnrollmentApplicationId">
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <a asp-controller="AdminEnrollments"
+                               asp-action="Details"
+                               asp-route-id="@Model.EnrollmentApplicationId">
+                                @Model.ApplicationNumber
+                            </a>
+                        }
+                        else
+                        {
                             @Model.ApplicationNumber
-                        </a>
+                        }
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>Issued  Date</dt>
+                    <dd>
+                        @(Model.IssuedAt
+                            .ToLocalTime()
+                            .ToString("dd MMM yyyy"))
                     </dd>
                 </div>
 
@@ -139,17 +162,8 @@
                     <dt>Due Date</dt>
                     <dd>
                         @(Model.DueAt
-                         .ToLocalTime()
-                         .ToString("dd MMM yyyy"))
-                    </dd>
-                </div>
-
-                <div>
-                    <dt>Due Date</dt>
-                    <dd>
-                        @(Model.DueAt
-                        .ToLocalTime()
-                        .ToString("dd MMM yyyy"))
+                            .ToLocalTime()
+                            .ToString("dd MMM yyyy"))
                     </dd>
                 </div>
 
@@ -225,17 +239,24 @@
                             <td>@item.Quantity</td>
 
                             <td>
-                                RM @item.UnitAmount.ToString("F2")
+                                <span class="currency-amount">
+                                    <span class="currency-code">RM</span>
+                                    <span class="currency-value">
+                                        @item.UnitAmount.ToString("F2")
+                                    </span>
+                                </span>
                             </td>
 
-                            <td class="billing-amount
-                                           @(item.LineTotal < 0
-                                                                           ? "discount"
-                                                                           : "")">
-                            RM @item.LineTotal.ToString("F2")
-                        </td>
-                    </tr>
-                                        }
+                            <td class="billing-amount @(item.LineTotal < 0 ? "discount" : "")">
+                                <span class="currency-amount">
+                                    <span class="currency-code">RM</span>
+                                    <span class="currency-value">
+                                        @item.LineTotal.ToString("F2")
+                                    </span>
+                                </span>
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
@@ -243,8 +264,11 @@
         <div class="billing-total-panel">
             <div>
                 <span>Tuition Subtotal</span>
-                <strong>
-                    RM @Model.TuitionSubtotal.ToString("F2")
+                <strong class="currency-amount">
+                    <span class="currency-code">RM</span>
+                    <span class="currency-value">
+                        @Model.TuitionSubtotal.ToString("F2")
+                    </span>
                 </strong>
             </div>
 
@@ -256,8 +280,11 @@
                         (@Model.TuitionDiscountRate.ToString("F0")%)
                     </span>
 
-                    <strong class="discount">
-                        − RM @Model.TuitionDiscountAmount.ToString("F2")
+                    <strong class="currency-amount discount">
+                        <span class="currency-code">RM</span>
+                        <span class="currency-value">
+                            −@Model.TuitionDiscountAmount.ToString("F2")
+                        </span>
                     </strong>
                 </div>
             }
@@ -266,8 +293,11 @@
             {
                 <div>
                     <span>Hardcopy Materials</span>
-                    <strong>
-                        RM @Model.HardcopyFee.ToString("F2")
+                    <strong class="currency-amount">
+                        <span class="currency-code">RM</span>
+                        <span class="currency-value">
+                            @Model.HardcopyFee.ToString("F2")
+                        </span>
                     </strong>
                 </div>
             }
@@ -276,117 +306,26 @@
             {
                 <div>
                     <span>Delivery Fee</span>
-                    <strong>
-                        RM @Model.DeliveryFee.ToString("F2")
+                    <strong class="currency-amount">
+                        <span class="currency-code">RM</span>
+                        <span class="currency-value">
+                            @Model.DeliveryFee.ToString("F2")
+                        </span>
                     </strong>
                 </div>
             }
 
             <div class="billing-grand-total">
                 <span>Total Amount</span>
-                <strong>
-                    RM @Model.TotalAmount.ToString("F2")
+                <strong class="currency-amount">
+                    <span class="currency-code">RM</span>
+                    <span class="currency-value">
+                        @Model.TotalAmount.ToString("F2")
+                    </span>
                 </strong>
             </div>
         </div>
     </section>
-
-    @if (Model.HardcopyMaterialsRequested)
-    {
-        <section class="billing-detail-card">
-            <div class="billing-section-title">
-                <i class="bi bi-credit-card"></i>
-                <h2>Payment History</h2>
-            </div>
-
-            @if (Model.Payments.Count == 0)
-            {
-                <div class="billing-empty-payment">
-                    <i class="bi bi-clock-history"></i>
-                    <p>No payment attempt has been made.</p>
-                </div>
-            }
-            else
-            {
-                <div class="billing-table-wrapper">
-                    <table class="billing-table">
-                        <thead>
-                            <tr>
-                                <th>Payment</th>
-                                <th>Provider</th>
-                                <th class="billing-number-column">
-                                    Amount
-                                </th>
-                                <th>Created</th>
-                                <th>Completed</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            @foreach (var payment in Model.Payments)
-                            {
-                                <tr>
-                                    <td>
-                                        <strong>
-                                            @payment.PaymentNumber
-                                        </strong>
-                                    </td>
-
-                                    <td>
-                                        @payment.PaymentProvider
-                                    </td>
-
-                                    <td class="billing-amount">
-                                        @payment.Currency
-                                        @payment.Amount.ToString("F2")
-                                    </td>
-
-                                    <td>
-                                        @payment.CreatedAt
-                                        .ToLocalTime()
-                                        .ToString(
-                                        "dd MMM yyyy, hh:mm tt")
-                                    </td>
-
-                                    <td>
-                                        @(payment.CompletedAt.HasValue
-                                                                    ? payment.CompletedAt.Value
-                                                                    .ToLocalTime()
-                                                                    .ToString(
-                                                                    "dd MMM yyyy, hh:mm tt")
-                                                                    : "—")
-                        </td>
-
-                                    <td>
-                                        <span class="@PaymentStatusClass(
-                                                                      payment.Status)">
-                                @PaymentStatusText(
-                                                                payment.Status)
-                            </span>
-                        </td>
-                    </tr>
-
-                    @if (!string.IsNullOrWhiteSpace(
-                                        payment.FailureReason))
-                                {
-                                    <tr class="billing-failure-row">
-                                        <td colspan="6">
-                                            <strong>
-                                                Failure reason:
-                                            </strong>
-
-                                            @payment.FailureReason
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-        </section>
-    }
 
     <section class="billing-detail-card">
         <div class="billing-section-title">
@@ -407,7 +346,7 @@
         else
         {
             <div class="billing-table-wrapper">
-                <table class="billing-table">
+                <table class="billing-table billing-payment-table">
 
                     <thead>
                         <tr>
@@ -417,6 +356,7 @@
                             <th>Created</th>
                             <th>Completed</th>
                             <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
 
@@ -433,44 +373,60 @@
                                 <td>
                                     @payment.PaymentProvider
                                 </td>
-
                                 <td class="billing-amount">
-                                    @payment.Currency
-                                    @payment.Amount.ToString("F2")
+                                    <span class="currency-amount">
+                                        <span class="currency-code">RM</span>
+                                        <span class="currency-value">
+                                            @payment.Amount.ToString("F2")
+                                        </span>
+                                    </span>
                                 </td>
                                 <td>
-                                    @(payment.CompletedAt.HasValue
-                                        ? payment.CompletedAt.Value
-                                        .ToLocalTime()
-                                        .ToString(
-                                        "dd MMM yyyy, hh:mm tt")
-                                        : "—")
-                                </td>
+                                    @(payment.CreatedAt
+                                                                .ToLocalTime()
+                                                                .ToString(
+                                                                "dd MMM yyyy, hh:mm tt"))
+                                                                                     </td>
 
                                 <td>
                                     @(payment.CompletedAt.HasValue
-                                        ? payment.CompletedAt.Value
-                                        .ToLocalTime()
-                                        .ToString(
-                                        "dd MMM yyyy, hh:mm tt")
-                                        : "—")
+                                                                ? payment.CompletedAt.Value
+                                                                .ToLocalTime()
+                                                                .ToString(
+                                                                "dd MMM yyyy, hh:mm tt")
+                                                                : "—")
                         </td>
 
                                 <td>
-                                    <span class="@PaymentStatusClass(
-                                                                      payment.Status)">
+                                    <span class="@PaymentStatusClass(payment.Status)">
+                                        @PaymentStatusText(payment.Status)
+                                    </span>
+                                </td>
 
-                                @PaymentStatusText(
-                                                                payment.Status)
-                            </span>
-                        </td>
-                    </tr>
+                                <td>
+                                    @if (payment.Status == PaymentStatus.Succeeded)
+                                    {
+                                        <a asp-controller="Payments"
+                                           asp-action="Receipt"
+                                           asp-route-id="@payment.PaymentId"
+                                           class="billing-details-button">
+
+                                            <i class="bi bi-receipt"></i>
+                                            View Receipt
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span>—</span>
+                                    }
+                                </td>
+                            </tr>
 
                     @if (!string.IsNullOrWhiteSpace(
                                         payment.FailureReason))
                             {
                                 <tr class="billing-failure-row">
-                                    <td colspan="6">
+                                    <td colspan="7">
                                         <strong>
                                             Failure reason:
                                         </strong>

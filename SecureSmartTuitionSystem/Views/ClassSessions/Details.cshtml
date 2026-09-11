@@ -20,18 +20,18 @@
 
     <div class="class-detail-header-actions">
         <a asp-controller="ClassSessions"
-           asp-action="Index"
-           class="outline-button">
-            <i class="bi bi-arrow-left"></i>
-            Back
-        </a>
-
-        <a asp-controller="ClassSessions"
            asp-action="Edit"
            asp-route-id="@Model.ClassSessionId"
            class="primary-button">
             <i class="bi bi-pencil-square"></i>
             Edit
+        </a>
+
+        <a asp-controller="ClassSessions"
+           asp-action="Index"
+           class="outline-button">
+            <i class="bi bi-arrow-left"></i>
+            Back
         </a>
     </div>
 </div>

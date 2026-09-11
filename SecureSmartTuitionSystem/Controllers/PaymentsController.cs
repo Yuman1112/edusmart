@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Security.Cryptography;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -37,22 +38,60 @@ namespace SecureSmartTuitionSystem.Controllers
         }
 
         /*
-         * Admin can use this action to generate or open
-         * the secure payment link for an existing bill.
+         * First-time payment uses the anonymous secure link.
+         * After account activation, only the linked parent
+         * may open a bill for payment from the portal.
          */
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Parent")]
         [HttpGet]
         public async Task<IActionResult> OpenBill(
             int id)
         {
+            string? currentUserId =
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrWhiteSpace(
+                    currentUserId))
+            {
+                return Challenge();
+            }
+
             var bill =
                 await _context.Bills
+                    .Include(item =>
+                        item.EnrollmentApplication)
+                    .ThenInclude(application =>
+                        application.ExistingParentProfile)
                     .FirstOrDefaultAsync(item =>
-                        item.BillId == id);
+                        item.BillId == id &&
+                        item.EnrollmentApplication
+                            .ExistingParentProfile != null &&
+                        item.EnrollmentApplication
+                            .ExistingParentProfile
+                            .ApplicationUserId ==
+                        currentUserId);
 
             if (bill == null)
             {
                 return NotFound();
+            }
+
+            if (bill.Status !=
+                    BillStatus.PendingPayment &&
+                bill.Status !=
+                    BillStatus.Overdue)
+            {
+                TempData["ErrorMessage"] =
+                    "This bill is not available for payment.";
+
+                return RedirectToAction(
+                    "Details",
+                    "Billing",
+                    new
+                    {
+                        id = bill.BillId
+                    });
             }
 
             if (string.IsNullOrWhiteSpace(
@@ -432,7 +471,10 @@ namespace SecureSmartTuitionSystem.Controllers
                     new RequestOptions
                     {
                         IdempotencyKey =
-                            $"edusmart-checkout-{payment.PaymentId}"
+                            $"edusmart-checkout-" +
+                            $"{bill.BillId}-" +
+                            $"{payment.PaymentId}-" +
+                            $"{bill.IssuedAt.Ticks}"
                     };
 
                 var sessionService =
@@ -598,6 +640,12 @@ namespace SecureSmartTuitionSystem.Controllers
                 ViewBag.BillId =
                     result.BillId;
 
+                ViewBag.PaymentId =
+                    result.PaymentId;
+
+                ViewBag.CheckoutSessionId =
+                    session.Id;
+
                 _logger.LogInformation(
                     "Stripe Checkout Session {SessionId} " +
                     "was reconciled successfully for bill {BillNumber}.",
@@ -640,6 +688,273 @@ namespace SecureSmartTuitionSystem.Controllers
             }
 
             return View();
+        }
+
+        [Authorize(Roles = "Admin,Parent,Student")]
+        [HttpGet]
+        [ResponseCache(
+            NoStore = true,
+            Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> Receipt(
+            int id,
+            CancellationToken cancellationToken)
+        {
+            string? currentUserId =
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier);
+
+            IQueryable<Payment> query =
+                _context.Payments
+                    .AsNoTracking()
+                    .Include(payment =>
+                        payment.Bill)
+                    .ThenInclude(bill =>
+                        bill.Items)
+                    .Include(payment =>
+                        payment.Bill)
+                    .ThenInclude(bill =>
+                        bill.EnrollmentApplication)
+                    .ThenInclude(application =>
+                        application.ExistingParentProfile)
+                    .Include(payment =>
+                        payment.Bill)
+                    .ThenInclude(bill =>
+                        bill.EnrollmentApplication)
+                    .ThenInclude(application =>
+                        application.ExistingStudentProfile);
+
+            /*
+             * Parent may only view receipts that belong
+             * to the linked Parent Profile.
+             */
+            if (User.IsInRole("Parent"))
+            {
+                query =
+                    query.Where(payment =>
+                        payment.Bill
+                            .EnrollmentApplication
+                            .ExistingParentProfile != null &&
+
+                        payment.Bill
+                            .EnrollmentApplication
+                            .ExistingParentProfile!
+                            .ApplicationUserId ==
+                        currentUserId);
+            }
+
+            /*
+             * Student may only view receipts that belong
+             * to the linked Student Profile.
+             */
+            else if (User.IsInRole("Student"))
+            {
+                query =
+                    query.Where(payment =>
+                        payment.Bill
+                            .EnrollmentApplication
+                            .ExistingStudentProfile != null &&
+
+                        payment.Bill
+                            .EnrollmentApplication
+                            .ExistingStudentProfile!
+                            .ApplicationUserId ==
+                        currentUserId);
+            }
+
+            /*
+             * Admin may view every receipt.
+             */
+            else if (!User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            Payment? payment =
+                await query.FirstOrDefaultAsync(
+                    item =>
+                        item.PaymentId == id,
+                    cancellationToken);
+
+            if (payment == null)
+            {
+                return NotFound();
+            }
+
+            /*
+             * A receipt only exists after successful payment.
+             */
+            if (payment.Status !=
+                    PaymentStatus.Succeeded ||
+                payment.Bill.Status !=
+                    BillStatus.Paid ||
+                !payment.CompletedAt.HasValue)
+            {
+                return NotFound();
+            }
+
+            PaymentReceiptViewModel viewModel =
+                BuildReceiptViewModel(payment);
+
+            return View(
+                "Receipt",
+                viewModel);
+        }
+
+
+        /*
+         * =====================================================
+         * FIRST-PAYMENT ANONYMOUS RECEIPT
+         * =====================================================
+         */
+
+        [AllowAnonymous]
+        [HttpGet]
+        [ResponseCache(
+            NoStore = true,
+            Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> ReceiptBySession(
+            string? sessionId,
+            CancellationToken cancellationToken)
+        {
+            /*
+             * Stripe Checkout Session IDs begin with cs_.
+             */
+            if (string.IsNullOrWhiteSpace(sessionId) ||
+                !sessionId.StartsWith(
+                    "cs_",
+                    StringComparison.Ordinal))
+            {
+                return NotFound();
+            }
+
+            Payment? payment =
+                await _context.Payments
+                    .AsNoTracking()
+                    .Include(item =>
+                        item.Bill)
+                    .ThenInclude(bill =>
+                        bill.Items)
+                    .Include(item =>
+                        item.Bill)
+                    .ThenInclude(bill =>
+                        bill.EnrollmentApplication)
+                    .FirstOrDefaultAsync(
+                        item =>
+                            item.ProviderCheckoutSessionId ==
+                                sessionId &&
+
+                            item.Status ==
+                                PaymentStatus.Succeeded &&
+
+                            item.Bill.Status ==
+                                BillStatus.Paid,
+                        cancellationToken);
+
+            if (payment == null ||
+                !payment.CompletedAt.HasValue)
+            {
+                return NotFound();
+            }
+
+            PaymentReceiptViewModel viewModel =
+                BuildReceiptViewModel(payment);
+
+            return View(
+                "Receipt",
+                viewModel);
+        }
+
+
+        /*
+         * =====================================================
+         * BUILD RECEIPT VIEW MODEL
+         * =====================================================
+         */
+
+        private static PaymentReceiptViewModel
+            BuildReceiptViewModel(
+                Payment payment)
+        {
+            Bill bill =
+                payment.Bill;
+
+            var application =
+                bill.EnrollmentApplication;
+
+            return new PaymentReceiptViewModel
+            {
+                PaymentId =
+                    payment.PaymentId,
+
+                PaymentNumber =
+                    payment.PaymentNumber,
+
+                BillNumber =
+                    bill.BillNumber,
+
+                ApplicationNumber =
+                    application.ApplicationNumber,
+
+                StudentName =
+                    application.StudentName,
+
+                GuardianName =
+                    application.GuardianName,
+
+                GuardianEmail =
+                    application.GuardianEmail,
+
+                PaymentProvider =
+                    payment.PaymentProvider,
+
+                Currency =
+                    payment.Currency,
+
+                AmountPaid =
+                    payment.Amount,
+
+                CompletedAt =
+                    payment.CompletedAt!.Value,
+
+                ProviderPaymentIntentId =
+                    payment.ProviderPaymentIntentId,
+
+                TuitionSubtotal =
+                    bill.TuitionSubtotal,
+
+                TuitionDiscountAmount =
+                    bill.TuitionDiscountAmount,
+
+                HardcopyFee =
+                    bill.HardcopyFee,
+
+                DeliveryFee =
+                    bill.DeliveryFee,
+
+                TotalAmount =
+                    bill.TotalAmount,
+
+                Items =
+                    bill.Items
+                        .OrderBy(item =>
+                            item.BillItemId)
+                        .Select(item =>
+                            new PaymentReceiptItemViewModel
+                            {
+                                Description =
+                                    item.Description,
+
+                                Quantity =
+                                    item.Quantity,
+
+                                UnitAmount =
+                                    item.UnitAmount,
+
+                                LineTotal =
+                                    item.LineTotal
+                            })
+                        .ToList()
+            };
         }
 
         [AllowAnonymous]
