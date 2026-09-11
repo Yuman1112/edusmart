@@ -124,10 +124,6 @@ namespace SecureSmartTuitionSystem.Controllers
                 StudentDetailsSessionKey,
                 JsonSerializer.Serialize(model));
 
-            /*
-             * Student details are complete.
-             * Continue to Guardian Details.
-             */
             return RedirectToAction(
                 nameof(GuardianDetails));
         }
