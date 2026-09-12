@@ -486,9 +486,6 @@ namespace SecureSmartTuitionSystem.Data
                         studentUser.FullName
                         ?? "Test Student",
 
-                    IdentificationType =
-                        "IC",
-
                     IdentificationNumber =
                         "090101-10-1234",
 
@@ -1023,9 +1020,6 @@ namespace SecureSmartTuitionSystem.Data
                         FinalTwoWeeksConfirmed =
                             false,
 
-                        PotentialDuplicateStudent =
-                            false,
-
                         PotentialDuplicateGuardian =
                             false,
 
@@ -1141,9 +1135,6 @@ namespace SecureSmartTuitionSystem.Data
                         FinalTwoWeeksConfirmed =
                             false,
 
-                        PotentialDuplicateStudent =
-                            true,
-
                         PotentialDuplicateGuardian =
                             true,
 
@@ -1153,8 +1144,7 @@ namespace SecureSmartTuitionSystem.Data
 
                         ApplicantNotes =
                             "Test application containing " +
-                            "possible duplicate student and " +
-                            "guardian records.",
+                            "a possible duplicate guardian record.",
 
                         SubmittedAt =
                             DateTime.UtcNow.AddDays(-1)
@@ -1189,8 +1179,8 @@ namespace SecureSmartTuitionSystem.Data
                                     .SubmittedAt,
 
                             Remarks =
-                                "Potential duplicate records " +
-                                "detected during application " +
+                                "Potential duplicate guardian " +
+                                "record detected during application " +
                                 "submission."
                         });
 

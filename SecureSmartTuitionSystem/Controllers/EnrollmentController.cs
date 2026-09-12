@@ -91,6 +91,42 @@ namespace SecureSmartTuitionSystem.Controllers
 
         /*
          * =====================================================
+         * CHECK EXISTING STUDENT IC
+         * =====================================================
+         */
+        [HttpGet]
+        public async Task<IActionResult> CheckStudentIc(
+            string icNumber)
+        {
+            if (string.IsNullOrWhiteSpace(icNumber) ||
+                !System.Text.RegularExpressions.Regex.IsMatch(
+                    icNumber,
+                    @"^\d{6}-\d{2}-\d{4}$"))
+            {
+                return Json(new
+                {
+                    exists = false
+                });
+            }
+
+            string normalizedIc =
+                icNumber.Trim();
+
+            bool exists =
+                await _context.StudentProfiles
+                    .AsNoTracking()
+                    .AnyAsync(student =>
+                        student.IdentificationNumber ==
+                            normalizedIc);
+
+            return Json(new
+            {
+                exists
+            });
+        }
+
+        /*
+         * =====================================================
          * STEP 1 - STUDENT DETAILS POST
          * =====================================================
          */
@@ -109,34 +145,21 @@ namespace SecureSmartTuitionSystem.Controllers
             var identificationNumber =
                 model.StudentIdentificationNumber.Trim();
 
-            // Keep Birth Certificate numbers in a consistent format
-            if (model.StudentIdentificationType == "BirthCertificate")
-            {
-                identificationNumber =
-                    identificationNumber.ToUpperInvariant();
-            }
-
             // Check whether the same identification already exists
             var existingStudent =
                 await _context.StudentProfiles
                     .AsNoTracking()
                     .FirstOrDefaultAsync(
                         student =>
-                            student.IdentificationType ==
-                                model.StudentIdentificationType &&
                             student.IdentificationNumber ==
                                 identificationNumber);
 
             if (existingStudent != null)
             {
-                var identificationLabel =
-                    model.StudentIdentificationType == "IC"
-                        ? "IC number"
-                        : "birth certificate number";
-
                 ModelState.AddModelError(
                     nameof(model.StudentIdentificationNumber),
-                    $"A student with this {identificationLabel} already exists. Please sign in to the existing account to enroll in additional classes.");
+                    "A student with this IC number already exists. " +
+                    "Please sign in to EduSmart to enroll in additional subjects.");
 
                 return View(model);
             }
@@ -147,9 +170,6 @@ namespace SecureSmartTuitionSystem.Controllers
 
             model.StudentName =
                 model.StudentName.Trim();
-
-            model.StudentIdentificationType =
-                model.StudentIdentificationType.Trim();
 
             model.StudentGender =
                 model.StudentGender.Trim();
@@ -755,7 +775,6 @@ namespace SecureSmartTuitionSystem.Controllers
          * HELPERS
          * =====================================================
          */
-
         private bool HasStudentDetails()
         {
             return !string.IsNullOrWhiteSpace(

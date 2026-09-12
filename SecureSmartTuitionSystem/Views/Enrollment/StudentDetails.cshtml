@@ -47,7 +47,7 @@
                     <input asp-for="StudentName"
                            class="form-control"
                            maxlength="100"
-                           placeholder="As per birth certificate / IC"
+                           placeholder="Full name as per IC"
                            autocomplete="off" />
 
                     <span asp-validation-for="StudentName"
@@ -57,47 +57,18 @@
                 </div>
 
                 <!-- ==========================================
-                     IDENTIFICATION
+                     IDENTIFICATION NUMBER
                      ========================================== -->
-                <!-- Identification Type -->
-                <div class="mb-3">
-
-                    <label asp-for="StudentIdentificationType"
-                           class="form-label">
-                    </label>
-
-                    <select asp-for="StudentIdentificationType"
-                            class="form-select"
-                            id="studentIdentificationType">
-
-                        <option value="IC">
-                            IC Number
-                        </option>
-
-                        <option value="BirthCertificate">
-                            Birth Certificate Number
-                        </option>
-
-                    </select>
-
-                    <span asp-validation-for="StudentIdentificationType"
-                          class="text-danger">
-                    </span>
-
-                </div>
-
-                <!-- Identification Number -->
                 <div class="mb-3">
 
                     <label asp-for="StudentIdentificationNumber"
-                           class="form-label"
-                           id="studentIdentificationNumberLabel">
+                           class="form-label">
                         IC Number
                     </label>
 
                     <input asp-for="StudentIdentificationNumber"
                            class="form-control"
-                           maxlength="30"
+                           maxlength="14"
                            placeholder="000000-00-0000"
                            autocomplete="off"
                            inputmode="numeric"
@@ -113,17 +84,12 @@
                          style="display: none;">
                     </div>
 
-                    <div class="form-text"
-                         id="studentIdentificationHelp">
-                    </div>
-
                 </div>
 
                 <!-- ==========================================
                      DATE OF BIRTH + GENDER
                      ========================================== -->
-                <div id="icAutoFillHelp"
-                     class="form-text mb-2">
+                <div class="form-text mb-2">
                     Date of birth and gender will be filled automatically from the IC number.
                 </div>
 
@@ -140,6 +106,7 @@
                                class="form-control"
                                type="date"
                                id="studentDateOfBirth"
+                               readonly
                                max="@DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd")" />
 
                         <span asp-validation-for="StudentDateOfBirth"
@@ -214,7 +181,8 @@
                 <div class="enrollment-form-actions justify-content-end">
 
                     <button type="submit"
-                            class="primary-button">
+                            class="primary-button"
+                            id="nextButton">
 
                         Next: Parent / Guardian Details
 
@@ -238,21 +206,9 @@
             "DOMContentLoaded",
             function () {
 
-                const typeSelect =
-                    document.getElementById(
-                        "studentIdentificationType");
-
                 const numberInput =
                     document.getElementById(
                         "studentIdentificationNumber");
-
-                const numberLabel =
-                    document.getElementById(
-                        "studentIdentificationNumberLabel");
-
-                const helpText =
-                    document.getElementById(
-                        "studentIdentificationHelp");
 
                 const dateOfBirthInput =
                     document.getElementById(
@@ -261,10 +217,6 @@
                 const genderSelect =
                     document.getElementById(
                         "studentGender");
-
-                const icAutoFillHelp =
-                    document.getElementById(
-                        "icAutoFillHelp");
 
                 const ageValidation =
                     document.getElementById(
@@ -281,6 +233,10 @@
                 const icValidation =
                     document.getElementById(
                         "studentIcValidation");
+
+                const nextButton =
+                    document.getElementById(
+                        "nextButton");
 
                 function calculateAge(dateOfBirth) {
 
@@ -385,10 +341,6 @@
 
                 function populateDetailsFromIc() {
 
-                    if (typeSelect.value !== "IC") {
-                        return;
-                    }
-
                     const digits =
                         numberInput.value.replace(/\D/g, "");
 
@@ -405,7 +357,7 @@
                         ageValidation.textContent = "";
                         ageValidation.style.display = "none";
 
-                        return;
+                        return false;
                     }
 
                     const yy =
@@ -439,35 +391,34 @@
                         date.getMonth() === mm - 1 &&
                         date.getDate() === dd;
 
-                        if (!validDate) {
+                    if (!validDate) {
 
-                            dateOfBirthInput.value = "";
-                            genderSelect.value = "";
+                        dateOfBirthInput.value = "";
+                        genderSelect.value = "";
 
-                            // Clear any previous age warning
-                            ageValidation.textContent = "";
-                            ageValidation.style.display = "none";
+                        ageValidation.textContent = "";
+                        ageValidation.style.display = "none";
 
-                            if (
-                                identificationValidation &&
-                                identificationValidation.textContent.trim() !== ""
-                            ) {
-                                icValidation.textContent = "";
-                                icValidation.style.display = "none";
-                            }
-                            else {
-                                icValidation.textContent =
-                                    "The IC number contains an invalid date of birth.";
+                        if (
+                            identificationValidation &&
+                            identificationValidation.textContent.trim() !== ""
+                        ) {
+                            icValidation.textContent = "";
+                            icValidation.style.display = "none";
+                        }
+                        else {
+                            icValidation.textContent =
+                                "The IC number contains an invalid date of birth.";
 
-                                icValidation.style.display =
-                                    "block";
-                            }
-
-                            return;
+                            icValidation.style.display =
+                                "block";
                         }
 
-                        icValidation.textContent = "";
-                        icValidation.style.display = "none";
+                        return false;
+                    }
+
+                    icValidation.textContent = "";
+                    icValidation.style.display = "none";
 
                     const month =
                         String(mm).padStart(2, "0");
@@ -478,7 +429,8 @@
                     dateOfBirthInput.value =
                         `${fullYear}-${month}-${day}`;
 
-                    validateStudentAge();
+                    const validAge =
+                        validateStudentAge();
 
                     const lastDigit =
                         parseInt(
@@ -488,76 +440,120 @@
                         lastDigit % 2 === 0
                             ? "Female"
                             : "Male";
+
+                    return validAge;
                 }
 
-                // ==========================================
-                // UPDATE IDENTIFICATION FIELD
-                // ==========================================
-                function updateIdentificationField() {
+                async function checkExistingIc() {
 
-                    if (typeSelect.value === "IC") {
+                    const currentIc =
+                        numberInput.value;
 
-                        numberLabel.textContent =
-                            "IC Number";
+                    const digits =
+                        currentIc.replace(/\D/g, "");
 
-                        numberInput.placeholder =
-                            "000000-00-0000";
-
-                        numberInput.maxLength =
-                            14;
-
-                        numberInput.inputMode =
-                            "numeric";
-
-                        helpText.textContent =
-                            "";
-
-                        numberInput.value =
-                            formatIcNumber(
-                                numberInput.value);
-
-                        dateOfBirthInput.readOnly =
-                            true;
-
-                        genderSelect.style.pointerEvents =
-                            "none";
-
-                        genderSelect.tabIndex =
-                            -1;
-
-                        icAutoFillHelp.hidden = 
-                            false;
-
-                        populateDetailsFromIc();
+                    if (digits.length !== 12) {
+                        return;
                     }
-                    else {
 
-                        numberLabel.textContent =
-                            "Birth Certificate Number";
+                    /*
+                     * Temporarily prevent submission while
+                     * the live duplicate check is running.
+                     */
+                    nextButton.disabled =
+                        true;
 
-                        numberInput.placeholder =
-                            "Enter birth certificate number";
+                    try {
 
-                        numberInput.maxLength =
-                            30;
+                        const response =
+                            await fetch(
+                                `/Enrollment/CheckStudentIc?icNumber=${encodeURIComponent(
+                                    currentIc
+                                )}`
+                            );
 
-                        numberInput.inputMode =
-                            "text";
+                        /*
+                         * Ignore an old response if the user
+                         * has already changed the IC number.
+                         */
+                        if (numberInput.value !== currentIc) {
+                            return;
+                        }
 
-                        helpText.textContent =
-                            "Enter the number exactly as shown on the birth certificate.";
+                        if (!response.ok) {
 
-                        dateOfBirthInput.readOnly =
-                            false;
+                            nextButton.disabled =
+                                false;
 
-                        genderSelect.style.pointerEvents =
-                            "";
+                            return;
+                        }
 
-                        genderSelect.tabIndex =
-                            0;
+                        const result =
+                            await response.json();
 
-                        icAutoFillHelp.hidden =
-                            true;
+                        /*
+                         * Check again after reading the response
+                         * in case the IC changed meanwhile.
+                         */
+                        if (numberInput.value !== currentIc) {
+                            return;
+                        }
+
+                        if (result.exists) {
+
+                            /*
+                             * Avoid showing the same duplicate message twice
+                             * when server-side validation already displayed it.
+                             */
+                            if (
+                                identificationValidation &&
+                                identificationValidation.textContent.trim() !== ""
+                            ) {
+                                icValidation.textContent =
+                                    "";
+
+                                icValidation.style.display =
+                                    "none";
+                            }
+                            else {
+                                icValidation.textContent =
+                                    "A student with this IC number already exists. Please sign in to EduSmart to enroll in additional subjects.";
+
+                                icValidation.style.display =
+                                    "block";
+                            }
+
+                            nextButton.disabled =
+                                true;
+                        }
+                        else {
+
+                            if (
+                                icValidation.textContent.includes(
+                                    "already exists")
+                            ) {
+                                icValidation.textContent =
+                                    "";
+
+                                icValidation.style.display =
+                                    "none";
+                            }
+
+                            nextButton.disabled =
+                                false;
+                        }
+                    }
+                    catch {
+
+                        /*
+                         * Live duplicate checking is only for UX.
+                         * Server-side validation still protects submission.
+                         */
+                        if (numberInput.value === currentIc) {
+
+                            nextButton.disabled =
+                                false;
+                        }
                     }
                 }
 
@@ -567,58 +563,61 @@
                 numberInput.addEventListener(
                     "input",
                     function () {
+                        /*
+                         * Clear any previous server-side IC error
+                         * when the user edits the IC number.
+                         */
+                        if (identificationValidation) {
+                            identificationValidation.textContent =
+                                "";
+                        }
 
-                        if (typeSelect.value === "IC") {
+                        this.value =
+                            formatIcNumber(
+                                this.value);
 
-                            this.value =
-                                formatIcNumber(
-                                    this.value);
-
+                        const validIc =
                             populateDetailsFromIc();
+
+                        if (validIc) {
+
+                            checkExistingIc();
+                        }
+                        else {
+
+                            nextButton.disabled =
+                                true;
                         }
                     });
 
                 // ==========================================
-                // IDENTIFICATION TYPE CHANGED
+                // PREVENT MANUAL GENDER EDIT
                 // ==========================================
-                typeSelect.addEventListener(
-                    "change",
-                    function () {
+                genderSelect.style.pointerEvents =
+                    "none";
 
-                        // Clear the old value
-                        numberInput.value = "";
-                        dateOfBirthInput.value = "";
-                        genderSelect.value = "";
+                genderSelect.tabIndex =
+                    -1;
 
-                        // Clear age validation message
-                        ageValidation.textContent = "";
-                        ageValidation.style.display = "none";
-
-                        // Clear IC validation message
-                        icValidation.textContent = "";
-                        icValidation.style.display = "none";
-
-                        updateIdentificationField();
-                    });
-
-                // ==========================================
-                // BIRTH CERTIFICATE DOB AGE VALIDATION
-                // ==========================================
-                dateOfBirthInput.addEventListener(
-                    "change",
-                    function () {
-
-                        if (typeSelect.value === "BirthCertificate") {
-
-                            validateStudentAge();
-                        }
-                    });
+                genderSelect.setAttribute(
+                    "aria-disabled",
+                    "true");
 
                 // ==========================================
                 // INITIAL PAGE LOAD
                 // ==========================================
-                updateIdentificationField();
+                const validIc =
+                    populateDetailsFromIc();
 
+                if (validIc) {
+
+                    checkExistingIc();
+                }
+                else {
+
+                    nextButton.disabled =
+                        false;
+                }
             });
     </script>
 }

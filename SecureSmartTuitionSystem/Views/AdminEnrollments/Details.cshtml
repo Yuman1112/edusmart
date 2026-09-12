@@ -408,42 +408,22 @@
 
                         <div class="duplicate-alert">
 
-                            <i class="bi bi-exclamation-triangle-fill">
-                            </i>
+                            <i class="bi bi-exclamation-triangle-fill"></i>
 
                             <div>
                                 <strong>
-                                    Potential duplicate record detected
+                                    Potential duplicate guardian record detected
                                 </strong>
 
-                                @if (
-                                                            Model.PotentialDuplicateStudent &&
-                                                            Model.PotentialDuplicateGuardian)
-                                {
-                                    <p>
-                                        Both the student and guardian
-                                        may already exist in the system.
-                                    </p>
-                                }
-                                else if (
-                                Model.PotentialDuplicateStudent)
-                                {
-                                    <p>
-                                        The student may already exist
-                                        in the system.
-                                    </p>
-                                }
-                                else
-                                {
-                                    <p>
-                                        The guardian may already exist
-                                        in the system.
-                                    </p>
-                                }
+                                <p>
+                                    The guardian may already exist in the system.
+                                </p>
                             </div>
 
                         </div>
+
                     </div>
+
                 </section>
             }
 

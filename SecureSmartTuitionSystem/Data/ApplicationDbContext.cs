@@ -149,11 +149,8 @@ namespace SecureSmartTuitionSystem.Data
                         student.StudentNumber)
                     .IsUnique();
 
-                entity.HasIndex(student => new
-                {
-                    student.IdentificationType,
-                    student.IdentificationNumber
-                })
+                entity.HasIndex(student =>
+                        student.IdentificationNumber)
                     .IsUnique();
 
                 entity.HasIndex(student =>

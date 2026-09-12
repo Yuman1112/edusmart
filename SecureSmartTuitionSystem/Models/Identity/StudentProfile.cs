@@ -16,10 +16,6 @@ namespace SecureSmartTuitionSystem.Models.Identity
 
         [Required]
         [StringLength(30)]
-        public string IdentificationType { get; set; } = string.Empty;
-
-        [Required]
-        [StringLength(30)]
         public string IdentificationNumber { get; set; } = string.Empty;
 
         [Required]

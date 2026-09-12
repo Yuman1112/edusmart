@@ -580,9 +580,6 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<bool>("PotentialDuplicateGuardian")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("PotentialDuplicateStudent")
-                        .HasColumnType("bit");
-
                     b.Property<string>("RejectionReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -611,12 +608,9 @@ namespace SecureSmartTuitionSystem.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("StudentIdentificationNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("StudentIdentificationType")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("nvarchar(14)");
 
                     b.Property<string>("StudentName")
                         .IsRequired()
@@ -1002,11 +996,6 @@ namespace SecureSmartTuitionSystem.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
-                    b.Property<string>("IdentificationType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -1029,12 +1018,12 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsUnique()
                         .HasFilter("[ApplicationUserId] IS NOT NULL");
 
+                    b.HasIndex("IdentificationNumber")
+                        .IsUnique();
+
                     b.HasIndex("ParentProfileId");
 
                     b.HasIndex("StudentNumber")
-                        .IsUnique();
-
-                    b.HasIndex("IdentificationType", "IdentificationNumber")
                         .IsUnique();
 
                     b.ToTable("StudentProfiles");

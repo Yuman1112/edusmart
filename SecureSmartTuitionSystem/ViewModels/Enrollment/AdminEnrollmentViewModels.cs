@@ -67,12 +67,9 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 
         public decimal TotalMonthlyFee { get; set; }
 
-        public bool PotentialDuplicateStudent { get; set; }
-
         public bool PotentialDuplicateGuardian { get; set; }
 
         public bool HasPotentialDuplicate =>
-            PotentialDuplicateStudent ||
             PotentialDuplicateGuardian;
 
         public EnrollmentStatus Status { get; set; }
@@ -151,13 +148,9 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         /*
          * Duplicate checking
          */
-
-        public bool PotentialDuplicateStudent { get; set; }
-
         public bool PotentialDuplicateGuardian { get; set; }
 
         public bool HasPotentialDuplicate =>
-            PotentialDuplicateStudent ||
             PotentialDuplicateGuardian;
 
         /*

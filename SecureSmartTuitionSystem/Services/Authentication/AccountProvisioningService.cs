@@ -511,9 +511,6 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                     FullName =
                         application.StudentName,
 
-                    IdentificationType =
-                        application.StudentIdentificationType!,
-
                     IdentificationNumber =
                         application.StudentIdentificationNumber!,
 
@@ -629,12 +626,6 @@ namespace SecureSmartTuitionSystem.Services.Authentication
         private static void ValidateStudentInformation(
             EnrollmentApplication application)
         {
-            if (string.IsNullOrWhiteSpace(
-                    application.StudentIdentificationType))
-            {
-                throw new InvalidOperationException(
-                    "Student identification type is required.");
-            }
 
             if (string.IsNullOrWhiteSpace(
                     application.StudentIdentificationNumber))
@@ -657,7 +648,6 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                     "Student school is required.");
             }
         }
-
         private static void EnsureIdentitySucceeded(
             IdentityResult result,
             string message)

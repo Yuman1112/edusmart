@@ -68,19 +68,10 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
         public string StudentName { get; set; }
             = string.Empty;
 
-        [StringLength(30)]
-        public string? StudentIdentificationType
-        {
-            get;
-            set;
-        }
-
-        [StringLength(50)]
-        public string? StudentIdentificationNumber
-        {
-            get;
-            set;
-        }
+        [Required]
+        [StringLength(14, ErrorMessage = "The IC number cannot exceed 14 characters.")]
+        public string StudentIdentificationNumber { get; set; }
+            = string.Empty;
 
         [Required]
         [DataType(DataType.Date)]
@@ -209,8 +200,6 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
         /*
          * Review information
          */
-        public bool PotentialDuplicateStudent { get; set; }
-
         public bool PotentialDuplicateGuardian { get; set; }
 
         public EnrollmentStatus Status { get; set; }

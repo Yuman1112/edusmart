@@ -98,7 +98,6 @@ namespace SecureSmartTuitionSystem.Controllers
             if (duplicateOnly)
             {
                 query = query.Where(application =>
-                    application.PotentialDuplicateStudent ||
                     application.PotentialDuplicateGuardian);
             }
 
@@ -138,9 +137,6 @@ namespace SecureSmartTuitionSystem.Controllers
                                     (decimal?)
                                     selected.MonthlyFeeAtApplication)
                             ?? 0,
-
-                        PotentialDuplicateStudent =
-                            application.PotentialDuplicateStudent,
 
                         PotentialDuplicateGuardian =
                             application.PotentialDuplicateGuardian,
@@ -387,9 +383,6 @@ namespace SecureSmartTuitionSystem.Controllers
                     ReviewedByName =
                         application.ReviewedByUser?.FullName ??
                         application.ReviewedByUser?.Email,
-
-                    PotentialDuplicateStudent =
-                        application.PotentialDuplicateStudent,
 
                     PotentialDuplicateGuardian =
                         application.PotentialDuplicateGuardian,

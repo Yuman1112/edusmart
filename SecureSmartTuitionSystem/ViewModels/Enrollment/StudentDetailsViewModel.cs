@@ -11,23 +11,15 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         [Display(Name = "Student's Full Name")]
         public string StudentName { get; set; } = string.Empty;
 
-
         [Required(
-            ErrorMessage = "Please select an identification type.")]
-        [Display(Name = "Identification Type")]
-        public string StudentIdentificationType { get; set; } = "IC";
-
-
-        [Required(
-            ErrorMessage = "Please enter the student's identification number.")]
+            ErrorMessage = "Please enter the student's IC number.")]
         [StringLength(
-            30,
+            14,
             ErrorMessage =
-                "The identification number cannot exceed 30 characters.")]
-        [Display(Name = "Identification Number")]
+                "The IC number cannot exceed 14 characters.")]
+        [Display(Name = "IC Number")]
         public string StudentIdentificationNumber { get; set; }
             = string.Empty;
-
 
         [Required(
             ErrorMessage = "Please select the student's date of birth.")]
@@ -35,12 +27,10 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         [Display(Name = "Date of Birth")]
         public DateTime? StudentDateOfBirth { get; set; }
 
-
         [Required(
             ErrorMessage = "Please select a gender.")]
         [Display(Name = "Gender")]
         public string StudentGender { get; set; } = string.Empty;
-
 
         [Required(
             ErrorMessage = "Please enter the student's current school.")]
@@ -48,16 +38,26 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         [Display(Name = "Current School")]
         public string StudentSchool { get; set; } = string.Empty;
 
-
         public IEnumerable<ValidationResult> Validate(
             ValidationContext validationContext)
         {
             // ==========================================
             // DATE OF BIRTH
             // ==========================================
-            if (StudentDateOfBirth.HasValue &&
-                StudentDateOfBirth.Value.Date < DateTime.Today)
+            if (StudentDateOfBirth.HasValue)
             {
+                if (StudentDateOfBirth.Value.Date >= DateTime.Today)
+                {
+                    yield return new ValidationResult(
+                        "The date of birth must be earlier than today.",
+                        new[]
+                        {
+                nameof(StudentDateOfBirth)
+                        });
+
+                    yield break;
+                }
+
                 var age =
                     CalculateAge(
                         StudentDateOfBirth.Value.Date);
@@ -68,11 +68,10 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                         "The student's age is not within the supported range for Year 1 to Form 5.",
                         new[]
                         {
-                            nameof(StudentDateOfBirth)
+                nameof(StudentDateOfBirth)
                         });
                 }
             }
-
 
             // ==========================================
             // GENDER
@@ -89,31 +88,11 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                     });
             }
 
-
-            // ==========================================
-            // IDENTIFICATION TYPE
-            // ==========================================
-            if (!string.IsNullOrWhiteSpace(
-                    StudentIdentificationType) &&
-                StudentIdentificationType != "IC" &&
-                StudentIdentificationType !=
-                    "BirthCertificate")
-            {
-                yield return new ValidationResult(
-                    "Please select a valid identification type.",
-                    new[]
-                    {
-                        nameof(StudentIdentificationType)
-                    });
-            }
-
-
             // ==========================================
             // IC VALIDATION
             // ==========================================
-            if (StudentIdentificationType == "IC" &&
-                !string.IsNullOrWhiteSpace(
-                    StudentIdentificationNumber))
+            if (!string.IsNullOrWhiteSpace(
+                StudentIdentificationNumber))    
             {
                 if (!Regex.IsMatch(
                         StudentIdentificationNumber,
@@ -130,13 +109,11 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                     yield break;
                 }
 
-
                 var digits =
                     new string(
                         StudentIdentificationNumber
                             .Where(char.IsDigit)
                             .ToArray());
-
 
                 var yy =
                     int.Parse(
@@ -150,7 +127,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                     int.Parse(
                         digits.Substring(4, 2));
 
-
                 var currentTwoDigitYear =
                     DateTime.Today.Year % 100;
 
@@ -158,7 +134,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                     yy <= currentTwoDigitYear
                         ? 2000 + yy
                         : 1900 + yy;
-
 
                 DateTime? icDateOfBirth = null;
 
@@ -175,7 +150,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                     icDateOfBirth = null;
                 }
 
-
                 if (!icDateOfBirth.HasValue)
                 {
                     yield return new ValidationResult(
@@ -189,7 +163,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                     yield break;
                 }
 
-
                 if (StudentDateOfBirth.HasValue &&
                     StudentDateOfBirth.Value.Date !=
                     icDateOfBirth.Value.Date)
@@ -202,7 +175,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                         });
                 }
 
-
                 var lastDigit =
                     int.Parse(
                         digits.Substring(11, 1));
@@ -211,7 +183,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                     lastDigit % 2 == 0
                         ? "Female"
                         : "Male";
-
 
                 if (!string.IsNullOrWhiteSpace(
                         StudentGender) &&
@@ -222,33 +193,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                         new[]
                         {
                             nameof(StudentGender)
-                        });
-                }
-            }
-
-
-            // ==========================================
-            // BIRTH CERTIFICATE VALIDATION
-            // ==========================================
-            if (StudentIdentificationType ==
-                    "BirthCertificate" &&
-                !string.IsNullOrWhiteSpace(
-                    StudentIdentificationNumber))
-            {
-                var birthCertificatePattern =
-                    @"^[A-Za-z0-9][A-Za-z0-9\s./-]{2,19}$";
-
-
-                if (!Regex.IsMatch(
-                        StudentIdentificationNumber.Trim(),
-                        birthCertificatePattern))
-                {
-                    yield return new ValidationResult(
-                        "Please enter a valid birth certificate number using letters, numbers, spaces, '/', '-' or '.'.",
-                        new[]
-                        {
-                            nameof(
-                                StudentIdentificationNumber)
                         });
                 }
             }
