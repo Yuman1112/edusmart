@@ -18,9 +18,6 @@ namespace SecureSmartTuitionSystem.Controllers
         private const string GuardianDetailsSessionKey =
             "Enrollment.GuardianDetails";
 
-        private const string ExistingStudentProfileIdSessionKey =
-            "Enrollment.ExistingStudentProfileId";
-
         private const string ExistingParentUserIdSessionKey =
             "Enrollment.ExistingParentUserId";
 
@@ -58,9 +55,6 @@ namespace SecureSmartTuitionSystem.Controllers
 
             HttpContext.Session.Remove(
                 GuardianDetailsSessionKey);
-
-            HttpContext.Session.Remove(
-                ExistingStudentProfileIdSessionKey);
 
             HttpContext.Session.Remove(
                 ExistingParentUserIdSessionKey);
@@ -135,14 +129,16 @@ namespace SecureSmartTuitionSystem.Controllers
 
             if (existingStudent != null)
             {
-                HttpContext.Session.SetInt32(
-                    ExistingStudentProfileIdSessionKey,
-                    existingStudent.StudentProfileId);
-            }
-            else
-            {
-                HttpContext.Session.Remove(
-                    ExistingStudentProfileIdSessionKey);
+                var identificationLabel =
+                    model.StudentIdentificationType == "IC"
+                        ? "IC number"
+                        : "birth certificate number";
+
+                ModelState.AddModelError(
+                    nameof(model.StudentIdentificationNumber),
+                    $"A student with this {identificationLabel} already exists. Please sign in to the existing account to enroll in additional classes.");
+
+                return View(model);
             }
 
             // Save normalized value back into the model
@@ -357,34 +353,6 @@ namespace SecureSmartTuitionSystem.Controllers
                 return View(
                     "GuardianDetails",
                     model);
-            }
-
-            int? existingStudentProfileId =
-                HttpContext.Session.GetInt32(
-                    ExistingStudentProfileIdSessionKey);
-
-            if (existingStudentProfileId.HasValue)
-            {
-                bool relationshipExists =
-                    await _context.ParentStudents
-                        .AsNoTracking()
-                        .AnyAsync(link =>
-                            link.ParentProfileId ==
-                                parentProfile.ParentProfileId &&
-                            link.StudentProfileId ==
-                                existingStudentProfileId.Value &&
-                            link.IsActive);
-
-                if (!relationshipExists)
-                {
-                    ModelState.AddModelError(
-                        string.Empty,
-                        "The existing student is not linked to this parent or guardian account.");
-
-                    return View(
-                        "GuardianDetails",
-                        model);
-                }
             }
 
             /*
