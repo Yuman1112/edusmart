@@ -90,6 +90,17 @@
     color: var(--muted);
 }
 
+.payment-success-copy {
+    display: grid;
+    margin: 18px 0 6px;
+    gap: 6px;
+}
+
+.payment-result-card .payment-success-copy p {
+    margin: 0;
+    line-height: 1.55;
+}
+
 .payment-status {
     display: inline-flex;
     min-height: 32px;

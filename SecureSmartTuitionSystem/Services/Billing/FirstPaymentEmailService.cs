@@ -1,6 +1,8 @@
 ﻿using System.Net;
 using System.Net.Mail;
+using System.Text;
 using Microsoft.Extensions.Options;
+using SecureSmartTuitionSystem.Models.Billing;
 using SecureSmartTuitionSystem.Settings;
 
 namespace SecureSmartTuitionSystem.Services.Billing
@@ -20,10 +22,7 @@ namespace SecureSmartTuitionSystem.Services.Billing
             string recipientEmail,
             string guardianName,
             string studentName,
-            string applicationNumber,
-            string billNumber,
-            decimal totalAmount,
-            DateTime dueAt,
+            Bill bill,
             string paymentUrl,
             CancellationToken cancellationToken = default)
         {
@@ -35,17 +34,86 @@ namespace SecureSmartTuitionSystem.Services.Billing
             string safeStudentName =
                 WebUtility.HtmlEncode(studentName);
 
-            string safeApplicationNumber =
-                WebUtility.HtmlEncode(applicationNumber);
-
-            string safeBillNumber =
-                WebUtility.HtmlEncode(billNumber);
-
             string safePaymentUrl =
                 WebUtility.HtmlEncode(paymentUrl);
 
             string subject =
-                $"EduSmart payment required - {billNumber}";
+                $"EduSmart payment required for {studentName}";
+
+            var itemRows = new StringBuilder();
+
+            foreach (BillItem item in
+                     bill.Items.OrderBy(item => item.BillItemId))
+            {
+                string safeDescription =
+                    WebUtility.HtmlEncode(item.Description);
+
+                string lineTotalColour =
+                    item.LineTotal < 0
+                        ? "#008f5a"
+                        : "#06356b";
+
+                itemRows.Append($$"""
+                    <tr>
+                        <td style="padding:14px 16px;border-bottom:1px solid #d7e8eb;font-weight:700;">
+                            {{safeDescription}}
+                        </td>
+                        <td style="padding:14px 12px;border-bottom:1px solid #d7e8eb;text-align:center;">
+                            {{item.Quantity}}
+                        </td>
+                        <td style="padding:14px 16px;border-bottom:1px solid #d7e8eb;text-align:right;white-space:nowrap;">
+                            RM {{item.UnitAmount:F2}}
+                        </td>
+                        <td style="padding:14px 16px;border-bottom:1px solid #d7e8eb;text-align:right;white-space:nowrap;font-weight:700;color:{{lineTotalColour}};">
+                            RM {{item.LineTotal:F2}}
+                        </td>
+                    </tr>
+                    """);
+            }
+
+            string discountSummaryHtml = string.Empty;
+
+            if (bill.TuitionDiscountAmount > 0)
+            {
+                discountSummaryHtml = $$"""
+                    <tr>
+                        <td style="padding:7px 0;color:#60758f;">
+                            Tuition Discount ({{bill.TuitionDiscountRate:F0}}%)
+                        </td>
+                        <td style="padding:7px 0;text-align:right;color:#008f5a;font-weight:700;white-space:nowrap;">
+                            RM &minus;{{bill.TuitionDiscountAmount:F2}}
+                        </td>
+                    </tr>
+                    """;
+            }
+
+            string hardcopySummaryHtml = string.Empty;
+
+            if (bill.HardcopyFee > 0)
+            {
+                hardcopySummaryHtml = $$"""
+                    <tr>
+                        <td style="padding:7px 0;color:#60758f;">Hardcopy Materials</td>
+                        <td style="padding:7px 0;text-align:right;font-weight:700;white-space:nowrap;">
+                            RM {{bill.HardcopyFee:F2}}
+                        </td>
+                    </tr>
+                    """;
+            }
+
+            string deliverySummaryHtml = string.Empty;
+
+            if (bill.DeliveryFee > 0)
+            {
+                deliverySummaryHtml = $$"""
+                    <tr>
+                        <td style="padding:7px 0;color:#60758f;">Delivery Fee</td>
+                        <td style="padding:7px 0;text-align:right;font-weight:700;white-space:nowrap;">
+                            RM {{bill.DeliveryFee:F2}}
+                        </td>
+                    </tr>
+                    """;
+            }
 
             string htmlBody = $$"""
                 <!doctype html>
@@ -97,32 +165,51 @@ namespace SecureSmartTuitionSystem.Services.Billing
                                 has been approved and is awaiting payment.
                             </p>
 
-                            <div style="
-                                margin:22px 0;
-                                padding:18px;
-                                background:#f5fbfc;
-                                border-radius:12px;
-                                line-height:1.8;">
+                            <div style="margin:22px 0 12px;font-size:18px;font-weight:700;color:#06356b;">
+                                Bill Items
+                            </div>
 
-                                <div>
-                                    <strong>Application:</strong>
-                                    {{safeApplicationNumber}}
-                                </div>
+                            <div style="overflow-x:auto;border:1px solid #d7e8eb;border-radius:12px;">
+                                <table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px;">
+                                    <thead>
+                                        <tr style="background:#f1fafb;color:#006f7f;">
+                                            <th style="padding:13px 16px;text-align:left;">Description</th>
+                                            <th style="padding:13px 12px;text-align:center;">Quantity</th>
+                                            <th style="padding:13px 16px;text-align:right;">Unit Amount</th>
+                                            <th style="padding:13px 16px;text-align:right;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {{itemRows}}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                                <div>
-                                    <strong>Bill:</strong>
-                                    {{safeBillNumber}}
-                                </div>
+                            <table role="presentation" style="width:100%;max-width:390px;margin:20px 0 0 auto;border-collapse:collapse;font-size:14px;">
+                                <tr>
+                                    <td style="padding:7px 0;color:#60758f;">Tuition Subtotal</td>
+                                    <td style="padding:7px 0;text-align:right;font-weight:700;white-space:nowrap;">
+                                        RM {{bill.TuitionSubtotal:F2}}
+                                    </td>
+                                </tr>
 
-                                <div>
-                                    <strong>Total:</strong>
-                                    MYR {{totalAmount:F2}}
-                                </div>
+                                {{discountSummaryHtml}}
+                                {{hardcopySummaryHtml}}
+                                {{deliverySummaryHtml}}
 
-                                <div>
-                                    <strong>Due date:</strong>
-                                    {{dueAt.ToLocalTime():dd MMM yyyy}}
-                                </div>
+                                <tr>
+                                    <td style="padding:15px 0 4px;border-top:1px solid #d7e8eb;font-size:17px;font-weight:700;">
+                                        Total Amount
+                                    </td>
+                                    <td style="padding:15px 0 4px;border-top:1px solid #d7e8eb;text-align:right;font-size:17px;font-weight:700;white-space:nowrap;">
+                                        RM {{bill.TotalAmount:F2}}
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <div style="margin-top:18px;padding:13px 16px;background:#f5fbfc;border-radius:10px;">
+                                <strong>Due date:</strong>
+                                {{bill.DueAt.ToLocalTime():dd MMM yyyy}}
                             </div>
 
                             <p style="

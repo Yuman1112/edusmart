@@ -12,9 +12,6 @@
             EnrollmentStatus.PendingReview =>
                 "Pending Review",
 
-            EnrollmentStatus.DuplicateReview =>
-                "Duplicate Review",
-
             EnrollmentStatus.ApprovedPendingPayment =>
                 "Pending Payment",
 
@@ -40,9 +37,6 @@
         {
             EnrollmentStatus.PendingReview =>
                 "status-pending",
-
-            EnrollmentStatus.DuplicateReview =>
-                "status-duplicate",
 
             EnrollmentStatus.ApprovedPendingPayment =>
                 "status-payment",
@@ -74,10 +68,6 @@
 
     <div>
         <h1>Enrollment Details</h1>
-
-        <p>
-            Review application @Model.ApplicationNumber.
-        </p>
     </div>
 
     <a asp-controller="AdminEnrollments"
@@ -240,7 +230,7 @@
                                                 Model.ApplicantNotes))
                         {
                             <div class="enrollment-information-item
-                                            full-width">
+                                                full-width">
 
                                 <span>Applicant Notes</span>
 
@@ -254,7 +244,7 @@
                                                 Model.RejectionReason))
                         {
                             <div class="enrollment-information-item
-                                            full-width">
+                                                full-width">
 
                                 <span>Rejection Reason</span>
 
@@ -310,13 +300,12 @@
                         </div>
 
                         <div class="enrollment-information-item">
-                            <span>Existing Student Record</span>
+                            <span>Student Account Record</span>
 
                             <strong>
-                                @(Model.ExistingStudentProfileId
-                                                                .HasValue
-                                                                ? "Matched existing student"
-                                                                : "New student")
+                                @(Model.ExistingStudentProfileId.HasValue
+                                                                ? "Existing student account found"
+                                                                : "New student account")
                             </strong>
                         </div>
 
@@ -376,56 +365,18 @@
                         </div>
 
                         <div class="enrollment-information-item">
-                            <span>Existing Guardian Record</span>
+                            <span>Guardian Account Record</span>
 
                             <strong>
-                                @(Model.ExistingParentProfileId
-                                                                .HasValue
-                                                                ? "Matched existing guardian"
-                                                                : "New guardian")
+                                @(Model.ExistingParentProfileId.HasValue
+                                                                ? "Existing guardian account found"
+                                                                : "New guardian account")
                             </strong>
                         </div>
 
                     </div>
                 </div>
             </section>
-
-            <!-- Duplicate checking -->
-            @if (Model.HasPotentialDuplicate)
-            {
-                <section class="enrollment-details-card">
-
-                    <div class="enrollment-details-card-header">
-
-                        <h2>
-                            <i class="bi bi-exclamation-triangle"></i>
-                            Duplicate Checking
-                        </h2>
-
-                    </div>
-
-                    <div class="enrollment-details-card-body">
-
-                        <div class="duplicate-alert">
-
-                            <i class="bi bi-exclamation-triangle-fill"></i>
-
-                            <div>
-                                <strong>
-                                    Potential duplicate guardian record detected
-                                </strong>
-
-                                <p>
-                                    The guardian may already exist in the system.
-                                </p>
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </section>
-            }
 
             <!-- Selected classes -->
             <section class="enrollment-details-card">
@@ -519,7 +470,7 @@
                                         @if (classItem.IsAvailable)
                                         {
                                             <span class="class-availability
-                                                                     class-available">
+                                                                                 class-available">
 
                                                 @classItem.AvailableSeatCount
                                                 seat(s) available
@@ -528,7 +479,7 @@
                                         else
                                         {
                                             <span class="class-availability
-                                                                     class-unavailable">
+                                                                                 class-unavailable">
 
                                                 @(classItem.IsFull
                                                                                     ? "Class full"
@@ -575,7 +526,7 @@
                             {
                                 <button type="button"
                                         class="enrollment-action-button
-                                                       enrollment-approve-button"
+                                                               enrollment-approve-button"
                                         data-bs-toggle="modal"
                                         data-bs-target="#approveModal">
 
@@ -588,7 +539,7 @@
                             {
                                 <button type="button"
                                         class="enrollment-action-button
-                                                       enrollment-reject-button"
+                                                               enrollment-reject-button"
                                         data-bs-toggle="modal"
                                         data-bs-target="#rejectModal">
 
@@ -601,7 +552,7 @@
                             {
                                 <button type="button"
                                         class="enrollment-action-button
-                                                       enrollment-cancel-button"
+                                                               enrollment-cancel-button"
                                         data-bs-toggle="modal"
                                         data-bs-target="#cancelModal">
 
@@ -719,7 +670,8 @@
 
                 <form asp-controller="AdminEnrollments"
                       asp-action="Approve"
-                      method="post">
+                      method="post"
+                      id="approveApplicationForm">
 
                     @Html.AntiForgeryToken()
 
@@ -745,10 +697,7 @@
                     <div class="modal-body">
 
                         <p>
-                            Approve application
-                            <strong>
-                                @Model.ApplicationNumber
-                            </strong>?
+                            Are you sure you want to approve this enrollment application?
                         </p>
 
                         <p class="text-muted">
@@ -779,6 +728,7 @@
                         </button>
 
                         <button type="submit"
+                                id="confirmApprovalButton"
                                 class="btn btn-success">
                             Confirm Approval
                         </button>
@@ -987,6 +937,36 @@
                             },
                             3000);
                     });
+
+                const approveForm =
+                    document.getElementById(
+                        "approveApplicationForm");
+
+                const approveButton =
+                    document.getElementById(
+                        "confirmApprovalButton");
+
+                if (approveForm && approveButton) {
+                    approveForm.addEventListener(
+                        "submit",
+                        function (event) {
+                            if (approveForm.dataset.submitting ===
+                                "true") {
+                                event.preventDefault();
+                                return;
+                            }
+
+                            approveForm.dataset.submitting =
+                                "true";
+
+                            approveButton.disabled = true;
+                            approveButton.innerHTML =
+                                '<span class="spinner-border ' +
+                                'spinner-border-sm" ' +
+                                'aria-hidden="true"></span> ' +
+                                'Approving...';
+                        });
+                }
             });
     </script>
 }

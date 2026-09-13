@@ -1,4 +1,4 @@
-﻿﻿using System.Data;
+﻿using System.Data;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -491,7 +491,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 }
 
                 /*
-                 * Find an existing student using ic number.
+                 * Find an existing student using the IC number.
                  */
                 var existingStudent =
                     await _context.StudentProfiles
@@ -500,23 +500,46 @@ namespace SecureSmartTuitionSystem.Controllers
                                 studentDetails
                                     .StudentIdentificationNumber);
 
+
                 /*
                  * Check whether the student is already
                  * enrolled in a selected class.
                  */
                 if (existingStudent != null)
                 {
-                    ModelState.AddModelError(
-                        string.Empty,
-                        "This student already has an EduSmart account. " +
-                        "Please sign in to enroll in additional subjects.");
+                    bool alreadyEnrolled =
+                        await _context.StudentEnrollments
+                            .AnyAsync(enrollment =>
+                                enrollment.StudentProfileId ==
+                                    existingStudent
+                                        .StudentProfileId &&
+                                model.SelectedClassSessionIds
+                                    .Contains(
+                                        enrollment
+                                            .ClassSessionId) &&
+                                (enrollment.Status ==
+                                    StudentEnrollmentStatus
+                                        .Active ||
+                                 enrollment.Status ==
+                                    StudentEnrollmentStatus
+                                        .PendingDrop));
 
-                    await PopulateSelectionViewModelAsync(
-                        model);
+                    if (alreadyEnrolled)
+                    {
+                        ModelState.AddModelError(
+                            nameof(
+                                model
+                                    .SelectedClassSessionIds),
+                            "The student is already enrolled " +
+                            "in one or more selected classes.");
 
-                    return View(
-                        EnrollmentOptionsViewPath,
-                        model);
+                        await PopulateSelectionViewModelAsync(
+                            model);
+
+                        return View(
+                            EnrollmentOptionsViewPath,
+                            model);
+                    }
                 }
 
                 /*
@@ -524,37 +547,25 @@ namespace SecureSmartTuitionSystem.Controllers
                  * another active application for the same
                  * class.
                  */
-                bool duplicatePendingApplication =
-                    await _context
-                        .EnrollmentApplications
+                bool existingActiveApplication =
+                    await _context.EnrollmentApplications
                         .AnyAsync(application =>
-                            application
-                                .StudentIdentificationNumber ==
-                                studentDetails
-                                    .StudentIdentificationNumber &&
-                            application.Status !=
-                                EnrollmentStatus.Rejected &&
-                            application.Status !=
-                                EnrollmentStatus.Cancelled &&
-                            application.SelectedSubjects
-                                .Any(selected =>
-                                    model
-                                        .SelectedClassSessionIds
-                                        .Contains(
-                                            selected
-                                                .ClassSessionId)));
+                            application.StudentIdentificationNumber ==
+                                studentDetails.StudentIdentificationNumber &&
+                            application.Status != EnrollmentStatus.Rejected &&
+                            application.Status != EnrollmentStatus.Cancelled &&
+                            application.SelectedSubjects.Any(selected =>
+                                model.SelectedClassSessionIds.Contains(
+                                    selected.ClassSessionId)));
 
-                if (duplicatePendingApplication)
+                if (existingActiveApplication)
                 {
                     ModelState.AddModelError(
-                        nameof(
-                            model.SelectedClassSessionIds),
-                        "An active enrollment application " +
-                        "already exists for this student " +
-                        "and one or more selected classes.");
+                        nameof(model.SelectedClassSessionIds),
+                        "An active enrollment application already exists " +
+                        "for this student and one or more selected classes.");
 
-                    await PopulateSelectionViewModelAsync(
-                        model);
+                    await PopulateSelectionViewModelAsync(model);
 
                     return View(
                         EnrollmentOptionsViewPath,
@@ -565,8 +576,6 @@ namespace SecureSmartTuitionSystem.Controllers
                  * Resolve Guardian information.
                  */
                 ParentProfile? existingParent = null;
-
-                bool potentialDuplicateGuardian = false;
 
                 string guardianName;
                 string guardianEmail;
@@ -685,28 +694,10 @@ namespace SecureSmartTuitionSystem.Controllers
                     guardianIdentificationLast4 =
                         GetLastFourDigits(
                             guardianIdentificationNumber);
-
-                    string normalizedEmail =
-                        _userManager.NormalizeEmail(
-                            guardianEmail);
-
-                    potentialDuplicateGuardian =
-                        await _context.ParentProfiles
-                            .AnyAsync(parent =>
-                                parent.ApplicationUser
-                                    .NormalizedEmail ==
-                                    normalizedEmail ||
-                                parent
-                                    .IdentificationNumber ==
-                                    guardianIdentificationNumber);
                 }
 
                 EnrollmentStatus initialStatus =
-                    potentialDuplicateGuardian
-                        ? EnrollmentStatus
-                            .DuplicateReview
-                        : EnrollmentStatus
-                            .PendingReview;
+                    EnrollmentStatus.PendingReview;
 
                 decimal monthlyTuitionFee =
                     selectedClasses.Sum(classSession =>
@@ -788,7 +779,8 @@ namespace SecureSmartTuitionSystem.Controllers
                                 .ParentProfileId,
 
                         ExistingStudentProfileId =
-                            null,
+                            existingStudent?
+                                .StudentProfileId,
 
                         GuardianName =
                             guardianName,
@@ -900,11 +892,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             model
                                 .FinalTwoWeeksConfirmed,
 
-                        PotentialDuplicateGuardian =
-                            potentialDuplicateGuardian,
-
-                        Status =
-                            initialStatus,
+                        Status = initialStatus,
 
                         ApplicantNotes =
                             string.IsNullOrWhiteSpace(
@@ -950,14 +938,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             submittedByUserId,
 
                         Remarks =
-                            initialStatus ==
-                            EnrollmentStatus
-                                .DuplicateReview
-                                ? "Application submitted. " +
-                                  "Potential duplicate " +
-                                  "record detected."
-                                : "Enrollment application " +
-                                  "submitted."
+                            "Enrollment application submitted."
                     });
 
                 _context.EnrollmentApplications.Add(
@@ -1104,7 +1085,16 @@ namespace SecureSmartTuitionSystem.Controllers
                     .Where(session =>
                         session.Status ==
                             ClassSessionStatus.Active &&
-                        session.Subject.IsActive)
+                        session.Subject.IsActive &&
+                        _context.StudentEnrollments.Count(
+                            enrollment =>
+                                enrollment.ClassSessionId ==
+                                    session.ClassSessionId &&
+                                (enrollment.Status ==
+                                    StudentEnrollmentStatus.Active ||
+                                 enrollment.Status ==
+                                    StudentEnrollmentStatus.PendingDrop)) <
+                        session.Capacity)
                     .OrderBy(session =>
                         session.Subject.EducationStage)
                     .ThenBy(session =>

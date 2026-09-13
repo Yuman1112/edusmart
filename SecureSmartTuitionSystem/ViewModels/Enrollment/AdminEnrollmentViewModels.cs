@@ -22,9 +22,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
          */
 
         public EnrollmentStatus? Status { get; set; }
-
-        public bool DuplicateOnly { get; set; }
-
         public string SortBy { get; set; } = "submittedAt";
 
         public string SortDirection { get; set; } = "desc";
@@ -36,8 +33,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public int TotalApplicationCount { get; set; }
 
         public int PendingReviewCount { get; set; }
-
-        public int DuplicateReviewCount { get; set; }
 
         public int ApprovedPendingPaymentCount { get; set; }
 
@@ -66,11 +61,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public int SelectedClassCount { get; set; }
 
         public decimal TotalMonthlyFee { get; set; }
-
-        public bool PotentialDuplicateGuardian { get; set; }
-
-        public bool HasPotentialDuplicate =>
-            PotentialDuplicateGuardian;
 
         public EnrollmentStatus Status { get; set; }
 
@@ -146,14 +136,6 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public string? ReviewedByName { get; set; }
 
         /*
-         * Duplicate checking
-         */
-        public bool PotentialDuplicateGuardian { get; set; }
-
-        public bool HasPotentialDuplicate =>
-            PotentialDuplicateGuardian;
-
-        /*
          * Fee and class information
          */
 
@@ -182,17 +164,13 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
          */
 
         public bool CanApprove =>
-            Status == EnrollmentStatus.PendingReview ||
-            Status == EnrollmentStatus.DuplicateReview;
+            Status == EnrollmentStatus.PendingReview;
 
         public bool CanReject =>
-            Status == EnrollmentStatus.PendingReview ||
-            Status == EnrollmentStatus.DuplicateReview;
+            Status == EnrollmentStatus.PendingReview;
 
         public bool CanCancel =>
-            Status != EnrollmentStatus.Enrolled &&
-            Status != EnrollmentStatus.Rejected &&
-            Status != EnrollmentStatus.Cancelled;
+            Status == EnrollmentStatus.ApprovedPendingPayment;
     }
 
     /*

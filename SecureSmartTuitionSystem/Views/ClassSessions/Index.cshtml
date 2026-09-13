@@ -26,7 +26,10 @@
 <div class="page-header">
     <div>
         <h1>Class Sessions</h1>
-        <p>Create and manage online tuition class schedules.</p>
+
+        <p>
+            Create and manage online tuition class schedules.
+        </p>
     </div>
 
     <a asp-controller="ClassSessions"
@@ -111,22 +114,6 @@
     <div class="class-filter-grid">
 
         <div>
-            <label asp-for="SubjectName"
-                   class="form-label">
-                Subject
-            </label>
-
-            <select asp-for="SubjectName"
-                    asp-items="Model.Subjects"
-                    class="form-select auto-filter">
-
-                <option value="">
-                    All Subjects
-                </option>
-            </select>
-        </div>
-
-        <div>
             <label asp-for="EducationStage"
                    class="form-label">
                 Education Stage
@@ -153,9 +140,22 @@
                     id="FilterAcademicLevel"
                     class="form-select auto-filter">
 
-                <option value="">
-                    All Levels
-                </option>
+                <option value="">All Levels</option>
+            </select>
+        </div>
+
+        <div>
+            <label asp-for="SubjectName"
+                   class="form-label">
+                Subject
+            </label>
+
+            <select asp-for="SubjectName"
+                    asp-items="Model.Subjects"
+                    id="FilterSubjectName"
+                    class="form-select auto-filter">
+
+                <option value="">All Subjects</option>
             </select>
         </div>
 
@@ -184,9 +184,7 @@
                     asp-items="Model.Tutors"
                     class="form-select auto-filter">
 
-                <option value="">
-                    All Tutors
-                </option>
+                <option value="">All Tutors</option>
             </select>
         </div>
 
@@ -221,7 +219,8 @@
 
                 <option value="">All Statuses</option>
 
-                @foreach (ClassSessionStatus status
+                @foreach (
+                                ClassSessionStatus status
                                 in Enum.GetValues<ClassSessionStatus>())
                 {
                     <option value="@status">
@@ -259,6 +258,7 @@
             <a asp-controller="ClassSessions"
                asp-action="Index"
                class="outline-button">
+
                 Clear Filters
             </a>
         </div>
@@ -269,10 +269,12 @@
             <table class="table align-middle compact-class-table">
 
                 <colgroup>
+                    <col class="column-number" />
                     <col class="column-class-name" />
                     <col class="column-subject" />
                     <col class="column-tutor" />
                     <col class="column-schedule" />
+                    <col class="column-enrollment" />
                     <col class="column-fee" />
                     <col class="column-status" />
                     <col class="column-actions" />
@@ -280,11 +282,17 @@
 
                 <thead>
                     <tr>
+                        <th class="number-column">
+                            No.
+                        </th>
+
                         <th>
                             <button type="button"
                                     class="sort-button"
                                     data-sort="className">
+
                                 Class Name
+
                                 <i class="bi bi-arrow-down-up"></i>
                             </button>
                         </th>
@@ -293,7 +301,9 @@
                             <button type="button"
                                     class="sort-button"
                                     data-sort="subject">
+
                                 Subject &amp; Level
+
                                 <i class="bi bi-arrow-down-up"></i>
                             </button>
                         </th>
@@ -302,7 +312,9 @@
                             <button type="button"
                                     class="sort-button"
                                     data-sort="tutor">
+
                                 Tutor
+
                                 <i class="bi bi-arrow-down-up"></i>
                             </button>
                         </th>
@@ -311,15 +323,21 @@
                             <button type="button"
                                     class="sort-button"
                                     data-sort="schedule">
+
                                 Schedule
                                 <i class="bi bi-arrow-down-up"></i>
                             </button>
+                        </th>
+
+                        <th class="enrollment-heading">
+                            Enrollment
                         </th>
 
                         <th>
                             <button type="button"
                                     class="sort-button"
                                     data-sort="monthlyFee">
+
                                 Fee
                                 <i class="bi bi-arrow-down-up"></i>
                             </button>
@@ -329,7 +347,9 @@
                             <button type="button"
                                     class="sort-button"
                                     data-sort="status">
+
                                 Status
+
                                 <i class="bi bi-arrow-down-up"></i>
                             </button>
                         </th>
@@ -341,15 +361,25 @@
                 </thead>
 
                 <tbody>
+                    @{
+                        int rowNumber = 0;
+                    }
+
                     @foreach (var session in Model.Sessions)
                     {
+                        rowNumber++;
+
                         <tr>
+                            <td class="number-column">
+                                @rowNumber
+                            </td>
+
                             <td class="class-name-column">
                                 <strong>
                                     @(session.ClassName
                                                                 ?? "Unnamed Class")
-                        </strong>
-                    </td>
+                                                                               </strong>
+                                                                           </td>
 
                             <td>
                                 <strong>
@@ -381,6 +411,28 @@
                                 </div>
                             </td>
 
+                            @{
+                                int enrolledCount =
+                                Model.EnrollmentCounts.TryGetValue(
+                                session.ClassSessionId,
+                                out int currentCount)
+                                ? currentCount
+                                : 0;
+                            }
+
+                            <td class="enrollment-column">
+                                <strong class="enrollment-count">
+                                    @enrolledCount / @session.Capacity
+                                </strong>
+
+                                @if (enrolledCount >= session.Capacity)
+                                {
+                                    <small class="capacity-label">
+                                        Full
+                                    </small>
+                                }
+                            </td>
+
                             <td>
                                 @if (session.Subject.MonthlyFee == 0)
                                 {
@@ -397,14 +449,16 @@
                             </td>
 
                             <td>
-                                @if (session.Status ==
+                                @if (
+                                                        session.Status ==
                                                         ClassSessionStatus.Active)
                                 {
                                     <span class="status-pill status-success">
                                         Active
                                     </span>
                                 }
-                                else if (session.Status ==
+                                else if (
+                                session.Status ==
                                 ClassSessionStatus.Cancelled)
                                 {
                                     <span class="status-pill status-danger">
@@ -456,7 +510,9 @@
                                                 </a>
                                             </li>
 
-                                            @if (session.Status == ClassSessionStatus.Active)
+                                            @if (
+                                                                                session.Status ==
+                                                                                ClassSessionStatus.Active)
                                             {
                                                 <li>
                                                     <hr class="dropdown-divider" />
@@ -471,7 +527,7 @@
 
                                                         <button type="submit"
                                                                 class="dropdown-item action-complete"
-                                                                onclick="return confirm('Mark this class as completed?');">
+                                                                onclick="return confirm('Mark this entire class session as completed?');">
 
                                                             <i class="bi bi-check2-circle"></i>
                                                             Mark as Completed
@@ -539,12 +595,6 @@
             "DOMContentLoaded",
             function () {
 
-                /*
-                 * =========================================
-                 * 1. REAL-TIME FILTER
-                 * =========================================
-                 */
-
                 const filterForm =
                     document.getElementById(
                         "classFilterForm"
@@ -560,10 +610,27 @@
                         "SortDirection"
                     );
 
+                const educationStageFilter =
+                    document.getElementById(
+                        "FilterEducationStage"
+                    );
+
                 const academicLevelFilter =
                     document.getElementById(
                         "FilterAcademicLevel"
                     );
+
+                const subjectFilter =
+                    document.getElementById(
+                        "FilterSubjectName"
+                    );
+
+
+                /*
+                 * =========================================
+                 * Automatic filtering
+                 * =========================================
+                 */
 
                 document
                     .querySelectorAll(".auto-filter")
@@ -574,15 +641,34 @@
                             function () {
 
                                 /*
-                                 * Clear Academic Level when
-                                 * Education Stage changes.
+                                 * Changing Education Stage
+                                 * resets both Academic Level
+                                 * and Subject.
                                  */
                                 if (
-                                    filter.id ===
-                                    "FilterEducationStage" &&
-                                    academicLevelFilter
+                                    filter ===
+                                    educationStageFilter
                                 ) {
-                                    academicLevelFilter.value = "";
+                                    if (academicLevelFilter) {
+                                        academicLevelFilter.value = "";
+                                    }
+
+                                    if (subjectFilter) {
+                                        subjectFilter.value = "";
+                                    }
+                                }
+
+                                /*
+                                 * Changing Academic Level
+                                 * resets Subject because the
+                                 * available subjects may change.
+                                 */
+                                if (
+                                    filter ===
+                                    academicLevelFilter &&
+                                    subjectFilter
+                                ) {
+                                    subjectFilter.value = "";
                                 }
 
                                 if (filterForm) {
@@ -595,7 +681,7 @@
 
                 /*
                  * =========================================
-                 * 2. COLUMN SORTING
+                 * Column sorting
                  * =========================================
                  */
 
@@ -650,7 +736,8 @@
                                 ) {
                                     sortDirectionInput.value = "desc";
                                 }
-                                else {
+                                else
+                                {
                                     sortDirectionInput.value = "asc";
                                 }
 
@@ -664,13 +751,8 @@
 
                 /*
                  * =========================================
-                 * 3. AUTOMATIC ALERT DISMISSAL
+                 * Automatic alert dismissal
                  * =========================================
-                 *
-                 * Success message: 3 seconds
-                 * Error message:   6 seconds
-                 *
-                 * The manual close button remains available.
                  */
 
                 const alerts =
@@ -692,10 +774,6 @@
                         window.setTimeout(
                             function () {
 
-                                /*
-                                 * Do nothing if the user has
-                                 * already closed the alert.
-                                 */
                                 if (
                                     !document.body.contains(
                                         alertElement
@@ -724,10 +802,6 @@
                             displayDuration
                         );
 
-                    /*
-                     * Stop the timer if the alert is closed
-                     * manually before the time ends.
-                     */
                     alertElement.addEventListener(
                         "closed.bs.alert",
                         function () {

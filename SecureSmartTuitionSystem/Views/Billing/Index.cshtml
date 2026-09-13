@@ -151,13 +151,30 @@
               id="billingFilterForm">
 
             <div class="billing-filter-row">
+                @if (User.IsInRole("Admin"))
+                {
+                    <div class="billing-filter-field billing-search-field">
+                        <label for="searchTerm">Search Student / Parent</label>
+
+                        <div class="billing-search-input">
+                            <i class="bi bi-search"></i>
+                            <input id="searchTerm"
+                                   name="searchTerm"
+                                   type="search"
+                                   value="@Model.SearchTerm"
+                                   maxlength="100"
+                                   placeholder="Name or guardian email"
+                                   class="form-control" />
+                        </div>
+                    </div>
+                }
+
                 <div class="billing-filter-field">
                     <label for="status">Bill Status</label>
 
                     <select id="status"
                             name="status"
-                            class="form-select"
-                            onchange="this.form.submit()">
+                            class="form-select">
 
                         <option value="">
                             All Statuses
@@ -168,15 +185,22 @@
                         {
                             <option value="@status"
                                     selected="@(Model.SelectedStatus == status
-                                                                                      ? "selected"
-                                                                                      : null)">
+                                                                                                                          ? "selected"
+                                                                                                                          : null)">
                             @StatusText(status)
                         </option>
                                                 }
                     </select>
                 </div>
 
-                @if (Model.SelectedStatus.HasValue)
+                <button type="submit"
+                        class="payment-link-button billing-filter-button">
+                    <i class="bi bi-funnel"></i>
+                    Apply Filters
+                </button>
+
+                @if (Model.SelectedStatus.HasValue ||
+                                !string.IsNullOrWhiteSpace(Model.SearchTerm))
                 {
                     <a asp-controller="Billing"
                        asp-action="Index"
@@ -217,29 +241,12 @@
                 <table class="billing-table">
                     <thead>
                         <tr>
-                            <th>
-                                <a asp-action="Index"
-                                   asp-route-status="@Model.SelectedStatus"
-                                   asp-route-sortBy="billNumber"
-                                   asp-route-sortDirection="@NextDirection("billNumber")">
-                                    Bill
-                                    <i class="bi @SortIcon("billNumber")"></i>
-                                </a>
-                            </th>
+                            <th class="billing-row-number">No.</th>
 
                             <th>
                                 <a asp-action="Index"
                                    asp-route-status="@Model.SelectedStatus"
-                                   asp-route-sortBy="applicationNumber"
-                                   asp-route-sortDirection="@NextDirection("applicationNumber")">
-                                    Application
-                                    <i class="bi @SortIcon("applicationNumber")"></i>
-                                </a>
-                            </th>
-
-                            <th>
-                                <a asp-action="Index"
-                                   asp-route-status="@Model.SelectedStatus"
+                                   asp-route-searchTerm="@Model.SearchTerm"
                                    asp-route-sortBy="studentName"
                                    asp-route-sortDirection="@NextDirection("studentName")">
                                     Student
@@ -252,6 +259,7 @@
                             <th>
                                 <a asp-action="Index"
                                    asp-route-status="@Model.SelectedStatus"
+                                   asp-route-searchTerm="@Model.SearchTerm"
                                    asp-route-sortBy="amount"
                                    asp-route-sortDirection="@NextDirection("amount")">
                                     Amount
@@ -262,6 +270,18 @@
                             <th>
                                 <a asp-action="Index"
                                    asp-route-status="@Model.SelectedStatus"
+                                   asp-route-searchTerm="@Model.SearchTerm"
+                                   asp-route-sortBy="issuedAt"
+                                   asp-route-sortDirection="@NextDirection("issuedAt")">
+                                    Issued Date
+                                    <i class="bi @SortIcon("issuedAt")"></i>
+                                </a>
+                            </th>
+
+                            <th>
+                                <a asp-action="Index"
+                                   asp-route-status="@Model.SelectedStatus"
+                                   asp-route-searchTerm="@Model.SearchTerm"
                                    asp-route-sortBy="dueAt"
                                    asp-route-sortDirection="@NextDirection("dueAt")">
                                     Due Date
@@ -272,6 +292,7 @@
                             <th>
                                 <a asp-action="Index"
                                    asp-route-status="@Model.SelectedStatus"
+                                   asp-route-searchTerm="@Model.SearchTerm"
                                    asp-route-sortBy="status"
                                    asp-route-sortDirection="@NextDirection("status")">
                                     Status
@@ -284,25 +305,21 @@
                     </thead>
 
                     <tbody>
-                        @foreach (var bill in Model.Bills)
+                        @for (int index = 0;
+                                            index < Model.Bills.Count;
+                                            index++)
                         {
+                            var bill = Model.Bills[index];
+
                             <tr>
-                                <td>
-                                    <strong>@bill.BillNumber</strong>
-
-                                    <small>
-                                        @(bill.IssuedAt
-                                         .ToLocalTime()
-                                         .ToString("dd MMM yyyy"))
-                                    </small>
-                                </td>
-
-                                <td>
-                                    @bill.ApplicationNumber
+                                <td class="billing-row-number">
+                                    @(index + 1)
                                 </td>
 
                                 <td>
                                     <strong>@bill.StudentName</strong>
+
+                                    <small>@bill.AcademicLevel</small>
                                 </td>
 
                                 <td>
@@ -318,10 +335,16 @@
                                 </td>
 
                                 <td>
+                                    @(bill.IssuedAt
+                                                                .ToLocalTime()
+                                                                .ToString("dd MMM yyyy"))
+                                                                                     </td>
+
+                                <td>
                                     @(bill.DueAt
-                                    .ToLocalTime()
-                                    .ToString("dd MMM yyyy"))
-                                </td>
+                                                                .ToLocalTime()
+                                                                .ToString("dd MMM yyyy"))
+                        </td>
 
                                 <td>
                                     <span class="@StatusClass(bill.Status)">
@@ -340,7 +363,7 @@
                                     </a>
                                 </td>
                             </tr>
-                        }
+                                        }
                     </tbody>
                 </table>
             </div>

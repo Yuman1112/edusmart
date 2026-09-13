@@ -5,15 +5,22 @@
 @{
     ViewData["Title"] = "Enrollment Requests";
 
+    EnrollmentStatus[] availableStatuses =
+    {
+        EnrollmentStatus.PendingReview,
+        EnrollmentStatus.ApprovedPendingPayment,
+        EnrollmentStatus.PaymentConfirmed,
+        EnrollmentStatus.Enrolled,
+        EnrollmentStatus.Rejected,
+        EnrollmentStatus.Cancelled
+    };
+
     string StatusText(EnrollmentStatus status)
     {
         return status switch
         {
             EnrollmentStatus.PendingReview =>
                 "Pending Review",
-
-            EnrollmentStatus.DuplicateReview =>
-                "Duplicate Review",
 
             EnrollmentStatus.ApprovedPendingPayment =>
                 "Pending Payment",
@@ -40,9 +47,6 @@
         {
             EnrollmentStatus.PendingReview =>
                 "status-pending",
-
-            EnrollmentStatus.DuplicateReview =>
-                "status-duplicate",
 
             EnrollmentStatus.ApprovedPendingPayment =>
                 "status-payment",
@@ -155,22 +159,6 @@
 
     <div class="enrollment-summary-card">
 
-        <div class="summary-icon summary-icon-duplicate">
-            <i class="bi bi-exclamation-triangle"></i>
-        </div>
-
-        <div>
-            <span>Duplicate Review</span>
-
-            <strong>
-                @Model.DuplicateReviewCount
-            </strong>
-        </div>
-
-    </div>
-
-    <div class="enrollment-summary-card">
-
         <div class="summary-icon summary-icon-payment">
             <i class="bi bi-credit-card"></i>
         </div>
@@ -231,8 +219,7 @@
             </p>
         </div>
 
-        @if (Model.Status.HasValue ||
-                Model.DuplicateOnly)
+        @if (Model.Status.HasValue)
         {
             <a asp-controller="AdminEnrollments"
                asp-action="Index"
@@ -261,8 +248,8 @@
                 </option>
 
                 @foreach (
-                                EnrollmentStatus enrollmentStatus
-                                in Enum.GetValues<EnrollmentStatus>())
+                    EnrollmentStatus enrollmentStatus
+                    in availableStatuses)
                 {
                     <option value="@enrollmentStatus">
                         @StatusText(enrollmentStatus)
@@ -270,25 +257,6 @@
                 }
 
             </select>
-        </div>
-
-        <div class="duplicate-filter-wrapper">
-
-            <label class="form-label">
-                Duplicate Checking
-            </label>
-
-            <label class="duplicate-filter-option">
-
-                <input asp-for="DuplicateOnly"
-                       class="form-check-input auto-filter" />
-
-                <span>
-                    Show potential duplicates only
-                </span>
-
-            </label>
-
         </div>
 
     </div>
@@ -323,8 +291,7 @@
                 matching the selected filters.
             </p>
 
-            @if (Model.Status.HasValue ||
-                    Model.DuplicateOnly)
+            @if (Model.Status.HasValue)
             {
                 <a asp-controller="AdminEnrollments"
                    asp-action="Index"
@@ -343,7 +310,7 @@
             <table class="table align-middle enrollment-table">
 
                 <colgroup>
-                    <col class="column-application" />
+                    <col class="column-number" />
                     <col class="column-student" />
                     <col class="column-guardian" />
                     <col class="column-classes" />
@@ -356,15 +323,8 @@
                 <thead>
                     <tr>
 
-                        <th>
-                            <button type="button"
-                                    class="enrollment-sort-button"
-                                    data-sort="applicationNumber">
-
-                                Application
-
-                                <i class="bi bi-arrow-down-up"></i>
-                            </button>
+                        <th class="number-column">
+                            No.
                         </th>
 
                         <th>
@@ -435,10 +395,15 @@
 
                 <tbody>
 
+                    @{
+                        int rowNumber = 0;
+                    }
+
                     @foreach (
-                                    var application
-                                    in Model.Applications)
+                        var application
+                        in Model.Applications)
                     {
+                        rowNumber++;
                         DateTime submittedLocal =
                         application.SubmittedAt
                         .ToLocalTime();
@@ -463,25 +428,8 @@
 
                         <tr>
 
-                            <!-- Application -->
-                            <td>
-                                <strong class="application-number">
-                                    @application.ApplicationNumber
-                                </strong>
-
-                                @if (
-                                                        application
-                                                        .HasPotentialDuplicate)
-                                {
-                                    <span class="duplicate-warning"
-                                          title="Potential duplicate record">
-
-                                        <i class="bi bi-exclamation-triangle-fill">
-                                        </i>
-
-                                        Duplicate
-                                    </span>
-                                }
+                            <td class="number-column">
+                                <strong>@rowNumber</strong>
                             </td>
 
                             <!-- Student -->

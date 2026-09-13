@@ -22,9 +22,22 @@ namespace SecureSmartTuitionSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(
             BillStatus? status,
+            string? searchTerm,
             string sortBy = "issuedAt",
             string sortDirection = "desc")
         {
+            searchTerm = (searchTerm ?? string.Empty).Trim();
+
+            if (searchTerm.Length > 100)
+            {
+                searchTerm = searchTerm[..100];
+            }
+
+            if (!User.IsInRole("Admin"))
+            {
+                searchTerm = string.Empty;
+            }
+
             sortBy = NormalizeSortBy(sortBy);
 
             sortDirection =
@@ -99,6 +112,14 @@ namespace SecureSmartTuitionSystem.Controllers
                     bill.Status == status.Value);
             }
 
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(bill =>
+                    bill.EnrollmentApplication.StudentName.Contains(searchTerm) ||
+                    bill.EnrollmentApplication.GuardianName.Contains(searchTerm) ||
+                    bill.EnrollmentApplication.GuardianEmail.Contains(searchTerm));
+            }
+
             query = ApplySorting(
                 query,
                 sortBy,
@@ -122,6 +143,10 @@ namespace SecureSmartTuitionSystem.Controllers
                             StudentName =
                                 bill.EnrollmentApplication
                                     .StudentName,
+
+                            AcademicLevel =
+                                bill.EnrollmentApplication
+                                    .AcademicLevel,
 
                             GuardianName =
                                 bill.EnrollmentApplication
@@ -171,6 +196,9 @@ namespace SecureSmartTuitionSystem.Controllers
 
                     SelectedStatus =
                         status,
+
+                    SearchTerm =
+                        searchTerm,
 
                     SortBy =
                         sortBy,
@@ -423,22 +451,6 @@ namespace SecureSmartTuitionSystem.Controllers
 
             return sortBy switch
             {
-                "billNumber" =>
-                    descending
-                        ? query.OrderByDescending(bill =>
-                            bill.BillNumber)
-                        : query.OrderBy(bill =>
-                            bill.BillNumber),
-
-                "applicationNumber" =>
-                    descending
-                        ? query.OrderByDescending(bill =>
-                            bill.EnrollmentApplication
-                                .ApplicationNumber)
-                        : query.OrderBy(bill =>
-                            bill.EnrollmentApplication
-                                .ApplicationNumber),
-
                 "studentName" =>
                     descending
                         ? query.OrderByDescending(bill =>
@@ -483,8 +495,6 @@ namespace SecureSmartTuitionSystem.Controllers
         {
             string[] allowedValues =
             {
-                "billNumber",
-                "applicationNumber",
                 "studentName",
                 "amount",
                 "issuedAt",

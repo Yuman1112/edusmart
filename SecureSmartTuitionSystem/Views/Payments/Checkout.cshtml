@@ -2,7 +2,7 @@
 @using SecureSmartTuitionSystem.Models.Billing
 
 @{
-    ViewData["Title"] = $"Payment - {Model.BillNumber}";
+    ViewData["Title"] = "Payment Details";
 
     bool canPay =
         Model.Status == BillStatus.PendingPayment ||
@@ -69,7 +69,7 @@
                         EduSmart Online Tuition
                     </span>
 
-                    <h1>Complete Your Payment</h1>
+                    <h1>Payment Details</h1>
 
                     <p>
                         Review the bill details before continuing
@@ -84,23 +84,30 @@
 
             <section class="payment-reference-grid">
                 <div>
-                    <span>Bill Number</span>
-                    <strong>@Model.BillNumber</strong>
-                </div>
-
-                <div>
-                    <span>Application Number</span>
-                    <strong>@Model.ApplicationNumber</strong>
-                </div>
-
-                <div>
                     <span>Student</span>
                     <strong>@Model.StudentName</strong>
                 </div>
 
                 <div>
+                    <span>Academic Level</span>
+                    <strong>@Model.AcademicLevel</strong>
+                </div>
+
+                <div>
                     <span>Guardian</span>
                     <strong>@Model.GuardianName</strong>
+                </div>
+
+                <div>
+                    <span>Guardian Email</span>
+                    <strong>@Model.GuardianEmail</strong>
+                </div>
+
+                <div>
+                    <span>Enrollment Duration</span>
+                    <strong>
+                        @Model.EnrollmentDurationMonths month(s)
+                    </strong>
                 </div>
 
                 <div>
@@ -165,9 +172,9 @@
                                     </td>
 
                                     <td class="payment-line-total
-                                                   @(item.LineTotal < 0
-                                                                                           ? "discount"
-                                                                                           : "")">
+                                                       @(item.LineTotal < 0
+                                                                                                                                   ? "discount"
+                                                                                                                                   : "")">
                                     RM @item.LineTotal.ToString("F2")
                                 </td>
                             </tr>

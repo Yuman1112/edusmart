@@ -582,17 +582,11 @@
 }
 
     .class-details-title h2 {
-        margin: 5px 0 0;
+        margin: 0;
         color: var(--navy);
-        font-size: 1.45rem;
+        font-size: 1.55rem;
+        font-weight: 800;
     }
-
-.class-code {
-    color: var(--teal-dark);
-    font-size: 0.86rem;
-    font-weight: 750;
-    white-space: nowrap;
-}
 
 .class-details-section {
     padding: 26px 28px;
@@ -745,4 +739,90 @@
     .compact-class-table {
         min-width: 1280px;
     }
+}
+
+.compact-class-table .column-number {
+    width: 60px;
+}
+
+.compact-class-table .number-column {
+    width: 60px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.compact-class-table tbody .number-column {
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.class-details-title > .status-pill {
+    min-width: 105px;
+    padding: 10px 18px;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.compact-class-table .column-enrollment {
+    width: 115px;
+}
+
+.enrollment-heading,
+.enrollment-column {
+    text-align: center !important;
+}
+
+.enrollment-column {
+    white-space: nowrap;
+}
+
+.compact-class-table .column-enrollment {
+    width: 110px;
+}
+
+.enrollment-heading,
+.enrollment-column {
+    text-align: center !important;
+}
+
+.enrollment-column {
+    white-space: nowrap;
+}
+
+.enrollment-count {
+    color: var(--navy);
+    font-size: 0.92rem;
+    font-weight: 750;
+}
+
+.capacity-label {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.capacity-label {
+    display: block;
+    margin-top: 5px;
+    color: #b42318;
+    font-size: 0.75rem;
+    font-weight: 750;
+}
+
+.details-capacity {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 3px;
+    padding: 8px 13px;
+    border-radius: 9px;
+}
+
+.capacity-remaining {
+    display: block;
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 0.82rem;
 }

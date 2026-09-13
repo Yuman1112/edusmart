@@ -33,17 +33,11 @@
 
             <h1>Thank You</h1>
 
-            <p>
-                Your Stripe test payment was verified successfully.
-            </p>
-
-            <div class="payment-completed-message">
-                <i class="bi bi-check-circle-fill"></i>
-
-                <div>
-                    <strong>Payment Successful</strong>
-                    <span>@statusMessage</span>
-                </div>
+            <div class="payment-success-copy">
+                <p>Payment was confirmed successfully.</p>
+                <p>Your bill is now paid.</p>
+                <p>Your enrollment is now confirmed.</p>
+                <p>Welcome to EduSmart.</p>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(checkoutSessionId))

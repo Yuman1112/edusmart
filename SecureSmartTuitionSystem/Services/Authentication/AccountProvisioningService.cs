@@ -178,8 +178,8 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                 CancellationToken cancellationToken)
         {
             /*
-             * Use the profile already linked during
-             * duplicate review.
+             * Use the existing parent profile already linked
+             * during application submission.
              */
             if (application.ExistingParentProfileId.HasValue)
             {
@@ -381,8 +381,8 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                 CancellationToken cancellationToken)
         {
             /*
-             * Use the student profile already linked
-             * during duplicate review.
+             * Use the existing student profile already linked
+             * during application submission.
              */
             if (application.ExistingStudentProfileId.HasValue)
             {
