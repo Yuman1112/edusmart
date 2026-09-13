@@ -65,6 +65,11 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                     parentProfile,
                     cancellationToken);
 
+            await EnsureParentStudentLinkAsync(
+                parentProfile,
+                studentProfile,
+                cancellationToken);
+
             int createdEnrollmentCount =
                 await CreateStudentEnrollmentsAsync(
                     application,
@@ -552,6 +557,43 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                 cancellationToken);
 
             return studentProfile;
+        }
+
+        private async Task EnsureParentStudentLinkAsync(
+            ParentProfile parentProfile,
+            StudentProfile studentProfile,
+            CancellationToken cancellationToken)
+        {
+            bool relationshipExists =
+                await _context.ParentStudents
+                    .AnyAsync(
+                        link =>
+                            link.ParentProfileId ==
+                                parentProfile.ParentProfileId &&
+                            link.StudentProfileId ==
+                                studentProfile.StudentProfileId,
+                        cancellationToken);
+
+            if (relationshipExists)
+            {
+                return;
+            }
+
+            var parentStudent =
+                new ParentStudent
+                {
+                    ParentProfileId =
+                        parentProfile.ParentProfileId,
+
+                    StudentProfileId =
+                        studentProfile.StudentProfileId
+                };
+
+            _context.ParentStudents.Add(
+                parentStudent);
+
+            await _context.SaveChangesAsync(
+                cancellationToken);
         }
 
         private async Task<int>

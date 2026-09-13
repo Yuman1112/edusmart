@@ -28,7 +28,8 @@
 
             <form asp-controller="Enrollment"
                   asp-action="GuardianDetails"
-                  method="post">
+                  method="post"
+                  id="guardianForm">
 
                 <!-- ==========================================
                      EXISTING PARENT CHECKBOX
@@ -263,7 +264,9 @@
                                placeholder="000000-00-0000" />
 
                         <span asp-validation-for="GuardianIdentificationNumber"
-                              class="text-danger">
+                              class="text-danger"
+                              id="guardianIcValidation">
+
                         </span>
 
                         <div class="form-text">
@@ -330,10 +333,17 @@
                 document.getElementById(
                     "guardianPhone");
 
+            const guardianIcValidation =
+                document.getElementById(
+                    "guardianIcValidation");
+
             const guardianIc =
                 document.getElementById(
                     "guardianIc");
 
+            const guardianForm =
+                document.getElementById(
+                    "guardianForm");
 
             function updateGuardianFields() {
 
@@ -351,7 +361,6 @@
                 newFields.disabled =
                     useExisting;
             }
-
 
             function formatIcNumber(value) {
 
@@ -382,6 +391,79 @@
                 return digits;
             }
 
+            function validateGuardianIc(value) {
+
+                if (!guardianIcValidation) {
+                    return true;
+                }
+
+                const digits =
+                    value.replace(/\D/g, "");
+
+                /*
+                 * Empty value is handled by server-side /
+                 * required validation.
+                 */
+                if (digits.length === 0) {
+
+                    guardianIcValidation.textContent =
+                        "";
+
+                    return true;
+                }
+
+                if (digits.length !== 12) {
+
+                    guardianIcValidation.textContent =
+                        "Please enter the IC number in the format 000000-00-0000.";
+
+                    return false;
+                }
+
+                const yy =
+                    parseInt(
+                        digits.substring(0, 2));
+
+                const mm =
+                    parseInt(
+                        digits.substring(2, 4));
+
+                const dd =
+                    parseInt(
+                        digits.substring(4, 6));
+
+                const currentTwoDigitYear =
+                    new Date().getFullYear() % 100;
+
+                const fullYear =
+                    yy <= currentTwoDigitYear
+                        ? 2000 + yy
+                        : 1900 + yy;
+
+                const date =
+                    new Date(
+                        fullYear,
+                        mm - 1,
+                        dd);
+
+                const validDate =
+                    date.getFullYear() === fullYear &&
+                    date.getMonth() === mm - 1 &&
+                    date.getDate() === dd;
+
+                if (!validDate) {
+
+                    guardianIcValidation.textContent =
+                        "The IC number contains an invalid date of birth.";
+
+                    return false;
+                }
+
+                guardianIcValidation.textContent =
+                    "";
+
+                return true;
+            }
 
             function formatPhoneNumber(value) {
 
@@ -402,7 +484,6 @@
                 return digits;
             }
 
-
             if (guardianIc) {
                 guardianIc.addEventListener(
                     "input",
@@ -411,9 +492,11 @@
                         this.value =
                             formatIcNumber(
                                 this.value);
+
+                        validateGuardianIc(
+                            this.value);
                     });
             }
-
 
             if (guardianPhone) {
                 guardianPhone.addEventListener(
@@ -426,6 +509,25 @@
                     });
             }
 
+            if (guardianForm) {
+
+                guardianForm.addEventListener(
+                    "submit",
+                    function (event) {
+
+                        if (checkbox.checked) {
+                            return;
+                        }
+
+                        const validIc =
+                            validateGuardianIc(
+                                guardianIc?.value ?? "");
+
+                        if (!validIc) {
+                            event.preventDefault();
+                        }
+                    });
+            }
 
             checkbox.addEventListener(
                 "change",

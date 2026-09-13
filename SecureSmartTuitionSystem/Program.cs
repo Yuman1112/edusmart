@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SecureSmartTuitionSystem.Data;
@@ -7,6 +8,7 @@ using SecureSmartTuitionSystem.Services.Authentication;
 using SecureSmartTuitionSystem.Services.Billing;
 using SecureSmartTuitionSystem.Settings;
 using Stripe;
+using System.Text;
 
 var builder =
     WebApplication.CreateBuilder(args);
@@ -132,6 +134,10 @@ builder.Services.Configure<EmailSettings>(
 builder.Services.AddScoped<
     IFirstPaymentEmailService,
     FirstPaymentEmailService>();
+
+builder.Services.AddScoped<
+    IAccountSetupEmailService,
+    AccountSetupEmailService>();
 
 /*
  * =====================================================

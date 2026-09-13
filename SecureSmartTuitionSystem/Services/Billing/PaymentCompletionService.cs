@@ -1,9 +1,13 @@
 ﻿using System.Data;
+using System.Text;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Billing;
 using SecureSmartTuitionSystem.Models.Enrollment;
+using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.Services.Authentication;
 
 namespace SecureSmartTuitionSystem.Services.Billing
@@ -16,6 +20,12 @@ namespace SecureSmartTuitionSystem.Services.Billing
         private readonly AccountProvisioningService
             _accountProvisioningService;
 
+        private readonly UserManager<ApplicationUser>
+            _userManager;
+
+        private readonly IAccountSetupEmailService
+            _accountSetupEmailService;
+
         private readonly ILogger<PaymentCompletionService>
             _logger;
 
@@ -23,11 +33,23 @@ namespace SecureSmartTuitionSystem.Services.Billing
             ApplicationDbContext context,
             AccountProvisioningService
                 accountProvisioningService,
+            UserManager<ApplicationUser>
+                userManager,
+            IAccountSetupEmailService
+                accountSetupEmailService,
             ILogger<PaymentCompletionService> logger)
         {
             _context = context;
+
             _accountProvisioningService =
                 accountProvisioningService;
+
+            _userManager =
+                userManager;
+
+            _accountSetupEmailService =
+                accountSetupEmailService;
+
             _logger = logger;
         }
 
@@ -280,6 +302,79 @@ namespace SecureSmartTuitionSystem.Services.Billing
                 {
                     await transaction.CommitAsync(
                         cancellationToken);
+                }
+
+                /*
+                 * =====================================================
+                 * ACCOUNT SETUP EMAIL
+                 * =====================================================
+                 *
+                 * Send the first-time password setup email only
+                 * after the payment and enrollment transaction
+                 * has been committed successfully.
+                 */
+                try
+                {
+                    ApplicationUser? parentUser =
+                        await _userManager.FindByNameAsync(
+                            provisioningResult.ParentUserName);
+
+                    if (parentUser != null &&
+                        parentUser.IsActive &&
+                        parentUser.MustChangePassword &&
+                        !string.IsNullOrWhiteSpace(
+                            parentUser.Email))
+                    {
+                        ApplicationUser? studentUser =
+                            await _userManager.FindByNameAsync(
+                                provisioningResult.StudentUserName);
+
+                        string token =
+                            await _userManager
+                                .GeneratePasswordResetTokenAsync(
+                                    parentUser);
+
+                        string encodedToken =
+                            WebEncoders.Base64UrlEncode(
+                                Encoding.UTF8.GetBytes(token));
+
+                        string setupUrl =
+                            "https://localhost:7086" +
+                            "/Identity/Account/SetupPassword" +
+                            $"?userId={Uri.EscapeDataString(parentUser.Id)}" +
+                            $"&token={Uri.EscapeDataString(encodedToken)}";
+
+                        string guardianName =
+                            parentUser.FullName
+                            ?? provisioningResult.ParentUserName;
+
+                        string studentName =
+                            studentUser?.FullName
+                            ?? provisioningResult.StudentUserName;
+
+                        await _accountSetupEmailService.SendAsync(
+                            parentUser.Email,
+                            guardianName,
+                            provisioningResult.ParentUserName,
+                            studentName,
+                            setupUrl,
+                            cancellationToken);
+
+                        _logger.LogInformation(
+                            "Account setup email was sent to parent " +
+                            "{ParentUserName} for application " +
+                            "{ApplicationNumber}.",
+                            provisioningResult.ParentUserName,
+                            application.ApplicationNumber);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Account setup email could not be sent " +
+                        "for application {ApplicationNumber}.",
+                        application.ApplicationNumber);
                 }
 
                 _logger.LogInformation(

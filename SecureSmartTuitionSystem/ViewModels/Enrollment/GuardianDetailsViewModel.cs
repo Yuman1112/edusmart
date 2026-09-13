@@ -2,7 +2,7 @@
 
 namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 {
-    public class GuardianDetailsViewModel
+    public class GuardianDetailsViewModel : IValidatableObject
     {
         // ==========================================
         // Existing Parent / Guardian Account
@@ -45,5 +45,79 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         [StringLength(14)]
         [Display(Name = "Identification Number")]
         public string? GuardianIdentificationNumber { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(
+            ValidationContext validationContext)
+        {
+            if (UseExistingParentAccount)
+            {
+                yield break;
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                GuardianIdentificationNumber))
+            {
+                yield break;
+            }
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(
+                    GuardianIdentificationNumber,
+                    @"^\d{6}-\d{2}-\d{4}$"))
+            {
+                yield break;
+            }
+
+            var digits =
+                new string(
+                    GuardianIdentificationNumber
+                        .Where(char.IsDigit)
+                        .ToArray());
+
+            var yy =
+                int.Parse(
+                    digits.Substring(0, 2));
+
+            var mm =
+                int.Parse(
+                    digits.Substring(2, 2));
+
+            var dd =
+                int.Parse(
+                    digits.Substring(4, 2));
+
+            var currentTwoDigitYear =
+                DateTime.Today.Year % 100;
+
+            var fullYear =
+                yy <= currentTwoDigitYear
+                    ? 2000 + yy
+                    : 1900 + yy;
+
+            bool validDate = true;
+
+            try
+            {
+                _ =
+                    new DateTime(
+                        fullYear,
+                        mm,
+                        dd);
+            }
+            catch
+            {
+                validDate = false;
+            }
+
+            if (!validDate)
+            {
+                yield return new ValidationResult(
+                    "The IC number contains an invalid date of birth.",
+                    new[]
+                    {
+                        nameof(
+                            GuardianIdentificationNumber)
+                    });
+            }
+        }
     }
 }
