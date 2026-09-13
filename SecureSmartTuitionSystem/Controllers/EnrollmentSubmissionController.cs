@@ -1,4 +1,4 @@
-﻿using System.Data;
+﻿﻿using System.Data;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -491,19 +491,17 @@ namespace SecureSmartTuitionSystem.Controllers
                 }
 
                 /*
-                 * Find an existing student using the
-                 * identification type and number.
+                 * Find an existing student using ic number.
                  */
                 var existingStudent =
                     await _context.StudentProfiles
                         .FirstOrDefaultAsync(student =>
-                            student.IdentificationType ==
-                                studentDetails
-                                    .StudentIdentificationType &&
                             student.IdentificationNumber ==
                                 studentDetails
                                     .StudentIdentificationNumber);
 
+
+                    existingStudent != null;
 
                 /*
                  * Check whether the student is already
@@ -511,39 +509,17 @@ namespace SecureSmartTuitionSystem.Controllers
                  */
                 if (existingStudent != null)
                 {
-                    bool alreadyEnrolled =
-                        await _context.StudentEnrollments
-                            .AnyAsync(enrollment =>
-                                enrollment.StudentProfileId ==
-                                    existingStudent
-                                        .StudentProfileId &&
-                                model.SelectedClassSessionIds
-                                    .Contains(
-                                        enrollment
-                                            .ClassSessionId) &&
-                                (enrollment.Status ==
-                                    StudentEnrollmentStatus
-                                        .Active ||
-                                 enrollment.Status ==
-                                    StudentEnrollmentStatus
-                                        .PendingDrop));
+                    ModelState.AddModelError(
+                        string.Empty,
+                        "This student already has an EduSmart account. " +
+                        "Please sign in to enroll in additional subjects.");
 
-                    if (alreadyEnrolled)
-                    {
-                        ModelState.AddModelError(
-                            nameof(
-                                model
-                                    .SelectedClassSessionIds),
-                            "The student is already enrolled " +
-                            "in one or more selected classes.");
+                    await PopulateSelectionViewModelAsync(
+                        model);
 
-                        await PopulateSelectionViewModelAsync(
-                            model);
-
-                        return View(
-                            EnrollmentOptionsViewPath,
-                            model);
-                    }
+                    return View(
+                        EnrollmentOptionsViewPath,
+                        model);
                 }
 
                 /*
@@ -699,9 +675,9 @@ namespace SecureSmartTuitionSystem.Controllers
                         GetLastFourDigits(
                             guardianIdentificationNumber);
                 }
-
-                EnrollmentStatus initialStatus =
                     EnrollmentStatus.PendingReview;
+                        : EnrollmentStatus
+                            .PendingReview;
 
                 decimal monthlyTuitionFee =
                     selectedClasses.Sum(classSession =>
@@ -783,8 +759,7 @@ namespace SecureSmartTuitionSystem.Controllers
                                 .ParentProfileId,
 
                         ExistingStudentProfileId =
-                            existingStudent?
-                                .StudentProfileId,
+                            null,
 
                         GuardianName =
                             guardianName,
@@ -803,11 +778,6 @@ namespace SecureSmartTuitionSystem.Controllers
 
                         StudentName =
                             studentDetails.StudentName
-                                .Trim(),
-
-                        StudentIdentificationType =
-                            studentDetails
-                                .StudentIdentificationType
                                 .Trim(),
 
                         StudentIdentificationNumber =
@@ -899,11 +869,11 @@ namespace SecureSmartTuitionSystem.Controllers
 
                         FinalTwoWeeksConfirmed =
                             model
-                                .FinalTwoWeeksConfirmed,
-
                         PotentialDuplicateStudent = false,
 
                         PotentialDuplicateGuardian = false,
+                        PotentialDuplicateGuardian =
+                            potentialDuplicateGuardian,
 
                         Status = initialStatus,
 

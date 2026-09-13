@@ -76,8 +76,8 @@ namespace SecureSmartTuitionSystem.Data
                 roleManager);
 
             /*
-             * Demo accounts are only created when
-             * seedBasicAccounts is true.
+             * This only creates the four demo accounts when
+             * seedBasicAccounts is set to true in Program.cs.
              */
             if (!seedBasicAccounts)
             {
@@ -102,10 +102,14 @@ namespace SecureSmartTuitionSystem.Data
                 context,
                 userManager);
 
-            await SeedDemoParentProfileAsync(
-                context,
-                userManager);
-        }
+                await SeedDemoParentProfileAsync(
+                    context,
+                    userManager);
+
+                await SeedDemoStudentProfileAsync(
+                    context,
+                    userManager);
+            }
 
 
         /*
@@ -396,12 +400,98 @@ namespace SecureSmartTuitionSystem.Data
             }
         }
 
+        /*
+         * =====================================================
+         * DEMO STUDENT PROFILE
+         * =====================================================
+         */
+
+        private static async Task SeedDemoStudentProfileAsync(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager)
+        {
+            var studentUser =
+                await userManager.FindByNameAsync(
+                    "ST00001");
+
+            if (studentUser == null)
+            {
+                return;
+            }
+
+            var existingStudentProfile =
+                await context.StudentProfiles
+                    .FirstOrDefaultAsync(
+                        student =>
+                            student.ApplicationUserId ==
+                            studentUser.Id);
+
+            if (existingStudentProfile != null)
+            {
+                return;
+            }
+
+            var parentProfile =
+                await context.ParentProfiles
+                    .FirstOrDefaultAsync();
+
+            if (parentProfile == null)
+            {
+                return;
+            }
+
+            var studentProfile =
+                new StudentProfile
+                {
+                    ApplicationUserId =
+                        studentUser.Id,
+
+                    StudentNumber =
+                        "ST00001",
+
+                    FullName =
+                        studentUser.FullName
+                        ?? "Test Student",
+
+                    IdentificationNumber =
+                        "090101-10-1234",
+
+                    DateOfBirth =
+                        new DateTime(2009, 1, 1),
+
+                    Gender =
+                        "Female",
+
+                    School =
+                        "Test School",
+
+                    AcademicLevel =
+                        "Form 5",
+
+                    IsActive =
+                        true,
+
+                    CreatedAt =
+                        DateTime.UtcNow,
+
+                    ParentProfileId =
+                        parentProfile.ParentProfileId
+                };
+
+            context.StudentProfiles.Add(
+                studentProfile);
+
+            await context.SaveChangesAsync();
+        }
+
 
         /*
          * =====================================================
          * DEMO TUTOR PROFILE
          * =====================================================
          */
+        private static async Task CreateRolesAsync(
+            RoleManager<IdentityRole> roleManager)
 
         private static async Task
             SeedDemoTutorProfileAsync(
@@ -590,11 +680,256 @@ namespace SecureSmartTuitionSystem.Data
                 return;
             }
 
-            string identityErrors =
-                string.Join(
-                    ", ",
-                    result.Errors.Select(error =>
-                        error.Description));
+            /*
+             * =================================================
+             * TEST APPLICATION 1 - PENDING REVIEW
+             * =================================================
+             */
+
+            const string pendingApplicationNumber =
+                "EA00001";
+
+            bool pendingApplicationExists =
+                await context.EnrollmentApplications
+                    .AnyAsync(
+                        application =>
+                            application
+                                .ApplicationNumber ==
+                            pendingApplicationNumber);
+
+            if (!pendingApplicationExists)
+            {
+                var firstClass =
+                    availableClasses[0];
+
+                var pendingApplication =
+                    new EnrollmentApplication
+                    {
+                        ApplicationNumber =
+                            pendingApplicationNumber,
+
+                        GuardianName =
+                            "Sample Guardian",
+
+                        GuardianEmail =
+                            "guardian.sample@gmail.com",
+
+                        GuardianPhoneNumber =
+                            "012-3456789",
+
+                        GuardianIdentificationLast4 =
+                            "5678",
+
+                        StudentName =
+                            "Sample Student",
+
+                        StudentDateOfBirth =
+                            new DateTime(
+                                2013,
+                                5,
+                                15),
+
+                        AcademicLevel =
+                            firstClass.Subject
+                                .AcademicLevel,
+
+                        RequestedStartDate =
+                            DateTime.Today.AddDays(14),
+
+                        HardcopyMaterialsRequested =
+                            false,
+
+                        FinalTwoWeeksConfirmed =
+                            false,
+
+                        PotentialDuplicateStudent =
+                            false,
+
+                        PotentialDuplicateGuardian =
+                            false,
+
+                        Status =
+                            EnrollmentStatus.PendingReview,
+
+                        ApplicantNotes =
+                            "Test enrollment application " +
+                            "for the Admin review workflow.",
+
+                        SubmittedAt =
+                            DateTime.UtcNow.AddDays(-2)
+                    };
+
+                pendingApplication
+                    .SelectedSubjects.Add(
+                        new EnrollmentApplicationSubject
+                        {
+                            ClassSessionId =
+                                firstClass
+                                    .ClassSessionId,
+
+                            MonthlyFeeAtApplication =
+                                firstClass.Subject
+                                    .MonthlyFee
+                        });
+
+                pendingApplication
+                    .StatusHistories.Add(
+                        new EnrollmentStatusHistory
+                        {
+                            PreviousStatus =
+                                null,
+
+                            NewStatus =
+                                EnrollmentStatus
+                                    .PendingReview,
+
+                            ChangedAt =
+                                pendingApplication
+                                    .SubmittedAt,
+
+                            Remarks =
+                                "Enrollment application " +
+                                "submitted."
+                        });
+
+                context.EnrollmentApplications.Add(
+                    pendingApplication);
+            }
+                context.EnrollmentApplications.Add(
+            /*
+             * =================================================
+             * TEST APPLICATION 2 - DUPLICATE REVIEW
+             * =================================================
+             */
+
+            const string duplicateApplicationNumber =
+                "EA00002";
+
+            bool duplicateApplicationExists =
+                await context.EnrollmentApplications
+                    .AnyAsync(
+                        application =>
+                            application
+                                .ApplicationNumber ==
+                            duplicateApplicationNumber);
+
+            if (!duplicateApplicationExists)
+            {
+                var selectedClass =
+                    availableClasses.Count > 1
+                        ? availableClasses[1]
+                        : availableClasses[0];
+
+                var duplicateApplication =
+                    new EnrollmentApplication
+                    {
+                        ApplicationNumber =
+                            duplicateApplicationNumber,
+
+                        GuardianName =
+                            "Existing Guardian Test",
+
+                        GuardianEmail =
+                            "existing.guardian@gmail.com",
+
+                        GuardianPhoneNumber =
+                            "013-8765432",
+
+                        GuardianIdentificationLast4 =
+                            "4321",
+
+                        StudentName =
+                            "Existing Student Test",
+
+                        StudentDateOfBirth =
+                            new DateTime(
+                                2012,
+                                8,
+                                20),
+
+                        AcademicLevel =
+                            selectedClass.Subject
+                                .AcademicLevel,
+
+                        RequestedStartDate =
+                            DateTime.Today.AddDays(21),
+
+                        HardcopyMaterialsRequested =
+                            true,
+
+                        FinalTwoWeeksConfirmed =
+                            false,
+
+                        PotentialDuplicateStudent =
+                            true,
+
+                        PotentialDuplicateGuardian =
+                            true,
+
+                        Status =
+                            EnrollmentStatus
+                                .DuplicateReview,
+
+                        ApplicantNotes =
+                            "Test application containing " +
+                            "possible duplicate student and " +
+                            "guardian records.",
+
+                        SubmittedAt =
+                            DateTime.UtcNow.AddDays(-1)
+                    };
+
+                duplicateApplication
+                    .SelectedSubjects.Add(
+                        new EnrollmentApplicationSubject
+                        {
+                            ClassSessionId =
+                                selectedClass
+                                    .ClassSessionId,
+
+                            MonthlyFeeAtApplication =
+                                selectedClass.Subject
+                                    .MonthlyFee
+                        });
+
+                duplicateApplication
+                    .StatusHistories.Add(
+                        new EnrollmentStatusHistory
+                        {
+                            PreviousStatus =
+                                null,
+
+                            NewStatus =
+                                EnrollmentStatus
+                                    .DuplicateReview,
+
+                            ChangedAt =
+                                duplicateApplication
+                                    .SubmittedAt,
+
+                            Remarks =
+                                "Potential duplicate records " +
+                                "detected during application " +
+                                "submission."
+                        });
+
+                context.EnrollmentApplications.Add(
+                    duplicateApplication);
+            }
+                                "detected during application " +
+                                "submission."
+                        });
+
+                context.EnrollmentApplications.Add(
+                    duplicateApplication);
+            }
+                                "detected during application " +
+                                "submission."
+                        });
+
+                context.EnrollmentApplications.Add(
+                    duplicateApplication);
+            }
 
             throw new InvalidOperationException(
                 $"{errorMessage} {identityErrors}");

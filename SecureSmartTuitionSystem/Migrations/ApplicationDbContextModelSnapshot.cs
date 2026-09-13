@@ -580,9 +580,6 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<bool>("PotentialDuplicateGuardian")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("PotentialDuplicateStudent")
-                        .HasColumnType("bit");
-
                     b.Property<string>("RejectionReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -611,12 +608,9 @@ namespace SecureSmartTuitionSystem.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("StudentIdentificationNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("StudentIdentificationType")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("nvarchar(14)");
 
                     b.Property<string>("StudentName")
                         .IsRequired()
@@ -925,6 +919,46 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("ParentProfiles");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.ParentStudent", b =>
+                {
+                    b.Property<int>("ParentStudentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ParentStudentId"));
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPrimaryGuardian")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LinkedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ParentProfileId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Relationship")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("StudentProfileId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ParentStudentId");
+
+                    b.HasIndex("StudentProfileId");
+
+                    b.HasIndex("ParentProfileId", "StudentProfileId")
+                        .IsUnique();
+
+                    b.ToTable("ParentStudents");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.StudentProfile", b =>
                 {
                     b.Property<int>("StudentProfileId")
@@ -962,11 +996,6 @@ namespace SecureSmartTuitionSystem.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
-                    b.Property<string>("IdentificationType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -988,6 +1017,9 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("ApplicationUserId")
                         .IsUnique()
                         .HasFilter("[ApplicationUserId] IS NOT NULL");
+
+                    b.HasIndex("IdentificationNumber")
+                        .IsUnique();
 
                     b.HasIndex("ParentProfileId");
 
@@ -1264,6 +1296,25 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("ApplicationUser");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.ParentStudent", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ParentProfile", "ParentProfile")
+                        .WithMany("ParentStudents")
+                        .HasForeignKey("ParentProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.StudentProfile", "StudentProfile")
+                        .WithMany("ParentStudents")
+                        .HasForeignKey("StudentProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ParentProfile");
+
+                    b.Navigation("StudentProfile");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.StudentProfile", b =>
                 {
                     b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "ApplicationUser")
@@ -1316,7 +1367,14 @@ namespace SecureSmartTuitionSystem.Migrations
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.ParentProfile", b =>
                 {
+                    b.Navigation("ParentStudents");
+
                     b.Navigation("Students");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.StudentProfile", b =>
+                {
+                    b.Navigation("ParentStudents");
                 });
 #pragma warning restore 612, 618
         }

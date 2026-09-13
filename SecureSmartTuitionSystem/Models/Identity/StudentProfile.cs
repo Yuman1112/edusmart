@@ -16,10 +16,6 @@ namespace SecureSmartTuitionSystem.Models.Identity
 
         [Required]
         [StringLength(30)]
-        public string IdentificationType { get; set; } = string.Empty;
-
-        [Required]
-        [StringLength(30)]
         public string IdentificationNumber { get; set; } = string.Empty;
 
         [Required]
@@ -42,9 +38,14 @@ namespace SecureSmartTuitionSystem.Models.Identity
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        // OLD relationship - temporarily kept during migration.
         public int ParentProfileId { get; set; }
 
         public ParentProfile ParentProfile { get; set; } = null!;
+
+        // NEW Parent-Student relationship.
+        public ICollection<ParentStudent> ParentStudents { get; set; }
+            = new List<ParentStudent>();
 
         public string? ApplicationUserId { get; set; }
 

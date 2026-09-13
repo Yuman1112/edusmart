@@ -91,13 +91,49 @@ namespace SecureSmartTuitionSystem.Controllers
 
         /*
          * =====================================================
+         * CHECK EXISTING STUDENT IC
+         * =====================================================
+         */
+        [HttpGet]
+        public async Task<IActionResult> CheckStudentIc(
+            string icNumber)
+        {
+            if (string.IsNullOrWhiteSpace(icNumber) ||
+                !System.Text.RegularExpressions.Regex.IsMatch(
+                    icNumber,
+                    @"^\d{6}-\d{2}-\d{4}$"))
+            {
+                return Json(new
+                {
+                    exists = false
+                });
+            }
+
+            string normalizedIc =
+                icNumber.Trim();
+
+            bool exists =
+                await _context.StudentProfiles
+                    .AsNoTracking()
+                    .AnyAsync(student =>
+                        student.IdentificationNumber ==
+                            normalizedIc);
+
+            return Json(new
+            {
+                exists
+            });
+        }
+
+        /*
+         * =====================================================
          * STEP 1 - STUDENT DETAILS POST
          * =====================================================
          */
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult StudentDetails(
+        public async Task<IActionResult> StudentDetails(
             StudentDetailsViewModel model)
         {
             if (!ModelState.IsValid)
@@ -105,14 +141,35 @@ namespace SecureSmartTuitionSystem.Controllers
                 return View(model);
             }
 
+            // Normalize identification number
+            var identificationNumber =
+                model.StudentIdentificationNumber.Trim();
+
+            // Check whether the same identification already exists
+            var existingStudent =
+                await _context.StudentProfiles
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        student =>
+                            student.IdentificationNumber ==
+                                identificationNumber);
+
+            if (existingStudent != null)
+            {
+                ModelState.AddModelError(
+                    nameof(model.StudentIdentificationNumber),
+                    "A student with this IC number already exists. " +
+                    "Please sign in to EduSmart to enroll in additional subjects.");
+
+                return View(model);
+            }
+
+            // Save normalized value back into the model
+            model.StudentIdentificationNumber =
+                identificationNumber;
+
             model.StudentName =
                 model.StudentName.Trim();
-
-            model.StudentIdentificationType =
-                model.StudentIdentificationType.Trim();
-
-            model.StudentIdentificationNumber =
-                model.StudentIdentificationNumber.Trim();
 
             model.StudentGender =
                 model.StudentGender.Trim();
@@ -120,14 +177,16 @@ namespace SecureSmartTuitionSystem.Controllers
             model.StudentSchool =
                 model.StudentSchool.Trim();
 
+            HttpContext.Session.Remove(
+                ExistingParentUserIdSessionKey);
+
+            HttpContext.Session.Remove(
+                GuardianDetailsSessionKey);
+
             HttpContext.Session.SetString(
                 StudentDetailsSessionKey,
                 JsonSerializer.Serialize(model));
 
-            /*
-             * Student details are complete.
-             * Continue to Guardian Details.
-             */
             return RedirectToAction(
                 nameof(GuardianDetails));
         }
@@ -716,7 +775,6 @@ namespace SecureSmartTuitionSystem.Controllers
          * HELPERS
          * =====================================================
          */
-
         private bool HasStudentDetails()
         {
             return !string.IsNullOrWhiteSpace(
