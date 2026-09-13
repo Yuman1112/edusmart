@@ -591,3 +591,11 @@
         width: 100%;
     }
 }
+
+.browse-empty-state p span {
+    display: block;
+}
+
+    .browse-empty-state p span + span {
+        margin-top: 4px;
+    }

@@ -1,8 +1,12 @@
 ﻿@model SecureSmartTuitionSystem.ViewModels.Billing.PaymentReceiptViewModel
+@using System.Text.Json
 
 @{
     ViewData["Title"] =
-        $"Receipt {Model.PaymentNumber}";
+        $"Receipt - {Model.StudentName} - {Model.TuitionPeriod}";
+
+    string receiptFileName =
+        $"Receipt - {Model.StudentName} - {Model.TuitionPeriod}";
 }
 
 @section Styles {
@@ -25,7 +29,7 @@
 
         <button type="button"
                 class="receipt-print-button"
-                onclick="window.print()">
+                onclick="printReceipt()">
 
             <i class="bi bi-printer"></i>
             Print Receipt
@@ -124,10 +128,6 @@
                 <strong>
                     @Model.StudentName
                 </strong>
-
-                <p>
-                    Enrollment @Model.ApplicationNumber
-                </p>
             </div>
 
         </section>
@@ -265,3 +265,26 @@
     </main>
 
 </div>
+
+@section Scripts {
+    <script>
+        const receiptFileName =
+            @Html.Raw(JsonSerializer.Serialize(receiptFileName));
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+                document.title = receiptFileName;
+            });
+
+        function printReceipt() {
+            document.title = receiptFileName;
+
+            window.setTimeout(
+                function () {
+                    window.print();
+                },
+                200);
+        }
+    </script>
+}

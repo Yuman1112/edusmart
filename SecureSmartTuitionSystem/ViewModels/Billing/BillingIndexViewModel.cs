@@ -16,6 +16,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Billing
 
         public BillStatus? SelectedStatus { get; set; }
 
+        public string SearchTerm { get; set; } = string.Empty;
+
         public string SortBy { get; set; } = "issuedAt";
 
         public string SortDirection { get; set; } = "desc";
@@ -33,6 +35,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Billing
         public string ApplicationNumber { get; set; } = string.Empty;
 
         public string StudentName { get; set; } = string.Empty;
+
+        public string AcademicLevel { get; set; } = string.Empty;
 
         public string GuardianName { get; set; } = string.Empty;
 

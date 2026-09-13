@@ -68,11 +68,6 @@
     background: #fff0cf;
 }
 
-.summary-icon-duplicate {
-    color: #c87500;
-    background: #ffebc2;
-}
-
 .summary-icon-payment {
     color: #6254c7;
     background: #ece9ff;
@@ -153,41 +148,6 @@
             box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.12);
         }
 
-.duplicate-filter-wrapper {
-    min-width: 0;
-}
-
-.duplicate-filter-option {
-    display: flex;
-    min-height: 42px;
-    margin: 0;
-    padding: 9px 12px;
-    align-items: center;
-    gap: 9px;
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    color: var(--navy);
-    background: #ffffff;
-    cursor: pointer;
-}
-
-    .duplicate-filter-option:hover {
-        border-color: var(--teal);
-        background: #f5fdfd;
-    }
-
-    .duplicate-filter-option .form-check-input {
-        width: 17px;
-        height: 17px;
-        margin: 0;
-        border-color: #9bbbc1;
-    }
-
-        .duplicate-filter-option .form-check-input:checked {
-            border-color: var(--teal);
-            background-color: var(--teal);
-        }
-
 .clear-filter-link {
     display: inline-flex;
     align-items: center;
@@ -264,41 +224,47 @@
             border-bottom: 0;
         }
 
+    .enrollment-table .column-number {
+        width: 60px;
+    }
+
+    .enrollment-table .number-column {
+        width: 60px;
+        padding-right: 8px;
+        padding-left: 8px;
+        text-align: center !important;
+        white-space: nowrap;
+    }
 
     /* =========================================================
    5. TABLE COLUMN WIDTHS
 ========================================================= */
-
-    .enrollment-table .column-application {
-        width: 13%;
-    }
-
     .enrollment-table .column-student {
-        width: 14%;
+        width: 16%;
     }
 
     .enrollment-table .column-guardian {
-        width: 18%;
+        width: 20%;
     }
 
     .enrollment-table .column-classes {
-        width: 9%;
+        width: 10%;
     }
 
     .enrollment-table .column-fee {
-        width: 11%;
+        width: 12%;
     }
 
     .enrollment-table .column-submitted {
-        width: 13%;
+        width: 15%;
     }
 
     .enrollment-table .column-status {
-        width: 13%;
+        width: 14%;
     }
 
     .enrollment-table .column-action {
-        width: 9%;
+        width: 13%;
     }
 
 
@@ -334,19 +300,6 @@
     color: var(--muted);
     font-size: 0.76rem;
     text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.duplicate-warning {
-    display: inline-flex;
-    padding: 4px 7px;
-    align-items: center;
-    gap: 4px;
-    border-radius: 999px;
-    color: #a55a00;
-    background: #fff0d4;
-    font-size: 0.7rem;
-    font-weight: 700;
     white-space: nowrap;
 }
 
@@ -423,11 +376,6 @@
 .status-pending {
     color: #a45d00;
     background: #fff0cf;
-}
-
-.status-duplicate {
-    color: #b55d00;
-    background: #ffe3bd;
 }
 
 .status-payment {
@@ -594,29 +542,6 @@
         color: var(--navy);
         font-size: 0.92rem;
     }
-
-.duplicate-alert {
-    display: flex;
-    padding: 14px;
-    align-items: flex-start;
-    gap: 10px;
-    border: 1px solid #f2ce91;
-    border-radius: 11px;
-    color: #8b5100;
-    background: #fff7e7;
-}
-
-    .duplicate-alert i {
-        margin-top: 1px;
-        color: #c87500;
-        font-size: 1.1rem;
-    }
-
-    .duplicate-alert p {
-        margin: 0;
-        font-size: 0.84rem;
-    }
-
 
 /* =========================================================
    12. SELECTED CLASS LIST

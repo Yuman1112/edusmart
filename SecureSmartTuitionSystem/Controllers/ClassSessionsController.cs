@@ -94,6 +94,28 @@ namespace SecureSmartTuitionSystem.Controllers
             "PER"
         };
 
+        private static readonly string[] SubjectDisplayOrder =
+        {
+            "BC",
+            "BMP",
+            "BMK",
+            "BIP",
+            "BIK",
+            "MM",
+            "SCI",
+            "SEJ",
+            "GEO",
+            "RBT",
+            "ASK",
+            "AM",
+            "BIO",
+            "CHE",
+            "PHY",
+            "ACC",
+            "EKO",
+            "PER"
+        };
+
         public ClassSessionsController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager)
@@ -188,6 +210,35 @@ namespace SecureSmartTuitionSystem.Controllers
 
             model.Sessions = await query.ToListAsync();
 
+            var classSessionIds =
+                model.Sessions
+                    .Select(session => session.ClassSessionId)
+                    .ToList();
+
+            model.EnrollmentCounts =
+                await _context.StudentEnrollments
+                    .AsNoTracking()
+                    .Where(enrollment =>
+                        classSessionIds.Contains(
+                            enrollment.ClassSessionId) &&
+                        (
+                            enrollment.Status ==
+                                StudentEnrollmentStatus.Active ||
+
+                            enrollment.Status ==
+                                StudentEnrollmentStatus.PendingDrop
+                        ))
+                    .GroupBy(enrollment =>
+                        enrollment.ClassSessionId)
+                    .Select(group => new
+                    {
+                        ClassSessionId = group.Key,
+                        Count = group.Count()
+                    })
+                    .ToDictionaryAsync(
+                        item => item.ClassSessionId,
+                        item => item.Count);
+
             await PopulateIndexSelectionsAsync(model);
 
             return View(model);
@@ -209,7 +260,24 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            int enrolledCount =
+                await _context.StudentEnrollments
+                    .AsNoTracking()
+                    .CountAsync(enrollment =>
+                        enrollment.ClassSessionId ==
+                            session.ClassSessionId &&
+                        (
+                            enrollment.Status ==
+                                StudentEnrollmentStatus.Active ||
+
+                            enrollment.Status ==
+                                StudentEnrollmentStatus.PendingDrop
+                        ));
+
+            ViewBag.EnrolledCount = enrolledCount;
+
             return View(session);
+
         }
 
         [HttpGet]
@@ -1031,30 +1099,183 @@ namespace SecureSmartTuitionSystem.Controllers
                     : query.OrderBy(session =>
                         session.Status),
 
-                _ => descending
-                    ? query.OrderByDescending(session =>
-                        session.ClassName)
-                    : query.OrderBy(session =>
-                        session.ClassName)
+                _ => ApplyClassNameSorting(
+                    query,
+                    descending)
             };
         }
+
+        private static IQueryable<ClassSession>
+            ApplyClassNameSorting(
+                IQueryable<ClassSession> query,
+                bool descending)
+        {
+            if (descending)
+            {
+                return query
+                    .OrderByDescending(session =>
+                        session.Subject.AcademicLevel == "YEAR 1" ? 1 :
+                        session.Subject.AcademicLevel == "YEAR 2" ? 2 :
+                        session.Subject.AcademicLevel == "YEAR 3" ? 3 :
+                        session.Subject.AcademicLevel == "YEAR 4" ? 4 :
+                        session.Subject.AcademicLevel == "YEAR 5" ? 5 :
+                        session.Subject.AcademicLevel == "YEAR 6" ? 6 :
+                        session.Subject.AcademicLevel == "FORM 1" ? 7 :
+                        session.Subject.AcademicLevel == "FORM 2" ? 8 :
+                        session.Subject.AcademicLevel == "FORM 3" ? 9 :
+                        session.Subject.AcademicLevel == "FORM 4" ? 10 :
+                        session.Subject.AcademicLevel == "FORM 5" ? 11 :
+                        99)
+
+                    .ThenByDescending(session =>
+                        session.Subject.SubjectName == "BC" ? 1 :
+                        session.Subject.SubjectName == "BMP" ? 2 :
+                        session.Subject.SubjectName == "BMK" ? 3 :
+                        session.Subject.SubjectName == "BIP" ? 4 :
+                        session.Subject.SubjectName == "BIK" ? 5 :
+                        session.Subject.SubjectName == "MM" ? 6 :
+                        session.Subject.SubjectName == "SCI" ? 7 :
+                        session.Subject.SubjectName == "SEJ" ? 8 :
+                        session.Subject.SubjectName == "GEO" ? 9 :
+                        session.Subject.SubjectName == "RBT" ? 10 :
+                        session.Subject.SubjectName == "ASK" ? 11 :
+                        session.Subject.SubjectName == "AM" ? 12 :
+                        session.Subject.SubjectName == "BIO" ? 13 :
+                        session.Subject.SubjectName == "CHE" ? 14 :
+                        session.Subject.SubjectName == "PHY" ? 15 :
+                        session.Subject.SubjectName == "ACC" ? 16 :
+                        session.Subject.SubjectName == "EKO" ? 17 :
+                        session.Subject.SubjectName == "PER" ? 18 :
+                        99)
+
+                    .ThenByDescending(session =>
+                        session.TutorUser.FullName ??
+                        session.TutorUser.Email)
+
+                    .ThenByDescending(session =>
+                        session.DayOfWeek == DayOfWeek.Monday ? 1 :
+                        session.DayOfWeek == DayOfWeek.Tuesday ? 2 :
+                        session.DayOfWeek == DayOfWeek.Wednesday ? 3 :
+                        session.DayOfWeek == DayOfWeek.Thursday ? 4 :
+                        session.DayOfWeek == DayOfWeek.Friday ? 5 :
+                        session.DayOfWeek == DayOfWeek.Saturday ? 6 :
+                        session.DayOfWeek == DayOfWeek.Sunday ? 7 :
+                        8)
+
+                    .ThenByDescending(session =>
+                        session.StartTime);
+            }
+
+            return query
+                .OrderBy(session =>
+                    session.Subject.AcademicLevel == "YEAR 1" ? 1 :
+                    session.Subject.AcademicLevel == "YEAR 2" ? 2 :
+                    session.Subject.AcademicLevel == "YEAR 3" ? 3 :
+                    session.Subject.AcademicLevel == "YEAR 4" ? 4 :
+                    session.Subject.AcademicLevel == "YEAR 5" ? 5 :
+                    session.Subject.AcademicLevel == "YEAR 6" ? 6 :
+                    session.Subject.AcademicLevel == "FORM 1" ? 7 :
+                    session.Subject.AcademicLevel == "FORM 2" ? 8 :
+                    session.Subject.AcademicLevel == "FORM 3" ? 9 :
+                    session.Subject.AcademicLevel == "FORM 4" ? 10 :
+                    session.Subject.AcademicLevel == "FORM 5" ? 11 :
+                    99)
+
+                .ThenBy(session =>
+                    session.Subject.SubjectName == "BC" ? 1 :
+                    session.Subject.SubjectName == "BMP" ? 2 :
+                    session.Subject.SubjectName == "BMK" ? 3 :
+                    session.Subject.SubjectName == "BIP" ? 4 :
+                    session.Subject.SubjectName == "BIK" ? 5 :
+                    session.Subject.SubjectName == "MM" ? 6 :
+                    session.Subject.SubjectName == "SCI" ? 7 :
+                    session.Subject.SubjectName == "SEJ" ? 8 :
+                    session.Subject.SubjectName == "GEO" ? 9 :
+                    session.Subject.SubjectName == "RBT" ? 10 :
+                    session.Subject.SubjectName == "ASK" ? 11 :
+                    session.Subject.SubjectName == "AM" ? 12 :
+                    session.Subject.SubjectName == "BIO" ? 13 :
+                    session.Subject.SubjectName == "CHE" ? 14 :
+                    session.Subject.SubjectName == "PHY" ? 15 :
+                    session.Subject.SubjectName == "ACC" ? 16 :
+                    session.Subject.SubjectName == "EKO" ? 17 :
+                    session.Subject.SubjectName == "PER" ? 18 :
+                    99)
+
+                .ThenBy(session =>
+                    session.TutorUser.FullName ??
+                    session.TutorUser.Email)
+
+                .ThenBy(session =>
+                    session.DayOfWeek == DayOfWeek.Monday ? 1 :
+                    session.DayOfWeek == DayOfWeek.Tuesday ? 2 :
+                    session.DayOfWeek == DayOfWeek.Wednesday ? 3 :
+                    session.DayOfWeek == DayOfWeek.Thursday ? 4 :
+                    session.DayOfWeek == DayOfWeek.Friday ? 5 :
+                    session.DayOfWeek == DayOfWeek.Saturday ? 6 :
+                    session.DayOfWeek == DayOfWeek.Sunday ? 7 :
+                    8)
+
+                .ThenBy(session =>
+                    session.StartTime);
+        }
+
         private async Task PopulateIndexSelectionsAsync(
             ClassSessionIndexViewModel model)
         {
-            model.Subjects =
-                await _context.Subjects
+            var subjectQuery =
+                _context.Subjects
                     .AsNoTracking()
-                    .Where(subject => subject.IsActive)
+                    .Where(subject => subject.IsActive);
+
+            if (model.EducationStage.HasValue)
+            {
+                subjectQuery = subjectQuery.Where(subject =>
+                    subject.EducationStage ==
+                        model.EducationStage.Value);
+            }
+
+            /*
+             * When an Academic Level is selected, the Subject
+             * dropdown must contain only the subjects that are
+             * valid for that exact level.
+             */
+            if (!string.IsNullOrWhiteSpace(model.AcademicLevel))
+            {
+                subjectQuery = subjectQuery.Where(subject =>
+                    subject.AcademicLevel ==
+                        model.AcademicLevel);
+            }
+
+            var subjectNames =
+                await subjectQuery
                     .Select(subject => subject.SubjectName)
                     .Distinct()
-                    .OrderBy(name => name)
+                    .ToListAsync();
+
+            model.Subjects =
+                subjectNames
+                    .OrderBy(name =>
+                    {
+                        int position = Array.IndexOf(
+                            SubjectDisplayOrder,
+                            name.ToUpperInvariant());
+
+                        return position >= 0
+                            ? position
+                            : int.MaxValue;
+                    })
+                    .ThenBy(name => name)
                     .Select(name => new SelectListItem
                     {
                         Value = name,
                         Text = name,
-                        Selected = name == model.SubjectName
+                        Selected = string.Equals(
+                            name,
+                            model.SubjectName,
+                            StringComparison.OrdinalIgnoreCase)
                     })
-                    .ToListAsync();
+                    .ToList();
 
             IEnumerable<string> levels =
                 model.EducationStage switch

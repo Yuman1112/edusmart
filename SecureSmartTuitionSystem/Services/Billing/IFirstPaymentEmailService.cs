@@ -1,4 +1,6 @@
-﻿namespace SecureSmartTuitionSystem.Services.Billing
+﻿using SecureSmartTuitionSystem.Models.Billing;
+
+namespace SecureSmartTuitionSystem.Services.Billing
 {
     public interface IFirstPaymentEmailService
     {
@@ -6,10 +8,7 @@
             string recipientEmail,
             string guardianName,
             string studentName,
-            string applicationNumber,
-            string billNumber,
-            decimal totalAmount,
-            DateTime dueAt,
+            Bill bill,
             string paymentUrl,
             CancellationToken cancellationToken = default);
     }

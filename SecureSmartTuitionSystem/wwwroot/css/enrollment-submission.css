@@ -1280,3 +1280,11 @@
         gap: 2px;
     }
 }
+
+.submission-message span {
+    display: block;
+}
+
+    .submission-message span + span {
+        margin-top: 4px;
+    }

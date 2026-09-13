@@ -16,6 +16,9 @@
         public string StudentName { get; set; }
             = string.Empty;
 
+        public string TuitionPeriod { get; set; }
+            = string.Empty;
+
         public string GuardianName { get; set; }
             = string.Empty;
 

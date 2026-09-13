@@ -16,6 +16,9 @@ namespace SecureSmartTuitionSystem.ViewModels.Billing
         public string StudentName { get; set; }
             = string.Empty;
 
+        public string AcademicLevel { get; set; }
+            = string.Empty;
+
         public string GuardianName { get; set; }
             = string.Empty;
 

@@ -167,25 +167,56 @@
     width: min(320px, 100%);
 }
 
-    .billing-filter-field label {
-        display: block;
-        margin-bottom: 7px;
-        color: var(--navy);
-        font-weight: 700;
+.billing-search-field {
+    width: min(390px, 100%);
+}
+
+.billing-search-input {
+    position: relative;
+}
+
+    .billing-search-input > i {
+        position: absolute;
+        top: 50%;
+        left: 15px;
+        z-index: 1;
+        color: var(--muted);
+        transform: translateY(-50%);
+        pointer-events: none;
     }
 
-    .billing-filter-field .form-select {
+    .billing-search-input .form-control {
         min-height: 48px;
+        padding-left: 43px;
         border-color: var(--border);
         border-radius: 10px;
         color: var(--navy);
-        background-color: var(--white);
     }
 
-        .billing-filter-field .form-select:focus {
+        .billing-search-input .form-control:focus {
             border-color: var(--teal);
             box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.13);
         }
+
+.billing-filter-field label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--navy);
+    font-weight: 700;
+}
+
+.billing-filter-field .form-select {
+    min-height: 48px;
+    border-color: var(--border);
+    border-radius: 10px;
+    color: var(--navy);
+    background-color: var(--white);
+}
+
+    .billing-filter-field .form-select:focus {
+        border-color: var(--teal);
+        box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.13);
+    }
 
 .billing-clear-button {
     display: inline-flex;
@@ -194,6 +225,10 @@
     align-items: center;
     justify-content: center;
     gap: 7px;
+}
+
+.billing-filter-button {
+    min-height: 48px;
 }
 
 /* =========================================================
@@ -292,6 +327,21 @@
         margin-top: 4px;
         color: var(--muted);
         overflow-wrap: anywhere;
+    }
+
+    .billing-table .billing-row-number {
+        width: 60px;
+        min-width: 60px;
+        max-width: 60px;
+        padding-right: 8px;
+        padding-left: 8px;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .billing-table tbody .billing-row-number {
+        color: var(--muted);
+        font-weight: 700;
     }
 
 /* =========================================================
@@ -649,12 +699,12 @@
         color: var(--muted);
     }
 
-.billing-payment-table th:nth-child(3),
-.billing-payment-table td:nth-child(3) {
+.billing-payment-table th:nth-child(2),
+.billing-payment-table td:nth-child(2) {
     text-align: right;
 }
 
-    .billing-payment-table td:nth-child(3) .currency-amount {
+    .billing-payment-table td:nth-child(2) .currency-amount {
         margin-left: auto;
     }
 
@@ -718,6 +768,7 @@
     }
 
     .billing-filter-field,
+    .billing-search-field,
     .billing-clear-button {
         width: 100%;
     }

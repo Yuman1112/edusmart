@@ -18,6 +18,9 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public string SortBy { get; set; } = "className";
         public string SortDirection { get; set; } = "asc";
 
+        public Dictionary<int, int> EnrollmentCounts { get; set; }
+            = new();
+
         public List<SelectListItem> Subjects { get; set; } = new();
         public List<SelectListItem> AcademicLevels { get; set; } = new();
         public List<SelectListItem> Tutors { get; set; } = new();

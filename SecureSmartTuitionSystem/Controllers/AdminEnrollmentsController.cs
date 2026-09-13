@@ -54,7 +54,6 @@ namespace SecureSmartTuitionSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(
             EnrollmentStatus? status,
-            bool duplicateOnly = false,
             string sortBy = "submittedAt",
             string sortDirection = "desc")
         {
@@ -72,11 +71,6 @@ namespace SecureSmartTuitionSystem.Controllers
                     application.Status ==
                     EnrollmentStatus.PendingReview);
 
-            int duplicateReviewCount =
-                await baseQuery.CountAsync(application =>
-                    application.Status ==
-                    EnrollmentStatus.DuplicateReview);
-
             int approvedPendingPaymentCount =
                 await baseQuery.CountAsync(application =>
                     application.Status ==
@@ -93,13 +87,6 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 query = query.Where(application =>
                     application.Status == status.Value);
-            }
-
-            if (duplicateOnly)
-            {
-                query = query.Where(application =>
-                    application.PotentialDuplicateStudent ||
-                    application.PotentialDuplicateGuardian);
             }
 
             query = ApplySorting(
@@ -139,12 +126,6 @@ namespace SecureSmartTuitionSystem.Controllers
                                     selected.MonthlyFeeAtApplication)
                             ?? 0,
 
-                        PotentialDuplicateStudent =
-                            application.PotentialDuplicateStudent,
-
-                        PotentialDuplicateGuardian =
-                            application.PotentialDuplicateGuardian,
-
                         Status = application.Status,
 
                         SubmittedAt =
@@ -162,8 +143,6 @@ namespace SecureSmartTuitionSystem.Controllers
 
                     Status = status,
 
-                    DuplicateOnly = duplicateOnly,
-
                     SortBy = sortBy,
 
                     SortDirection = sortDirection,
@@ -173,9 +152,6 @@ namespace SecureSmartTuitionSystem.Controllers
 
                     PendingReviewCount =
                         pendingReviewCount,
-
-                    DuplicateReviewCount =
-                        duplicateReviewCount,
 
                     ApprovedPendingPaymentCount =
                         approvedPendingPaymentCount,
@@ -388,12 +364,6 @@ namespace SecureSmartTuitionSystem.Controllers
                         application.ReviewedByUser?.FullName ??
                         application.ReviewedByUser?.Email,
 
-                    PotentialDuplicateStudent =
-                        application.PotentialDuplicateStudent,
-
-                    PotentialDuplicateGuardian =
-                        application.PotentialDuplicateGuardian,
-
                     TotalMonthlyFee =
                         classItems.Sum(item =>
                             item.MonthlyFeeAtApplication),
@@ -453,9 +423,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 }
 
                 if (application.Status !=
-                        EnrollmentStatus.PendingReview &&
-                    application.Status !=
-                        EnrollmentStatus.DuplicateReview)
+                    EnrollmentStatus.PendingReview)
                 {
                     TempData["ErrorMessage"] =
                         "Only pending applications can be approved.";
@@ -669,10 +637,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             application.GuardianEmail,
                             application.GuardianName,
                             application.StudentName,
-                            application.ApplicationNumber,
-                            bill.BillNumber,
-                            bill.TotalAmount,
-                            bill.DueAt,
+                            bill,
                             paymentUrl,
                             HttpContext.RequestAborted);
 
@@ -891,15 +856,11 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
-            if (application.Status ==
-                    EnrollmentStatus.Enrolled ||
-                application.Status ==
-                    EnrollmentStatus.Rejected ||
-                application.Status ==
-                    EnrollmentStatus.Cancelled)
+            if (application.Status !=
+                EnrollmentStatus.ApprovedPendingPayment)
             {
                 TempData["ErrorMessage"] =
-                    "This application can no longer be cancelled.";
+                    "Only an application awaiting payment can be cancelled.";
 
                 return RedirectToAction(
                     nameof(Details),

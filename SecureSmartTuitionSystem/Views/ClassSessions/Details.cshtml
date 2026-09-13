@@ -4,6 +4,24 @@
 
 @{
     ViewData["Title"] = "Class Session Details";
+
+    int enrolledCount =
+        ViewBag.EnrolledCount is int count
+            ? count
+            : 0;
+
+    decimal occupancyRate =
+        Model.Capacity > 0
+            ? (decimal)enrolledCount /
+              Model.Capacity
+            : 0;
+
+    string capacityClass =
+        enrolledCount >= Model.Capacity
+            ? "capacity-full"
+            : occupancyRate >= 0.8m
+                ? "capacity-warning"
+                : "capacity-available";
 }
 
 @section Styles {
@@ -39,7 +57,6 @@
 <div class="class-details-card">
     <div class="class-details-title">
         <div>
-            <span class="class-code">@Model.ClassCode</span>
             <h2>@(Model.ClassName ?? "Unnamed Class")</h2>
         </div>
 
@@ -110,8 +127,25 @@
             </div>
 
             <div class="class-detail-item">
-                <span>Capacity</span>
-                <strong>@Model.Capacity students</strong>
+                <span>Enrollment / Capacity</span>
+
+                <strong class="details-capacity @capacityClass">
+                    @enrolledCount / @Model.Capacity students
+                </strong>
+
+                @if (enrolledCount >= Model.Capacity)
+                {
+                    <small class="capacity-label">
+                        This class is full.
+                    </small>
+                }
+                else
+                {
+                    <small class="capacity-remaining">
+                        @(Model.Capacity - enrolledCount)
+                        seat(s) remaining
+                    </small>
+                }
             </div>
 
             <div class="class-detail-item class-detail-wide">

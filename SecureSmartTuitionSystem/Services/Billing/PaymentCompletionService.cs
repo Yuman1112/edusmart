@@ -222,8 +222,7 @@ namespace SecureSmartTuitionSystem.Services.Billing
                             null,
 
                         Remarks =
-                            $"Payment {payment.PaymentNumber} " +
-                            "was confirmed through Stripe."
+                            "Payment was confirmed through Stripe."
                     });
 
                 await _context.SaveChangesAsync(

@@ -10,6 +10,7 @@ using SecureSmartTuitionSystem.ViewModels.Billing;
 using SecureSmartTuitionSystem.Services.Billing;
 using Stripe;
 using Stripe.Checkout;
+using System.Globalization;
 
 namespace SecureSmartTuitionSystem.Controllers
 {
@@ -77,6 +78,25 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            bool hasSuccessfulPayment =
+                await _context.Payments
+                    .AsNoTracking()
+                    .AnyAsync(payment =>
+                        payment.BillId == bill.BillId &&
+                        payment.Status == PaymentStatus.Succeeded);
+
+            if (bill.Status == BillStatus.Paid ||
+                hasSuccessfulPayment)
+            {
+                TempData["SuccessMessage"] =
+                    "This bill has already been paid.";
+
+                return RedirectToAction(
+                    "Details",
+                    "Billing",
+                    new { id = bill.BillId });
+            }
+
             if (bill.Status !=
                     BillStatus.PendingPayment &&
                 bill.Status !=
@@ -142,10 +162,18 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
-            if (bill.Status == BillStatus.Paid)
+            bool hasSuccessfulPayment =
+                await _context.Payments
+                    .AsNoTracking()
+                    .AnyAsync(payment =>
+                        payment.BillId == bill.BillId &&
+                        payment.Status == PaymentStatus.Succeeded);
+
+            if (bill.Status == BillStatus.Paid ||
+                hasSuccessfulPayment)
             {
                 TempData["SuccessMessage"] =
-                    $"Bill {bill.BillNumber} has already been paid.";
+                    "This bill has already been paid.";
             }
 
             if (bill.Status ==
@@ -183,6 +211,9 @@ namespace SecureSmartTuitionSystem.Controllers
 
                     StudentName =
                         application.StudentName,
+
+                    AcademicLevel =
+                        application.AcademicLevel,
 
                     GuardianName =
                         application.GuardianName,
@@ -272,10 +303,18 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
-            if (bill.Status == BillStatus.Paid)
+            bool hasSuccessfulPayment =
+                await _context.Payments
+                    .AsNoTracking()
+                    .AnyAsync(payment =>
+                        payment.BillId == bill.BillId &&
+                        payment.Status == PaymentStatus.Succeeded);
+
+            if (bill.Status == BillStatus.Paid ||
+                hasSuccessfulPayment)
             {
                 TempData["SuccessMessage"] =
-                    $"Bill {bill.BillNumber} has already been paid.";
+                    "This bill has already been paid.";
 
                 return RedirectToAction(
                     nameof(Checkout),
@@ -634,14 +673,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 ViewBag.PaymentVerified = true;
 
                 ViewBag.StatusMessage =
-                    $"Payment {result.PaymentNumber} was confirmed. " +
-                    $"Bill {result.BillNumber} is now paid.";
-
-                ViewBag.BillId =
-                    result.BillId;
-
-                ViewBag.PaymentId =
-                    result.PaymentId;
+                    "Payment was confirmed. Bill is now paid.";
 
                 ViewBag.CheckoutSessionId =
                     session.Id;
@@ -881,6 +913,46 @@ namespace SecureSmartTuitionSystem.Controllers
             var application =
                 bill.EnrollmentApplication;
 
+            DateTime tuitionStartMonth =
+                new DateTime(
+                    application.RequestedStartDate.Year,
+                    application.RequestedStartDate.Month,
+                    1);
+
+            int durationMonths =
+                Math.Max(
+                    application.EnrollmentDurationMonths,
+                    1);
+
+            DateTime tuitionEndMonth =
+                tuitionStartMonth.AddMonths(
+                    durationMonths - 1);
+
+            string tuitionPeriod;
+
+            if (durationMonths == 1)
+            {
+                tuitionPeriod =
+                    tuitionStartMonth.ToString(
+                        "MMMM yyyy",
+                        CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                string startMonthText =
+                    tuitionStartMonth.ToString(
+                        "MMMM yyyy",
+                        CultureInfo.InvariantCulture);
+
+                string endMonthText =
+                    tuitionEndMonth.ToString(
+                        "MMMM yyyy",
+                        CultureInfo.InvariantCulture);
+
+                tuitionPeriod =
+                    $"{startMonthText} to {endMonthText}";
+            }
+
             return new PaymentReceiptViewModel
             {
                 PaymentId =
@@ -897,6 +969,9 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 StudentName =
                     application.StudentName,
+
+                TuitionPeriod =
+                    tuitionPeriod,
 
                 GuardianName =
                     application.GuardianName,
