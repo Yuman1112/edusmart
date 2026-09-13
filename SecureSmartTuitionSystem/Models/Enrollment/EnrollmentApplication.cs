@@ -200,8 +200,6 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
         /*
          * Review information
          */
-        public bool PotentialDuplicateGuardian { get; set; }
-
         public EnrollmentStatus Status { get; set; }
             = EnrollmentStatus.PendingReview;
 

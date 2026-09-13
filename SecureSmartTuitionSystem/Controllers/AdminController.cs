@@ -44,9 +44,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     await _context.EnrollmentApplications
                         .CountAsync(application =>
                             application.Status ==
-                                EnrollmentStatus.PendingReview ||
-                            application.Status ==
-                                EnrollmentStatus.DuplicateReview),
+                                EnrollmentStatus.PendingReview),
 
                 RecentClasses =
                     await _context.ClassSessions
@@ -79,9 +77,7 @@ namespace SecureSmartTuitionSystem.Controllers
                         .AsNoTracking()
                         .Where(application =>
                             application.Status ==
-                                EnrollmentStatus.PendingReview ||
-                            application.Status ==
-                                EnrollmentStatus.DuplicateReview)
+                                EnrollmentStatus.PendingReview)
                         .OrderByDescending(application =>
                             application.SubmittedAt)
                         .Take(5)

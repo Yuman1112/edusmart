@@ -752,9 +752,7 @@ namespace SecureSmartTuitionSystem.Controllers
             }
 
             if (application.Status !=
-                    EnrollmentStatus.PendingReview &&
-                application.Status !=
-                    EnrollmentStatus.DuplicateReview)
+                    EnrollmentStatus.PendingReview)
             {
                 TempData["ErrorMessage"] =
                     "Only pending applications can be rejected.";
