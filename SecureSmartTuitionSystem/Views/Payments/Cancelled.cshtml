@@ -3,6 +3,10 @@
 
     string? paymentAccessToken =
         ViewBag.PaymentAccessToken as string;
+
+    bool preserveSession =
+        ViewBag.PreserveSession is bool value &&
+        value;
 }
 
 @section Styles {
@@ -34,6 +38,7 @@
             <a asp-controller="Payments"
                asp-action="Checkout"
                asp-route-token="@paymentAccessToken"
+               asp-route-preserveSession="@preserveSession"
                class="payment-result-button">
 
                 Try Again

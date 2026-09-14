@@ -2,9 +2,11 @@
 using System.Security.Cryptography;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
+using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.Models.Billing;
 using SecureSmartTuitionSystem.ViewModels.Billing;
 using SecureSmartTuitionSystem.Services.Billing;
@@ -22,6 +24,9 @@ namespace SecureSmartTuitionSystem.Controllers
         private readonly IPaymentCompletionService
             _paymentCompletionService;
 
+        private readonly SignInManager<ApplicationUser>
+            _signInManager;
+
         private readonly ILogger<PaymentsController>
             _logger;
 
@@ -29,12 +34,13 @@ namespace SecureSmartTuitionSystem.Controllers
             ApplicationDbContext context,
             StripeClient stripeClient,
             IPaymentCompletionService paymentCompletionService,
+            SignInManager<ApplicationUser> signInManager,
             ILogger<PaymentsController> logger)
         {
             _context = context;
             _stripeClient = stripeClient;
-            _paymentCompletionService =
-                paymentCompletionService;
+            _paymentCompletionService = paymentCompletionService;
+            _signInManager = signInManager;
             _logger = logger;
         }
 
@@ -127,7 +133,8 @@ namespace SecureSmartTuitionSystem.Controllers
                 nameof(Checkout),
                 new
                 {
-                    token = bill.PaymentAccessToken
+                    token = bill.PaymentAccessToken,
+                    preserveSession = true
                 });
         }
 
@@ -140,7 +147,8 @@ namespace SecureSmartTuitionSystem.Controllers
         [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> Checkout(
-            string? token)
+            string? token,
+            bool preserveSession = false)
         {
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -160,6 +168,20 @@ namespace SecureSmartTuitionSystem.Controllers
             if (bill == null)
             {
                 return NotFound();
+            }
+
+            if (!preserveSession &&
+                User.Identity?.IsAuthenticated == true)
+            {
+                await _signInManager.SignOutAsync();
+
+                return RedirectToAction(
+                    nameof(Checkout),
+                    new
+                    {
+                        token,
+                        preserveSession = false
+                    });
             }
 
             bool hasSuccessfulPayment =
@@ -202,6 +224,9 @@ namespace SecureSmartTuitionSystem.Controllers
                 {
                     PaymentAccessToken =
                         bill.PaymentAccessToken!,
+
+                    PreserveSession =
+                        preserveSession,
 
                     BillNumber =
                         bill.BillNumber,
@@ -284,7 +309,8 @@ namespace SecureSmartTuitionSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult>
             CreateCheckoutSession(
-                string token)
+                string token,
+                bool preserveSession = false)
         {
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -320,7 +346,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     nameof(Checkout),
                     new
                     {
-                        token
+                        token,
+                        preserveSession
                     });
             }
 
@@ -336,7 +363,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     nameof(Checkout),
                     new
                     {
-                        token
+                        token,
+                        preserveSession
                     });
             }
 
@@ -349,7 +377,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     nameof(Checkout),
                     new
                     {
-                        token
+                        token,
+                        preserveSession
                     });
             }
 
@@ -373,7 +402,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     nameof(Checkout),
                     new
                     {
-                        token
+                        token,
+                        preserveSession
                     });
             }
 
@@ -432,7 +462,8 @@ namespace SecureSmartTuitionSystem.Controllers
 
                         CancelUrl =
                             $"{baseUrl}/Payments/Cancelled" +
-                            $"?token={Uri.EscapeDataString(token)}",
+                            $"?token={Uri.EscapeDataString(token)}" +
+                            $"&preserveSession={preserveSession.ToString().ToLowerInvariant()}",
 
                         CustomerEmail =
                             bill.EnrollmentApplication
@@ -562,7 +593,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     nameof(Checkout),
                     new
                     {
-                        token
+                        token,
+                        preserveSession
                     });
             }
             catch (Exception exception)
@@ -585,7 +617,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     nameof(Checkout),
                     new
                     {
-                        token
+                        token,
+                        preserveSession
                     });
             }
         }
@@ -1035,10 +1068,14 @@ namespace SecureSmartTuitionSystem.Controllers
         [AllowAnonymous]
         [HttpGet]
         public IActionResult Cancelled(
-            string? token)
+            string? token,
+            bool preserveSession = false)
         {
             ViewBag.PaymentAccessToken =
                 token;
+
+            ViewBag.PreserveSession =
+                preserveSession;
 
             return View();
         }

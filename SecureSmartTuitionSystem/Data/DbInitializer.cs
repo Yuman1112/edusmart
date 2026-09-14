@@ -307,38 +307,119 @@ namespace SecureSmartTuitionSystem.Data
             UserManager<ApplicationUser> userManager)
         {
             ApplicationUser? user =
-                await userManager.FindByNameAsync(StudentUserName);
-            if (user == null) return;
+                await userManager.FindByNameAsync(
+                    StudentUserName);
 
-            bool exists = await context.StudentProfiles
-                .AnyAsync(x => x.ApplicationUserId == user.Id);
-            if (exists) return;
+            if (user == null)
+            {
+                return;
+            }
+
+            StudentProfile? studentProfile =
+                await context.StudentProfiles
+                    .FirstOrDefaultAsync(
+                        student =>
+                            student.ApplicationUserId ==
+                                user.Id);
 
             ApplicationUser? parentUser =
-                await userManager.FindByNameAsync(ParentUserName);
-            if (parentUser == null) return;
+                await userManager.FindByNameAsync(
+                    ParentUserName);
 
-            ParentProfile? parent = await context.ParentProfiles
-                .FirstOrDefaultAsync(
-                    x => x.ApplicationUserId == parentUser.Id);
-            if (parent == null) return;
-
-            context.StudentProfiles.Add(new StudentProfile
+            if (parentUser == null)
             {
-                ApplicationUserId = user.Id,
-                StudentNumber = StudentUserName,
-                FullName = user.FullName ?? "Test Student",
-                IdentificationNumber = "090101-10-1234",
-                DateOfBirth = new DateTime(2009, 1, 1),
-                Gender = "Female",
-                School = "Test School",
-                AcademicLevel = "Form 5",
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow,
-                ParentProfileId = parent.ParentProfileId
-            });
+                return;
+            }
 
-            await context.SaveChangesAsync();
+            ParentProfile? parent =
+                await context.ParentProfiles
+                    .FirstOrDefaultAsync(
+                        profile =>
+                            profile.ApplicationUserId ==
+                                parentUser.Id);
+
+            if (parent == null)
+            {
+                return;
+            }
+
+            if (studentProfile == null)
+            {
+                studentProfile =
+                    new StudentProfile
+                    {
+                        ApplicationUserId =
+                            user.Id,
+
+                        StudentNumber =
+                            StudentUserName,
+
+                        FullName =
+                            user.FullName
+                            ?? "Test Student",
+
+                        IdentificationNumber =
+                            "090101-10-1234",
+
+                        DateOfBirth =
+                            new DateTime(2009, 1, 1),
+
+                        Gender =
+                            "Female",
+
+                        School =
+                            "Test School",
+
+                        AcademicLevel =
+                            "Form 5",
+
+                        IsActive =
+                            true,
+
+                        CreatedAt =
+                            DateTime.UtcNow
+                    };
+
+                context.StudentProfiles.Add(
+                    studentProfile);
+
+                await context.SaveChangesAsync();
+            }
+
+            bool linkExists =
+                await context.ParentStudents
+                    .AnyAsync(link =>
+                        link.ParentProfileId ==
+                            parent.ParentProfileId &&
+                        link.StudentProfileId ==
+                            studentProfile.StudentProfileId);
+
+            if (!linkExists)
+            {
+                context.ParentStudents.Add(
+                    new ParentStudent
+                    {
+                        ParentProfileId =
+                            parent.ParentProfileId,
+
+                        StudentProfileId =
+                            studentProfile.StudentProfileId,
+
+                        Relationship =
+                            "Parent",
+
+                        IsPrimaryGuardian =
+                            true,
+
+                        IsActive =
+                            true,
+
+                        LinkedAt =
+                            DateTime.UtcNow
+                    });
+
+                await context.SaveChangesAsync();
+            }
         }
 
         private static void EnsureIdentitySucceeded(

@@ -177,6 +177,16 @@ namespace SecureSmartTuitionSystem.Controllers
             model.StudentSchool =
                 model.StudentSchool.Trim();
 
+            if (model.StudentHasNoEmail)
+            {
+                model.StudentEmail = null;
+            }
+            else
+            {
+                model.StudentEmail =
+                    model.StudentEmail?.Trim();
+            }
+
             HttpContext.Session.Remove(
                 ExistingParentUserIdSessionKey);
 

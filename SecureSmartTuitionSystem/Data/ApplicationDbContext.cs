@@ -160,14 +160,6 @@ namespace SecureSmartTuitionSystem.Data
                         "[ApplicationUserId] IS NOT NULL");
 
                 entity.HasOne(student =>
-                        student.ParentProfile)
-                    .WithMany(parent =>
-                        parent.Students)
-                    .HasForeignKey(student =>
-                        student.ParentProfileId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(student =>
                         student.ApplicationUser)
                     .WithOne()
                     .HasForeignKey<StudentProfile>(

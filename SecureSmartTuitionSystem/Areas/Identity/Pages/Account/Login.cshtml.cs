@@ -231,7 +231,29 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     new { area = "" });
             }
 
-            // Student and Parent currently return to Home.
+            // Parent
+            if (await _userManager.IsInRoleAsync(
+                    user,
+                    "Parent"))
+            {
+                return RedirectToAction(
+                    "Index",
+                    "Parent",
+                    new { area = "" });
+            }
+
+            // Student
+            if (await _userManager.IsInRoleAsync(
+                    user,
+                    "Student"))
+            {
+                return RedirectToAction(
+                    "Index",
+                    "Student",
+                    new { area = "" });
+            }
+
+            // Fallback
             return RedirectToAction(
                 "Index",
                 "Home",

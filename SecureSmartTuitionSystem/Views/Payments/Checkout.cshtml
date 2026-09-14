@@ -261,6 +261,10 @@
                                name="token"
                                value="@Model.PaymentAccessToken" />
 
+                        <input type="hidden"
+                               name="preserveSession"
+                               value="@Model.PreserveSession.ToString().ToLowerInvariant()" />
+
                         <button type="submit"
                                 class="payment-submit-button">
 

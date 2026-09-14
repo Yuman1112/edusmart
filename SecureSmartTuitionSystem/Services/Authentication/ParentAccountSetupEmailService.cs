@@ -5,12 +5,12 @@ using SecureSmartTuitionSystem.Settings;
 
 namespace SecureSmartTuitionSystem.Services.Authentication
 {
-    public sealed class AccountSetupEmailService
-        : IAccountSetupEmailService
+    public sealed class ParentAccountSetupEmailService
+        : IParentAccountSetupEmailService
     {
         private readonly EmailSettings _settings;
 
-        public AccountSetupEmailService(
+        public ParentAccountSetupEmailService(
             IOptions<EmailSettings> options)
         {
             _settings = options.Value;

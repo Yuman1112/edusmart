@@ -7,6 +7,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Billing
         public string PaymentAccessToken { get; set; }
             = string.Empty;
 
+        public bool PreserveSession { get; set; }
+
         public string BillNumber { get; set; }
             = string.Empty;
 

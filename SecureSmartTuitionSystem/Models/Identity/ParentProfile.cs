@@ -28,11 +28,6 @@ namespace SecureSmartTuitionSystem.Models.Identity
 
         public ApplicationUser ApplicationUser { get; set; } = null!;
 
-        // OLD relationship
-        public ICollection<StudentProfile> Students { get; set; }
-            = new List<StudentProfile>();
-
-        // NEW relationship
         public ICollection<ParentStudent> ParentStudents { get; set; }
             = new List<ParentStudent>();
     }

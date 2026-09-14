@@ -819,6 +819,14 @@ namespace SecureSmartTuitionSystem.Controllers
                             studentDetails.StudentSchool
                                 .Trim(),
 
+                        StudentEmail =
+                            studentDetails.StudentHasNoEmail
+                                ? null
+                                : studentDetails.StudentEmail?.Trim(),
+
+                        StudentHasNoEmail =
+                            studentDetails.StudentHasNoEmail,
+
                         AcademicLevel =
                             selectedClasses[0]
                                 .Subject

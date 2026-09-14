@@ -1,13 +1,13 @@
 ﻿namespace SecureSmartTuitionSystem.Services.Authentication
 {
-    public interface IAccountSetupEmailService
+    public interface IStudentAccountSetupEmailService
     {
         Task SendAsync(
             string recipientEmail,
-            string guardianName,
-            string parentUserId,
             string studentName,
+            string studentUserId,
             string setupUrl,
+            bool sentToGuardian,
             CancellationToken cancellationToken = default);
     }
 }

@@ -83,6 +83,12 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
         [StringLength(150)]
         public string? StudentSchool { get; set; }
 
+        [EmailAddress]
+        [StringLength(256)]
+        public string? StudentEmail { get; set; }
+
+        public bool StudentHasNoEmail { get; set; }
+
         [Required]
         [StringLength(30)]
         public string AcademicLevel { get; set; }

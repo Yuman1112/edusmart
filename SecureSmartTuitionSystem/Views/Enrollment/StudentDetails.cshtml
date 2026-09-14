@@ -176,6 +176,52 @@
                 </div>
 
                 <!-- ==========================================
+                    STUDENT EMAIL
+                    ========================================== -->
+                <!-- Student Email -->
+                <div class="mb-3">
+
+                    <label asp-for="StudentEmail"
+                           class="form-label">
+                        Student Email Address
+                    </label>
+
+                    <input asp-for="StudentEmail"
+                           class="form-control"
+                           type="email"
+                           id="studentEmail"
+                           maxlength="256"
+                           autocomplete="email"
+                           placeholder="student@example.com" />
+
+                    <span asp-validation-for="StudentEmail"
+                          class="text-danger">
+                    </span>
+
+                </div>
+
+                <!-- No Student Email -->
+                <div class="form-check mb-2 student-email-option">
+
+                    <input asp-for="StudentHasNoEmail"
+                           class="form-check-input"
+                           id="studentHasNoEmail" />
+
+                    <label asp-for="StudentHasNoEmail"
+                           class="form-check-label">
+                        Student does not have an email address
+                    </label>
+
+                </div>
+
+                <div id="studentEmailHelp"
+                     class="form-text mb-4"
+                     hidden>
+                    The student account setup link will be sent to the
+                    primary parent / guardian's email address.
+                </div>
+
+                <!-- ==========================================
                      NAVIGATION
                      ========================================== -->
                 <div class="enrollment-form-actions justify-content-end">
@@ -237,6 +283,50 @@
                 const nextButton =
                     document.getElementById(
                         "nextButton");
+
+                const studentEmailInput =
+                    document.getElementById("studentEmail");
+
+                const studentHasNoEmail =
+                    document.getElementById("studentHasNoEmail");
+
+                const studentEmailHelp =
+                    document.getElementById("studentEmailHelp");
+
+                function updateStudentEmailState() {
+
+                    if (!studentEmailInput ||
+                        !studentHasNoEmail ||
+                        !studentEmailHelp) {
+                        return;
+                    }
+
+                    if (studentHasNoEmail.checked) {
+
+                        studentEmailInput.value = "";
+                        studentEmailInput.disabled = true;
+
+                        studentEmailInput.classList.add(
+                            "student-email-disabled");
+
+                        studentEmailHelp.hidden = false;
+                    }
+                    else {
+
+                        studentEmailInput.disabled = false;
+
+                        studentEmailInput.classList.remove(
+                            "student-email-disabled");
+
+                        studentEmailHelp.hidden = true;
+                    }
+                }
+
+                studentHasNoEmail.addEventListener(
+                    "change",
+                    updateStudentEmailState);
+
+                updateStudentEmailState();
 
                 function calculateAge(dateOfBirth) {
 

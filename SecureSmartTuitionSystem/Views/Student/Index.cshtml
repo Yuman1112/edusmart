@@ -1,0 +1,99 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Student.StudentDashboardViewModel
+
+@{
+    ViewData["Title"] = "Student Dashboard";
+    Layout = "/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-5">
+
+    <div class="mb-4">
+
+        <h1 class="fw-bold">
+            Welcome, @Model.StudentName
+        </h1>
+
+        <p class="text-muted mb-1">
+            Student User ID:
+            <strong>@Model.StudentUserName</strong>
+        </p>
+
+        <p class="text-muted">
+            @Model.AcademicLevel · @Model.School
+        </p>
+
+    </div>
+
+    <div class="row g-4 mb-4">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-4">
+
+                    <div class="text-muted">
+                        Active Classes
+                    </div>
+
+                    <div class="display-6 fw-bold">
+                        @Model.ActiveClassCount
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body p-4">
+
+            <h2 class="h4 fw-bold mb-4">
+                My Classes
+            </h2>
+
+            @if (Model.Classes.Count == 0)
+            {
+                <p class="text-muted mb-0">
+                    You are not currently enrolled
+                    in any active classes.
+                </p>
+            }
+            else
+            {
+                @foreach (var item in Model.Classes)
+                {
+                    <div class="border rounded-3 p-3 mb-3">
+
+                        <h3 class="h5 fw-bold mb-1">
+                            @item.SubjectName
+                        </h3>
+
+                        <div class="text-muted">
+                            @item.ClassCode
+                            @if (!string.IsNullOrWhiteSpace(
+                                                item.ClassName))
+                            {
+                                <span>
+                                    · @item.ClassName
+                                </span>
+                            }
+                        </div>
+
+                        <div class="text-muted">
+                            @item.Day
+                            ·
+                            @item.StartTime
+                            -
+                            @item.EndTime
+                        </div>
+
+                    </div>
+                }
+            }
+
+        </div>
+
+    </div>
+
+</div>

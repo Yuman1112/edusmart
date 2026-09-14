@@ -23,8 +23,11 @@ namespace SecureSmartTuitionSystem.Services.Billing
         private readonly UserManager<ApplicationUser>
             _userManager;
 
-        private readonly IAccountSetupEmailService
-            _accountSetupEmailService;
+        private readonly IParentAccountSetupEmailService
+            _parentAccountSetupEmailService;
+
+        private readonly IStudentAccountSetupEmailService
+            _studentAccountSetupEmailService;
 
         private readonly ILogger<PaymentCompletionService>
             _logger;
@@ -35,8 +38,10 @@ namespace SecureSmartTuitionSystem.Services.Billing
                 accountProvisioningService,
             UserManager<ApplicationUser>
                 userManager,
-            IAccountSetupEmailService
-                accountSetupEmailService,
+            IParentAccountSetupEmailService
+                parentAccountSetupEmailService,
+            IStudentAccountSetupEmailService
+                studentAccountSetupEmailService,
             ILogger<PaymentCompletionService> logger)
         {
             _context = context;
@@ -47,8 +52,11 @@ namespace SecureSmartTuitionSystem.Services.Billing
             _userManager =
                 userManager;
 
-            _accountSetupEmailService =
-                accountSetupEmailService;
+            _parentAccountSetupEmailService =
+                parentAccountSetupEmailService;
+
+            _studentAccountSetupEmailService =
+                studentAccountSetupEmailService;
 
             _logger = logger;
         }
@@ -305,12 +313,8 @@ namespace SecureSmartTuitionSystem.Services.Billing
 
                 /*
                  * =====================================================
-                 * ACCOUNT SETUP EMAIL
+                 * PARENT ACCOUNT SETUP EMAIL
                  * =====================================================
-                 *
-                 * Send the first-time password setup email only
-                 * after the payment and enrollment transaction
-                 * has been committed successfully.
                  */
                 try
                 {
@@ -351,7 +355,7 @@ namespace SecureSmartTuitionSystem.Services.Billing
                             studentUser?.FullName
                             ?? provisioningResult.StudentUserName;
 
-                        await _accountSetupEmailService.SendAsync(
+                        await _parentAccountSetupEmailService.SendAsync(
                             parentUser.Email,
                             guardianName,
                             provisioningResult.ParentUserName,
@@ -376,6 +380,100 @@ namespace SecureSmartTuitionSystem.Services.Billing
                         application.ApplicationNumber);
                 }
 
+                /*
+                 * =====================================================
+                 * STUDENT ACCOUNT SETUP EMAIL
+                 * =====================================================
+                 */
+                try
+                {
+                    ApplicationUser? studentUser =
+                        await _userManager.FindByNameAsync(
+                            provisioningResult.StudentUserName);
+
+                    if (studentUser != null &&
+                        studentUser.IsActive &&
+                        studentUser.MustChangePassword)
+                    {
+                        string? recipientEmail;
+                        bool sentToGuardian;
+
+                        if (!string.IsNullOrWhiteSpace(
+                                studentUser.Email))
+                        {
+                            recipientEmail =
+                                studentUser.Email;
+
+                            sentToGuardian =
+                                false;
+                        }
+                        else
+                        {
+                            recipientEmail =
+                                application.GuardianEmail;
+
+                            sentToGuardian =
+                                true;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(
+                                recipientEmail))
+                        {
+                            string token =
+                                await _userManager
+                                    .GeneratePasswordResetTokenAsync(
+                                        studentUser);
+
+                            string encodedToken =
+                                WebEncoders.Base64UrlEncode(
+                                    Encoding.UTF8.GetBytes(token));
+
+                            string setupUrl =
+                                "https://localhost:7086" +
+                                "/Identity/Account/SetupPassword" +
+                                $"?userId={Uri.EscapeDataString(studentUser.Id)}" +
+                                $"&token={Uri.EscapeDataString(encodedToken)}";
+
+                            string studentName =
+                                studentUser.FullName
+                                ?? provisioningResult.StudentUserName;
+
+                            await _studentAccountSetupEmailService
+                                .SendAsync(
+                                    recipientEmail,
+                                    studentName,
+                                    provisioningResult.StudentUserName,
+                                    setupUrl,
+                                    sentToGuardian,
+                                    cancellationToken);
+
+                            _logger.LogInformation(
+                                "Student account setup email was sent " +
+                                "for student {StudentUserName} " +
+                                "to {RecipientType} for application " +
+                                "{ApplicationNumber}.",
+                                provisioningResult.StudentUserName,
+                                sentToGuardian
+                                    ? "guardian"
+                                    : "student",
+                                application.ApplicationNumber);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Student account setup email could not be sent " +
+                        "for application {ApplicationNumber}.",
+                        application.ApplicationNumber);
+                }
+
+                /*
+                 * =====================================================
+                 * PAYMENT COMPLETION LOG
+                 * =====================================================
+                 */
                 _logger.LogInformation(
                     "Payment {PaymentNumber} completed for " +
                     "bill {BillNumber} and application " +

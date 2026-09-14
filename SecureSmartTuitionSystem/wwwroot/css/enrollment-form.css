@@ -2,7 +2,6 @@
    EDUSMART - PUBLIC ENROLLMENT FORM
 ========================================================= */
 
-
 /* =========================================================
    1. ENROLLMENT PROGRESS STEPS
 ========================================================= */
@@ -59,19 +58,17 @@
     font-weight: 700;
 }
 
-
 /* Current step */
 .enrollment-step.is-current {
     color: var(--navy);
     font-weight: 600;
 }
 
-    .enrollment-step.is-current .enrollment-step-number {
-        color: var(--white);
-        background-color: var(--teal);
-        border-color: var(--teal);
-    }
-
+.enrollment-step.is-current .enrollment-step-number {
+    color: var(--white);
+    background-color: var(--teal);
+    border-color: var(--teal);
+}
 
 /* Completed step */
 .enrollment-step.is-complete {
@@ -79,21 +76,21 @@
     font-weight: 600;
 }
 
-    .enrollment-step.is-complete .enrollment-step-number {
-        color: var(--white);
-        background-color: var(--teal-dark);
-        border-color: var(--teal-dark);
-    }
+.enrollment-step.is-complete .enrollment-step-number {
+    color: var(--white);
+    background-color: var(--teal-dark);
+    border-color: var(--teal-dark);
+}
 
 
-    /* Completed connector */
-    .enrollment-step.is-complete:not(:last-child)::after {
-        background-color: var(--teal);
-    }
+/* Completed connector */
+.enrollment-step.is-complete:not(:last-child)::after {
+    background-color: var(--teal);
+}
 
 
 /* =========================================================
-   2. ENROLLMENT FORM CARD
+2. ENROLLMENT FORM CARD
 ========================================================= */
 
 .enrollment-card {
@@ -105,19 +102,42 @@
     box-shadow: var(--shadow);
 }
 
-    .enrollment-card h1 {
-        color: var(--navy);
-        font-weight: 700;
-    }
+.enrollment-card h1 {
+    color: var(--navy);
+    font-weight: 700;
+}
 
-    .enrollment-card .form-label {
-        color: var(--navy);
-        font-weight: 600;
-    }
+.enrollment-card .form-label {
+    color: var(--navy);
+    font-weight: 600;
+}
 
 
 /* =========================================================
-   3. RESPONSIVE DESIGN
+3. STUDENT EMAIL FIELD
+========================================================= */
+
+/* Student email checkbox option */
+.student-email-option .form-check-label {
+    font-weight: 400 !important;
+}
+
+/* Disabled when student does not have an email address */
+.form-control.student-email-disabled {
+    background-color: #e9ecef !important;
+    border-color: #ced4da !important;
+    color: #6c757d !important;
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+.form-control.student-email-disabled::placeholder {
+    color: #9ca3af !important;
+}
+
+
+/* =========================================================
+4. RESPONSIVE DESIGN
 ========================================================= */
 
 /* Tablet */
@@ -128,10 +148,10 @@
         font-size: 0.8rem;
     }
 
-        .enrollment-step:not(:last-child)::after {
-            min-width: 6px;
-            margin: 0 5px;
-        }
+    .enrollment-step:not(:last-child)::after {
+        min-width: 6px;
+        margin: 0 5px;
+    }
 
     .enrollment-step-number {
         width: 29px;
@@ -142,7 +162,6 @@
         padding: 28px 24px;
     }
 }
-
 
 /* Mobile */
 @media (max-width: 575.98px) {

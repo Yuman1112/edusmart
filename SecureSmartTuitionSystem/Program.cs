@@ -136,8 +136,12 @@ builder.Services.AddScoped<
     FirstPaymentEmailService>();
 
 builder.Services.AddScoped<
-    IAccountSetupEmailService,
-    AccountSetupEmailService>();
+    IParentAccountSetupEmailService,
+    ParentAccountSetupEmailService>();
+
+builder.Services.AddScoped<
+    IStudentAccountSetupEmailService,
+    StudentAccountSetupEmailService>();
 
 /*
  * =====================================================

@@ -13,10 +13,15 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
         private readonly UserManager<ApplicationUser>
             _userManager;
 
+        private readonly SignInManager<ApplicationUser>
+            _signInManager;
+
         public SetupPasswordModel(
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager)
         {
             _userManager = userManager;
+            _signInManager = signInManager;
         }
 
         [BindProperty]
@@ -176,9 +181,11 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return Page();
             }
 
+            await _signInManager.SignOutAsync();
+
             TempData["SuccessMessage"] =
                 "Your password has been created successfully. " +
-                "You can now sign in.";
+                $"Your User ID is {user.UserName}. You can now sign in.";
 
             return RedirectToPage(
                 "/Account/Login",

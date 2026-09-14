@@ -38,9 +38,34 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         [Display(Name = "Current School")]
         public string StudentSchool { get; set; } = string.Empty;
 
+        [EmailAddress(
+            ErrorMessage = "Please enter a valid email address.")]
+        [StringLength(256)]
+        [Display(Name = "Student Email Address")]
+        public string? StudentEmail { get; set; }
+
+        [Display(Name = "Student does not have an email address")]
+        public bool StudentHasNoEmail { get; set; }
+
+
+
         public IEnumerable<ValidationResult> Validate(
             ValidationContext validationContext)
         {
+            // ==========================================
+            // STUDENT EMAIL
+            // ==========================================
+            if (!StudentHasNoEmail &&
+                string.IsNullOrWhiteSpace(StudentEmail))
+            {
+                yield return new ValidationResult(
+                    "Please enter the student's email address or select that the student does not have an email address.",
+                    new[]
+                    {
+            nameof(StudentEmail)
+                    });
+            }
+
             // ==========================================
             // DATE OF BIRTH
             // ==========================================

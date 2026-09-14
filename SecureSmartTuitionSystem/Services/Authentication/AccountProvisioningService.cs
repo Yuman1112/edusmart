@@ -404,12 +404,22 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                         "The linked student profile was not found.");
                 }
 
-                if (linkedProfile.ParentProfileId !=
-                    parentProfile.ParentProfileId)
+                bool isLinkedToParent =
+                    await _context.ParentStudents
+                        .AnyAsync(
+                            link =>
+                                link.ParentProfileId ==
+                                    parentProfile.ParentProfileId &&
+                                link.StudentProfileId ==
+                                    linkedProfile.StudentProfileId &&
+                                link.IsActive,
+                            cancellationToken);
+
+                if (!isLinkedToParent)
                 {
                     throw new InvalidOperationException(
-                        "The linked student belongs to a " +
-                        "different parent profile.");
+                        "The linked student is not associated with " +
+                        "this parent profile.");
                 }
 
                 return linkedProfile;
@@ -433,12 +443,22 @@ namespace SecureSmartTuitionSystem.Services.Authentication
 
             if (existingStudentProfile != null)
             {
-                if (existingStudentProfile.ParentProfileId !=
-                    parentProfile.ParentProfileId)
+                bool isLinkedToParent =
+                    await _context.ParentStudents
+                        .AnyAsync(
+                            link =>
+                                link.ParentProfileId ==
+                                    parentProfile.ParentProfileId &&
+                                link.StudentProfileId ==
+                                    existingStudentProfile.StudentProfileId &&
+                                link.IsActive,
+                            cancellationToken);
+
+                if (!isLinkedToParent)
                 {
                     throw new InvalidOperationException(
                         "A student with the same identification " +
-                        "number belongs to another parent profile.");
+                        "number is not linked to this parent profile.");
                 }
 
                 return existingStudentProfile;
@@ -448,6 +468,11 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                 await GenerateNextUserIdAsync(
                     "ST",
                     cancellationToken);
+
+            string? studentEmail =
+                application.StudentHasNoEmail
+                    ? null
+                    : application.StudentEmail?.Trim();
 
             /*
              * Student email is optional because younger
@@ -460,7 +485,7 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                         studentUserName,
 
                     Email =
-                        null,
+                        studentEmail,
 
                     FullName =
                         application.StudentName,
@@ -536,12 +561,6 @@ namespace SecureSmartTuitionSystem.Services.Authentication
 
                     CreatedAt =
                         DateTime.UtcNow,
-
-                    ParentProfileId =
-                        parentProfile.ParentProfileId,
-
-                    ParentProfile =
-                        parentProfile,
 
                     ApplicationUserId =
                         studentUser.Id,
