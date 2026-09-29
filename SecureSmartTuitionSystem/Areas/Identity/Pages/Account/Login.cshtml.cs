@@ -2,21 +2,26 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
 using SecureSmartTuitionSystem.Models.Identity;
 
 namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
 {
+    [EnableRateLimiting("LoginPolicy")]
     public class LoginModel : PageModel
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ILogger<LoginModel> _logger;
 
         public LoginModel(
             SignInManager<ApplicationUser> signInManager,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            ILogger<LoginModel> logger)
         {
             _signInManager = signInManager;
             _userManager = userManager;
+            _logger = logger;
         }
 
         [BindProperty]
@@ -87,6 +92,10 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
 
             if (user == null)
             {
+                _logger.LogWarning(
+                    "Login failed for an unknown account from {RemoteIp}.",
+                    HttpContext.Connection.RemoteIpAddress);
+
                 ModelState.AddModelError(
                     string.Empty,
                     "Invalid User ID, email, or password.");
@@ -118,15 +127,43 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     Input.Password,
                     lockoutOnFailure: true);
 
+            int maximumAttempts =
+                _userManager.Options
+                    .Lockout
+                    .MaxFailedAccessAttempts;
+
             // =====================================================
             // ACCOUNT LOCKOUT
             // =====================================================
             if (result.IsLockedOut)
             {
+                DateTimeOffset? lockoutEnd =
+                    await _userManager.GetLockoutEndDateAsync(user);
+
+                int remainingMinutes = 15;
+
+                if (lockoutEnd.HasValue)
+                {
+                    TimeSpan remainingTime =
+                        lockoutEnd.Value - DateTimeOffset.UtcNow;
+
+                    remainingMinutes =
+                        Math.Max(
+                            1,
+                            (int)Math.Ceiling(
+                                remainingTime.TotalMinutes));
+                }
+
+                _logger.LogWarning(
+                    "Account {UserId} was temporarily locked.",
+                    user.Id);
+
                 ModelState.AddModelError(
                     string.Empty,
-                    "Your account has been temporarily locked. " +
-                    "Please try again later.");
+                    $"Your account has been temporarily locked " +
+                    $"after {maximumAttempts} unsuccessful login attempts. " +
+                    $"Please try again in approximately " +
+                    $"{remainingMinutes} minute(s).");
 
                 return Page();
             }
@@ -148,9 +185,30 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             if (!result.Succeeded)
             {
+                int failedAttempts =
+                    await _userManager.GetAccessFailedCountAsync(user);
+
+                int remainingAttempts =
+                    Math.Max(
+                        0,
+                        maximumAttempts - failedAttempts);
+
+                _logger.LogWarning(
+                    "Login failed for account {UserId}. " +
+                    "{RemainingAttempts} attempt(s) remaining.",
+                    user.Id,
+                    remainingAttempts);
+
+                string attemptWord =
+                    remainingAttempts == 1
+                        ? "attempt"
+                        : "attempts";
+
                 ModelState.AddModelError(
                     string.Empty,
-                    "Invalid User ID, email, or password.");
+                    $"Invalid User ID, email, or password. " +
+                    $"You have {remainingAttempts} login " +
+                    $"{attemptWord} remaining.");
 
                 return Page();
             }
@@ -180,6 +238,10 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             await _signInManager.SignInAsync(
                 user,
                 isPersistent: false);
+
+            _logger.LogInformation(
+                "Login succeeded for account {UserId}.",
+                user.Id);
 
             // =====================================================
             // RETURN URL

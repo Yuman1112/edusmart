@@ -18,11 +18,16 @@ namespace SecureSmartTuitionSystem.Models.Billing
             = string.Empty;
 
         /*
-         * Used for secure access to the payment page.
-         * It must not be generated from BillId.
+         * Only the SHA-256 hash is stored. The raw token is sent
+         * to the guardian and is never persisted in the database.
          */
         [StringLength(64)]
-        public string? PaymentAccessToken { get; set; }
+        public string? PaymentAccessTokenHash { get; set; }
+
+        public DateTime? PaymentAccessTokenExpiresAt { get; set; }
+
+        [NotMapped]
+        public string? RawPaymentAccessToken { get; set; }
 
         public int EnrollmentApplicationId { get; set; }
 

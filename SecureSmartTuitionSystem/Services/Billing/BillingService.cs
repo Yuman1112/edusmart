@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Billing;
 using SecureSmartTuitionSystem.Models.Enrollment;
-using System.Security.Cryptography;
+using SecureSmartTuitionSystem.Services.Security;
 
 namespace SecureSmartTuitionSystem.Services.Billing
 {
@@ -147,12 +147,22 @@ namespace SecureSmartTuitionSystem.Services.Billing
 
                 DateTime issuedAt = DateTime.UtcNow;
 
+                string rawPaymentAccessToken =
+                    PaymentAccessTokenService.GenerateToken();
+
                 var bill = new Bill
                 {
                     BillNumber = billNumber,
 
-                    PaymentAccessToken =
-                        GeneratePaymentAccessToken(),
+                    PaymentAccessTokenHash =
+                        PaymentAccessTokenService.HashToken(
+                            rawPaymentAccessToken),
+
+                    PaymentAccessTokenExpiresAt =
+                        issuedAt.AddDays(7),
+
+                    RawPaymentAccessToken =
+                        rawPaymentAccessToken,
 
                     EnrollmentApplicationId =
                         application.EnrollmentApplicationId,
@@ -582,14 +592,5 @@ namespace SecureSmartTuitionSystem.Services.Billing
             return Math.Abs(first - second) < 0.01m;
         }
 
-        private static string GeneratePaymentAccessToken()
-        {
-            byte[] tokenBytes =
-                RandomNumberGenerator.GetBytes(32);
-
-            return Convert
-                .ToHexString(tokenBytes)
-                .ToLowerInvariant();
-        }
     }
 }

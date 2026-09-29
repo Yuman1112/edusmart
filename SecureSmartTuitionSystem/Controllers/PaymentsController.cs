@@ -1,15 +1,16 @@
 ﻿using System.Data;
-using System.Security.Cryptography;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.Models.Billing;
 using SecureSmartTuitionSystem.ViewModels.Billing;
 using SecureSmartTuitionSystem.Services.Billing;
+using SecureSmartTuitionSystem.Services.Security;
 using Stripe;
 using Stripe.Checkout;
 using System.Globalization;
@@ -18,6 +19,9 @@ namespace SecureSmartTuitionSystem.Controllers
 {
     public class PaymentsController : Controller
     {
+        private const string VerifiedReceiptSessionKey =
+            "Payments.VerifiedReceiptSessionId";
+
         private readonly ApplicationDbContext _context;
         private readonly StripeClient _stripeClient;
 
@@ -120,20 +124,23 @@ namespace SecureSmartTuitionSystem.Controllers
                     });
             }
 
-            if (string.IsNullOrWhiteSpace(
-                    bill.PaymentAccessToken))
-            {
-                bill.PaymentAccessToken =
-                    await GenerateUniqueAccessTokenAsync();
+            string paymentAccessToken =
+                await GenerateUniqueAccessTokenAsync();
 
-                await _context.SaveChangesAsync();
-            }
+            bill.PaymentAccessTokenHash =
+                PaymentAccessTokenService.HashToken(
+                    paymentAccessToken);
+
+            bill.PaymentAccessTokenExpiresAt =
+                DateTime.UtcNow.AddDays(7);
+
+            await _context.SaveChangesAsync();
 
             return RedirectToAction(
                 nameof(Checkout),
                 new
                 {
-                    token = bill.PaymentAccessToken,
+                    token = paymentAccessToken,
                     preserveSession = true
                 });
         }
@@ -145,6 +152,7 @@ namespace SecureSmartTuitionSystem.Controllers
          * Access is protected using a secure random token.
          */
         [AllowAnonymous]
+        [EnableRateLimiting("PaymentPolicy")]
         [HttpGet]
         public async Task<IActionResult> Checkout(
             string? token,
@@ -155,6 +163,9 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            string tokenHash =
+                PaymentAccessTokenService.HashToken(token);
+
             var bill =
                 await _context.Bills
                     .AsNoTracking()
@@ -163,7 +174,10 @@ namespace SecureSmartTuitionSystem.Controllers
                     .Include(item =>
                         item.Items)
                     .FirstOrDefaultAsync(item =>
-                        item.PaymentAccessToken == token);
+                        item.PaymentAccessTokenHash == tokenHash &&
+                        item.PaymentAccessTokenExpiresAt.HasValue &&
+                        item.PaymentAccessTokenExpiresAt.Value >
+                            DateTime.UtcNow);
 
             if (bill == null)
             {
@@ -223,7 +237,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 new PaymentCheckoutViewModel
                 {
                     PaymentAccessToken =
-                        bill.PaymentAccessToken!,
+                        token,
 
                     PreserveSession =
                         preserveSession,
@@ -305,6 +319,7 @@ namespace SecureSmartTuitionSystem.Controllers
          * Creates a Stripe Test Checkout Session.
          */
         [AllowAnonymous]
+        [EnableRateLimiting("PaymentPolicy")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult>
@@ -317,12 +332,18 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            string tokenHash =
+                PaymentAccessTokenService.HashToken(token);
+
             var bill =
                 await _context.Bills
                     .Include(item =>
                         item.EnrollmentApplication)
                     .FirstOrDefaultAsync(item =>
-                        item.PaymentAccessToken == token);
+                        item.PaymentAccessTokenHash == tokenHash &&
+                        item.PaymentAccessTokenExpiresAt.HasValue &&
+                        item.PaymentAccessTokenExpiresAt.Value >
+                            DateTime.UtcNow);
 
             if (bill == null)
             {
@@ -628,6 +649,7 @@ namespace SecureSmartTuitionSystem.Controllers
          * Only the Stripe webhook can confirm payment.
          */
         [AllowAnonymous]
+        [EnableRateLimiting("PaymentPolicy")]
         [HttpGet]
         public async Task<IActionResult> Success(
             [FromQuery(Name = "session_id")]
@@ -711,6 +733,10 @@ namespace SecureSmartTuitionSystem.Controllers
                 ViewBag.CheckoutSessionId =
                     session.Id;
 
+                HttpContext.Session.SetString(
+                    VerifiedReceiptSessionKey,
+                    session.Id);
+
                 _logger.LogInformation(
                     "Stripe Checkout Session {SessionId} " +
                     "was reconciled successfully for bill {BillNumber}.",
@@ -737,7 +763,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     sessionId);
 
                 ViewBag.StatusMessage =
-                    exception.Message;
+                    "The payment could not be verified. " +
+                    "Please contact support.";
             }
             catch (Exception exception)
             {
@@ -873,6 +900,7 @@ namespace SecureSmartTuitionSystem.Controllers
          */
 
         [AllowAnonymous]
+        [EnableRateLimiting("PaymentPolicy")]
         [HttpGet]
         [ResponseCache(
             NoStore = true,
@@ -887,6 +915,18 @@ namespace SecureSmartTuitionSystem.Controllers
             if (string.IsNullOrWhiteSpace(sessionId) ||
                 !sessionId.StartsWith(
                     "cs_",
+                    StringComparison.Ordinal))
+            {
+                return NotFound();
+            }
+
+            string? verifiedSessionId =
+                HttpContext.Session.GetString(
+                    VerifiedReceiptSessionKey);
+
+            if (!string.Equals(
+                    verifiedSessionId,
+                    sessionId,
                     StringComparison.Ordinal))
             {
                 return NotFound();
@@ -1066,6 +1106,7 @@ namespace SecureSmartTuitionSystem.Controllers
         }
 
         [AllowAnonymous]
+        [EnableRateLimiting("PaymentPolicy")]
         [HttpGet]
         public IActionResult Cancelled(
             string? token,
@@ -1168,13 +1209,16 @@ namespace SecureSmartTuitionSystem.Controllers
             while (true)
             {
                 string token =
-                    GenerateAccessToken();
+                    PaymentAccessTokenService.GenerateToken();
+
+                string tokenHash =
+                    PaymentAccessTokenService.HashToken(token);
 
                 bool exists =
                     await _context.Bills
                         .AnyAsync(bill =>
-                            bill.PaymentAccessToken ==
-                            token);
+                            bill.PaymentAccessTokenHash ==
+                            tokenHash);
 
                 if (!exists)
                 {
@@ -1183,14 +1227,5 @@ namespace SecureSmartTuitionSystem.Controllers
             }
         }
 
-        private static string GenerateAccessToken()
-        {
-            byte[] tokenBytes =
-                RandomNumberGenerator.GetBytes(32);
-
-            return Convert
-                .ToHexString(tokenBytes)
-                .ToLowerInvariant();
-        }
     }
 }

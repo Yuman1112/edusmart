@@ -435,10 +435,10 @@ namespace SecureSmartTuitionSystem.Data
                     .IsUnique();
 
                 entity.HasIndex(bill =>
-                        bill.PaymentAccessToken)
+                        bill.PaymentAccessTokenHash)
                     .IsUnique()
                     .HasFilter(
-                        "[PaymentAccessToken] IS NOT NULL");
+                        "[PaymentAccessTokenHash] IS NOT NULL");
 
                 entity.HasIndex(bill =>
                         bill.EnrollmentApplicationId)

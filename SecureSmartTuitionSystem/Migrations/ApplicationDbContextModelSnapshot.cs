@@ -240,7 +240,10 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("PaymentAccessToken")
+                    b.Property<DateTime?>("PaymentAccessTokenExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentAccessTokenHash")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
@@ -271,9 +274,9 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("EnrollmentApplicationId")
                         .IsUnique();
 
-                    b.HasIndex("PaymentAccessToken")
+                    b.HasIndex("PaymentAccessTokenHash")
                         .IsUnique()
-                        .HasFilter("[PaymentAccessToken] IS NOT NULL");
+                        .HasFilter("[PaymentAccessTokenHash] IS NOT NULL");
 
                     b.ToTable("Bills");
                 });

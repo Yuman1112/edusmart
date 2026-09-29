@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Identity;
@@ -10,6 +11,7 @@ using SecureSmartTuitionSystem.ViewModels.Enrollment;
 namespace SecureSmartTuitionSystem.Controllers
 {
     [AllowAnonymous]
+    [EnableRateLimiting("PublicFormPolicy")]
     public class EnrollmentController : Controller
     {
         private const string StudentDetailsSessionKey =

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Enrollment;
@@ -12,6 +13,7 @@ using SecureSmartTuitionSystem.ViewModels.Enrollment;
 namespace SecureSmartTuitionSystem.Controllers
 {
     [AllowAnonymous]
+    [EnableRateLimiting("PublicFormPolicy")]
     public class EnrollmentSubmissionController : Controller
     {
         private const string StudentDetailsSessionKey =
@@ -49,12 +51,17 @@ namespace SecureSmartTuitionSystem.Controllers
         private readonly UserManager<ApplicationUser>
             _userManager;
 
+        private readonly ILogger<EnrollmentSubmissionController>
+            _logger;
+
         public EnrollmentSubmissionController(
             ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            ILogger<EnrollmentSubmissionController> logger)
         {
             _context = context;
             _userManager = userManager;
+            _logger = logger;
         }
 
         /*
@@ -972,9 +979,14 @@ namespace SecureSmartTuitionSystem.Controllers
                                 .EnrollmentApplicationId
                     });
             }
-            catch
+            catch (Exception exception)
             {
                 await transaction.RollbackAsync();
+
+                _logger.LogError(
+                    exception,
+                    "Enrollment submission failed. Trace {TraceId}.",
+                    HttpContext.TraceIdentifier);
 
                 ModelState.AddModelError(
                     string.Empty,

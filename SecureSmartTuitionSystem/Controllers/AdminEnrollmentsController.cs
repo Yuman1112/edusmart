@@ -7,6 +7,7 @@ using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.Services.Billing;
+using SecureSmartTuitionSystem.Services.Security;
 using SecureSmartTuitionSystem.ViewModels.Enrollment;
 
 namespace SecureSmartTuitionSystem.Controllers
@@ -618,12 +619,28 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 await transaction.CommitAsync();
 
+                string paymentAccessToken =
+                    bill.RawPaymentAccessToken
+                    ?? PaymentAccessTokenService.GenerateToken();
+
+                if (bill.RawPaymentAccessToken == null)
+                {
+                    bill.PaymentAccessTokenHash =
+                        PaymentAccessTokenService.HashToken(
+                            paymentAccessToken);
+
+                    bill.PaymentAccessTokenExpiresAt =
+                        DateTime.UtcNow.AddDays(7);
+
+                    await _context.SaveChangesAsync();
+                }
+
                 string? paymentUrl = Url.Action(
                     "Checkout",
                     "Payments",
                     new
                     {
-                        token = bill.PaymentAccessToken
+                        token = paymentAccessToken
                     },
                     Request.Scheme);
 
@@ -674,8 +691,13 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 await transaction.RollbackAsync();
 
+                _logger.LogWarning(
+                    exception,
+                    "Enrollment approval was rejected for application {ApplicationId}.",
+                    model.EnrollmentApplicationId);
+
                 TempData["ErrorMessage"] =
-                    exception.Message;
+                    "The application could not be approved in its current state.";
 
                 return RedirectToAction(
                     nameof(Details),
@@ -684,9 +706,14 @@ namespace SecureSmartTuitionSystem.Controllers
                         id = model.EnrollmentApplicationId
                     });
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException exception)
             {
                 await transaction.RollbackAsync();
+
+                _logger.LogError(
+                    exception,
+                    "Database update failed while approving application {ApplicationId}.",
+                    model.EnrollmentApplicationId);
 
                 TempData["ErrorMessage"] =
                     "The application could not be approved because " +
@@ -699,9 +726,14 @@ namespace SecureSmartTuitionSystem.Controllers
                         id = model.EnrollmentApplicationId
                     });
             }
-            catch
+            catch (Exception exception)
             {
                 await transaction.RollbackAsync();
+
+                _logger.LogError(
+                    exception,
+                    "Unexpected approval failure for application {ApplicationId}.",
+                    model.EnrollmentApplicationId);
 
                 TempData["ErrorMessage"] =
                     "An unexpected error occurred while approving " +

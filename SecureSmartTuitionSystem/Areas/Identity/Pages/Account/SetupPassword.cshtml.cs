@@ -3,11 +3,13 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
 using SecureSmartTuitionSystem.Models.Identity;
 
 namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
 {
+    [EnableRateLimiting("PublicFormPolicy")]
     public class SetupPasswordModel : PageModel
     {
         private readonly UserManager<ApplicationUser>

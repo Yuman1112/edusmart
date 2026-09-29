@@ -223,6 +223,13 @@ namespace SecureSmartTuitionSystem.Services.Billing
                     completedAt;
 
                 /*
+                 * A successful payment permanently invalidates the
+                 * anonymous first-payment link.
+                 */
+                bill.PaymentAccessTokenHash = null;
+                bill.PaymentAccessTokenExpiresAt = null;
+
+                /*
                  * Record payment confirmation.
                  */
                 EnrollmentStatus previousStatus =
