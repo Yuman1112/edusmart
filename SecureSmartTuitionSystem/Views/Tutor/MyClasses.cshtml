@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorMyClassesViewModel
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorMyClassesViewModel
 
 @using SecureSmartTuitionSystem.Models.Enrollment
 
@@ -386,7 +386,7 @@ else
 
 
 @section Scripts {
-    <script>
+    <script nonce="@Context.Items["CspNonce"]">
         document.addEventListener(
             "DOMContentLoaded",
             function () {

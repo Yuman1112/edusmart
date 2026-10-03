@@ -1,0 +1,42 @@
+@model SecureSmartTuitionSystem.ViewModels.Communication.AnnouncementFormViewModel
+
+@{
+    ViewData["Title"] = "Create Announcement";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/announcement.css" asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>Create Announcement</h1>
+        <p>Create an announcement for the selected audience.</p>
+    </div>
+
+    <a asp-action="Index" class="outline-button">
+        <i class="bi bi-arrow-left"></i>
+        Back
+    </a>
+</div>
+
+<section class="announcement-form-card">
+    <form asp-action="Create" method="post">
+        <partial name="_AnnouncementForm" model="Model" />
+
+        <div class="announcement-form-actions">
+            <a asp-action="Index" class="outline-button">Cancel</a>
+            <button type="submit" class="primary-button">
+                <i class="bi bi-megaphone-fill"></i>
+                Create Announcement
+            </button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="~/js/announcement-form.js"
+            asp-append-version="true"></script>
+}

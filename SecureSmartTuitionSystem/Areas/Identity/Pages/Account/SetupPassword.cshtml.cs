@@ -67,33 +67,11 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             string? userId,
             string? token)
         {
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                return BadRequest(
-                    "DEBUG: userId is missing.");
-            }
-
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return BadRequest(
-                    "DEBUG: token is missing.");
-            }
-
-            var user =
-                await _userManager.FindByIdAsync(
-                    userId);
-
-            if (user == null)
-            {
-                return BadRequest(
-                    $"DEBUG: User was not found. Received userId = [{userId}]");
-            }
-
-            if (!user.IsActive)
-            {
-                return BadRequest(
-                    "DEBUG: User exists but account is inactive.");
-            }
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+                return BadRequest("The account setup link is invalid or expired.");
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null || !user.IsActive)
+                return BadRequest("The account setup link is invalid or expired.");
 
             Input.UserId =
                 userId;

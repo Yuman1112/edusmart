@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.GuardianDetailsViewModel
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.GuardianDetailsViewModel
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 
 @{
@@ -314,7 +314,7 @@
 
     <partial name="_ValidationScriptsPartial" />
 
-    <script>
+    <script nonce="@Context.Items["CspNonce"]">
         (() => {
 
             const checkbox =

@@ -1,4 +1,5 @@
-﻿using System.Data;
+using SecureSmartTuitionSystem.Models.Security;
+using System.Data;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -23,6 +24,8 @@ namespace SecureSmartTuitionSystem.Controllers
             "Payments.VerifiedReceiptSessionId";
 
         private readonly ApplicationDbContext _context;
+        private readonly SecurityEventService _securityEvents;
+        private readonly PaymentCallbackTokenService _callbackTokens;
         private readonly StripeClient _stripeClient;
 
         private readonly IPaymentCompletionService
@@ -39,13 +42,15 @@ namespace SecureSmartTuitionSystem.Controllers
             StripeClient stripeClient,
             IPaymentCompletionService paymentCompletionService,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<PaymentsController> logger)
+            ILogger<PaymentsController> logger, SecurityEventService securityEvents, PaymentCallbackTokenService callbackTokens)
         {
             _context = context;
             _stripeClient = stripeClient;
             _paymentCompletionService = paymentCompletionService;
             _signInManager = signInManager;
             _logger = logger;
+            _securityEvents = securityEvents;
+            _callbackTokens = callbackTokens;
         }
 
         /*
@@ -54,7 +59,8 @@ namespace SecureSmartTuitionSystem.Controllers
          * may open a bill for payment from the portal.
          */
         [Authorize(Roles = "Parent")]
-        [HttpGet]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> OpenBill(
             int id)
         {
@@ -212,23 +218,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     "This bill has already been paid.";
             }
 
-            if (bill.Status ==
-                    BillStatus.PendingPayment &&
-                bill.DueAt < DateTime.UtcNow)
-            {
-                var trackedBill =
-                    await _context.Bills
-                        .FirstAsync(item =>
-                            item.BillId == bill.BillId);
 
-                trackedBill.Status =
-                    BillStatus.Overdue;
-
-                await _context.SaveChangesAsync();
-
-                bill.Status =
-                    BillStatus.Overdue;
-            }
 
             var application =
                 bill.EnrollmentApplication;
@@ -479,7 +469,8 @@ namespace SecureSmartTuitionSystem.Controllers
 
                         SuccessUrl =
                             $"{baseUrl}/Payments/Success" +
-                            "?session_id={CHECKOUT_SESSION_ID}",
+                            "?session_id={CHECKOUT_SESSION_ID}" +
+                            $"&callbackToken={Uri.EscapeDataString(_callbackTokens.Create(payment.PaymentId))}",
 
                         CancelUrl =
                             $"{baseUrl}/Payments/Cancelled" +
@@ -597,6 +588,10 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 await transaction.RollbackAsync();
 
+                await _securityEvents.RecordAsync(HttpContext, "OperationError", SecuritySeverity.High,
+
+                    "An application operation failed. Refer to the private server log using the trace ID.");
+
                 _logger.LogError(
                     exception,
                     "Stripe Checkout creation failed for bill {BillId}.",
@@ -622,6 +617,10 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 await transaction.RollbackAsync();
 
+                await _securityEvents.RecordAsync(HttpContext, "OperationError", SecuritySeverity.High,
+
+                    "An application operation failed. Refer to the private server log using the trace ID.");
+
                 _logger.LogError(
                     exception,
                     "Payment creation failed for bill {BillId}.",
@@ -644,18 +643,40 @@ namespace SecureSmartTuitionSystem.Controllers
             }
         }
 
-        /*
-         * This page does not mark payment as successful.
-         * Only the Stripe webhook can confirm payment.
-         */
         [AllowAnonymous]
         [EnableRateLimiting("PaymentPolicy")]
         [HttpGet]
-        public async Task<IActionResult> Success(
-            [FromQuery(Name = "session_id")]
-    string? sessionId,
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> Success([FromQuery(Name = "session_id")] string? sessionId,
+            string? callbackToken)
+        {
+            if (!_callbackTokens.TryRead(callbackToken, out int paymentId) ||
+                string.IsNullOrWhiteSpace(sessionId) || sessionId.Length > 255 ||
+                !await _context.Payments.AsNoTracking().AnyAsync(x => x.PaymentId == paymentId &&
+                    x.ProviderCheckoutSessionId == sessionId))
+                return BadRequest("The payment verification link is invalid or expired.");
+            return View("VerifyPayment", new PaymentVerificationViewModel {
+                SessionId = sessionId, CallbackToken = callbackToken!
+            });
+        }
+
+        /*
+         * Reconcile only through a protected POST after validating the callback token.
+         * Stripe's server response and the local amount/currency checks determine success.
+         */
+        [AllowAnonymous]
+        [EnableRateLimiting("PaymentPolicy")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> ConfirmPayment(string? sessionId, string? callbackToken,
             CancellationToken cancellationToken)
         {
+            if (!_callbackTokens.TryRead(callbackToken, out int expectedPaymentId) ||
+                string.IsNullOrWhiteSpace(sessionId) || sessionId.Length > 255 ||
+                !await _context.Payments.AsNoTracking().AnyAsync(x => x.PaymentId == expectedPaymentId &&
+                    x.ProviderCheckoutSessionId == sessionId, cancellationToken))
+                return BadRequest("The payment verification link is invalid or expired.");
             ViewBag.PaymentVerified = false;
             ViewBag.BillId = null;
 
@@ -664,7 +685,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 ViewBag.StatusMessage =
                     "The Stripe Checkout Session ID is missing.";
 
-                return View();
+                return View("Success");
             }
 
             try
@@ -691,7 +712,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     ViewBag.StatusMessage =
                         "Stripe has not confirmed this payment yet.";
 
-                    return View();
+                    return View("Success");
                 }
 
                 if (!session.AmountTotal.HasValue ||
@@ -701,7 +722,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     ViewBag.StatusMessage =
                         "Stripe returned incomplete payment information.";
 
-                    return View();
+                    return View("Success");
                 }
 
                 PaymentCompletionResult result =
@@ -745,6 +766,8 @@ namespace SecureSmartTuitionSystem.Controllers
             }
             catch (StripeException exception)
             {
+                await _securityEvents.RecordAsync(HttpContext, "OperationError", SecuritySeverity.High,
+                    "An application operation failed. Refer to the private server log using the trace ID.");
                 _logger.LogError(
                     exception,
                     "Stripe verification failed for " +
@@ -756,6 +779,8 @@ namespace SecureSmartTuitionSystem.Controllers
             }
             catch (InvalidOperationException exception)
             {
+                await _securityEvents.RecordAsync(HttpContext, "OperationError", SecuritySeverity.High,
+                    "An application operation failed. Refer to the private server log using the trace ID.");
                 _logger.LogError(
                     exception,
                     "Local payment completion failed for " +
@@ -768,6 +793,8 @@ namespace SecureSmartTuitionSystem.Controllers
             }
             catch (Exception exception)
             {
+                await _securityEvents.RecordAsync(HttpContext, "OperationError", SecuritySeverity.High,
+                    "An application operation failed. Refer to the private server log using the trace ID.");
                 _logger.LogError(
                     exception,
                     "Unexpected payment completion error for " +
@@ -779,7 +806,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     "not update the local payment record.";
             }
 
-            return View();
+            return View("Success");
         }
 
         [Authorize(Roles = "Admin,Parent,Student")]

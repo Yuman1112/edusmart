@@ -23,7 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Models\Communication\" />
     <Folder Include="Models\Security\" />
     <Folder Include="Models\Reporting\" />
     <Folder Include="Services\Communication\" />

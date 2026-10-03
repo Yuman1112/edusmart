@@ -1,0 +1,37 @@
+@page
+@model SecureSmartTuitionSystem.Areas.Identity.Pages.Account.AccessDeniedModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Access Denied";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/access-denied.css"
+          asp-append-version="true" />
+}
+
+<main class="access-denied-page">
+    <section class="access-denied-card">
+        <div class="access-denied-icon">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+
+        <span class="access-denied-eyebrow">ACCESS RESTRICTED</span>
+        <h1>Access Denied</h1>
+
+        <p>
+            You do not have permission to access this page.
+            Please return to a page available for your account.
+        </p>
+
+        <a asp-controller="Home"
+           asp-action="Index"
+           class="primary-button">
+            <i class="bi bi-house-door-fill"></i>
+            Return Home
+        </a>
+    </section>
+</main>

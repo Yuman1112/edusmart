@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @using SecureSmartTuitionSystem.Models.Identity
 
 @{
@@ -85,6 +85,12 @@
     <link rel="stylesheet"
           href="~/SecureSmartTuitionSystem.styles.css"
           asp-append-version="true" />
+
+    @if (User.Identity?.IsAuthenticated == true && (User.IsInRole("Admin") || User.IsInRole("Parent")))
+    {
+        <script src="~/js/message-unread.js" asp-append-version="true"
+                data-unread-url="@Url.Action("UnreadCounts", "Messages")"></script>
+    }
 
     @await RenderSectionAsync("Styles", required: false)
 
@@ -223,15 +229,40 @@
                             </span>
                         </a>
 
-                        <span class="sidebar-link disabled-link"
-                              title="This module will be developed later">
+                        <div class="sidebar-module">
+                            <button type="button"
+                                    class="sidebar-link sidebar-module-button
+                                           @(currentController == "Announcements" || currentController == "Messages" ? "active" : "")"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#communicationMenu"
+                                    aria-expanded="@(currentController == "Announcements" || currentController == "Messages" ? "true" : "false")"
+                                    aria-controls="communicationMenu">
+                                <span class="sidebar-link-content">
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                    <span>Communication</span>
+                                </span>
+                                <i class="bi bi-chevron-down sidebar-module-arrow"></i>
+                            </button>
 
-                            <i class="bi bi-chat-dots-fill"></i>
+                            <div id="communicationMenu"
+                                 class="collapse sidebar-submenu @(currentController == "Announcements" || currentController == "Messages" ? "show" : "")">
+                                <a class="sidebar-submenu-link @(currentController == "Announcements" ? "active" : "")"
+                                   asp-controller="Announcements"
+                                   asp-action="Index">
+                                    <i class="bi bi-megaphone-fill"></i>
+                                    <span>Announcements</span>
+                                    @await Component.InvokeAsync("AnnouncementUnread")
+                                </a>
 
-                            <span>
-                                Communication
-                            </span>
-                        </span>
+                                <a class="sidebar-submenu-link @(currentController == "Messages" ? "active" : "")"
+                                   asp-controller="Messages"
+                                   asp-action="Index">
+                                    <i class="bi bi-chat-square-text-fill"></i>
+                                    <span>Messages</span>
+                                    @await Component.InvokeAsync("MessageUnread")
+                                </a>
+                            </div>
+                        </div>
 
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
@@ -243,15 +274,10 @@
                             </span>
                         </span>
 
-                        <span class="sidebar-link disabled-link"
-                              title="This module will be developed later">
-
-                            <i class="bi bi-shield-check"></i>
-
-                            <span>
-                                System &amp; Security
-                            </span>
-                        </span>
+                        <a class="sidebar-link @(currentController == "Security" ? "active" : "")"
+                           asp-controller="Security" asp-action="Index">
+                            <i class="bi bi-shield-check"></i><span>System &amp; Security</span>
+                        </a>
                                 }
                     else if (isTutor)
                     {
@@ -285,12 +311,19 @@
                             <span>Assignments</span>
                         </span>
 
-                        <span class="sidebar-link disabled-link"
-                              title="This module will be developed later">
+                        <a class="sidebar-link
+                                  @(currentController == "Announcements"
+                                      ? "active"
+                                      : "")"
+                           asp-controller="Announcements"
+                           asp-action="Index">
 
-                            <i class="bi bi-chat-dots-fill"></i>
-                            <span>Messages</span>
-                        </span>
+                            <i class="bi bi-megaphone-fill"></i>
+                            <span>Announcements</span>
+
+                            @await Component.InvokeAsync(
+                                "AnnouncementUnread")
+                        </a>
 
                         <span class="sidebar-link disabled-link"
                               title="This module will be developed later">
@@ -410,6 +443,31 @@
                                     Payment &amp; Billing
                                 </span>
                             </a>
+
+                            <a asp-controller="Announcements"
+                               asp-action="Index"
+                               class="public-nav-link
+                                      @(currentController == "Announcements"
+                                          ? "active"
+                                          : "")">
+
+                                <i class="bi bi-megaphone-fill"></i>
+                                <span>Announcements</span>
+
+                                @await Component.InvokeAsync(
+                                    "AnnouncementUnread")
+                            </a>
+
+                            @if (User.IsInRole("Parent"))
+                            {
+                                <a asp-controller="Messages"
+                                   asp-action="Index"
+                                   class="public-nav-link @(currentController == "Messages" ? "active" : "")">
+                                    <i class="bi bi-chat-square-text-fill"></i>
+                                    <span>Messages</span>
+                                    @await Component.InvokeAsync("MessageUnread")
+                                </a>
+                            }
                                         }
 
                     </div>
@@ -482,6 +540,12 @@
     <script src="~/js/site.js"
             asp-append-version="true">
     </script>
+
+    @if (User.Identity?.IsAuthenticated == true && (User.IsInRole("Admin") || User.IsInRole("Parent")))
+    {
+        <script src="~/js/message-unread.js" asp-append-version="true"
+                data-unread-url="@Url.Action("UnreadCounts", "Messages")"></script>
+    }
 
     @await RenderSectionAsync(
     "Scripts",

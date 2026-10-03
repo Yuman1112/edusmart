@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.BrowseClassesViewModel
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.BrowseClassesViewModel
 
 @{
     ViewData["Title"] = "Browse Classes";
@@ -327,7 +327,7 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script nonce="@Context.Items["CspNonce"]">
         (() => {
             "use strict";
 

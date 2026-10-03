@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Admin.AdminDashboardViewModel
+@model SecureSmartTuitionSystem.ViewModels.Admin.AdminDashboardViewModel
 
 @{
     ViewData["Title"] = "Admin Dashboard";
@@ -19,6 +19,8 @@
         </p>
     </div>
 </div>
+
+@await Component.InvokeAsync("SecurityAlerts")
 
 <section class="dashboard-grid">
     <article class="metric-card">

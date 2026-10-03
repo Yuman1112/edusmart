@@ -1,0 +1,16 @@
+@page
+@model SecureSmartTuitionSystem.Areas.Identity.Pages.Account.LoginWith2faModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{ Layout = "/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Verify sign-in"; }
+<div class="container py-5" style="max-width:520px">
+    <h1>Verify sign-in</h1><p>Enter the code from your authenticator app.</p>
+    <form method="post">
+        <input type="hidden" asp-for="ReturnUrl" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <label asp-for="Input.Code" class="form-label">Authenticator code</label>
+        <input asp-for="Input.Code" class="form-control" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus />
+        <span asp-validation-for="Input.Code" class="text-danger"></span>
+        <button type="submit" class="btn btn-primary mt-3">Verify</button>
+        <a asp-page="/Account/Login" class="btn btn-outline-secondary mt-3">Back to sign in</a>
+    </form>
+</div>

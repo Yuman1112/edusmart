@@ -1,0 +1,54 @@
+@model SecureSmartTuitionSystem.ViewModels.Security.SecurityIndexViewModel
+@using SecureSmartTuitionSystem.Models.Security
+@{ ViewData["Title"] = "System & Security"; }
+<div class="page-header"><div><h1>System &amp; Security</h1><p>Review activity and security alerts.</p></div></div>
+<div class="alert @(Model.RecentAlerts > 0 ? "alert-warning" : "alert-success")" role="status">
+    <strong>@Model.RecentAlerts security alert(s)</strong> in the last 24 hours.
+    <a asp-action="Index" asp-route-severity="High">View high severity events</a>
+</div>
+@if (!Model.EmailAlertsConfigured)
+{
+    <div class="alert alert-info">Email alerts are not configured. Security events are available below.</div>
+}
+@if (TempData["SecurityNotice"] != null) { <div class="alert alert-success">@TempData["SecurityNotice"]</div> }
+<div class="card p-3 mb-4">
+    <h2 class="h5">Protect existing financial notes</h2>
+    <p>New notes are encrypted automatically. Upgrade older payment failure and bill cancellation notes in batches.</p>
+    <form asp-action="EncryptLegacyFinancialNotes" method="post">
+        <button type="submit" class="outline-button">Encrypt existing notes</button>
+    </form>
+</div>
+<form method="get" class="row g-3 mb-4">
+    <div class="col-md-2"><label for="from" class="form-label">From (UTC)</label><input id="from" name="from" type="date" value="@Model.From?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-md-2"><label for="to" class="form-label">To (UTC)</label><input id="to" name="to" type="date" value="@Model.To?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-md-3"><label for="userId" class="form-label">User ID</label><input id="userId" name="userId" value="@Model.UserId" maxlength="450" class="form-control" /></div>
+    <div class="col-md-2"><label for="severity" class="form-label">Severity</label><select id="severity" name="severity" class="form-select"><option value="">All</option>
+        @foreach (var level in Enum.GetValues<SecuritySeverity>()) { <option value="@level" selected="@(Model.Severity == level)">@level</option> }
+    </select></div>
+    <div class="col-md-3"><label for="eventName" class="form-label">Event</label><input id="eventName" name="eventName" value="@Model.EventName" maxlength="100" class="form-control" /></div>
+    <div class="col-12"><button type="submit" class="primary-button">Apply filters</button> <a asp-action="Index" class="outline-button">Reset</a></div>
+</form>
+<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr><th>Time (UTC)</th><th>User</th><th>Event</th><th>Severity</th><th>Record</th><th>Details</th><th>Integrity</th></tr></thead>
+    <tbody>
+    @if (Model.Rows.Count == 0) { <tr><td colspan="7" class="text-center py-4">No matching activity.</td></tr> }
+    @foreach (var row in Model.Rows)
+    {
+        var entry = row.Entry;
+        <tr class="@((int)entry.Severity >= (int)SecuritySeverity.High || !row.IntegrityValid ? "table-warning" : "")">
+            <td class="text-nowrap">@entry.OccurredAtUtc.ToString("dd MMM yyyy HH:mm:ss")</td>
+            <td>@entry.ActorName</td><td>@entry.EventName</td><td>@entry.Severity</td>
+            <td>@entry.EntityName @entry.EntityKey</td>
+            <td>@entry.Summary<small class="d-block text-muted">IP: @entry.RemoteIp · Trace: @entry.TraceId</small></td>
+            <td><span class="badge @(row.IntegrityValid ? "bg-success" : "bg-danger")">@(row.IntegrityValid ? "Verified" : "Review required")</span></td>
+        </tr>
+    }
+    </tbody>
+</table></div></div>
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <span>@Model.TotalRecords record(s) · Page @Model.PageNumber of @Model.TotalPages</span>
+    <div>
+        @if (Model.PageNumber > 1) { <a asp-action="Index" asp-route-pageNumber="@(Model.PageNumber - 1)" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity" class="outline-button">Previous</a> }
+        @if (Model.PageNumber < Model.TotalPages) { <a asp-action="Index" asp-route-pageNumber="@(Model.PageNumber + 1)" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity" class="outline-button">Next</a> }
+    </div>
+</div>

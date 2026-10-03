@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
 using SecureSmartTuitionSystem.Models.Identity;
+using SecureSmartTuitionSystem.Models.Security;
+using SecureSmartTuitionSystem.Services.Security;
 
 namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
 {
@@ -13,15 +15,17 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<LoginModel> _logger;
+        private readonly SecurityEventService _events;
 
         public LoginModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
-            ILogger<LoginModel> logger)
+            ILogger<LoginModel> logger, SecurityEventService events)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _logger = logger;
+            _events = events;
         }
 
         [BindProperty]
@@ -45,9 +49,10 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
         // GET - LOGIN
         // =========================================================
         public async Task<IActionResult> OnGetAsync(
-            string? returnUrl = null)
+            string? returnUrl = null, string? reason = null)
         {
             ReturnUrl = returnUrl;
+            if (reason == "expired") ModelState.AddModelError(string.Empty, "Your session expired. Please sign in again.");
 
             // If already logged in, redirect to the appropriate page.
             if (User.Identity?.IsAuthenticated == true)
@@ -92,6 +97,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
 
             if (user == null)
             {
+                await _events.RecordAsync(HttpContext, "LoginFailed", SecuritySeverity.Warning, "Invalid sign-in attempt.");
                 _logger.LogWarning(
                     "Login failed for an unknown account from {RemoteIp}.",
                     HttpContext.Connection.RemoteIpAddress);
@@ -108,6 +114,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             if (!user.IsActive)
             {
+                await _events.RecordAsync(HttpContext, "LoginFailed", SecuritySeverity.Warning, "Inactive account sign-in rejected.", user.Id);
                 ModelState.AddModelError(
                     string.Empty,
                     "This account is currently inactive.");
@@ -137,6 +144,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             if (result.IsLockedOut)
             {
+                await _events.RecordAsync(HttpContext, "AccountLocked", SecuritySeverity.High, "Account lockout enforced.", user.Id);
                 DateTimeOffset? lockoutEnd =
                     await _userManager.GetLockoutEndDateAsync(user);
 
@@ -185,6 +193,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             if (!result.Succeeded)
             {
+                await _events.RecordAsync(HttpContext, "LoginFailed", SecuritySeverity.Warning, "Invalid sign-in attempt.", user.Id);
                 int failedAttempts =
                     await _userManager.GetAccessFailedCountAsync(user);
 
@@ -216,18 +225,32 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             // ADDITIONAL LOGIN STEPS
             // =====================================================
-            // Forced password change and 2FA will be implemented
-            // later. Accounts requiring these steps must not
-            // bypass them.
-            if (user.MustChangePassword ||
-                user.TwoFactorEnabled)
+            if (user.MustChangePassword)
             {
-                ModelState.AddModelError(
-                    string.Empty,
-                    "This account requires an additional login " +
-                    "step that is not available yet.");
-
+                ModelState.AddModelError(string.Empty, "Please complete the account setup link sent to your email before signing in.");
                 return Page();
+            }
+            if (user.TwoFactorEnabled)
+            {
+                var twoFactorResult = await _signInManager.PasswordSignInAsync(
+                    user, Input.Password, isPersistent: false, lockoutOnFailure: false);
+                string destination = !string.IsNullOrWhiteSpace(ReturnUrl) && Url.IsLocalUrl(ReturnUrl)
+                    ? ReturnUrl : Url.Content("~/Identity/Account/Login");
+                if (twoFactorResult.RequiresTwoFactor)
+                {
+                    await _events.RecordAsync(HttpContext, "TwoFactorChallenge", SecuritySeverity.Information,
+                        "Password verified; second factor required.", user.Id);
+                    return RedirectToPage("/Account/LoginWith2fa", new { area = "Identity", returnUrl = destination, rememberMe = false });
+                }
+                if (!twoFactorResult.Succeeded)
+                {
+                    ModelState.AddModelError(string.Empty, "Sign-in could not be completed.");
+                    return Page();
+                }
+                HttpContext.Session.Clear();
+                await _events.RecordAsync(HttpContext, "LoginSucceeded", SecuritySeverity.Information,
+                    "Sign-in completed using an existing remembered second factor.", user.Id);
+                return LocalRedirect(destination);
             }
 
             // =====================================================
@@ -235,10 +258,12 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             // All checks have passed. Create the authentication
             // cookie and sign the user in.
+            HttpContext.Session.Clear();
             await _signInManager.SignInAsync(
                 user,
                 isPersistent: false);
 
+            await _events.RecordAsync(HttpContext, "LoginSucceeded", SecuritySeverity.Information, "User signed in.", user.Id);
             _logger.LogInformation(
                 "Login succeeded for account {UserId}.",
                 user.Id);

@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Billing.BillDetailsViewModel
+@model SecureSmartTuitionSystem.ViewModels.Billing.BillDetailsViewModel
 @using SecureSmartTuitionSystem.Models.Billing
 
 @{
@@ -89,14 +89,14 @@
                         (Model.Status == BillStatus.PendingPayment ||
                         Model.Status == BillStatus.Overdue))
             {
-                <a asp-controller="Payments"
-                   asp-action="OpenBill"
-                   asp-route-id="@Model.BillId"
-                   class="payment-link-button">
+                <form asp-controller="Payments" asp-action="OpenBill" method="post">
+                    <input type="hidden" name="id" value="@Model.BillId" />
+                    <button type="submit" class="payment-link-button">
 
                     <i class="bi bi-credit-card"></i>
                     Make Payment
-                </a>
+                    </button>
+                </form>
             }
             else if ((User.IsInRole("Admin") ||
             User.IsInRole("Student")) &&

@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -44,31 +44,6 @@ namespace SecureSmartTuitionSystem.Controllers
                 NormalizeSortDirection(sortDirection);
 
             DateTime currentTime = DateTime.UtcNow;
-
-            /*
-             * Mark expired pending bills as overdue.
-             */
-            var accessibleBills =
-                GetAccessibleBillsQuery();
-
-            var expiredBills =
-                await accessibleBills
-                    .Where(bill =>
-                        bill.Status ==
-                            BillStatus.PendingPayment &&
-                        bill.DueAt < currentTime)
-                    .ToListAsync();
-
-            if (expiredBills.Count > 0)
-            {
-                foreach (var bill in expiredBills)
-                {
-                    bill.Status =
-                        BillStatus.Overdue;
-                }
-
-                await _context.SaveChangesAsync();
-            }
 
             var baseQuery =
                 GetAccessibleBillsQuery()
@@ -232,28 +207,6 @@ namespace SecureSmartTuitionSystem.Controllers
             if (bill == null)
             {
                 return NotFound();
-            }
-
-            /*
-             * Update a pending bill to overdue when
-             * its due date has passed.
-             */
-            if (bill.Status ==
-                    BillStatus.PendingPayment &&
-                bill.DueAt < DateTime.UtcNow)
-            {
-                var trackedBill =
-                    await GetAccessibleBillsQuery()
-                        .FirstAsync(item =>
-                            item.BillId == id);
-
-                trackedBill.Status =
-                    BillStatus.Overdue;
-
-                await _context.SaveChangesAsync();
-
-                bill.Status =
-                    BillStatus.Overdue;
             }
 
             var application =

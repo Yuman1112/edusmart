@@ -1,4 +1,4 @@
-﻿@using System.Globalization
+@using System.Globalization
 @model SecureSmartTuitionSystem.ViewModels.Enrollment.EnrollmentSelectionViewModel
 
 @{
@@ -266,7 +266,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 
-    <script>
+    <script nonce="@Context.Items["CspNonce"]">
         document.addEventListener(
             "DOMContentLoaded",
             function () {

@@ -241,8 +241,8 @@
 
 .billing-table-heading {
     display: flex;
-    min-height: 78px;
-    padding: 20px 24px;
+    min-height: 76px;
+    padding: 20px 23px;
     align-items: center;
     justify-content: space-between;
     gap: 15px;
@@ -266,7 +266,7 @@
         .billing-section-title h2 {
             margin: 0;
             color: var(--navy);
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             font-weight: 750;
         }
 
@@ -282,12 +282,14 @@
 
 .billing-table {
     width: 100%;
+    min-width: 1180px;
+    table-layout: fixed;
     border-collapse: collapse;
 }
 
     .billing-table th,
     .billing-table td {
-        padding: 16px 18px;
+        padding: 15px 14px;
         vertical-align: middle;
         border-bottom: 1px solid var(--border);
         color: var(--navy);
@@ -296,9 +298,9 @@
 
     .billing-table th {
         color: var(--teal-dark);
-        background: #f4fbfc;
-        font-size: 0.78rem;
-        font-weight: 800;
+        background: #f3fbfc;
+        font-size: 0.72rem;
+        font-weight: 750;
         text-transform: uppercase;
         white-space: nowrap;
     }
@@ -319,7 +321,11 @@
     }
 
     .billing-table tbody tr:hover {
-        background: #fbfefe;
+        background: #f8fdfd;
+    }
+
+    .billing-table tbody td {
+        font-size: 0.86rem;
     }
 
     .billing-table td small {
@@ -343,6 +349,33 @@
         color: var(--muted);
         font-weight: 700;
     }
+
+    .billing-table .column-number { width: 60px; }
+    .billing-table .column-student { width: 185px; }
+    .billing-table .column-guardian { width: 235px; }
+    .billing-table .column-amount { width: 125px; }
+    .billing-table .column-issued { width: 145px; }
+    .billing-table .column-due { width: 135px; }
+    .billing-table .column-status { width: 145px; }
+    .billing-table .column-action { width: 105px; }
+
+.billing-table-primary {
+    display: block;
+    color: var(--navy);
+    font-size: 0.86rem;
+    font-weight: 750;
+    line-height: 1.25;
+}
+
+.billing-table-secondary {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 400;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
 
 /* =========================================================
    BILL ITEM COLUMN ALIGNMENT
@@ -436,7 +469,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    font-size: 0.82rem;
+    font-size: 0.74rem;
     font-weight: 750;
     white-space: nowrap;
 }

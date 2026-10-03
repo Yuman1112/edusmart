@@ -1,0 +1,88 @@
+@model SecureSmartTuitionSystem.ViewModels.Communication.AnnouncementFormViewModel
+@using SecureSmartTuitionSystem.Models.Communication
+
+<div asp-validation-summary="ModelOnly"
+     class="alert alert-danger"
+     role="alert">
+</div>
+
+<input asp-for="AnnouncementId" type="hidden" />
+
+<div class="announcement-form-grid">
+    <div class="announcement-full-field">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title"
+               class="form-control"
+               maxlength="150"
+               autocomplete="off" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div>
+        <label asp-for="TargetAudience" class="form-label"></label>
+        <select asp-for="TargetAudience"
+                asp-items="Html.GetEnumSelectList<AnnouncementAudience>()"
+                class="form-select">
+        </select>
+        <div class="form-text">
+            Only the selected role can view this announcement.
+        </div>
+        <span asp-validation-for="TargetAudience" class="text-danger"></span>
+    </div>
+
+    <div></div>
+
+    <div>
+        <label asp-for="PublishAt" class="form-label"></label>
+        <input asp-for="PublishAt"
+               id="AnnouncementPublishAt"
+               type="datetime-local"
+               class="form-control"
+               asp-format="{0:yyyy-MM-ddTHH:mm}" />
+        <span asp-validation-for="PublishAt" class="text-danger"></span>
+    </div>
+
+    <div class="announcement-expiry-section">
+        <label asp-for="ExpiryUnit" class="form-label"></label>
+
+        <div class="announcement-expiry-controls">
+            <select asp-for="ExpiryUnit"
+                    id="AnnouncementExpiryUnit"
+                    class="form-select">
+                <option value="None">No Expiry</option>
+                <option value="Days">Days</option>
+                <option value="Weeks">Weeks</option>
+                <option value="Months">Months</option>
+            </select>
+
+            <input asp-for="ExpiryDuration"
+                   id="AnnouncementExpiryDuration"
+                   type="number"
+                   min="1"
+                   max="365"
+                   inputmode="numeric"
+                   class="form-control"
+                   placeholder="Duration" />
+        </div>
+
+        <span asp-validation-for="ExpiryUnit" class="text-danger"></span>
+        <span asp-validation-for="ExpiryDuration" class="text-danger"></span>
+
+        <div id="announcementExpiryPreview"
+             class="announcement-expiry-preview"
+             aria-live="polite">
+        </div>
+    </div>
+
+    <div class="announcement-full-field">
+        <label asp-for="Content" class="form-label"></label>
+        <textarea asp-for="Content"
+                  class="form-control announcement-content-input"
+                  maxlength="4000"
+                  rows="10"></textarea>
+        <div class="form-text">
+            Plain text only. Maximum 4000 characters.
+        </div>
+        <span asp-validation-for="Content" class="text-danger"></span>
+    </div>
+</div>

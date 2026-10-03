@@ -1,4 +1,11 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using SecureSmartTuitionSystem.Services.Security;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
@@ -9,6 +16,7 @@ using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.Middleware;
 using SecureSmartTuitionSystem.Services.Authentication;
 using SecureSmartTuitionSystem.Services.Billing;
+using SecureSmartTuitionSystem.Services.Communication;
 using SecureSmartTuitionSystem.Settings;
 using Stripe;
 using System.Text;
@@ -34,6 +42,35 @@ string connectionString =
     ?? throw new InvalidOperationException(
         "Connection string 'DefaultConnection' " +
         "was not found.");
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<AuditLogIntegrity>();
+builder.Services.AddSingleton<FinancialFieldProtection>();
+builder.Services.AddSingleton<PaymentCallbackTokenService>();
+builder.Services.AddSingleton<SecurityEventService>();
+builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection(SecuritySettings.SectionName));
+builder.Services.AddHostedService<SecurityAlertWorker>();
+builder.Services.AddHostedService<BillExpiryWorker>();
+
+var protection = builder.Services.AddDataProtection().UseCryptographicAlgorithms(
+    new AuthenticatedEncryptorConfiguration {
+        EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
+        ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
+    });
+// Leave the existing key ring location unchanged by default so old messages remain readable.
+string? keyRingPath = builder.Configuration["Security:KeyRingPath"];
+if (!string.IsNullOrWhiteSpace(keyRingPath))
+    protection.PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
+string? certificatePath = builder.Configuration["Security:KeyCertificatePath"];
+if (!string.IsNullOrWhiteSpace(certificatePath))
+{
+    var certificate = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12FromFile(
+        certificatePath, builder.Configuration["Security:KeyCertificatePassword"],
+        System.Security.Cryptography.X509Certificates.X509KeyStorageFlags.EphemeralKeySet);
+    protection.ProtectKeysWithCertificate(certificate);
+}
+else if (!string.IsNullOrWhiteSpace(keyRingPath) && OperatingSystem.IsWindows())
+    protection.ProtectKeysWithDpapi();
 
 builder.Services.AddDbContext<ApplicationDbContext>(
     options =>
@@ -78,6 +115,31 @@ builder.Services
         })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, SecurityClaimsPrincipalFactory>();
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    // Revoked sessions are rejected on their next request, including background polling.
+    options.ValidationInterval = TimeSpan.Zero;
+    options.OnRefreshingPrincipal = context =>
+    {
+        var previousActivity = context.CurrentPrincipal?.FindFirst("EduSmart.LastActivityUtc");
+        if (context.NewPrincipal?.Identity is ClaimsIdentity identity)
+        {
+            foreach (var claim in identity.FindAll("EduSmart.LastActivityUtc").ToList()) identity.RemoveClaim(claim);
+            if (previousActivity != null) identity.AddClaim(previousActivity);
+        }
+        return Task.CompletedTask;
+    };
+});
+foreach (string scheme in new[] { IdentityConstants.TwoFactorUserIdScheme, IdentityConstants.TwoFactorRememberMeScheme })
+{
+    builder.Services.Configure<CookieAuthenticationOptions>(scheme, options =>
+    {
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+    });
+}
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -115,35 +177,16 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode =
         StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter(
-        "LoginPolicy",
-        limiter =>
-        {
-            limiter.PermitLimit = 5;
-            limiter.Window = TimeSpan.FromMinutes(1);
-            limiter.QueueLimit = 0;
-            limiter.AutoReplenishment = true;
-        });
-
-    options.AddFixedWindowLimiter(
-        "PublicFormPolicy",
-        limiter =>
-        {
-            limiter.PermitLimit = 20;
-            limiter.Window = TimeSpan.FromMinutes(1);
-            limiter.QueueLimit = 0;
-            limiter.AutoReplenishment = true;
-        });
-
-    options.AddFixedWindowLimiter(
-        "PaymentPolicy",
-        limiter =>
-        {
-            limiter.PermitLimit = 10;
-            limiter.Window = TimeSpan.FromMinutes(1);
-            limiter.QueueLimit = 0;
-            limiter.AutoReplenishment = true;
-        });
+    foreach (var policy in new[] { ("LoginPolicy", 5), ("PublicFormPolicy", 20), ("PaymentPolicy", 10) })
+    {
+        int permits = policy.Item2;
+        options.AddPolicy(policy.Item1, context => RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions {
+                PermitLimit = permits, Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    }
 });
 
 /*
@@ -208,6 +251,10 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IStudentAccountSetupEmailService,
     StudentAccountSetupEmailService>();
+
+builder.Services.AddScoped<
+    IMessageProtectionService,
+    MessageProtectionService>();
 
 /*
  * =====================================================
@@ -292,6 +339,10 @@ app.UseRouting();
 
 app.Use(async (context, next) =>
 {
+    string nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    context.Items["CspNonce"] = nonce;
+    if (context.User.Identity?.IsAuthenticated == true)
+        context.Response.Headers["Cache-Control"] = "no-store";
     context.Response.Headers.TryAdd(
         "X-Content-Type-Options",
         "nosniff");
@@ -314,7 +365,7 @@ app.Use(async (context, next) =>
         "img-src 'self' data:; " +
         "style-src 'self' 'unsafe-inline' " +
             "https://cdn.jsdelivr.net; " +
-        "script-src 'self' 'unsafe-inline'; " +
+        $"script-src 'self' 'nonce-{nonce}'; " +
         "font-src 'self' data: " +
             "https://cdn.jsdelivr.net; " +
         "frame-ancestors 'none'; " +
@@ -329,7 +380,13 @@ app.UseRateLimiter();
 app.UseSession();
 
 app.UseAuthentication();
-
+app.UseMiddleware<AuthenticatedSessionMiddleware>();
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true)
+        context.Response.Headers["Cache-Control"] = "no-store";
+    await next();
+});
 app.UseAuthorization();
 
 /*

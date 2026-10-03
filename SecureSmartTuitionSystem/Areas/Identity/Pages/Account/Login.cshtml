@@ -127,7 +127,7 @@
 
     <partial name="_ValidationScriptsPartial" />
 
-    <script>
+    <script nonce="@HttpContext.Items["CspNonce"]">
         const passwordToggleButtons =
             document.querySelectorAll(".password-toggle");
 

@@ -1,4 +1,5 @@
-﻿using System.Data;
+using SecureSmartTuitionSystem.Models.Security;
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,7 @@ namespace SecureSmartTuitionSystem.Controllers
     public class AdminEnrollmentsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly SecurityEventService _securityEvents;
 
         private readonly UserManager<ApplicationUser>
             _userManager;
@@ -34,7 +36,7 @@ namespace SecureSmartTuitionSystem.Controllers
             UserManager<ApplicationUser> userManager,
             IBillingService billingService,
             IFirstPaymentEmailService firstPaymentEmailService,
-            ILogger<AdminEnrollmentsController> logger)
+            ILogger<AdminEnrollmentsController> logger, SecurityEventService securityEvents)
         {
             _context = context;
             _userManager = userManager;
@@ -44,6 +46,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 firstPaymentEmailService;
 
             _logger = logger;
+            _securityEvents = securityEvents;
         }
 
         /*
@@ -662,6 +665,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     }
                     catch (Exception exception)
                     {
+                        await _securityEvents.RecordAsync(HttpContext, "OperationError", SecuritySeverity.High,
+                            "An application operation failed. Refer to the private server log using the trace ID.");
                         _logger.LogError(
                             exception,
                             "First-payment email could not be sent " +
@@ -710,6 +715,10 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 await transaction.RollbackAsync();
 
+                await _securityEvents.RecordAsync(HttpContext, "OperationError", SecuritySeverity.High,
+
+                    "An application operation failed. Refer to the private server log using the trace ID.");
+
                 _logger.LogError(
                     exception,
                     "Database update failed while approving application {ApplicationId}.",
@@ -729,6 +738,10 @@ namespace SecureSmartTuitionSystem.Controllers
             catch (Exception exception)
             {
                 await transaction.RollbackAsync();
+
+                await _securityEvents.RecordAsync(HttpContext, "OperationError", SecuritySeverity.High,
+
+                    "An application operation failed. Refer to the private server log using the trace ID.");
 
                 _logger.LogError(
                     exception,

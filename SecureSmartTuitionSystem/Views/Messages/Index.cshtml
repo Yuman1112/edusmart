@@ -1,0 +1,315 @@
+@model SecureSmartTuitionSystem.ViewModels.Communication.MessageIndexViewModel
+
+@{
+    ViewData["Title"] = "Messages";
+
+    string Initial(string name) =>
+        string.IsNullOrWhiteSpace(name) ? "U" : name[..1].ToUpperInvariant();
+
+    string FileSize(long bytes) => bytes >= 1024 * 1024
+        ? $"{bytes / 1024d / 1024d:F1} MB"
+        : $"{Math.Max(1, bytes / 1024d):F0} KB";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/messages.css" asp-append-version="true" />
+}
+
+<div class="message-page">
+    <header class="page-header message-page-header">
+        <div>
+            <h1>Messages</h1>
+            <p>Communicate securely with EduSmart.</p>
+        </div>
+    </header>
+
+    @if (TempData["MessageError"] != null)
+    {
+        <div class="alert alert-danger message-alert" role="alert">
+            <i class="bi bi-exclamation-circle"></i>
+            @TempData["MessageError"]
+        </div>
+    }
+
+    <section class="message-shell">
+        <aside class="conversation-panel">
+            <div class="conversation-heading">
+                <div>
+                    <span>CONVERSATIONS</span>
+                    <span class="message-unread-badge" data-message-unread-total
+                          hidden="@(Model.TotalUnreadCount == 0)"
+                          aria-label="@Model.TotalUnreadCount unread message(s)">@Model.TotalUnreadCount</span>
+                </div>
+            </div>
+
+            @if (Model.IsAdmin && Model.AvailableParents.Any())
+            {
+                <form asp-action="Start" method="post" class="new-conversation-form">
+                    <label for="parentUserId">Start a conversation</label>
+                    <div>
+                        <select id="parentUserId" name="parentUserId" class="form-select" required>
+                            <option value="">Select parent</option>
+                            @foreach (var parent in Model.AvailableParents)
+                            {
+                                <option value="@parent.UserId">@parent.Name (@parent.ParentUserName)</option>
+                            }
+                        </select>
+                        <button type="submit" aria-label="Open conversation">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                </form>
+            }
+
+            @if (!Model.IsAdmin && !Model.Conversations.Any())
+            {
+                <form asp-action="StartParent" method="post" class="new-conversation-form">
+                    <button type="submit" class="primary-button">Start a conversation with Admin</button>
+                </form>
+            }
+            <div class="conversation-list">
+                @if (!Model.Conversations.Any())
+                {
+                    <div class="conversation-empty">
+                        <i class="bi bi-chat-square-text"></i>
+                        <p>No conversations yet.</p>
+                    </div>
+                }
+
+                @foreach (var conversation in Model.Conversations)
+                {
+                    <a asp-action="Index"
+                       asp-route-id="@conversation.ConversationId"
+                       data-conversation-id="@conversation.ConversationId"
+                       class="conversation-item @(Model.ActiveConversationId == conversation.ConversationId ? "active" : "")">
+                        <span class="conversation-avatar">@Initial(conversation.ParticipantName)</span>
+                        <span class="conversation-copy">
+                            <span class="conversation-row">
+                                <strong>@conversation.ParticipantName</strong>
+                                @if (conversation.LastMessageAt.HasValue)
+                                {
+                                    <time>@conversation.LastMessageAt.Value.ToLocalTime().ToString("dd MMM")</time>
+                                }
+                            </span>
+                            <span class="conversation-row">
+                                <small>@conversation.LastMessagePreview</small>
+                                <b class="message-unread" data-conversation-unread
+                                   hidden="@(conversation.UnreadCount == 0)"
+                                   aria-label="@conversation.UnreadCount unread message(s)">@conversation.UnreadCount</b>
+                            </span>
+                        </span>
+                    </a>
+                }
+            </div>
+        </aside>
+
+        <div class="chat-panel"
+             data-conversation-id="@Model.ActiveConversationId"
+             data-read-status-url="@Url.Action("ReadStatuses", "Messages")"
+             data-mark-read-url="@Url.Action("MarkRead", "Messages")"
+             data-last-visible-message-id="@(Model.Messages.Select(x => x.ChatMessageId).DefaultIfEmpty(0).Max())">
+            @if (!Model.ActiveConversationId.HasValue)
+            {
+                <div class="chat-empty">
+                    <i class="bi bi-chat-dots"></i>
+                    <h2>Select a conversation</h2>
+                    <p>Select a conversation from the list to view or send messages.</p>
+                </div>
+            }
+            else
+            {
+                <header class="chat-header">
+                    <span class="conversation-avatar">@Initial(Model.ActiveParticipantName)</span>
+                    <div>
+                        <strong>@Model.ActiveParticipantName</strong>
+                        <span>@Model.ActiveParticipantEmail</span>
+                    </div>
+                    <span class="secure-chat-label">
+                        <i class="bi bi-shield-lock"></i>
+                        Secure conversation
+                    </span>
+                </header>
+
+                <div class="chat-messages" id="chatMessages">
+                    @if (!Model.Messages.Any())
+                    {
+                        <div class="chat-welcome">
+                            <i class="bi bi-shield-check"></i>
+                            <p>Messages and attachments in this conversation are securely protected.</p>
+                        </div>
+                    }
+
+                    @foreach (var message in Model.Messages)
+                    {
+                        <article class="message-bubble-row @(message.IsMine ? "mine" : "theirs")">
+                            <div class="message-bubble @(message.IsDeletedForEveryone ? "message-deleted" : "")">
+                                <div class="message-actions dropdown">
+                                    <button type="button"
+                                            class="message-actions-button"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false"
+                                            aria-label="Message actions">
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        @if (message.CanEdit)
+                                        {
+                                            <li>
+                                                <button type="button"
+                                                        class="dropdown-item edit-message-button"
+                                                        data-message-id="@message.ChatMessageId"
+                                                        data-message-content="@message.Content">
+                                                    <i class="bi bi-pencil"></i>
+                                                    Edit
+                                                </button>
+                                            </li>
+                                        }
+
+                                        <li>
+                                            <form asp-action="DeleteForMe"
+                                                  asp-route-id="@message.ChatMessageId"
+                                                  method="post"
+                                                  class="message-action-form">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit"
+                                                        class="dropdown-item confirm-delete-for-me">
+                                                    <i class="bi bi-trash"></i>
+                                                    Delete for me
+                                                </button>
+                                            </form>
+                                        </li>
+
+                                        @if (message.CanDeleteForEveryone)
+                                        {
+                                            <li>
+                                                <form asp-action="DeleteForEveryone"
+                                                      asp-route-id="@message.ChatMessageId"
+                                                      method="post"
+                                                      class="message-action-form">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit"
+                                                            class="dropdown-item text-danger confirm-delete-for-everyone">
+                                                        <i class="bi bi-trash3"></i>
+                                                        Delete for everyone
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(message.Content))
+                                {
+                                    <p class="@(message.IsDeletedForEveryone ? "deleted-message-text" : "")">
+                                        @if (message.IsDeletedForEveryone)
+                                        {
+                                            <i class="bi bi-slash-circle"></i>
+                                        }
+                                        <span class="message-text">@message.Content</span>
+                                    </p>
+                                }
+
+                                @foreach (var file in message.Attachments)
+                                {
+                                    <a asp-action="Download"
+                                       asp-route-id="@file.MessageAttachmentId"
+                                       class="message-file">
+                                        <i class="bi bi-file-earmark-arrow-down"></i>
+                                        <span>
+                                            <strong>@file.FileName</strong>
+                                            <small>@FileSize(file.FileSize)</small>
+                                        </span>
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                }
+
+                                <footer>
+                                    @if (message.EditedAt.HasValue && !message.IsDeletedForEveryone)
+                                    {
+                                        <span class="edited-label">Edited</span>
+                                    }
+                                    <time>@message.SentAt.ToLocalTime().ToString("dd MMM, hh:mm tt")</time>
+                                    @if (message.IsMine)
+                                    {
+                                        <i class="bi message-delivery-status @(message.ReadAt.HasValue ? "bi-check2-all read" : "bi-check2")"
+                                           data-message-id="@message.ChatMessageId"
+                                           title="@(message.ReadAt.HasValue ? "Read" : "Sent")"></i>
+                                    }
+                                </footer>
+                            </div>
+                        </article>
+                    }
+                </div>
+
+                <form asp-action="Send"
+                      method="post"
+                      enctype="multipart/form-data"
+                      class="message-composer"
+                      id="messageComposer">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="ConversationId" value="@Model.ActiveConversationId" />
+                    <input type="file"
+                           name="Attachment"
+                           id="messageAttachment"
+                           accept=".pdf,.jpg,.jpeg,.png,.docx"
+                           hidden />
+
+                    <label for="messageAttachment" class="attachment-button" title="Attach file">
+                        <i class="bi bi-paperclip"></i>
+                    </label>
+
+                    <div class="composer-input">
+                        <textarea name="Content"
+                                  id="messageContent"
+                                  maxlength="2000"
+                                  rows="1"
+                                  placeholder="Type a message..."></textarea>
+                        <span id="selectedFileName" hidden></span>
+                    </div>
+
+                    <button type="submit" class="send-message-button" aria-label="Send message">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </form>
+                <p class="attachment-help">PDF, JPG, PNG or DOCX · Maximum 10 MB</p>
+            }
+        </div>
+    </section>
+</div>
+
+<div class="modal fade" id="editMessageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content edit-message-modal-content">
+            <form asp-action="EditMessage" method="post" id="editMessageForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Edit Message</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="ChatMessageId" id="editMessageId" />
+                    <label for="editMessageContent" class="form-label">Message</label>
+                    <textarea name="Content"
+                              id="editMessageContent"
+                              class="form-control"
+                              rows="5"
+                              maxlength="2000"
+                              required></textarea>
+                    <div class="form-text">You can edit unread text within 15 minutes after sending.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="outline-button" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="primary-button">
+                        <i class="bi bi-check-lg"></i>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/messages.js" asp-append-version="true"></script>
+}

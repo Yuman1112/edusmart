@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Billing.BillingIndexViewModel
+@model SecureSmartTuitionSystem.ViewModels.Billing.BillingIndexViewModel
 @using SecureSmartTuitionSystem.Models.Billing
 
 @{
@@ -239,6 +239,16 @@
         {
             <div class="billing-table-wrapper">
                 <table class="billing-table">
+                    <colgroup>
+                        <col class="column-number" />
+                        <col class="column-student" />
+                        <col class="column-guardian" />
+                        <col class="column-amount" />
+                        <col class="column-issued" />
+                        <col class="column-due" />
+                        <col class="column-status" />
+                        <col class="column-action" />
+                    </colgroup>
                     <thead>
                         <tr>
                             <th class="billing-row-number">No.</th>
@@ -313,21 +323,21 @@
 
                             <tr>
                                 <td class="billing-row-number">
-                                    @(index + 1)
+                                    <strong>@(index + 1)</strong>
                                 </td>
 
                                 <td>
-                                    <strong>@bill.StudentName</strong>
+                                    <strong class="billing-table-primary">@bill.StudentName</strong>
 
-                                    <small>@bill.AcademicLevel</small>
+                                    <span class="billing-table-secondary">@bill.AcademicLevel</span>
                                 </td>
 
                                 <td>
-                                    <strong>@bill.GuardianName</strong>
+                                    <strong class="billing-table-primary">@bill.GuardianName</strong>
 
-                                    <small>
+                                    <span class="billing-table-secondary">
                                         @bill.GuardianEmail
-                                    </small>
+                                    </span>
                                 </td>
 
                                 <td class="billing-amount">
@@ -335,15 +345,18 @@
                                 </td>
 
                                 <td>
-                                    @(bill.IssuedAt
-                                                                .ToLocalTime()
-                                                                .ToString("dd MMM yyyy"))
+                                    <strong class="billing-table-primary">
+                                        @bill.IssuedAt.ToLocalTime().ToString("dd MMM yyyy")
+                                    </strong>
+                                    <span class="billing-table-secondary">
+                                        @bill.IssuedAt.ToLocalTime().ToString("hh:mm tt")
+                                    </span>
                                                                                      </td>
 
                                 <td>
-                                    @(bill.DueAt
-                                                                .ToLocalTime()
-                                                                .ToString("dd MMM yyyy"))
+                                    <strong class="billing-table-primary">
+                                        @bill.DueAt.ToLocalTime().ToString("dd MMM yyyy")
+                                    </strong>
                         </td>
 
                                 <td>
@@ -370,3 +383,20 @@
         }
     </section>
 </div>
+
+@section Scripts {
+    <script nonce="@Context.Items["CspNonce"]">
+        document.addEventListener("DOMContentLoaded", function () {
+            const form = document.getElementById("billingFilterForm");
+            const status = document.getElementById("status");
+            const search = document.getElementById("searchTerm");
+            let timer;
+
+            status?.addEventListener("change", () => form?.requestSubmit());
+            search?.addEventListener("input", function () {
+                window.clearTimeout(timer);
+                timer = window.setTimeout(() => form?.requestSubmit(), 450);
+            });
+        });
+    </script>
+}

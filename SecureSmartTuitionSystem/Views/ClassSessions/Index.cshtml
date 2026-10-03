@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.ClassSessionIndexViewModel
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.ClassSessionIndexViewModel
 
 @using SecureSmartTuitionSystem.Models.Enrollment
 
@@ -527,7 +527,7 @@
 
                                                         <button type="submit"
                                                                 class="dropdown-item action-complete"
-                                                                onclick="return confirm('Mark this entire class session as completed?');">
+                                                                data-confirm="Mark this entire class session as completed?">
 
                                                             <i class="bi bi-check2-circle"></i>
                                                             Mark as Completed
@@ -544,7 +544,7 @@
 
                                                         <button type="submit"
                                                                 class="dropdown-item action-cancel"
-                                                                onclick="return confirm('Are you sure you want to cancel this class session?');">
+                                                                data-confirm="Are you sure you want to cancel this class session?">
 
                                                             <i class="bi bi-x-circle"></i>
                                                             Cancel Class
@@ -567,7 +567,7 @@
 
                                                         <button type="submit"
                                                                 class="dropdown-item action-activate"
-                                                                onclick="return confirm('Activate this class session?');">
+                                                                data-confirm="Activate this class session?">
 
                                                             <i class="bi bi-check-circle"></i>
                                                             Activate Class
@@ -590,7 +590,7 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script nonce="@Context.Items["CspNonce"]">
         document.addEventListener(
             "DOMContentLoaded",
             function () {

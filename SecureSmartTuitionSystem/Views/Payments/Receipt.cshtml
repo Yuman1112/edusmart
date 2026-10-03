@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Billing.PaymentReceiptViewModel
+@model SecureSmartTuitionSystem.ViewModels.Billing.PaymentReceiptViewModel
 @using System.Text.Json
 
 @{
@@ -29,7 +29,7 @@
 
         <button type="button"
                 class="receipt-print-button"
-                onclick="printReceipt()">
+                id="printReceiptButton">
 
             <i class="bi bi-printer"></i>
             Print Receipt
@@ -267,7 +267,7 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script nonce="@Context.Items["CspNonce"]">
         const receiptFileName =
             @Html.Raw(JsonSerializer.Serialize(receiptFileName));
 

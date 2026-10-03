@@ -1,0 +1,324 @@
+@model SecureSmartTuitionSystem.ViewModels.Communication.AnnouncementIndexViewModel
+@using SecureSmartTuitionSystem.Models.Communication
+
+@{
+    ViewData["Title"] = Model.IsAdmin
+        ? "Manage Announcements"
+        : "Announcements";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/announcement.css" asp-append-version="true" />
+}
+
+<div class="page-header announcement-page-header">
+    <div>
+        <h1>Announcements</h1>
+        <p>
+            @(Model.IsAdmin
+                ? "Create and manage announcements for EduSmart users."
+                : "View the latest information from EduSmart.")
+        </p>
+    </div>
+
+    @if (Model.IsAdmin)
+    {
+        <a asp-action="Create" class="primary-button">
+            <i class="bi bi-plus-lg"></i>
+            Create Announcement
+        </a>
+    }
+</div>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success alert-dismissible fade show"
+         data-auto-dismiss="true"
+         role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        @successMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (Model.IsAdmin)
+{
+    <form method="get"
+          id="announcementFilterForm"
+          class="announcement-filter-card">
+        <div class="announcement-filter-heading">
+            <div>
+                <h2><i class="bi bi-funnel"></i> Filter Announcements</h2>
+                <p>Search by title or content and narrow the list by audience or status.</p>
+            </div>
+
+            <a asp-action="Index" class="announcement-clear-link">
+                <i class="bi bi-x-circle"></i>
+                Clear Filters
+            </a>
+        </div>
+
+        <div class="announcement-filter-grid">
+            <div>
+                <label asp-for="SearchTerm" class="form-label">Search</label>
+                <input asp-for="SearchTerm"
+                       id="AnnouncementSearchTerm"
+                       class="form-control"
+                       maxlength="100"
+                       placeholder="Search announcements" />
+            </div>
+
+            <div>
+                <label asp-for="Audience" class="form-label">Audience</label>
+                <select asp-for="Audience"
+                        asp-items="Html.GetEnumSelectList<AnnouncementAudience>()"
+                        class="form-select announcement-auto-filter">
+                    <option value="">All Audiences</option>
+                </select>
+            </div>
+
+            <div>
+                <label asp-for="Status" class="form-label">Status</label>
+                <select asp-for="Status"
+                        class="form-select announcement-auto-filter">
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="expired">Expired</option>
+                    <option value="archived">Archived</option>
+                </select>
+            </div>
+
+        </div>
+    </form>
+}
+
+<section class="announcement-list-card">
+    <div class="announcement-list-header">
+        <h2>
+            <i class="bi bi-megaphone-fill"></i>
+            @(Model.IsAdmin ? "All Announcements" : "Latest Announcements")
+        </h2>
+        <span>@Model.Announcements.Count announcement(s)</span>
+    </div>
+
+    @if (Model.Announcements.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-megaphone"></i>
+            <h3>No Announcements Found</h3>
+            <p>No announcements are available at the moment.</p>
+        </div>
+    }
+    else
+    {
+        <div class="announcement-items">
+            @for (int index = 0; index < Model.Announcements.Count; index++)
+            {
+                var item = Model.Announcements[index];
+                string statusClass = item.DisplayStatus.ToLowerInvariant();
+
+                <article class="announcement-item announcement-clickable-row"
+                         data-details-url="@Url.Action(
+                                      "Details",
+                                      "Announcements",
+                                      new { id = item.AnnouncementId })"
+                 tabindex="0"
+                 role="link"
+                 aria-label="View announcement: @item.Title">
+
+                <div class="announcement-number">@(index + 1)</div>
+
+                    <div class="announcement-item-main">
+                        <div class="announcement-item-topline">
+                            <div>
+                                <h3>@item.Title</h3>
+                                <div class="announcement-meta">
+                                    <span><i class="bi bi-people"></i> @item.TargetAudience</span>
+                                    <span><i class="bi bi-calendar-event"></i> @item.PublishAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</span>
+
+                                    @if (Model.IsAdmin)
+                                    {
+                                        <span>
+                                            <i class="bi bi-eye"></i>
+                                            Read by @item.ReadCount user(s)
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="announcement-status-group">
+                                @if (!Model.IsAdmin)
+                                {
+                                    <span class="announcement-read-status @(item.IsRead ? "read" : "new")">
+                                        @(item.IsRead ? "Read" : "New")
+                                    </span>
+                                }
+
+                                <span class="announcement-status @statusClass">
+                                    @item.DisplayStatus
+                                </span>
+                            </div>
+                        </div>
+
+                        <p>@item.ContentPreview</p>
+
+                        <div class="announcement-item-actions">
+
+                            @if (Model.IsAdmin)
+                            {
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.AnnouncementId"
+                                   class="outline-button announcement-small-button">
+                                    <i class="bi bi-pencil"></i>
+                                    Edit
+                                </a>
+
+                                @if (item.IsArchived)
+                                {
+                                    <form asp-action="Restore"
+                                          asp-route-id="@item.AnnouncementId"
+                                          method="post">
+                                        <button type="submit" class="outline-button announcement-small-button">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                            Restore
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="Archive"
+                                          asp-route-id="@item.AnnouncementId"
+                                          method="post"
+                                          data-confirm="Archive this announcement?">
+                                        <button type="submit" class="outline-button announcement-small-button announcement-archive-button">
+                                            <i class="bi bi-archive"></i>
+                                            Archive
+                                        </button>
+                                    </form>
+                                }
+                            }
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</section>
+
+@section Scripts {
+    <script nonce="@Context.Items["CspNonce"]">
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+                const filterForm =
+                    document.getElementById(
+                        "announcementFilterForm");
+
+                document
+                    .querySelectorAll(
+                        ".announcement-auto-filter")
+                    .forEach(function (filter) {
+                        filter.addEventListener(
+                            "change",
+                            function () {
+                                filterForm?.requestSubmit();
+                            });
+                    });
+
+                const searchInput =
+                    document.getElementById(
+                        "AnnouncementSearchTerm");
+
+                let searchTimer;
+
+                searchInput?.addEventListener(
+                    "input",
+                    function () {
+                        window.clearTimeout(searchTimer);
+
+                        searchTimer = window.setTimeout(
+                            function () {
+                                filterForm?.requestSubmit();
+                            },
+                            450);
+                    });
+
+                document
+                    .querySelectorAll(
+                        '[data-auto-dismiss="true"]')
+                    .forEach(function (alertElement) {
+                        window.setTimeout(
+                            function () {
+                                if (!document.body.contains(
+                                        alertElement)) {
+                                    return;
+                                }
+
+                                if (typeof bootstrap ===
+                                        "undefined" ||
+                                    !bootstrap.Alert) {
+                                    alertElement.remove();
+                                    return;
+                                }
+
+                                bootstrap.Alert
+                                    .getOrCreateInstance(
+                                        alertElement)
+                                    .close();
+                            },
+                            3000);
+                    });
+            });
+
+        document
+            .querySelectorAll(
+                ".announcement-clickable-row")
+            .forEach(function (row) {
+
+                function openDetails() {
+                    const detailsUrl =
+                        row.dataset.detailsUrl;
+
+                    if (detailsUrl) {
+                        window.location.href =
+                            detailsUrl;
+                    }
+                }
+
+                row.addEventListener(
+                    "click",
+                    function (event) {
+
+                        /*
+                         * Edit, Archive and Restore controls
+                         * continue working independently.
+                         */
+                        if (
+                            event.target.closest(
+                                "a, button, form, input, select, textarea"
+                            )
+                        ) {
+                            return;
+                        }
+
+                        openDetails();
+                    });
+
+                row.addEventListener(
+                    "keydown",
+                    function (event) {
+
+                        if (
+                            event.key !== "Enter" &&
+                            event.key !== " "
+                        ) {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        openDetails();
+                    });
+            });
+    </script>
+}

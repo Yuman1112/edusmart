@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.StudentDetailsViewModel
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.StudentDetailsViewModel
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 
 @{
@@ -247,7 +247,7 @@
 
     <partial name="_ValidationScriptsPartial" />
 
-    <script>
+    <script nonce="@Context.Items["CspNonce"]">
         document.addEventListener(
             "DOMContentLoaded",
             function () {

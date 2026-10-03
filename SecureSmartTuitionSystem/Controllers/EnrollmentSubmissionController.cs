@@ -1,4 +1,6 @@
-﻿using System.Data;
+using SecureSmartTuitionSystem.Models.Security;
+using SecureSmartTuitionSystem.Services.Security;
+using System.Data;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -47,6 +49,7 @@ namespace SecureSmartTuitionSystem.Controllers
         private const decimal EastMalaysiaShippingFee = 18.00m;
 
         private readonly ApplicationDbContext _context;
+        private readonly SecurityEventService _securityEvents;
 
         private readonly UserManager<ApplicationUser>
             _userManager;
@@ -57,11 +60,12 @@ namespace SecureSmartTuitionSystem.Controllers
         public EnrollmentSubmissionController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            ILogger<EnrollmentSubmissionController> logger)
+            ILogger<EnrollmentSubmissionController> logger, SecurityEventService securityEvents)
         {
             _context = context;
             _userManager = userManager;
             _logger = logger;
+            _securityEvents = securityEvents;
         }
 
         /*
@@ -982,6 +986,10 @@ namespace SecureSmartTuitionSystem.Controllers
             catch (Exception exception)
             {
                 await transaction.RollbackAsync();
+
+                await _securityEvents.RecordAsync(HttpContext, "OperationError", SecuritySeverity.High,
+
+                    "An application operation failed. Refer to the private server log using the trace ID.");
 
                 _logger.LogError(
                     exception,

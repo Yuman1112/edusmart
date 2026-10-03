@@ -1,0 +1,90 @@
+@model SecureSmartTuitionSystem.ViewModels.Communication.AnnouncementDetailsViewModel
+
+@{
+    ViewData["Title"] = "Announcement Details";
+    string status = Model.DisplayStatus;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/announcement.css" asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>Announcement Details</h1>
+        <p>View the complete announcement information.</p>
+    </div>
+
+    <div class="announcement-header-actions">
+        @if (Model.IsAdmin)
+        {
+            <a asp-action="Edit"
+               asp-route-id="@Model.AnnouncementId"
+               class="primary-button">
+                <i class="bi bi-pencil"></i>
+                Edit
+            </a>
+        }
+
+        <a asp-action="Index" class="outline-button">
+            <i class="bi bi-arrow-left"></i>
+            Back
+        </a>
+    </div>
+</div>
+
+<article class="announcement-details-card">
+    <header class="announcement-details-header">
+        <div>
+            <span class="announcement-eyebrow">EDUSMART ANNOUNCEMENT</span>
+            <h2>@Model.Title</h2>
+        </div>
+
+        <span class="announcement-status @status.ToLowerInvariant()">@status</span>
+    </header>
+
+    <section class="announcement-details-meta @(Model.IsAdmin ? "admin-view" : "")">
+        <div>
+            <span>Target Audience</span>
+            <strong>@Model.TargetAudience</strong>
+        </div>
+        <div>
+            <span>Published</span>
+            <strong>@Model.PublishAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</strong>
+        </div>
+        <div>
+            <span>Expires</span>
+            <strong>
+                @(Model.ExpiresAt.HasValue
+                    ? Model.ExpiresAt.Value.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")
+                    : "No expiry")
+            </strong>
+        </div>
+        <div>
+            <span>Created By</span>
+            <strong>@Model.CreatedBy</strong>
+        </div>
+
+        @if (Model.IsAdmin)
+        {
+            <div>
+                <span>Read By</span>
+                <strong>@Model.ReadCount user(s)</strong>
+            </div>
+        }
+    </section>
+
+    <section class="announcement-details-content">
+        @Model.Content
+    </section>
+</article>
+
+@if (!Model.IsAdmin)
+{
+    <form id="announcementReadForm" asp-action="MarkRead" method="post" hidden>
+        <input type="hidden" name="id" value="@Model.AnnouncementId" />
+    </form>
+}
+@section Scripts {
+    <script src="~/js/announcement-read.js" asp-append-version="true"></script>
+}

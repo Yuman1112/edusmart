@@ -1,0 +1,12 @@
+@model SecureSmartTuitionSystem.ViewModels.Billing.PaymentVerificationViewModel
+@{ ViewData["Title"] = "Verify payment"; }
+<div class="container py-5 text-center">
+    <h1>Verifying your payment</h1>
+    <p>Please wait while EduSmart confirms the payment with Stripe.</p>
+    <form asp-action="ConfirmPayment" method="post" id="paymentVerificationForm">
+        <input type="hidden" name="sessionId" value="@Model.SessionId" />
+        <input type="hidden" name="callbackToken" value="@Model.CallbackToken" />
+        <button type="submit" class="primary-button">Continue verification</button>
+    </form>
+</div>
+@section Scripts { <script src="~/js/payment-verification.js" asp-append-version="true"></script> }

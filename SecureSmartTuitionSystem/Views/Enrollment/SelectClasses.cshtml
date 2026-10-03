@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.EnrollmentSelectionViewModel
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.EnrollmentSelectionViewModel
 
 @{
     ViewData["Title"] = "Select Classes";
@@ -472,7 +472,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 
-    <script>
+    <script nonce="@Context.Items["CspNonce"]">
         document.addEventListener("DOMContentLoaded", function () {
             const form =
                 document.getElementById("selectClassesForm");

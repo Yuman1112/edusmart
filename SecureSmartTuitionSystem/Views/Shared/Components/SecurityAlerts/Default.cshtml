@@ -1,0 +1,8 @@
+@model int
+@if (Model > 0)
+{
+    <div class="alert alert-warning" role="status">
+        <i class="bi bi-shield-exclamation"></i> @Model security alert(s) in the last 24 hours.
+        <a asp-controller="Security" asp-action="Index">Review security activity</a>
+    </div>
+}

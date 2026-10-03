@@ -1,7 +1,13 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using SecureSmartTuitionSystem.Models.Security;
+using SecureSmartTuitionSystem.Services.Security;
+using System.Security.Claims;
 using SecureSmartTuitionSystem.Models;
 using SecureSmartTuitionSystem.Models.Billing;
+using SecureSmartTuitionSystem.Models.Communication;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Models.Identity;
 
@@ -10,10 +16,79 @@ namespace SecureSmartTuitionSystem.Data
     public class ApplicationDbContext
         : IdentityDbContext<ApplicationUser>
     {
-        public ApplicationDbContext(
-            DbContextOptions<ApplicationDbContext> options)
-            : base(options)
+        private readonly IHttpContextAccessor _http;
+        private readonly AuditLogIntegrity _auditIntegrity;
+        private readonly FinancialFieldProtection _financialProtection;
+        private readonly bool _auditChanges;
+        private bool _auditPrepared;
+
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
+            IHttpContextAccessor http, AuditLogIntegrity auditIntegrity,
+            FinancialFieldProtection financialProtection, bool auditChanges = true) : base(options)
         {
+            _http = http;
+            _auditIntegrity = auditIntegrity;
+            _financialProtection = financialProtection;
+            _auditChanges = auditChanges;
+        }
+
+        public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+        public DbSet<SecurityEmailDelivery> SecurityEmailDeliveries => Set<SecurityEmailDelivery>();
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            PrepareAuditEntries();
+            int result = base.SaveChanges(acceptAllChangesOnSuccess);
+            _auditPrepared = false;
+            return result;
+        }
+
+        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default)
+        {
+            PrepareAuditEntries();
+            int result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            _auditPrepared = false;
+            return result;
+        }
+
+        private void PrepareAuditEntries()
+        {
+            ChangeTracker.DetectChanges();
+            if (ChangeTracker.Entries<AuditLogEntry>().Any(x =>
+                x.State is EntityState.Modified or EntityState.Deleted))
+                throw new InvalidOperationException("Audit entries cannot be modified or deleted.");
+            if (!_auditChanges || _auditPrepared) return;
+            _auditPrepared = true;
+            var context = _http.HttpContext;
+            var changed = ChangeTracker.Entries().Where(x =>
+                x.Entity is not AuditLogEntry and not SecurityEmailDelivery &&
+                x.State is EntityState.Added or EntityState.Modified or EntityState.Deleted).ToList();
+            foreach (var change in changed)
+            {
+                string entity = change.Metadata.ClrType.Name;
+                var keys = change.Properties.Where(x => x.Metadata.IsPrimaryKey() &&
+                    !x.IsTemporary && x.Metadata.Name.EndsWith("Id", StringComparison.Ordinal))
+                    .Select(x => $"{x.Metadata.Name}={x.CurrentValue}")
+                    .Concat(change.Properties.Where(x =>
+                        x.Metadata.Name is "PaymentNumber" or "BillNumber" or "ApplicationNumber" or "ClassCode")
+                        .Select(x => $"{x.Metadata.Name}={x.CurrentValue}"));
+                string fields = string.Join(", ", change.Properties.Where(x =>
+                    change.State != EntityState.Modified || x.IsModified).Select(x => x.Metadata.Name));
+                var entry = new AuditLogEntry {
+                    ActorUserId = context?.User.FindFirstValue(ClaimTypes.NameIdentifier),
+                    ActorName = SecurityEventService.Limit(context?.User.Identity?.Name ?? "System", 256),
+                    EventName = SecurityEventService.Limit(entity + "." + change.State, 100),
+                    Severity = SecuritySeverity.Information,
+                    EntityName = SecurityEventService.Limit(entity, 120),
+                    EntityKey = SecurityEventService.Limit(string.Join(", ", keys), 256),
+                    RemoteIp = SecurityEventService.Limit(context?.Connection.RemoteIpAddress?.ToString() ?? "", 64),
+                    TraceId = SecurityEventService.Limit(context?.TraceIdentifier ?? "", 120),
+                    Summary = SecurityEventService.Limit($"{change.State} record. Fields: {fields}. Values are not logged.", 1000)
+                };
+                _auditIntegrity.Seal(entry);
+                AuditLogEntries.Add(entry);
+            }
         }
 
         /*
@@ -70,10 +145,44 @@ namespace SecureSmartTuitionSystem.Data
         public DbSet<Payment> Payments =>
             Set<Payment>();
 
+        /*
+         * Communication and Announcement
+         */
+        public DbSet<Announcement> Announcements =>
+            Set<Announcement>();
+
+        public DbSet<AnnouncementRead> AnnouncementReads =>
+            Set<AnnouncementRead>();
+
+        public DbSet<Conversation> Conversations =>
+            Set<Conversation>();
+
+        public DbSet<ChatMessage> ChatMessages =>
+            Set<ChatMessage>();
+
+        public DbSet<MessageAttachment> MessageAttachments =>
+            Set<MessageAttachment>();
+
+        public DbSet<MessageUserDeletion> MessageUserDeletions =>
+            Set<MessageUserDeletion>();
+
         protected override void OnModelCreating(
             ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // AddDefaultIdentity uses 128-character provider/token keys at runtime.
+            // Apply the same mapping when the design-time factory builds the model.
+            builder.Entity<IdentityUserLogin<string>>(entity =>
+            {
+                entity.Property(x => x.LoginProvider).HasMaxLength(128);
+                entity.Property(x => x.ProviderKey).HasMaxLength(128);
+            });
+            builder.Entity<IdentityUserToken<string>>(entity =>
+            {
+                entity.Property(x => x.LoginProvider).HasMaxLength(128);
+                entity.Property(x => x.Name).HasMaxLength(128);
+            });
 
             ConfigureIdentityProfiles(builder);
             ConfigureSubjectsAndClasses(builder);
@@ -81,6 +190,143 @@ namespace SecureSmartTuitionSystem.Data
             ConfigureStudentEnrollments(builder);
             ConfigureEnrollmentStatusHistories(builder);
             ConfigureBilling(builder);
+            ConfigureCommunication(builder);
+            ConfigureSecurity(builder);
+        }
+
+        private void ConfigureSecurity(ModelBuilder builder)
+        {
+            builder.Entity<AuditLogEntry>(entity =>
+            {
+                entity.ToTable("AuditLogEntries", table =>
+                {
+                    table.HasTrigger("TR_AuditLogEntries_AppendOnly");
+                    table.UseSqlOutputClause(false);
+                });
+                entity.HasIndex(x => x.OccurredAtUtc);
+                entity.HasIndex(x => new { x.Severity, x.OccurredAtUtc });
+                entity.HasIndex(x => new { x.ActorUserId, x.OccurredAtUtc });
+                entity.HasIndex(x => new { x.EventName, x.RemoteIp, x.OccurredAtUtc });
+                entity.Property(x => x.IntegrityProof).IsRequired();
+            });
+            builder.Entity<SecurityEmailDelivery>(entity =>
+            {
+                entity.HasKey(x => x.AuditLogEntryId);
+                entity.Property(x => x.AuditLogEntryId).ValueGeneratedNever();
+                entity.HasOne<AuditLogEntry>().WithMany().HasForeignKey(x => x.AuditLogEntryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            var converter = new ValueConverter<string?, string?>(
+                value => value == null ? null : _financialProtection.Encrypt(value),
+                value => value == null ? null : _financialProtection.Decrypt(value));
+            builder.Entity<Payment>().Property(x => x.FailureReason)
+                .HasConversion(converter).HasColumnType("nvarchar(max)")
+                .Metadata.SetMaxLength(null);
+            builder.Entity<Bill>().Property(x => x.CancellationReason)
+                .HasConversion(converter).HasColumnType("nvarchar(max)")
+                .Metadata.SetMaxLength(null);
+        }
+
+        private static void ConfigureCommunication(
+            ModelBuilder builder)
+        {
+            builder.Entity<Announcement>(entity =>
+            {
+                entity.HasIndex(item => item.PublishAt);
+                entity.HasIndex(item => new
+                {
+                    item.TargetAudience,
+                    item.IsArchived
+                });
+
+                entity.HasOne(item => item.CreatedByUser)
+                    .WithMany()
+                    .HasForeignKey(item => item.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<AnnouncementRead>(entity =>
+            {
+                entity.HasIndex(item => new
+                {
+                    item.AnnouncementId,
+                    item.UserId
+                })
+                    .IsUnique();
+
+                entity.HasIndex(item => new
+                {
+                    item.UserId,
+                    item.ReadAt
+                });
+
+                entity.HasOne(item => item.Announcement)
+                    .WithMany(item => item.Reads)
+                    .HasForeignKey(item => item.AnnouncementId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(item => item.User)
+                    .WithMany()
+                    .HasForeignKey(item => item.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Conversation>(entity =>
+            {
+                entity.HasIndex(item => item.ParentUserId).IsUnique();
+                entity.HasIndex(item => item.LastMessageAt);
+
+                entity.HasOne(item => item.ParentUser)
+                    .WithMany()
+                    .HasForeignKey(item => item.ParentUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<ChatMessage>(entity =>
+            {
+                entity.HasIndex(item => new { item.ConversationId, item.SentAt });
+                entity.HasIndex(item => new { item.ConversationId, item.ReadAt });
+
+                entity.HasOne(item => item.Conversation)
+                    .WithMany(item => item.Messages)
+                    .HasForeignKey(item => item.ConversationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(item => item.SenderUser)
+                    .WithMany()
+                    .HasForeignKey(item => item.SenderUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(item => item.DeletedAt);
+            });
+
+            builder.Entity<MessageAttachment>(entity =>
+            {
+                entity.HasIndex(item => item.ChatMessageId);
+                entity.HasOne(item => item.ChatMessage)
+                    .WithMany(item => item.Attachments)
+                    .HasForeignKey(item => item.ChatMessageId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<MessageUserDeletion>(entity =>
+            {
+                entity.HasIndex(item => new
+                {
+                    item.ChatMessageId,
+                    item.UserId
+                }).IsUnique();
+
+                entity.HasOne(item => item.ChatMessage)
+                    .WithMany(item => item.UserDeletions)
+                    .HasForeignKey(item => item.ChatMessageId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(item => item.User)
+                    .WithMany()
+                    .HasForeignKey(item => item.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
         }
 
         private static void ConfigureIdentityProfiles(

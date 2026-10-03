@@ -1,0 +1,44 @@
+@model SecureSmartTuitionSystem.ViewModels.Communication.AnnouncementFormViewModel
+
+@{
+    ViewData["Title"] = "Edit Announcement";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/announcement.css" asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>Edit Announcement</h1>
+        <p>Update the announcement details and publication period.</p>
+    </div>
+
+    <a asp-action="Index" class="outline-button">
+        <i class="bi bi-arrow-left"></i>
+        Back
+    </a>
+</div>
+
+<section class="announcement-form-card">
+    <form asp-action="Edit"
+          asp-route-id="@Model.AnnouncementId"
+          method="post">
+        <partial name="_AnnouncementForm" model="Model" />
+
+        <div class="announcement-form-actions">
+            <a asp-action="Index" class="outline-button">Cancel</a>
+            <button type="submit" class="primary-button">
+                <i class="bi bi-check-lg"></i>
+                Save Changes
+            </button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="~/js/announcement-form.js"
+            asp-append-version="true"></script>
+}
