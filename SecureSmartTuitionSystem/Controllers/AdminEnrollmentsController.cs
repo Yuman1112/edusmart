@@ -1,3 +1,7 @@
+using Stripe;
+using Stripe.Checkout;
+using SecureSmartTuitionSystem.Services.Enrollment;
+using SecureSmartTuitionSystem.Models.Billing;
 using SecureSmartTuitionSystem.Models.Security;
 using System.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -17,6 +21,7 @@ namespace SecureSmartTuitionSystem.Controllers
     public class AdminEnrollmentsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly StripeClient _stripeClient;
         private readonly SecurityEventService _securityEvents;
 
         private readonly UserManager<ApplicationUser>
@@ -36,9 +41,10 @@ namespace SecureSmartTuitionSystem.Controllers
             UserManager<ApplicationUser> userManager,
             IBillingService billingService,
             IFirstPaymentEmailService firstPaymentEmailService,
-            ILogger<AdminEnrollmentsController> logger, SecurityEventService securityEvents)
+            ILogger<AdminEnrollmentsController> logger, SecurityEventService securityEvents, StripeClient stripeClient)
         {
             _context = context;
+            _stripeClient = stripeClient;
             _userManager = userManager;
             _billingService = billingService;
 
@@ -218,8 +224,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             classSession.ClassSessionId &&
                             (enrollment.Status ==
                                 StudentEnrollmentStatus.Active ||
-                             enrollment.Status ==
-                                StudentEnrollmentStatus.PendingDrop));
+                             ((enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date)) && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date))));
 
                 classItems.Add(
                     new AdminEnrollmentClassItemViewModel
@@ -482,12 +487,13 @@ namespace SecureSmartTuitionSystem.Controllers
                             });
                     }
 
-                    if (classSession.Status !=
-                        ClassSessionStatus.Active)
+                    if (classSession.Status != ClassSessionStatus.Active ||
+                        (classSession.StartDate.HasValue && application.RequestedStartDate.Date < classSession.StartDate.Value.Date) ||
+                        (classSession.EndDate.HasValue && application.RequestedStartDate.Date > classSession.EndDate.Value.Date))
                     {
                         TempData["ErrorMessage"] =
                             $"Class {GetClassDisplayName(classSession)} " +
-                            "is no longer active.";
+                            "is unavailable for the requested enrollment start date.";
 
                         return RedirectToAction(
                             nameof(Details),
@@ -499,15 +505,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     }
 
                     int occupiedSeats =
-                        await _context.StudentEnrollments
-                            .CountAsync(enrollment =>
-                                enrollment.ClassSessionId ==
-                                classSession.ClassSessionId &&
-                                (enrollment.Status ==
-                                    StudentEnrollmentStatus.Active ||
-                                 enrollment.Status ==
-                                    StudentEnrollmentStatus
-                                        .PendingDrop));
+                        await new EnrollmentRulesService(_context).OccupiedSeatsAsync(classSession.ClassSessionId, application.EnrollmentApplicationId);
 
                     if (occupiedSeats >=
                         classSession.Capacity)
@@ -543,9 +541,7 @@ namespace SecureSmartTuitionSystem.Controllers
                                     classSession.ClassSessionId &&
                                     (enrollment.Status ==
                                         StudentEnrollmentStatus.Active ||
-                                     enrollment.Status ==
-                                        StudentEnrollmentStatus
-                                            .PendingDrop));
+                                     (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date))));
 
                         if (alreadyEnrolled)
                         {
@@ -564,6 +560,17 @@ namespace SecureSmartTuitionSystem.Controllers
                         }
                     }
                 }
+
+                if (application.RequestedStartDate.Date < ClassScheduleService.Today)
+                {
+                    TempData["ErrorMessage"] = "The requested start date has passed. Reject this request and ask the student or parent to submit a new request with a future start date.";
+                    return RedirectToAction(nameof(Details), new { id = application.EnrollmentApplicationId });
+                }
+
+                var ruleError = await new EnrollmentRulesService(_context).ValidateAsync(
+                    application.SelectedSubjects.Select(x => x.ClassSessionId).ToList(), application.RequestedStartDate,
+                    application.ExistingStudentProfileId, application.EnrollmentApplicationId, durationMonths: application.EnrollmentDurationMonths);
+                if (ruleError != null) { TempData["ErrorMessage"] = ruleError; return RedirectToAction(nameof(Details), new { id = application.EnrollmentApplicationId }); }
 
                 EnrollmentStatus previousStatus =
                     application.Status;
@@ -888,6 +895,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     });
             }
 
+            await using var cancelTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             var application =
                 await _context.EnrollmentApplications
                     .FirstOrDefaultAsync(item =>
@@ -912,6 +920,21 @@ namespace SecureSmartTuitionSystem.Controllers
                         id = application.EnrollmentApplicationId
                     });
             }
+
+            var pendingPayments = await _context.Payments.Where(x => x.Bill.EnrollmentApplicationId == application.EnrollmentApplicationId && x.Status == PaymentStatus.Pending).ToListAsync();
+            try
+            {
+                var sessions = new SessionService(_stripeClient);
+                foreach (var payment in pendingPayments.Where(x => x.PaymentProvider == "Stripe" && x.ProviderCheckoutSessionId != null))
+                {
+                    var checkout = await sessions.GetAsync(payment.ProviderCheckoutSessionId!, cancellationToken: HttpContext.RequestAborted);
+                    if (checkout.Status == "complete") { TempData["ErrorMessage"] = "A payment is already being confirmed. Wait for its result before cancelling."; return RedirectToAction(nameof(Details), new { id = application.EnrollmentApplicationId }); }
+                    if (checkout.Status == "open") await sessions.ExpireAsync(checkout.Id, cancellationToken: HttpContext.RequestAborted);
+                    else if (checkout.Status != "expired") { TempData["ErrorMessage"] = "The active checkout cannot currently be cancelled."; return RedirectToAction(nameof(Details), new { id = application.EnrollmentApplicationId }); }
+                }
+            }
+            catch (StripeException ex) { _logger.LogError(ex, "Could not expire checkout during application cancellation."); TempData["ErrorMessage"] = "Could not stop the active payment checkout. The application has not been cancelled; retry after checking payment status."; return RedirectToAction(nameof(Details), new { id = application.EnrollmentApplicationId }); }
+            foreach (var payment in pendingPayments) { payment.Status = PaymentStatus.Failed; payment.FailedAt = DateTime.UtcNow; payment.FailureReason = "Enrollment application cancelled by Admin."; }
 
             var previousStatus =
                 application.Status;
@@ -950,7 +973,10 @@ namespace SecureSmartTuitionSystem.Controllers
                         model.CancellationReason.Trim()
                 });
 
+            var unpaidBills = await _context.Bills.Where(b => b.EnrollmentApplicationId == application.EnrollmentApplicationId && (b.Status == BillStatus.PendingPayment || b.Status == BillStatus.Overdue)).ToListAsync();
+            foreach (var bill in unpaidBills) { bill.Status = BillStatus.Cancelled; bill.CancelledAt = DateTime.UtcNow; bill.CancellationReason = model.CancellationReason.Trim(); bill.PaymentAccessTokenHash = null; bill.PaymentAccessTokenExpiresAt = null; }
             await _context.SaveChangesAsync();
+            await cancelTransaction.CommitAsync();
 
             TempData["SuccessMessage"] =
                 $"Application {application.ApplicationNumber} " +
@@ -1061,7 +1087,7 @@ namespace SecureSmartTuitionSystem.Controllers
         {
             return string.IsNullOrWhiteSpace(
                 classSession.ClassName)
-                ? classSession.ClassCode
+                ? "Class"
                 : classSession.ClassName;
         }
     }

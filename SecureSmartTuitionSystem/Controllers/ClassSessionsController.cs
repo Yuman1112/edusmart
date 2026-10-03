@@ -1,4 +1,5 @@
-﻿using System.Data;
+using SecureSmartTuitionSystem.Services.Enrollment;
+using System.Data;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
@@ -225,8 +226,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             enrollment.Status ==
                                 StudentEnrollmentStatus.Active ||
 
-                            enrollment.Status ==
-                                StudentEnrollmentStatus.PendingDrop
+                            (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date))
                         ))
                     .GroupBy(enrollment =>
                         enrollment.ClassSessionId)
@@ -270,8 +270,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             enrollment.Status ==
                                 StudentEnrollmentStatus.Active ||
 
-                            enrollment.Status ==
-                                StudentEnrollmentStatus.PendingDrop
+                            (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date))
                         ));
 
             ViewBag.EnrolledCount = enrolledCount;
@@ -285,6 +284,7 @@ namespace SecureSmartTuitionSystem.Controllers
         {
             var model = new ClassSessionFormViewModel
             {
+                StartDate = ClassScheduleService.Today,
                 Capacity = 20,
                 StartTime = new TimeOnly(18, 0),
                 EndTime = new TimeOnly(20, 0)
@@ -300,6 +300,7 @@ namespace SecureSmartTuitionSystem.Controllers
         public async Task<IActionResult> Create(
             ClassSessionFormViewModel model)
         {
+            model.ClassSessionId = null; // Creation never trusts a posted existing class identifier.
             NormalizeInput(model);
             await GenerateClassNameIfEmptyAsync(model);
 
@@ -319,6 +320,8 @@ namespace SecureSmartTuitionSystem.Controllers
 
             try
             {
+                await ValidateClassSessionAsync(model, existingClassSessionId: null);
+                if (!ModelState.IsValid) { await PopulateSelectionsAsync(model); return View(model); }
                 Subject subject =
                     await FindOrCreateSubjectAsync(model);
 
@@ -327,6 +330,8 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 var classSession = new ClassSession
                 {
+                    StartDate = model.StartDate!.Value.Date,
+                    EndDate = model.EndDate?.Date,
                     ClassCode = classCode,
                     ClassName = model.ClassName!,
                     Subject = subject,
@@ -358,7 +363,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 ModelState.AddModelError(
                     string.Empty,
                     "The class session could not be saved. " +
-                    "The Class Name or Class Code may already exist.");
+                    "The class name may already exist.");
 
                 await PopulateSelectionsAsync(model);
 
@@ -384,6 +389,8 @@ namespace SecureSmartTuitionSystem.Controllers
             var model = new ClassSessionFormViewModel
             {
                 ClassSessionId = session.ClassSessionId,
+                StartDate = ClassScheduleService.FirstDate(session),
+                EndDate = session.EndDate,
                 EducationStage = session.Subject.EducationStage,
                 AcademicLevel = session.Subject.AcademicLevel,
                 SubjectName = session.Subject.SubjectName,
@@ -443,9 +450,13 @@ namespace SecureSmartTuitionSystem.Controllers
 
             try
             {
+                await ValidateClassSessionAsync(model, model.ClassSessionId);
+                if (!ModelState.IsValid) { await PopulateSelectionsAsync(model); return View(model); }
                 Subject subject =
                     await FindOrCreateSubjectAsync(model);
 
+                session.StartDate = model.StartDate!.Value.Date;
+                session.EndDate = model.EndDate?.Date;
                 session.Subject = subject;
                 session.ClassName = model.ClassName!;
                 session.TutorUserId = model.TutorUserId;
@@ -460,7 +471,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 await transaction.CommitAsync();
 
                 TempData["SuccessMessage"] =
-                    $"Class {session.ClassCode} " +
+                    $"Class {session.ClassName} " +
                     "was updated successfully.";
 
                 return RedirectToAction(nameof(Index));
@@ -484,32 +495,8 @@ namespace SecureSmartTuitionSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id)
         {
-            var session =
-                await _context.ClassSessions
-                    .FirstOrDefaultAsync(item =>
-                        item.ClassSessionId == id);
-
-            if (session == null)
-            {
-                return NotFound();
-            }
-
-            if (session.Status != ClassSessionStatus.Active)
-            {
-                TempData["ErrorMessage"] =
-                    "Only an active class can be cancelled.";
-
-                return RedirectToAction(nameof(Index));
-            }
-
-            session.Status = ClassSessionStatus.Cancelled;
-
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] =
-                $"Class {session.ClassCode} was cancelled.";
-
-            return RedirectToAction(nameof(Index));
+            if (!await _context.ClassSessions.AnyAsync(x => x.ClassSessionId == id)) return NotFound();
+            return RedirectToAction("Index", "ClassSchedules", new { classSessionId = id });
         }
 
         [HttpPost]
@@ -534,12 +521,20 @@ namespace SecureSmartTuitionSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            if (!session.EndDate.HasValue || session.EndDate.Value.Date >= ClassScheduleService.Today ||
+                await _context.ClassLessonChanges.AnyAsync(x => x.ClassSessionId == id && (x.ReplacementDate == null || x.ReplacementDate >= ClassScheduleService.Today)))
+            {
+                TempData["ErrorMessage"] = "Set a past term end date and resolve outstanding replacements before completing the class.";
+                return RedirectToAction(nameof(Index));
+            }
+            if (await _context.EnrollmentApplications.AnyAsync(x => (x.Status == EnrollmentStatus.ApprovedPendingPayment || x.Status == EnrollmentStatus.PaymentConfirmed) && x.SelectedSubjects.Any(y => y.ClassSessionId == id)))
+            { TempData["ErrorMessage"] = "Resolve approved applications awaiting payment before completing this class."; return RedirectToAction(nameof(Index)); }
             session.Status = ClassSessionStatus.Completed;
 
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] =
-                $"Class {session.ClassCode} was marked as completed.";
+                $"Class {session.ClassName} was marked as completed.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -572,6 +567,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     item.TutorUserId == session.TutorUserId &&
                     item.DayOfWeek == session.DayOfWeek &&
                     item.Status == ClassSessionStatus.Active &&
+                    (!session.EndDate.HasValue || (item.StartDate ?? item.CreatedAt.Date) <= session.EndDate.Value) &&
+                    (!item.EndDate.HasValue || (session.StartDate ?? session.CreatedAt.Date) <= item.EndDate.Value) &&
                     session.StartTime < item.EndTime &&
                     session.EndTime > item.StartTime);
 
@@ -584,12 +581,17 @@ namespace SecureSmartTuitionSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            if (session.EndDate.HasValue && session.EndDate.Value.Date < ClassScheduleService.Today)
+            {
+                TempData["ErrorMessage"] = "Extend the class end date before reactivating an ended term.";
+                return RedirectToAction(nameof(Index));
+            }
             session.Status = ClassSessionStatus.Active;
 
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] =
-                $"Class {session.ClassCode} was activated.";
+                $"Class {session.ClassName} was activated.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -675,6 +677,82 @@ namespace SecureSmartTuitionSystem.Controllers
             ClassSessionFormViewModel model,
             int? existingClassSessionId)
         {
+            if (model.StartDate.HasValue)
+            {
+                model.EndDate ??= AcademicYearPolicy.EndOfYear(model.StartDate.Value);
+                if (model.EndDate.Value.Year != model.StartDate.Value.Year) ModelState.AddModelError(nameof(model.EndDate), "A class term must end within its academic year (by 31 December).");
+                if (model.StartDate.Value.Year < 2000 || model.StartDate.Value.Year > 2100)
+                    ModelState.AddModelError(nameof(model.StartDate), "Choose a date between 2000 and 2100.");
+                if (!existingClassSessionId.HasValue && model.StartDate.Value.Date < ClassScheduleService.Today)
+                    ModelState.AddModelError(nameof(model.StartDate), "A new class must start today or later.");
+                if (model.EndDate.HasValue && (model.EndDate.Value.Date < model.StartDate.Value.Date || model.EndDate.Value.Year > 2100))
+                    ModelState.AddModelError(nameof(model.EndDate), "End date must be on or after start date (through 2100).");
+                if (model.EndDate.HasValue && model.DayOfWeek.HasValue &&
+                    model.StartDate.Value.Date.AddDays(((int)model.DayOfWeek.Value - (int)model.StartDate.Value.DayOfWeek + 7) % 7) > model.EndDate.Value.Date)
+                    ModelState.AddModelError(nameof(model.EndDate), "The date range must contain at least one lesson on the selected weekday.");
+            }
+            if (existingClassSessionId.HasValue)
+            {
+                var previous = await _context.ClassSessions.AsNoTracking().Include(x => x.Subject).FirstOrDefaultAsync(x => x.ClassSessionId == existingClassSessionId.Value);
+                bool promised = await _context.EnrollmentApplications.AnyAsync(x => (x.Status == EnrollmentStatus.ApprovedPendingPayment || x.Status == EnrollmentStatus.PaymentConfirmed) && x.SelectedSubjects.Any(y => y.ClassSessionId == existingClassSessionId.Value)) ||
+                    await _context.StudentEnrollments.AnyAsync(x => x.ClassSessionId == existingClassSessionId.Value && (x.Status == StudentEnrollmentStatus.Active || x.Status == StudentEnrollmentStatus.PendingDrop));
+                if (previous != null && (ClassScheduleService.FirstDate(previous) <= ClassScheduleService.Today || promised) &&
+                    (model.StartDate?.Date != ClassScheduleService.FirstDate(previous) || model.DayOfWeek != previous.DayOfWeek ||
+                     model.StartTime != previous.StartTime || model.EndTime != previous.EndTime || model.TutorUserId != previous.TutorUserId || model.SubjectName != previous.Subject.SubjectName || model.AcademicLevel != previous.Subject.AcademicLevel || model.EducationStage != previous.Subject.EducationStage))
+                    ModelState.AddModelError("", "This class has started or already has approved/enrolled students. Its subject, start date, tutor and weekly timetable are preserved. Use Calendar to cancel a dated lesson and schedule its replacement.");
+                if (model.EndDate.HasValue && await _context.StudentEnrollments.AnyAsync(x => x.ClassSessionId == existingClassSessionId.Value && x.StartDate > model.EndDate.Value &&
+                    (x.Status == StudentEnrollmentStatus.Active || x.Status == StudentEnrollmentStatus.PendingDrop)))
+                    ModelState.AddModelError(nameof(model.EndDate), "An enrolled student starts after the proposed end date.");
+                if (model.EndDate.HasValue)
+                {
+                    // Approved fee snapshots promise whole billing months; do not silently shorten that promise.
+                    var commitments = await _context.EnrollmentApplications.AsNoTracking()
+                        .Where(x => (x.Status == EnrollmentStatus.ApprovedPendingPayment || x.Status == EnrollmentStatus.PaymentConfirmed || x.Status == EnrollmentStatus.Enrolled) &&
+                            x.SelectedSubjects.Any(y => y.ClassSessionId == existingClassSessionId.Value))
+                        .Select(x => new { x.RequestedStartDate, x.EnrollmentDurationMonths }).ToListAsync();
+                    if (commitments.Any(x => new DateTime(x.RequestedStartDate.Year, x.RequestedStartDate.Month, 1)
+                        .AddMonths(x.EnrollmentDurationMonths).AddDays(-1) > model.EndDate.Value.Date))
+                        ModelState.AddModelError(nameof(model.EndDate), "End date cannot be earlier than an approved or paid tuition period. Use a new class session for a shorter term.");
+                }
+                if (model.EndDate.HasValue && await _context.ClassLessonChanges.AnyAsync(x => x.ClassSessionId == existingClassSessionId.Value && x.OriginalDate > model.EndDate.Value))
+                    ModelState.AddModelError(nameof(model.EndDate), "Do not shorten the term past an existing cancelled lesson. Replacement lessons may occur after the term.");
+            }
+            if (existingClassSessionId.HasValue && await new EnrollmentRulesService(_context).OccupiedSeatsAsync(existingClassSessionId.Value) > model.Capacity)
+                ModelState.AddModelError(nameof(model.Capacity), "Maximum capacity cannot be below existing enrollments and approved reservations.");
+            if (existingClassSessionId.HasValue && model.EndDate.HasValue && await _context.EnrollmentApplications.AnyAsync(x => (x.Status == EnrollmentStatus.ApprovedPendingPayment || x.Status == EnrollmentStatus.PaymentConfirmed) && x.RequestedStartDate > model.EndDate && x.SelectedSubjects.Any(y => y.ClassSessionId == existingClassSessionId)))
+                ModelState.AddModelError(nameof(model.EndDate), "An approved application starts after the proposed end date.");
+            if (existingClassSessionId.HasValue && model.StartDate.HasValue && model.DayOfWeek.HasValue && model.StartTime.HasValue && model.EndTime.HasValue)
+            {
+                var own = await _context.StudentEnrollments.AsNoTracking().Where(x => x.ClassSessionId == existingClassSessionId.Value &&
+                    (x.Status == StudentEnrollmentStatus.Active || x.Status == StudentEnrollmentStatus.PendingDrop)).ToListAsync();
+                var ids = own.Select(x => x.StudentProfileId).ToList();
+                var other = await _context.StudentEnrollments.AsNoTracking().Include(x => x.ClassSession).Where(x => ids.Contains(x.StudentProfileId) &&
+                    x.ClassSessionId != existingClassSessionId.Value && x.ClassSession.Status == ClassSessionStatus.Active &&
+                    (x.Status == StudentEnrollmentStatus.Active || x.Status == StudentEnrollmentStatus.PendingDrop)).ToListAsync();
+                foreach (var e in own)
+                {
+                    var begin = model.StartDate.Value > e.StartDate ? model.StartDate.Value : e.StartDate;
+                    DateTime? end = model.EndDate;
+                    if (e.DropEffectiveDate.HasValue && (!end.HasValue || e.DropEffectiveDate.Value <= end.Value)) end = e.DropEffectiveDate.Value.AddDays(-1);
+                    foreach (var o in other.Where(x => x.StudentProfileId == e.StudentProfileId))
+                    {
+                        var otherBegin = ClassScheduleService.FirstDate(o.ClassSession) > o.StartDate ? ClassScheduleService.FirstDate(o.ClassSession) : o.StartDate;
+                        DateTime? otherEnd = AcademicYearPolicy.ClassEnd(o.ClassSession);
+                        if (o.DropEffectiveDate.HasValue && (!otherEnd.HasValue || o.DropEffectiveDate.Value <= otherEnd.Value)) otherEnd = o.DropEffectiveDate.Value.AddDays(-1);
+                        if (ClassScheduleService.WeeklyOverlap(begin, end, model.DayOfWeek.Value, model.StartTime.Value, model.EndTime.Value,
+                            otherBegin, otherEnd, o.ClassSession.DayOfWeek, o.ClassSession.StartTime, o.ClassSession.EndTime))
+                            ModelState.AddModelError("", "The proposed timetable conflicts with another class of an enrolled student.");
+                    }
+                }
+            }
+            if (existingClassSessionId.HasValue && model.EndDate.HasValue)
+            {
+                var commitments = await _context.EnrollmentApplications.AsNoTracking().Where(a =>
+                    (a.Status == EnrollmentStatus.ApprovedPendingPayment || a.Status == EnrollmentStatus.PaymentConfirmed || a.Status == EnrollmentStatus.Enrolled) &&
+                    a.SelectedSubjects.Any(x => x.ClassSessionId == existingClassSessionId.Value)).Select(a => new { a.RequestedStartDate, a.EnrollmentDurationMonths }).ToListAsync();
+                if (commitments.Any(a => new DateTime(a.RequestedStartDate.Year, a.RequestedStartDate.Month, 1).AddMonths(a.EnrollmentDurationMonths).AddDays(-1) > model.EndDate.Value.Date))
+                    ModelState.AddModelError(nameof(model.EndDate), "The proposed end date would shorten an approved or paid tuition period. Review those commitments first.");
+            }
             ValidateStageAndLevel(model);
             ValidateSubject(model);
             ValidateTime(model);
@@ -735,23 +813,21 @@ namespace SecureSmartTuitionSystem.Controllers
                 model.StartTime.Value <
                     model.EndTime.Value)
             {
-                bool conflict =
-                    await _context.ClassSessions.AnyAsync(
-                        session =>
-                            session.TutorUserId ==
-                                model.TutorUserId &&
-                            session.DayOfWeek ==
-                                model.DayOfWeek.Value &&
-                            session.Status ==
-                                ClassSessionStatus.Active &&
-                            (!existingClassSessionId.HasValue ||
-                             session.ClassSessionId !=
-                                existingClassSessionId.Value) &&
-                            model.StartTime.Value <
-                                session.EndTime &&
-                            model.EndTime.Value >
-                                session.StartTime);
-
+                var candidates = await _context.ClassSessions.AsNoTracking().Where(session =>
+                    session.TutorUserId == model.TutorUserId && session.DayOfWeek == model.DayOfWeek.Value &&
+                    session.Status == ClassSessionStatus.Active && (!existingClassSessionId.HasValue || session.ClassSessionId != existingClassSessionId.Value) &&
+                    model.StartTime.Value < session.EndTime && model.EndTime.Value > session.StartTime).ToListAsync();
+                bool conflict = model.StartDate.HasValue && candidates.Any(session => ClassScheduleService.WeeklyOverlap(
+                    model.StartDate.Value, model.EndDate, model.DayOfWeek.Value, model.StartTime.Value, model.EndTime.Value,
+                    ClassScheduleService.FirstDate(session), AcademicYearPolicy.ClassEnd(session), session.DayOfWeek, session.StartTime, session.EndTime));
+                if (!conflict && model.StartDate.HasValue)
+                {
+                    var replacements = await _context.ClassLessonChanges.AsNoTracking().Where(x => x.ReplacementDate != null &&
+                        x.ClassSession.TutorUserId == model.TutorUserId && x.ReplacementDate >= model.StartDate.Value.Date &&
+                        (!model.EndDate.HasValue || x.ReplacementDate <= model.EndDate.Value.Date) &&
+                        x.ReplacementStartTime < model.EndTime.Value && x.ReplacementEndTime > model.StartTime.Value).ToListAsync();
+                    conflict = replacements.Any(x => x.ReplacementDate!.Value.DayOfWeek == model.DayOfWeek.Value);
+                }
                 if (conflict)
                 {
                     ModelState.AddModelError(

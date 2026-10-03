@@ -1,9 +1,17 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Enrollment.ClassSessionFormViewModel
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.ClassSessionFormViewModel
 
 <div asp-validation-summary="ModelOnly"
      class="alert alert-danger">
 </div>
 
+<div class="class-form-section">
+    <h2><i class="bi bi-calendar-range"></i> Class Validity</h2>
+    <div class="row g-4">
+        <div class="col-md-6"><label asp-for="StartDate" class="form-label"></label><input asp-for="StartDate" type="date" class="form-control" /><span asp-validation-for="StartDate" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="EndDate" class="form-label"></label><input asp-for="EndDate" type="date" class="form-control" /><span asp-validation-for="EndDate" class="text-danger"></span><small class="text-muted">Academic year: January–December. Leave blank to end on 31 December of the start year.</small></div>
+    </div>
+    <p class="text-muted mt-3">Weekly lessons exist only within this period. Once the class starts, use Calendar for individual cancellations and replacements.</p>
+</div>
 <input type="hidden"
        id="InitialAcademicLevel"
        value="@Model.AcademicLevel" />

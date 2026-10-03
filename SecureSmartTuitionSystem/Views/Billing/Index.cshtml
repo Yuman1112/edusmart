@@ -62,7 +62,7 @@
         <div>
             <h1>Payment &amp; Billing</h1>
             <p>
-                Review bills and monitor payment status.
+                @(User.IsInRole("Admin") ? "Review bills and monitor payment status." : "View your own bills, payments and receipts.")
             </p>
         </div>
     </header>
@@ -147,7 +147,7 @@
     <section class="billing-filter-card">
         <form asp-controller="Billing"
               asp-action="Index"
-              method="get"
+              method="get" data-live-filter
               id="billingFilterForm">
 
             <div class="billing-filter-row">
@@ -218,7 +218,7 @@
         <div class="billing-table-heading">
             <div>
                 <i class="bi bi-receipt-cutoff"></i>
-                <h2>All Bills</h2>
+                <h2>@(User.IsInRole("Admin") ? "All Bills" : "My Bills")</h2>
             </div>
 
             <span>@Model.Bills.Count bill(s)</span>
@@ -384,19 +384,3 @@
     </section>
 </div>
 
-@section Scripts {
-    <script nonce="@Context.Items["CspNonce"]">
-        document.addEventListener("DOMContentLoaded", function () {
-            const form = document.getElementById("billingFilterForm");
-            const status = document.getElementById("status");
-            const search = document.getElementById("searchTerm");
-            let timer;
-
-            status?.addEventListener("change", () => form?.requestSubmit());
-            search?.addEventListener("input", function () {
-                window.clearTimeout(timer);
-                timer = window.setTimeout(() => form?.requestSubmit(), 450);
-            });
-        });
-    </script>
-}

@@ -1,7 +1,9 @@
-﻿namespace SecureSmartTuitionSystem.Services.Billing
+namespace SecureSmartTuitionSystem.Services.Billing
 {
     public interface IPaymentCompletionService
     {
+        Task<PaymentCompletionResult> CompleteZeroBillAsync(int billId, CancellationToken cancellationToken = default);
+
         Task<PaymentCompletionResult>
             CompleteStripePaymentAsync(
                 string checkoutSessionId,

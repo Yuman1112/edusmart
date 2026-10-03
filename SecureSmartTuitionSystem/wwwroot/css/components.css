@@ -379,3 +379,6 @@
         min-height: 125px;
     }
 }
+
+/* Shared compact action for table rows. */
+.outline-button.table-view-button { min-height: 32px; padding: 5px 9px; gap: 4px; border-radius: 7px; font-size: .78rem; line-height: 1; white-space: nowrap; }

@@ -1,0 +1,116 @@
+.conversation-entry {
+    position: relative;
+}
+
+    .conversation-entry .conversation-item {
+        padding-right: 39px;
+    }
+
+.conversation-options {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 30px;
+    padding: 0;
+    color: var(--teal-dark);
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+}
+
+    .conversation-options:hover, .conversation-options[aria-expanded="true"] {
+        background: #ddfaf8;
+    }
+
+    .conversation-options:focus-visible {
+        outline: 2px solid var(--teal);
+        outline-offset: 2px;
+    }
+
+.conversation-pin {
+    color: var(--teal-dark);
+    font-size: .8rem;
+    margin-left: 4px;
+}
+
+.conversation-context-menu {
+    position: fixed;
+    z-index: 1100;
+    min-width: 215px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--white);
+    box-shadow: 0 12px 30px rgba(7,69,92,.18);
+}
+
+    .conversation-context-menu[hidden] {
+        display: none !important;
+    }
+
+    .conversation-context-menu button {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        padding: 11px 12px;
+        color: var(--navy);
+        background: transparent;
+        border: 0;
+        border-radius: 7px;
+        text-align: left;
+        font-size: .86rem;
+    }
+
+        .conversation-context-menu button:hover, .conversation-context-menu button:focus {
+            background: #ddfaf8;
+            color: var(--teal-dark);
+            outline: none;
+        }
+
+    .conversation-context-menu .conversation-delete {
+        color: #b42332;
+    }
+
+        .conversation-context-menu .conversation-delete:hover, .conversation-context-menu .conversation-delete:focus {
+            color: #981b29;
+            background: #fff0f2;
+        }
+
+.conversation-delete-dialog {
+    width: min(460px, calc(100vw - 32px));
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    color: var(--navy);
+    background: var(--white);
+    box-shadow: 0 16px 40px rgba(7,69,92,.2);
+}
+
+    .conversation-delete-dialog::backdrop {
+        background: rgba(6,47,95,.35);
+    }
+
+    .conversation-delete-dialog h2 {
+        font-size: 1.25rem;
+        font-weight: 750;
+    }
+
+    .conversation-delete-dialog p {
+        line-height: 1.6;
+        font-size: .9rem;
+    }
+
+.conversation-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}

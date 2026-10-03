@@ -1,0 +1,2 @@
+@model int
+<span class="message-unread-badge notification-unread-badge" data-notification-unread-total hidden="@(Model == 0)" title="@Model unread notification(s)" aria-label="@Model unread notification(s)">@(Model > 99 ? "99+" : Model.ToString())</span>

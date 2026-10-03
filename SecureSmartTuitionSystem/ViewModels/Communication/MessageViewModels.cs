@@ -16,6 +16,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Communication
 
     public sealed class ParentContactViewModel
     {
+        public string Role { get; set; } = "Parent";
         public string UserId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string ParentUserName { get; set; } = string.Empty;
@@ -24,6 +25,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Communication
 
     public sealed class ConversationListItemViewModel
     {
+        public bool IsPinned { get; set; }
         public int ConversationId { get; set; }
         public string ParticipantUserId { get; set; } = string.Empty;
         public string ParticipantName { get; set; } = string.Empty;

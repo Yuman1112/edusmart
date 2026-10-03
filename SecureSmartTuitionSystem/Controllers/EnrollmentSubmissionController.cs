@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Services.Enrollment;
 using SecureSmartTuitionSystem.Models.Security;
 using SecureSmartTuitionSystem.Services.Security;
 using System.Data;
@@ -103,8 +104,7 @@ namespace SecureSmartTuitionSystem.Controllers
                         GetGuardianDisplayName(
                             guardianDetails),
 
-                    RequestedStartDate =
-                        DateTime.Today.AddDays(7),
+                    RequestedStartDate = GetRequestedStartDate(),
 
                     EnrollmentDurationMonths = 1
                 };
@@ -151,6 +151,9 @@ namespace SecureSmartTuitionSystem.Controllers
                 return View(SelectClassesViewPath, model);
             }
 
+            if (!model.RequestedStartDate.HasValue || model.RequestedStartDate.Value.Date < ClassScheduleService.Today || model.RequestedStartDate.Value.Date > ClassScheduleService.Today.AddYears(1))
+            { ModelState.AddModelError(nameof(model.RequestedStartDate), "Choose a start date from today through the next year."); await PopulateSelectionViewModelAsync(model); return View(SelectClassesViewPath, model); }
+
             var selectedClasses =
                 await _context.ClassSessions
                     .AsNoTracking()
@@ -159,6 +162,8 @@ namespace SecureSmartTuitionSystem.Controllers
                         model.SelectedClassSessionIds.Contains(
                             session.ClassSessionId) &&
                         session.Status == ClassSessionStatus.Active &&
+                        (!session.EndDate.HasValue || session.EndDate.Value >= DateTime.UtcNow.AddHours(8).Date) &&
+                        (session.StartDate ?? session.CreatedAt.AddHours(8)).Year >= DateTime.UtcNow.AddHours(8).Year &&
                         session.Subject.IsActive)
                     .ToListAsync();
 
@@ -172,6 +177,25 @@ namespace SecureSmartTuitionSystem.Controllers
                 await PopulateSelectionViewModelAsync(model);
                 return View(SelectClassesViewPath, model);
             }
+
+            if (selectedClasses.Any(c => !ClassScheduleService.ValidOn(c, model.RequestedStartDate!.Value)))
+            { ModelState.AddModelError("", "Choose classes valid for the selected start date and academic year."); await PopulateSelectionViewModelAsync(model); return View(SelectClassesViewPath, model); }
+            int? addStudentId = HttpContext.Session.GetInt32("Enrollment.AddSubjectStudentId");
+            if (addStudentId.HasValue)
+            {
+                string? userId = _userManager.GetUserId(User);
+                if (userId == null || !await _context.StudentProfiles.AnyAsync(x => x.StudentProfileId == addStudentId.Value && x.IsActive &&
+                    ((User.IsInRole("Student") && x.ApplicationUserId == userId) ||
+                     (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))))) return Forbid();
+                var unavailable = await new EnrollmentRulesService(_context).UnavailableSubjectsAsync(addStudentId.Value, model.RequestedStartDate!.Value.Year);
+                if (selectedClasses.Any(x => unavailable.Contains(x.SubjectId)))
+                {
+                    ModelState.AddModelError("", "This subject has already been enrolled or has a pending application for the selected academic year.");
+                    await PopulateSelectionViewModelAsync(model);
+                    return View(SelectClassesViewPath, model);
+                }
+            }
+            HttpContext.Session.SetString("Enrollment.RequestedStartDate", model.RequestedStartDate!.Value.ToString("yyyy-MM-dd"));
 
             bool mixedStage = selectedClasses
                 .Select(item => item.Subject.EducationStage)
@@ -225,7 +249,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 StudentName = studentDetails.StudentName,
                 GuardianName = GetGuardianDisplayName(guardianDetails),
                 SelectedClassSessionIds = selectedIds,
-                RequestedStartDate = DateTime.Today.AddDays(7),
+                RequestedStartDate = GetRequestedStartDate(),
                 EnrollmentDurationMonths = 1
             };
 
@@ -252,6 +276,8 @@ namespace SecureSmartTuitionSystem.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult BackToGuardianDetails()
         {
+            if (HttpContext.Session.GetInt32("Enrollment.AddSubjectStudentId").HasValue)
+                return RedirectToAction(nameof(SelectClasses));
             return RedirectToAction(
                 "GuardianDetails",
                 "Enrollment");
@@ -268,6 +294,16 @@ namespace SecureSmartTuitionSystem.Controllers
         public async Task<IActionResult> Submit(
             EnrollmentSelectionViewModel model)
         {
+            int? addStudentId = HttpContext.Session.GetInt32("Enrollment.AddSubjectStudentId");
+            if (addStudentId.HasValue)
+            {
+                string? userId = _userManager.GetUserId(User);
+                var lockedStudent = await _context.StudentProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.StudentProfileId == addStudentId &&
+                    ((User.IsInRole("Student") && x.ApplicationUserId == userId) || (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))));
+                if (lockedStudent == null || GetStudentDetailsFromSession()?.StudentIdentificationNumber != lockedStudent.IdentificationNumber) return Forbid();
+                string? guardianId = HttpContext.Session.GetString(ExistingParentUserIdSessionKey);
+                if ((User.IsInRole("Parent") && guardianId != userId) || !await _context.ParentStudents.AnyAsync(x => x.IsActive && x.StudentProfileId == addStudentId && x.ParentProfile.ApplicationUserId == guardianId)) return Forbid();
+            }
             var studentDetails =
                 GetStudentDetailsFromSession();
 
@@ -450,7 +486,9 @@ namespace SecureSmartTuitionSystem.Controllers
                          in selectedClasses)
                 {
                     if (classSession.Status !=
-                        ClassSessionStatus.Active)
+                        ClassSessionStatus.Active ||
+                        (classSession.StartDate.HasValue && model.RequestedStartDate!.Value.Date < classSession.StartDate.Value.Date) ||
+                        (classSession.EndDate.HasValue && model.RequestedStartDate!.Value.Date > classSession.EndDate.Value.Date))
                     {
                         ModelState.AddModelError(
                             nameof(
@@ -458,7 +496,7 @@ namespace SecureSmartTuitionSystem.Controllers
                                     .SelectedClassSessionIds),
                             $"Class " +
                             $"{GetClassName(classSession)} " +
-                            "is no longer active.");
+                            "is unavailable for the requested enrollment start date.");
 
                         await PopulateSelectionViewModelAsync(
                             model);
@@ -469,17 +507,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     }
 
                     int occupiedSeats =
-                        await _context.StudentEnrollments
-                            .CountAsync(enrollment =>
-                                enrollment.ClassSessionId ==
-                                    classSession
-                                        .ClassSessionId &&
-                                (enrollment.Status ==
-                                    StudentEnrollmentStatus
-                                        .Active ||
-                                 enrollment.Status ==
-                                    StudentEnrollmentStatus
-                                        .PendingDrop));
+                        await new EnrollmentRulesService(_context).OccupiedSeatsAsync(classSession.ClassSessionId);
 
                     if (occupiedSeats >=
                         classSession.Capacity)
@@ -512,6 +540,9 @@ namespace SecureSmartTuitionSystem.Controllers
                                     .StudentIdentificationNumber);
 
 
+                var ruleError = await new EnrollmentRulesService(_context).ValidateAsync(model.SelectedClassSessionIds.ToList(), model.RequestedStartDate!.Value.Date, existingStudent?.StudentProfileId, durationMonths: model.EnrollmentDurationMonths);
+                if (ruleError != null) { ModelState.AddModelError("", ruleError); await PopulateSelectionViewModelAsync(model); return View(EnrollmentOptionsViewPath, model); }
+
                 /*
                  * Check whether the student is already
                  * enrolled in a selected class.
@@ -531,9 +562,7 @@ namespace SecureSmartTuitionSystem.Controllers
                                 (enrollment.Status ==
                                     StudentEnrollmentStatus
                                         .Active ||
-                                 enrollment.Status ==
-                                    StudentEnrollmentStatus
-                                        .PendingDrop));
+                                 (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date))));
 
                     if (alreadyEnrolled)
                     {
@@ -972,6 +1001,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     application
                         .EnrollmentApplicationId);
 
+                if (addStudentId.HasValue) HttpContext.Session.SetInt32("Enrollment.LastAdditionalApplicationId", application.EnrollmentApplicationId);
+                else HttpContext.Session.Remove("Enrollment.LastAdditionalApplicationId");
                 ClearEnrollmentDraftSession();
 
                 return RedirectToAction(
@@ -1089,6 +1120,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            ViewData["IsAdditionalEnrollment"] = HttpContext.Session.GetInt32("Enrollment.LastAdditionalApplicationId") == id;
             return View(
                 SubmittedViewPath,
                 application);
@@ -1113,15 +1145,16 @@ namespace SecureSmartTuitionSystem.Controllers
                     .Where(session =>
                         session.Status ==
                             ClassSessionStatus.Active &&
+                        (!session.EndDate.HasValue || session.EndDate.Value >= DateTime.UtcNow.AddHours(8).Date) &&
+                        (session.StartDate ?? session.CreatedAt.AddHours(8)).Year >= DateTime.UtcNow.AddHours(8).Year &&
                         session.Subject.IsActive &&
                         _context.StudentEnrollments.Count(
                             enrollment =>
-                                enrollment.ClassSessionId ==
+                                enrollment.StartDate.Year >= ClassScheduleService.Today.Year && enrollment.ClassSessionId ==
                                     session.ClassSessionId &&
                                 (enrollment.Status ==
                                     StudentEnrollmentStatus.Active ||
-                                 enrollment.Status ==
-                                    StudentEnrollmentStatus.PendingDrop)) <
+                                 ((enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date)) && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date)))) <
                         session.Capacity)
                     .OrderBy(session =>
                         session.Subject.EducationStage)
@@ -1135,6 +1168,24 @@ namespace SecureSmartTuitionSystem.Controllers
                         session.StartTime)
                     .ToListAsync();
 
+            int? addStudentId = HttpContext.Session.GetInt32("Enrollment.AddSubjectStudentId");
+            if (addStudentId.HasValue)
+            {
+                string? userId = _userManager.GetUserId(User);
+                bool ownsStudent = userId != null && await _context.StudentProfiles.AnyAsync(x => x.StudentProfileId == addStudentId.Value && x.IsActive &&
+                    ((User.IsInRole("Student") && x.ApplicationUserId == userId) ||
+                     (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))));
+                if (!ownsStudent) classSessions.Clear();
+                else
+                {
+                    var unavailableByYear = new Dictionary<int, HashSet<int>>();
+                    var rules = new EnrollmentRulesService(_context);
+                    foreach (var year in classSessions.Select(x => ClassScheduleService.FirstDate(x).Year).Distinct())
+                        unavailableByYear[year] = await rules.UnavailableSubjectsAsync(addStudentId.Value, year);
+                    classSessions = classSessions.Where(x => !unavailableByYear[ClassScheduleService.FirstDate(x).Year].Contains(x.SubjectId)).ToList();
+                }
+            }
+
             var availableClasses =
                 new List<
                     EnrollmentSelectableClassViewModel>();
@@ -1143,24 +1194,16 @@ namespace SecureSmartTuitionSystem.Controllers
                      in classSessions)
             {
                 int occupiedSeats =
-                    await _context.StudentEnrollments
-                        .AsNoTracking()
-                        .CountAsync(enrollment =>
-                            enrollment.ClassSessionId ==
-                                classSession
-                                    .ClassSessionId &&
-                            (enrollment.Status ==
-                                StudentEnrollmentStatus
-                                    .Active ||
-                             enrollment.Status ==
-                                StudentEnrollmentStatus
-                                    .PendingDrop));
+                    await new EnrollmentRulesService(_context).OccupiedSeatsAsync(classSession.ClassSessionId);
+                if (occupiedSeats >= classSession.Capacity) continue;
 
                 availableClasses.Add(
                     new EnrollmentSelectableClassViewModel
                     {
                         ClassSessionId =
                             classSession.ClassSessionId,
+                        TermStart = ClassScheduleService.FirstDate(classSession),
+                        TermEnd = AcademicYearPolicy.ClassEnd(classSession),
 
                         ClassCode =
                             classSession.ClassCode,
@@ -1217,6 +1260,8 @@ namespace SecureSmartTuitionSystem.Controllers
 
             model.AvailableClasses =
                 availableClasses;
+            var selectedTerms = await _context.ClassSessions.AsNoTracking().Where(x => model.SelectedClassSessionIds.Contains(x.ClassSessionId)).ToListAsync();
+            model.SelectedTermEndDate = selectedTerms.Count > 0 ? selectedTerms.Select(AcademicYearPolicy.ClassEnd).Min() : null;
 
             model.AcademicLevelOptions =
                 classSessions
@@ -1329,6 +1374,8 @@ namespace SecureSmartTuitionSystem.Controllers
 
         private void ClearEnrollmentDraftSession()
         {
+            HttpContext.Session.Remove("Enrollment.AddSubjectStudentId");
+            HttpContext.Session.Remove("Enrollment.RequestedStartDate");
             HttpContext.Session.Remove(
                 StudentDetailsSessionKey);
 
@@ -1370,6 +1417,8 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
+        private DateTime GetRequestedStartDate() => DateTime.TryParseExact(HttpContext.Session.GetString("Enrollment.RequestedStartDate"), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var date) ? date.Date : ClassScheduleService.Today.AddDays(7);
+
         private static string GetGuardianDisplayName(
             GuardianDetailsViewModel guardianDetails)
         {
@@ -1390,7 +1439,7 @@ namespace SecureSmartTuitionSystem.Controllers
         {
             return string.IsNullOrWhiteSpace(
                 classSession.ClassName)
-                ? classSession.ClassCode
+                ? "Class"
                 : classSession.ClassName;
         }
 
@@ -1480,12 +1529,12 @@ namespace SecureSmartTuitionSystem.Controllers
             return enrollmentDurationMonths switch
             {
                 1 => 0m,
+                2 => 0m,
                 3 => 3m,
                 6 => 5m,
                 9 => 8m,
                 12 => 10m,
-                _ => throw new InvalidOperationException(
-                    "Invalid enrollment duration.")
+                _ => 0m
             };
         }
 

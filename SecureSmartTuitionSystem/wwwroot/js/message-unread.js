@@ -6,7 +6,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function setBadge(badge, count) {
         badge.hidden = count === 0;
-        badge.textContent = String(count);
+        badge.dataset.unreadCount = String(count);
+        badge.textContent = count > 99 ? "99+" : String(count);
         badge.title = `${count} unread message(s)`;
         badge.setAttribute("aria-label", badge.title);
     }
@@ -22,6 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const result = await response.json();
             document.querySelectorAll("[data-message-unread-total]").forEach(
                 badge => setBadge(badge, result.totalUnreadCount));
+            document.dispatchEvent(new Event("edusmart:message-counts-updated"));
             const counts = new Map(result.conversations.map(item => [String(item.conversationId), item.unreadCount]));
             document.querySelectorAll(".conversation-item[data-conversation-id]").forEach(item => {
                 const badge = item.querySelector("[data-conversation-unread]");

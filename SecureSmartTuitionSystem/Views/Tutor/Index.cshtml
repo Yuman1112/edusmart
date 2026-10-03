@@ -3,9 +3,9 @@
 @{
     ViewData["Title"] = "Tutor Dashboard";
 
-    string greeting = DateTime.Now.Hour < 12
+    string greeting = DateTime.UtcNow.AddHours(8).Hour < 12
         ? "Good morning"
-        : DateTime.Now.Hour < 18
+        : DateTime.UtcNow.AddHours(8).Hour < 18
             ? "Good afternoon"
             : "Good evening";
 }
@@ -26,7 +26,7 @@
     </div>
 
     <span class="status-pill status-success">
-        @DateTime.Today.ToString("ddd, dd MMM yyyy")
+        @DateTime.UtcNow.AddHours(8).Date.ToString("ddd, dd MMM yyyy")
     </span>
 </div>
 
@@ -125,3 +125,4 @@
         }
     </div>
 </section>
+<a class="btn btn-outline-primary mt-3" asp-controller="ClassSchedules" asp-action="Index" asp-route-mode="today">Open today’s calendar</a>

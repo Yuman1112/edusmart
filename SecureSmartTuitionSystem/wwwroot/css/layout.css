@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    EDUSMART - COMPLETE LAYOUT.CSS
 ========================================================= */
 
@@ -134,15 +134,15 @@ a {
 .sidebar-link {
     display: flex;
     width: 100%;
-    min-height: 55px;
-    padding: 12px 15px;
+    min-height: 48px;
+    padding: 11px 13px;
     align-items: center;
-    gap: 13px;
+    gap: 10px;
     border: 1px solid transparent;
     border-radius: 12px;
     color: #315f75;
     background: transparent;
-    font-size: 0.93rem;
+    font-size: 0.88rem;
     font-weight: 650;
     line-height: 1.25;
     text-align: left;
@@ -212,8 +212,8 @@ a {
         display: block;
         min-width: 0;
         overflow: visible;
-        font-size: 0.86rem;
-        white-space: nowrap;
+        font-size: inherit;
+        white-space: normal;
     }
 
 .sidebar-module-arrow {
@@ -242,7 +242,7 @@ a {
 .sidebar-submenu-link {
     display: flex;
     min-height: 42px;
-    margin: 3px 0 3px 29px;
+    margin: 3px 0 3px 20px;
     padding: 9px 11px;
     align-items: center;
     gap: 9px;
@@ -250,10 +250,10 @@ a {
     border-radius: 9px;
     color: #416a7d;
     background: transparent;
-    font-size: 0.79rem;
+    font-size: 0.88rem;
     font-weight: 650;
     line-height: 1.2;
-    white-space: nowrap;
+    white-space: normal;
 }
 
     .sidebar-submenu-link i {
@@ -264,10 +264,10 @@ a {
         text-align: center;
     }
 
-    .sidebar-submenu-link span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .sidebar-submenu-link > span {
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 
     .sidebar-submenu-link:hover {
@@ -330,12 +330,12 @@ a {
     min-height: 52px;
     padding: 11px 15px;
     align-items: center;
-    gap: 13px;
+    gap: 10px;
     border: 1px solid transparent;
     border-radius: 12px;
     color: #315f75;
     background: transparent;
-    font-size: 0.93rem;
+    font-size: 0.88rem;
     font-weight: 650;
     text-align: left;
 }
@@ -472,9 +472,9 @@ a {
     min-height: 100px;
     margin: 0 auto;
     padding: 14px 45px;
-    grid-template-columns: minmax(110px, 1fr) auto minmax(220px, 1fr);
+    grid-template-columns: 85px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 30px;
+    gap: 12px;
 }
 
 
@@ -511,7 +511,8 @@ a {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 30px;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 .public-nav-link {
@@ -521,7 +522,7 @@ a {
     gap: 8px;
     border-radius: 10px;
     color: var(--navy);
-    font-size: 0.98rem;
+    font-size: 0.88rem;
     font-weight: 650;
     white-space: nowrap;
 }
@@ -776,7 +777,7 @@ a {
 
     .sidebar-submenu-link {
         margin-left: 22px;
-        font-size: 0.75rem;
+        font-size: 0.86rem;
     }
 
     .staff-topbar {
@@ -792,7 +793,7 @@ a {
     .public-navbar {
         min-height: 88px;
         padding: 12px 24px;
-        grid-template-columns: minmax(90px, 1fr) auto minmax(180px, 1fr);
+        grid-template-columns: 75px minmax(0, 1fr) auto;
         gap: 18px;
     }
 
@@ -1114,3 +1115,36 @@ a {
 }
 .message-unread-badge[hidden], .message-unread[hidden] { display: none !important; }
 .public-nav-link .message-unread-badge { margin-left: 2px; }
+
+/* Shared navigation states: group headings and the current page are distinct. */
+.sidebar-link.module-current { color: var(--teal-dark); background: rgba(255, 255, 255, .6); }
+.sidebar-link.module-current i { color: var(--teal-dark); }
+.public-nav-link.active { color: var(--teal-dark); background: #ddfaf8; }
+.sidebar-link:focus-visible, .sidebar-submenu-link:focus-visible,
+.public-nav-link:focus-visible, .sidebar-logout:focus-visible,
+.sidebar-toggle:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.sidebar-submenu-link > .message-unread-badge,
+.sidebar-submenu-link > .announcement-unread-badge { flex-shrink: 0; overflow: visible; }
+.sidebar-toggle, .sidebar-overlay { display: none; }
+@media (max-width: 1280px) {
+    .public-navbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+    .public-brand { order: 1; }
+    .public-account { order: 2; }
+    .public-navigation { width: 100%; order: 3; flex-wrap: wrap; justify-content: center; gap: 4px; }
+}
+@media (max-width: 768px) {
+    .staff-sidebar { position: fixed; top: 0; bottom: 0; left: 0; width: 250px; max-width: 85vw; z-index: 1050; transform: translateX(-100%); transition: transform .2s ease; }
+    .staff-sidebar.open { transform: translateX(0); }
+    .sidebar-navigation { min-height: 0; overflow-y: auto; }
+    .sidebar-toggle { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; margin-right: auto; border: 1px solid var(--border); border-radius: 9px; color: var(--teal-dark); background: white; font-size: 1.5rem; }
+    .sidebar-overlay.show { display: block; position: fixed; inset: 0; z-index: 1040; width: 100%; height: 100%; border: 0; background: rgba(6,47,95,.3); }
+    .sidebar-overlay[hidden] { display: none; }
+    .public-nav-link { flex: 0 1 auto; }
+    .public-navigation { justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) { .staff-sidebar { transition: none; } }
+
+/* Let the chat content use the space left by the responsive topbar. */
+body.messages-page-active .staff-main { display: flex; flex-direction: column; }
+body.messages-page-active .staff-topbar { flex-shrink: 0; }
+body.messages-page-active .staff-content { height: auto !important; min-height: 0; flex: 1 1 0; }

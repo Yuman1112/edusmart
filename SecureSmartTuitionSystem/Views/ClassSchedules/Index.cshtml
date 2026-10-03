@@ -1,0 +1,57 @@
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.CalendarModel
+@using SecureSmartTuitionSystem.Services.Enrollment
+@{
+    ViewData["Title"] = "Class Calendar";
+    var previous = Model.Mode == "month" ? Model.Anchor.AddMonths(-1) : Model.Anchor.AddDays(Model.Mode == "week" ? -7 : -1);
+    var next = Model.Mode == "month" ? Model.Anchor.AddMonths(1) : Model.Anchor.AddDays(Model.Mode == "week" ? 7 : 1);
+}
+<div class="page-header"><div><h1>Class Calendar</h1><p>Weekly classes and dated replacements · Malaysia time (MYT)</p></div></div>
+@if (TempData["SuccessMessage"] != null) { <div class="alert alert-success" role="status" data-success-timeout="5000">@TempData["SuccessMessage"]</div> }
+<section class="calendar-controls" aria-label="Calendar controls">
+<div class="calendar-control-row calendar-control-primary">
+    <div class="calendar-date-navigation">
+        <a class="btn btn-outline-primary" asp-action="Index" asp-route-date="@previous.ToString("yyyy-MM-dd")" asp-route-mode="@Model.Mode" asp-route-classSessionId="@Model.ClassSessionId" aria-label="Previous calendar period"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+        <strong>@(Model.Mode == "month" ? Model.Anchor.ToString("MMMM yyyy") : Model.Mode == "today" ? Model.Anchor.ToString("dd MMM yyyy") : $"{Model.From:dd MMM} – {Model.To:dd MMM yyyy}")</strong>
+        <a class="btn btn-outline-primary" asp-action="Index" asp-route-date="@next.ToString("yyyy-MM-dd")" asp-route-mode="@Model.Mode" asp-route-classSessionId="@Model.ClassSessionId" aria-label="Next calendar period"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="calendar-view-modes" aria-label="Calendar view">
+        <a class="btn @(Model.Mode == "today" ? "btn-primary" : "btn-outline-primary")" aria-current="@(Model.Mode == "today" ? "page" : null)" asp-action="Index" asp-route-mode="today" asp-route-classSessionId="@Model.ClassSessionId">Today</a>
+        <a class="btn @(Model.Mode == "week" ? "btn-primary" : "btn-outline-primary")" aria-current="@(Model.Mode == "week" ? "page" : null)" asp-action="Index" asp-route-date="@Model.Anchor.ToString("yyyy-MM-dd")" asp-route-mode="week" asp-route-classSessionId="@Model.ClassSessionId">Week</a>
+        <a class="btn @(Model.Mode == "month" ? "btn-primary" : "btn-outline-primary")" aria-current="@(Model.Mode == "month" ? "page" : null)" asp-action="Index" asp-route-date="@Model.Anchor.ToString("yyyy-MM-dd")" asp-route-mode="month" asp-route-classSessionId="@Model.ClassSessionId">Month</a>
+    </div>
+</div>
+<div class="calendar-control-row calendar-control-secondary calendar-queue-row">
+
+    <a class="btn btn-outline-secondary" asp-action="Pending"><i class="bi bi-clock-history" aria-hidden="true"></i> Pending Replacements</a>
+</div>
+</section>
+<div class="schedule-legend" aria-label="Calendar legend"><span><i class="legend-dot" aria-hidden="true"></i>Scheduled</span><span><i class="legend-dot cancelled" aria-hidden="true"></i>Cancelled</span><span><i class="legend-dot replacement" aria-hidden="true"></i>Replacement</span></div>
+<div class="schedule-scroll"><div class="schedule-grid @(Model.Mode == "today" ? "schedule-single" : "")">
+@if (Model.Mode != "today") { foreach (var name in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" }) { <div class="schedule-weekday">@name</div> } }
+@if (Model.Mode == "month")
+{
+    var leadingDays = ((int)Model.From.DayOfWeek + 6) % 7;
+    for (var i = 0; i < leadingDays; i++) { <div class="schedule-empty" aria-hidden="true"></div> }
+}
+@for (var date = Model.From; date <= Model.To; date = date.AddDays(1))
+{
+    var lessons = Model.Lessons.Where(x => x.Date.Date == date).ToList();
+    <section class="schedule-day @(date == ClassScheduleService.Today ? "schedule-today" : "")">
+        <a class="schedule-day-label" asp-action="Index" asp-route-date="@date.ToString("yyyy-MM-dd")" asp-route-mode="today" asp-route-classSessionId="@Model.ClassSessionId">@date.ToString("dd MMM")</a>
+        @foreach (var lesson in lessons)
+        {
+            <article class="schedule-lesson @(lesson.Cancelled ? "schedule-cancelled" : lesson.Replacement ? "schedule-replacement" : "")">
+                <a class="calendar-class-link" asp-controller="@(User.IsInRole("Admin") ? "ClassSessions" : "Tutor")" asp-action="@(User.IsInRole("Admin") ? "Details" : "ClassDetails")" asp-route-id="@lesson.Class.ClassSessionId" aria-label="@($"{lesson.Class.ClassName} — {lesson.Status}. View class details")"><strong>@lesson.Class.ClassName</strong></a>
+                @if (!lesson.Cancelled && !lesson.Replacement && lesson.Date.Add(lesson.End.ToTimeSpan()) > ClassScheduleService.Now)
+                { <a class="calendar-cancel-link" asp-action="Cancel" asp-route-classSessionId="@lesson.Class.ClassSessionId" asp-route-date="@lesson.Date.ToString("yyyy-MM-dd")">Cancel this lesson</a> }
+            </article>
+        }
+        @if (lessons.Count == 0) { <small class="text-muted">No classes</small> }
+    </section>
+}
+@if (Model.Mode == "month")
+{
+    var trailingDays = (7 - (((int)Model.To.DayOfWeek + 6) % 7 + 1)) % 7;
+    for (var i = 0; i < trailingDays; i++) { <div class="schedule-empty" aria-hidden="true"></div> }
+}
+</div></div>

@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Student.StudentDashboardViewModel
+@model SecureSmartTuitionSystem.ViewModels.Student.StudentDashboardViewModel
 
 @{
     ViewData["Title"] = "Student Dashboard";
@@ -55,8 +55,7 @@
             @if (Model.Classes.Count == 0)
             {
                 <p class="text-muted mb-0">
-                    You are not currently enrolled
-                    in any active classes.
+                    No classes are currently open. Class access starts on your enrollment start date.
                 </p>
             }
             else
@@ -70,12 +69,12 @@
                         </h3>
 
                         <div class="text-muted">
-                            @item.ClassCode
+                            
                             @if (!string.IsNullOrWhiteSpace(
                                                 item.ClassName))
                             {
                                 <span>
-                                    · @item.ClassName
+                                    @item.ClassName
                                 </span>
                             }
                         </div>
@@ -97,3 +96,4 @@
     </div>
 
 </div>
+<a class="btn btn-primary mt-3" asp-controller="LearningClasses" asp-action="Index">My class schedule</a>

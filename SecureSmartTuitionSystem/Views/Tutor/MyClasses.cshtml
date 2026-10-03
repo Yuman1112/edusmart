@@ -86,7 +86,7 @@
 
 <form asp-controller="Tutor"
       asp-action="MyClasses"
-      method="get"
+      method="get" data-live-filter
       id="tutorClassFilterForm"
       class="tutor-class-filter-card">
 
@@ -233,10 +233,6 @@ else
                 <header class="tutor-class-card-header">
 
                     <div class="tutor-class-title">
-
-                        <span class="class-code">
-                            @item.ClassCode
-                        </span>
 
                         <h2>
                             @item.ClassName
@@ -385,35 +381,3 @@ else
 }
 
 
-@section Scripts {
-    <script nonce="@Context.Items["CspNonce"]">
-        document.addEventListener(
-            "DOMContentLoaded",
-            function () {
-
-                const filterForm =
-                    document.getElementById(
-                        "tutorClassFilterForm"
-                    );
-
-                if (!filterForm) {
-                    return;
-                }
-
-                document
-                    .querySelectorAll(
-                        ".tutor-auto-filter"
-                    )
-                    .forEach(function (filter) {
-
-                        filter.addEventListener(
-                            "change",
-                            function () {
-                                filterForm.requestSubmit();
-                            }
-                        );
-                    });
-            }
-        );
-    </script>
-}

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using SecureSmartTuitionSystem.Models.Identity;
 
 namespace SecureSmartTuitionSystem.Models.Enrollment
@@ -58,6 +58,9 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
         [Required]
         [Range(1, 100)]
         public int Capacity { get; set; }
+
+        [DataType(DataType.Date)] public DateTime? StartDate { get; set; }
+        [DataType(DataType.Date)] public DateTime? EndDate { get; set; }
 
         public DateTime CreatedAt { get; set; }
             = DateTime.UtcNow;

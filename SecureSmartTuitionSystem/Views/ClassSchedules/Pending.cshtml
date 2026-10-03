@@ -1,0 +1,59 @@
+@model List<SecureSmartTuitionSystem.Models.Enrollment.ClassLessonChange>
+@using SecureSmartTuitionSystem.Services.Enrollment
+@{ ViewData["Title"] = "Replacement Lessons"; bool includeScheduled = ViewBag.IncludeScheduled is bool selected && selected; }
+<div class="page-header"><div><h1>Replacement Lessons</h1><p>Keep track of every cancelled lesson until its replacement is arranged.</p></div></div>
+@if (TempData["SuccessMessage"] != null) { <div class="alert alert-success" role="status" data-success-timeout="5000">@TempData["SuccessMessage"]</div> }
+<div class="schedule-toolbar">
+    <a class="btn @(!includeScheduled ? "btn-primary" : "btn-outline-primary")" asp-action="Pending" asp-route-includeScheduled="false" aria-current="@(!includeScheduled ? "page" : null)">Pending only <span class="badge rounded-pill text-bg-light ms-1">@ViewBag.PendingCount</span></a>
+    <a class="btn @(includeScheduled ? "btn-primary" : "btn-outline-primary")" asp-action="Pending" asp-route-includeScheduled="true" aria-current="@(includeScheduled ? "page" : null)">All replacements <span class="badge rounded-pill text-bg-light ms-1">@ViewBag.ScheduledCount</span></a>
+    <a class="btn btn-outline-secondary" asp-action="Index">Calendar</a>
+</div>
+<section class="dashboard-card replacement-list-card">
+    <header class="dashboard-card-header">
+        <h2>@(includeScheduled ? "Scheduled replacement lessons" : "Pending replacement lessons")</h2>
+        <span class="text-muted">Total: <strong>@Model.Count</strong></span>
+    </header>
+<div class="table-responsive"><table class="table align-middle replacement-lessons-table"><colgroup><col class="replacement-col-class" /><col class="replacement-col-date" /><col class="replacement-col-reason" /><col class="replacement-col-date" /><col class="replacement-col-action" /></colgroup><thead><tr><th>Class</th><th>Original lesson</th><th>Reason</th><th>Replacement</th><th>Action</th></tr></thead><tbody>
+@foreach (var x in Model)
+{
+<tr><td>@x.ClassSession.ClassName</td><td>@x.OriginalDate.ToString("dd MMM yyyy")<br />@x.OriginalStartTime.ToString("HH:mm") – @x.OriginalEndTime.ToString("HH:mm")</td><td>@x.CancellationReason</td>
+<td>
+@if (x.ReplacementDate.HasValue) {
+    @x.ReplacementDate.Value.ToString("dd MMM yyyy")<br />
+    <span>@x.ReplacementStartTime?.ToString("HH:mm") – @x.ReplacementEndTime?.ToString("HH:mm")</span>
+} else { <span>Pending date</span> }
+</td><td>
+@if (!x.ReplacementDate.HasValue)
+{
+    <a class="btn btn-sm btn-outline-primary" asp-action="Replacement" asp-route-id="@x.ClassLessonChangeId">Schedule</a>
+}
+else if (x.ReplacementDate.Value.Add(x.ReplacementStartTime!.Value.ToTimeSpan()) > ClassScheduleService.Now)
+{
+    <div class="replacement-action-cell">
+        <div class="replacement-action-buttons">
+            <a class="btn btn-sm btn-outline-primary" asp-action="Replacement" asp-route-id="@x.ClassLessonChangeId">Reschedule</a>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-open-replacement-cancel aria-expanded="false" aria-controls="replacementCancelForm-@x.ClassLessonChangeId">Cancel replacement</button>
+        </div>
+        <form id="replacementCancelForm-@x.ClassLessonChangeId" asp-action="Unschedule" method="post" class="replacement-cancel-form" hidden>
+            <input type="hidden" name="changeId" value="@x.ClassLessonChangeId" />
+            <label for="replacementCancelReason-@x.ClassLessonChangeId" class="form-label">Cancellation reason <span class="text-danger" aria-hidden="true">*</span></label>
+            <textarea id="replacementCancelReason-@x.ClassLessonChangeId" name="reason" required maxlength="500" rows="3" class="form-control form-control-sm" placeholder="Explain why this replacement cannot go ahead." aria-describedby="replacementCancelHelp-@x.ClassLessonChangeId"></textarea>
+            <small id="replacementCancelHelp-@x.ClassLessonChangeId" class="text-muted d-block mt-1">This clears the replacement date and time. The original lesson returns to Pending Replacements; affected users will be notified.</small>
+            <div class="replacement-cancel-actions mt-2">
+                <button type="submit" class="btn btn-sm btn-danger" data-confirm="Cancel this replacement, notify affected users and return it to Pending Replacements?">Confirm cancellation</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-keep-replacement>Keep replacement</button>
+            </div>
+        </form>
+    </div>
+}
+else { <span>Finished / in progress</span> }
+
+</td></tr>
+}
+@if (Model.Count == 0) { <tr><td colspan="5">@(includeScheduled ? "No replacement lessons." : "No pending replacements.")</td></tr> }
+</tbody></table></div>
+</section>
+
+@section Scripts {
+    <script src="~/js/replacement-cancel.js" asp-append-version="true"></script>
+}

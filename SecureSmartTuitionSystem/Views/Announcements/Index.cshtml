@@ -43,7 +43,7 @@
 
 @if (Model.IsAdmin)
 {
-    <form method="get"
+    <form method="get" data-live-filter
           id="announcementFilterForm"
           class="announcement-filter-card">
         <div class="announcement-filter-heading">
@@ -135,7 +135,7 @@
                                 <h3>@item.Title</h3>
                                 <div class="announcement-meta">
                                     <span><i class="bi bi-people"></i> @item.TargetAudience</span>
-                                    <span><i class="bi bi-calendar-event"></i> @item.PublishAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</span>
+                                    <span><i class="bi bi-calendar-event"></i> @item.PublishAt.AddHours(8).ToString("dd MMM yyyy, hh:mm tt")</span>
 
                                     @if (Model.IsAdmin)
                                     {
@@ -214,35 +214,6 @@
                 const filterForm =
                     document.getElementById(
                         "announcementFilterForm");
-
-                document
-                    .querySelectorAll(
-                        ".announcement-auto-filter")
-                    .forEach(function (filter) {
-                        filter.addEventListener(
-                            "change",
-                            function () {
-                                filterForm?.requestSubmit();
-                            });
-                    });
-
-                const searchInput =
-                    document.getElementById(
-                        "AnnouncementSearchTerm");
-
-                let searchTimer;
-
-                searchInput?.addEventListener(
-                    "input",
-                    function () {
-                        window.clearTimeout(searchTimer);
-
-                        searchTimer = window.setTimeout(
-                            function () {
-                                filterForm?.requestSubmit();
-                            },
-                            450);
-                    });
 
                 document
                     .querySelectorAll(

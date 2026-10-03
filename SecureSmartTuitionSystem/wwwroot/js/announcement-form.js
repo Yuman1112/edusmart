@@ -30,7 +30,13 @@ document.addEventListener("DOMContentLoaded", function () {
             23, 59, 59, 0);
         if (unit === "Days") result.setDate(result.getDate() + duration);
         else if (unit === "Weeks") result.setDate(result.getDate() + duration * 7);
-        else if (unit === "Months") result.setMonth(result.getMonth() + duration);
+        else if (unit === "Months") {
+            const day = result.getDate();
+            result.setDate(1);
+            result.setMonth(result.getMonth() + duration);
+            const lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+            result.setDate(Math.min(day, lastDay));
+        }
         return result;
     }
 

@@ -1,0 +1,9 @@
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.LearningClassesModel
+@{ var lesson = Model.Lessons.Single(); ViewData["Title"] = "Class Details"; }
+<div class="page-header"><div><h1>@lesson.Class.ClassName</h1><p>@(Model.Student!.FullName) · @lesson.Date.ToString("dd MMM yyyy")</p></div><a class="btn btn-outline-primary" asp-action="Index" asp-route-studentId="@Model.Student.StudentProfileId" asp-route-date="@lesson.Date.ToString("yyyy-MM-dd")" asp-route-mode="month">Back to My Classes</a></div>
+<section class="class-details-card"><h2>Lesson Information</h2><dl class="row"><dt class="col-sm-3">Class</dt><dd class="col-sm-9">@lesson.Class.ClassName</dd><dt class="col-sm-3">Subject</dt><dd class="col-sm-9">@lesson.Class.Subject.SubjectName</dd><dt class="col-sm-3">Tutor</dt><dd class="col-sm-9">@(lesson.Class.TutorUser.FullName ?? lesson.Class.TutorUser.UserName)</dd><dt class="col-sm-3">Date</dt><dd class="col-sm-9">@lesson.Date.ToString("dd MMM yyyy")</dd><dt class="col-sm-3">Time</dt><dd class="col-sm-9">@lesson.Start.ToString("HH:mm") – @lesson.End.ToString("HH:mm") MYT</dd><dt class="col-sm-3">Status</dt><dd class="col-sm-9">@lesson.Status</dd>
+@if (lesson.Cancelled) { <dt class="col-sm-3">Cancellation Reason</dt><dd class="col-sm-9">@lesson.Reason</dd> }
+@if (lesson.Replacement) { <dt class="col-sm-3">Original Lesson</dt><dd class="col-sm-9">@lesson.OriginalDate.ToString("dd MMM yyyy")</dd> }
+</dl>
+@if (!lesson.Cancelled && lesson.Status != "Finished" && SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.MeetLink(lesson.Venue)) { <a class="btn btn-primary" href="@lesson.Venue" target="_blank" rel="noopener noreferrer">Join Google Meet</a> }
+</section>

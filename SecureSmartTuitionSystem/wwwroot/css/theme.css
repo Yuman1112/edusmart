@@ -1,0 +1,266 @@
+/* EduSmart shared palette: teal/navigation, navy/text; semantic status colors. */
+:root {
+    --surface-tint: #e8f9f7;
+    --surface-muted: #f5fbfb;
+    --success-soft: #eaf7f0;
+    --danger-soft: #fff0f1;
+    --warning-soft: #fff6e5;
+    --bs-primary: #0798a4;
+    --bs-primary-rgb: 7,152,164;
+    --bs-link-color: var(--teal-dark);
+    --bs-link-hover-color: var(--teal-deep);
+    --bs-border-color: var(--border);
+    --bs-body-color: var(--navy)
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--teal);
+    --bs-btn-border-color: var(--teal);
+    --bs-btn-hover-bg: var(--teal-dark);
+    --bs-btn-hover-border-color: var(--teal-dark);
+    --bs-btn-active-bg: var(--teal-deep);
+    --bs-btn-active-border-color: var(--teal-deep);
+    --bs-btn-disabled-bg: var(--teal);
+    --bs-btn-disabled-border-color: var(--teal)
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--teal-dark);
+    --bs-btn-border-color: var(--teal);
+    --bs-btn-hover-bg: var(--teal);
+    --bs-btn-hover-border-color: var(--teal);
+    --bs-btn-active-bg: var(--teal);
+    --bs-btn-active-border-color: var(--teal)
+}
+
+.form-control, .form-select {
+    color: var(--navy);
+    border-color: var(--border);
+    border-radius: 9px
+}
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--teal);
+        box-shadow: 0 0 0 .2rem rgba(7,152,164,.13)
+    }
+
+.form-check-input:checked {
+    background-color: var(--teal);
+    border-color: var(--teal)
+}
+
+.class-details-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 24px;
+    color: var(--navy)
+}
+
+.table {
+    --bs-table-color: var(--navy);
+    --bs-table-border-color: var(--border);
+    --bs-table-hover-bg: var(--surface-tint)
+}
+
+    .table thead {
+        background: var(--surface-tint)
+    }
+
+.chat-tools {
+    border-bottom-color: var(--border);
+    background: var(--surface-muted)
+}
+
+    .chat-tools summary {
+        color: var(--teal-dark)
+    }
+
+.class-form-section, .announcement-form-section, .billing-summary-card {
+    border-color: var(--border)
+}
+
+.exit-policy {
+    background: var(--surface-tint);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 16px 0;
+    line-height: 1.7
+}
+
+.exit-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap
+}
+
+@media(max-width:600px) {
+    .class-details-card {
+        padding: 18px
+    }
+}
+
+.table-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px 23px;
+    margin-top: 0;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: .83rem
+}
+
+.table-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap
+}
+
+.table-page-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--teal-dark);
+    font-size: .82rem;
+    font-weight: 650;
+    text-decoration: none
+}
+
+    .table-page-button:hover, .table-page-button:focus-visible {
+        background: var(--surface-tint);
+        color: var(--teal-dark);
+        border-color: var(--teal)
+    }
+
+    .table-page-button.active {
+        background: var(--teal);
+        border-color: var(--teal);
+        color: var(--white)
+    }
+
+    .table-page-button:disabled {
+        opacity: .45;
+        cursor: default
+    }
+
+.table-page-hidden {
+    display: none !important
+}
+
+#securityResults[aria-busy="true"] {
+    opacity: .65
+}
+
+@media print {
+    .table-pagination {
+        display: none !important
+    }
+
+    .table-page-hidden {
+        display: table-row !important
+    }
+}
+
+.live-filter-form button[type="submit"], .live-filter-form button:not([type]) {
+    display: none
+}
+
+.table-pagination-controls {
+    gap: 6px
+}
+
+.table-page-button {
+    border-radius: 7px;
+    min-height: 34px;
+    font-size: .75rem;
+    font-weight: 600;
+    padding: 7px 10px
+}
+
+    .table-page-button:disabled, .table-page-button[aria-disabled="true"] {
+        opacity: .45;
+        pointer-events: none;
+        cursor: default;
+        background: var(--white);
+        color: var(--teal-dark);
+        border-color: var(--border)
+    }
+
+
+/* Consistent on-screen tables; document printing keeps its original layout. */
+@media screen {
+    :is(.table,.billing-table,.payment-table,.receipt-table) {
+        width: 100%;
+        border-collapse: collapse;
+        color: var(--navy);
+        font-family: inherit;
+        font-size: .86rem
+    }
+
+        :is(.table,.billing-table,.payment-table,.receipt-table) thead th {
+            background: var(--surface-muted) !important;
+            color: var(--navy) !important;
+            font-size: .72rem !important;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            text-align: left
+        }
+
+        :is(.table,.billing-table,.payment-table,.receipt-table) th,
+        :is(.table,.billing-table,.payment-table,.receipt-table) td {
+            padding: 15px 14px !important;
+            border-bottom: 1px solid var(--border)
+        }
+
+        :is(.table,.billing-table,.payment-table,.receipt-table) tbody td {
+            font-size: .86rem !important;
+            line-height: 1.5
+        }
+
+        :is(.table,.billing-table,.payment-table,.receipt-table) thead :is(button,a) {
+            font-size: inherit;
+            color: inherit
+        }
+
+        :is(.table,.billing-table,.payment-table,.receipt-table) tbody tr:last-child td {
+            border-bottom: 0
+        }
+}
+
+
+/* Match the Class Sessions / Enrollment Requests outer table card. */
+.replacement-list-card {
+    width: 100%;
+    border-color: var(--border);
+    background: var(--white)
+}
+
+    .replacement-list-card .replacement-lessons-table {
+        margin-bottom: 0
+    }
+
+@media(max-width:600px) {
+    .replacement-list-card .dashboard-card-header {
+        flex-wrap: wrap;
+        padding: 16px
+    }
+
+    .table-pagination {
+        padding: 16px
+    }
+}

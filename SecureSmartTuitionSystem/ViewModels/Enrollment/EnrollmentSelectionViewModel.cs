@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using SecureSmartTuitionSystem.Models.Enrollment;
 
 namespace SecureSmartTuitionSystem.ViewModels.Enrollment
@@ -109,6 +109,9 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
          * before saving. Never trust totals submitted by
          * JavaScript.
          */
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public DateTime? SelectedTermEndDate { get; set; }
+
         public int SelectedClassCount { get; set; }
 
         public int UniqueSubjectCount { get; set; }
@@ -163,7 +166,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                 DateTime selectedDate =
                     RequestedStartDate.Value.Date;
 
-                if (selectedDate < DateTime.Today)
+                if (selectedDate < SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today)
                 {
                     yield return new ValidationResult(
                         "Requested start date cannot be earlier than today.",
@@ -174,7 +177,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                 }
 
                 if (selectedDate >
-                    DateTime.Today.AddYears(1))
+                    SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today.AddYears(1))
                 {
                     yield return new ValidationResult(
                         "Requested start date cannot be more than one year from today.",
@@ -211,6 +214,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
             int[] validDurationOptions =
             {
                 1,
+                2,
                 3,
                 6,
                 9,
@@ -294,6 +298,9 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
     public class EnrollmentSelectableClassViewModel
     {
         public int ClassSessionId { get; set; }
+        public DateTime TermStart { get; set; }
+        public DateTime TermEnd { get; set; }
+
 
         public string ClassCode { get; set; }
             = string.Empty;

@@ -77,28 +77,28 @@
         <header class="dashboard-card-header">
             <h2>
                 <i class="bi bi-journal-bookmark me-2"></i>
-                Recent Classes
+                Today’s Classes
             </h2>
 
-            <a asp-controller="Classes"
-               asp-action="Index">
+            <a asp-controller="ClassSchedules"
+               asp-action="Index" asp-route-mode="today">
                 View all
                 <i class="bi bi-chevron-right"></i>
             </a>
         </header>
 
         <div class="dashboard-card-body">
-            @if (Model.RecentClasses.Count == 0)
+            @if (Model.TodayClasses.Count == 0)
             {
             <div class="empty-state">
                 <i class="bi bi-journal-x"></i>
-                No class sessions are available.
+                No classes today.
             </div>
             }
             else
             {
             <ul class="dashboard-list">
-                @foreach (var item in Model.RecentClasses)
+                @foreach (var item in Model.TodayClasses)
                     {
                 <li class="dashboard-list-item">
                     <span class="list-icon">
@@ -107,8 +107,7 @@
 
                     <div class="list-content">
                         <strong>
-                            @item.SubjectName -
-                            @item.AcademicLevel
+                            @item.ClassName
                         </strong>
 
                         <small>
@@ -116,8 +115,8 @@
                         </small>
                     </div>
 
-                    <span class="status-pill status-success">
-                        Active
+                    <span class="status-pill @item.StatusCssClass">
+                        @item.Status
                     </span>
                 </li>
                     }

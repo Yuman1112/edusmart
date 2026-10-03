@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @using SecureSmartTuitionSystem.Models.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
@@ -14,7 +14,7 @@
         </span>
 
             <span class="account-text">
-                <strong>@User.Identity?.Name</strong>
+                <strong>@(User.IsInRole("Admin") ? "Administrator" : User.Identity?.Name)</strong>
 
                 <small>
                 @if (User.IsInRole("Parent"))

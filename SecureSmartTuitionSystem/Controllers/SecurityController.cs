@@ -49,19 +49,20 @@ public sealed class SecurityController : Controller
         string? eventName, SecuritySeverity? severity, int pageNumber = 1)
     {
         var query = _db.AuditLogEntries.AsNoTracking();
-        if (from.HasValue) query = query.Where(x => x.OccurredAtUtc >= from.Value.Date);
+        if (from.HasValue)
+        { var start = from.Value.Date == DateTime.MinValue.Date ? DateTime.MinValue : from.Value.Date.AddHours(-8); query = query.Where(x => x.OccurredAtUtc >= start); }
         if (to.HasValue && to.Value.Date < DateTime.MaxValue.Date)
-        { var end = to.Value.Date.AddDays(1); query = query.Where(x => x.OccurredAtUtc < end); }
+        { var end = to.Value.Date.AddDays(1).AddHours(-8); query = query.Where(x => x.OccurredAtUtc < end); }
         userId = SecurityEventService.Limit((userId ?? string.Empty).Trim(), 450);
         eventName = SecurityEventService.Limit((eventName ?? string.Empty).Trim(), 100);
-        if (userId.Length > 0) query = query.Where(x => x.ActorUserId == userId || x.ActorName == userId);
-        if (eventName.Length > 0) query = query.Where(x => x.EventName == eventName);
+        if (userId.Length > 0) query = query.Where(x => (x.ActorUserId != null && x.ActorUserId.Contains(userId)) || (x.ActorName != null && x.ActorName.Contains(userId)));
+        if (eventName.Length > 0) query = query.Where(x => x.EventName.Contains(eventName));
         if (severity.HasValue) query = query.Where(x => x.Severity == severity.Value);
         int total = await query.CountAsync();
-        int pages = Math.Max(1, (int)Math.Ceiling(total / 50d));
+        int pages = Math.Max(1, (int)Math.Ceiling(total / 25d));
         pageNumber = Math.Clamp(pageNumber, 1, pages);
         var records = await query.OrderByDescending(x => x.AuditLogEntryId)
-            .Skip((pageNumber - 1) * 50).Take(50).ToListAsync();
+            .Skip((pageNumber - 1) * 25).Take(25).ToListAsync();
         var since = DateTime.UtcNow.AddDays(-1);
         return View(new SecurityIndexViewModel {
             From = from, To = to, UserId = userId, EventName = eventName, Severity = severity,

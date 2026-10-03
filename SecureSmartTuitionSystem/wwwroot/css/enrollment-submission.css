@@ -326,19 +326,19 @@
     gap: 16px;
 }
 
-.delivery-address-grid .full-width,
-.enrollment-form-grid .full-width {
-    grid-column: 1 / -1;
-}
+    .delivery-address-grid .full-width,
+    .enrollment-form-grid .full-width {
+        grid-column: 1 / -1;
+    }
 
-.enrollment-form-grid .form-control,
-.enrollment-form-grid .form-select,
-.delivery-address-grid .form-control,
-.delivery-address-grid .form-select {
-    min-height: 44px;
-    border-color: var(--border);
-    border-radius: 9px;
-}
+    .enrollment-form-grid .form-control,
+    .enrollment-form-grid .form-select,
+    .delivery-address-grid .form-control,
+    .delivery-address-grid .form-select {
+        min-height: 44px;
+        border-color: var(--border);
+        border-radius: 9px;
+    }
 
 .billing-summary-card {
     display: block;
@@ -1288,3 +1288,53 @@
     .submission-message span + span {
         margin-top: 4px;
     }
+
+/* Shared guidance spans both enrollment date and plan fields. */
+.enrollment-plan-guidance {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-tint);
+    color: var(--muted);
+    font-size: .82rem;
+    line-height: 1.6;
+    min-width: 0
+}
+
+    .enrollment-plan-guidance > i {
+        flex: 0 0 auto;
+        color: var(--teal);
+        font-size: 1rem;
+        margin-top: 2px
+    }
+
+    .enrollment-plan-guidance > div {
+        min-width: 0
+    }
+
+    .enrollment-plan-guidance p {
+        margin: 0
+    }
+
+        .enrollment-plan-guidance p + p {
+            margin-top: 5px
+        }
+
+    .enrollment-plan-guidance .enrollment-plan-summary {
+        font-weight: 600;
+        color: var(--navy)
+    }
+
+.enrollment-plan-summary:empty {
+    display: none
+}
+
+@media(max-width:600px) {
+    .enrollment-plan-guidance {
+        padding: 12px;
+        gap: 9px
+    }
+}

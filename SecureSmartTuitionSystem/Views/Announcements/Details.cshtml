@@ -50,13 +50,13 @@
         </div>
         <div>
             <span>Published</span>
-            <strong>@Model.PublishAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</strong>
+            <strong>@Model.PublishAt.AddHours(8).ToString("dd MMM yyyy, hh:mm tt")</strong>
         </div>
         <div>
             <span>Expires</span>
             <strong>
                 @(Model.ExpiresAt.HasValue
-                    ? Model.ExpiresAt.Value.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")
+                    ? Model.ExpiresAt.Value.AddHours(8).ToString("dd MMM yyyy, hh:mm tt")
                     : "No expiry")
             </strong>
         </div>

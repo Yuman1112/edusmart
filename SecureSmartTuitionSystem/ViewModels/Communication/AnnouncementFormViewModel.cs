@@ -37,7 +37,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Communication
         [Required(ErrorMessage = "Publish date and time are required.")]
         [Display(Name = "Publish Date and Time")]
         public DateTime PublishAt { get; set; }
-            = DateTime.Now;
+            = DateTime.UtcNow.AddHours(8);
 
         [Display(Name = "Expiry Option")]
         [EnumDataType(typeof(AnnouncementExpiryUnit))]
@@ -51,6 +51,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Communication
         public IEnumerable<ValidationResult> Validate(
             ValidationContext validationContext)
         {
+            if (PublishAt.Year < 2000 || PublishAt.Year > 2100)
+                yield return new ValidationResult("Publish date must be between 2000 and 2100 (MYT).", new[] { nameof(PublishAt) });
             if (ExpiryUnit == AnnouncementExpiryUnit.None)
             {
                 yield break;

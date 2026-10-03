@@ -1,0 +1,99 @@
+/* Learners use a compact top navigation; staff retain their sidebar. */
+.learner-nav-group > button {
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+}
+
+.learner-nav-menu {
+    min-width: 245px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(7,69,92,.12);
+}
+
+    .learner-nav-menu .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 12px;
+        border-radius: 8px;
+        color: var(--navy);
+        font-size: .88rem;
+        white-space: nowrap;
+    }
+
+        .learner-nav-menu .dropdown-item:hover, .learner-nav-menu .dropdown-item:focus, .learner-nav-menu .dropdown-item.active {
+            color: var(--teal-dark);
+            background: #ddfaf8;
+        }
+
+        .learner-nav-menu .dropdown-item .message-unread-badge, .learner-nav-menu .dropdown-item .announcement-unread-badge {
+            margin-left: auto;
+        }
+
+.announcement-unread-badge[hidden] {
+    display: none !important;
+}
+
+.notification-unread-badge {
+    flex-shrink: 0;
+}
+
+.learner-calendar-child {
+    margin-bottom: 20px;
+}
+
+    .learner-calendar-child select {
+        max-width: 360px;
+    }
+
+.learner-class-card {
+    scroll-margin-top: 150px;
+}
+
+#enrollment-actions {
+    scroll-margin-top: 150px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+    #enrollment-actions form {
+        margin: 0;
+    }
+
+.notification-toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.notification-card.is-unread {
+    border-left: 4px solid var(--teal);
+}
+
+@media (max-width: 768px) {
+    .learner-nav-menu {
+        min-width: 215px;
+    }
+
+    .public-navbar {
+        padding: 12px 16px;
+    }
+
+    .notification-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+.learner-nav-group > button.active {
+    background: #ddfaf8;
+    color: var(--teal-dark);
+}

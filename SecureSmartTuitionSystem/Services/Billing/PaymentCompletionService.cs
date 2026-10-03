@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
@@ -16,6 +16,7 @@ namespace SecureSmartTuitionSystem.Services.Billing
         : IPaymentCompletionService
     {
         private readonly ApplicationDbContext _context;
+        private readonly string _publicBaseUrl;
 
         private readonly AccountProvisioningService
             _accountProvisioningService;
@@ -42,9 +43,13 @@ namespace SecureSmartTuitionSystem.Services.Billing
                 parentAccountSetupEmailService,
             IStudentAccountSetupEmailService
                 studentAccountSetupEmailService,
-            ILogger<PaymentCompletionService> logger)
+            ILogger<PaymentCompletionService> logger, IConfiguration configuration)
         {
             _context = context;
+            string baseUrl = configuration["App:PublicBaseUrl"] ?? "https://localhost:7086";
+            if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri) || baseUri.Scheme != "https" || !string.IsNullOrEmpty(baseUri.UserInfo) || !string.IsNullOrEmpty(baseUri.Query) || !string.IsNullOrEmpty(baseUri.Fragment))
+                throw new InvalidOperationException("App:PublicBaseUrl must be an absolute HTTPS URL.");
+            _publicBaseUrl = baseUrl.TrimEnd('/');
 
             _accountProvisioningService =
                 accountProvisioningService;
@@ -61,20 +66,45 @@ namespace SecureSmartTuitionSystem.Services.Billing
             _logger = logger;
         }
 
-        public async Task<PaymentCompletionResult>
-            CompleteStripePaymentAsync(
-                string checkoutSessionId,
-                string? paymentIntentId,
-                string stripeEventId,
-                long amountPaidInSen,
-                string currency,
-                CancellationToken cancellationToken = default)
+        public Task<PaymentCompletionResult> CompleteStripePaymentAsync(string checkoutSessionId, string? paymentIntentId,
+            string stripeEventId, long amountPaidInSen, string currency, CancellationToken cancellationToken = default) =>
+            CompletePaymentAsync(checkoutSessionId, paymentIntentId, stripeEventId, amountPaidInSen, currency, false, cancellationToken);
+
+        public async Task<PaymentCompletionResult> CompleteZeroBillAsync(int billId, CancellationToken cancellationToken = default)
+        {
+            _context.ChangeTracker.Clear();
+            string sessionId = $"free_bill_{billId}";
+            await using (var tx = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken))
+            {
+                var bill = await _context.Bills.Include(x => x.EnrollmentApplication).FirstOrDefaultAsync(x => x.BillId == billId, cancellationToken)
+                    ?? throw new InvalidOperationException("Bill not found.");
+                if (bill.TotalAmount != 0m || bill.Currency != "MYR") throw new InvalidOperationException("Only a MYR zero-total bill can use free enrollment confirmation.");
+                var payment = await _context.Payments.FirstOrDefaultAsync(x => x.ProviderCheckoutSessionId == sessionId, cancellationToken);
+                if (payment == null)
+                {
+                    if ((bill.Status != BillStatus.PendingPayment && bill.Status != BillStatus.Overdue) || bill.EnrollmentApplication.Status != EnrollmentStatus.ApprovedPendingPayment)
+                        throw new InvalidOperationException("This free enrollment is no longer awaiting confirmation.");
+                    var numbers = await _context.Payments.Select(x => x.PaymentNumber).ToListAsync(cancellationToken);
+                    int next = numbers.Select(x => x.Length > 2 && int.TryParse(x.AsSpan(2), out var n) ? n : 0).DefaultIfEmpty(0).Max() + 1;
+                    if (next > 99999) throw new InvalidOperationException("Payment-number limit reached.");
+                    _context.Payments.Add(new Payment { BillId = billId, PaymentNumber = $"PY{next:D5}", Amount = 0m, Currency = "MYR",
+                        PaymentProvider = "Free", ProviderCheckoutSessionId = sessionId, Status = PaymentStatus.Pending });
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                await tx.CommitAsync(cancellationToken);
+            }
+            _context.ChangeTracker.Clear();
+            return await CompletePaymentAsync(sessionId, null, $"free_confirm_{billId}", 0, "MYR", true, cancellationToken);
+        }
+
+        private async Task<PaymentCompletionResult> CompletePaymentAsync(string checkoutSessionId, string? paymentIntentId,
+            string stripeEventId, long amountPaidInSen, string currency, bool allowZero, CancellationToken cancellationToken)
         {
             ValidateInput(
                 checkoutSessionId,
                 stripeEventId,
                 amountPaidInSen,
-                currency);
+                currency, allowZero);
 
             IDbContextTransaction? transaction = null;
 
@@ -98,14 +128,14 @@ namespace SecureSmartTuitionSystem.Services.Billing
                  */
                 var paymentWithSameEvent =
                     await _context.Payments
-                        .AsNoTracking()
+                        .AsNoTracking().Include(x => x.Bill).ThenInclude(x => x.EnrollmentApplication)
                         .FirstOrDefaultAsync(
                             payment =>
                                 payment.ProviderEventId ==
                                 stripeEventId,
                             cancellationToken);
 
-                if (paymentWithSameEvent != null)
+                if (paymentWithSameEvent != null && paymentWithSameEvent.Bill.EnrollmentApplication.Status == EnrollmentStatus.Enrolled)
                 {
                     var existingResult =
                         await BuildExistingResultAsync(
@@ -176,16 +206,19 @@ namespace SecureSmartTuitionSystem.Services.Billing
                     return completedResult;
                 }
 
-                ValidatePaymentState(
-                    payment,
-                    bill,
-                    application);
+                if (allowZero && (payment.PaymentProvider != "Free" || payment.Amount != 0m || bill.TotalAmount != 0m))
+                    throw new InvalidOperationException("Free enrollment confirmation cannot complete a payable bill.");
+
+                bool resumeProvisioning = payment.Status == PaymentStatus.Succeeded && bill.Status == BillStatus.Paid && application.Status == EnrollmentStatus.PaymentConfirmed;
+                if (!resumeProvisioning) ValidatePaymentState(payment, bill, application);
 
                 ValidatePaymentAmount(
                     bill,
                     amountPaidInSen,
                     currency);
 
+                if (!resumeProvisioning)
+                {
                 DateTime completedAt =
                     DateTime.UtcNow;
 
@@ -259,11 +292,20 @@ namespace SecureSmartTuitionSystem.Services.Billing
                             null,
 
                         Remarks =
-                            "Payment was confirmed through Stripe."
+                            allowZero ? "Zero-total enrollment was confirmed without a charge." : "Payment was confirmed through Stripe."
                     });
 
                 await _context.SaveChangesAsync(
                     cancellationToken);
+
+                }
+                // Preserve the verified charge even if account/enrollment fulfillment needs retrying.
+                if (ownsTransaction && transaction != null)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                    await transaction.DisposeAsync(); transaction = null;
+                    transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+                }
 
                 /*
                  * Create or reuse Parent and Student accounts,
@@ -349,7 +391,7 @@ namespace SecureSmartTuitionSystem.Services.Billing
                                 Encoding.UTF8.GetBytes(token));
 
                         string setupUrl =
-                            "https://localhost:7086" +
+                            _publicBaseUrl +
                             "/Identity/Account/SetupPassword" +
                             $"?userId={Uri.EscapeDataString(parentUser.Id)}" +
                             $"&token={Uri.EscapeDataString(encodedToken)}";
@@ -436,7 +478,7 @@ namespace SecureSmartTuitionSystem.Services.Billing
                                     Encoding.UTF8.GetBytes(token));
 
                             string setupUrl =
-                                "https://localhost:7086" +
+                                _publicBaseUrl +
                                 "/Identity/Account/SetupPassword" +
                                 $"?userId={Uri.EscapeDataString(studentUser.Id)}" +
                                 $"&token={Uri.EscapeDataString(encodedToken)}";
@@ -550,7 +592,7 @@ namespace SecureSmartTuitionSystem.Services.Billing
             string checkoutSessionId,
             string stripeEventId,
             long amountPaidInSen,
-            string currency)
+            string currency, bool allowZero = false)
         {
             if (string.IsNullOrWhiteSpace(
                     checkoutSessionId))
@@ -568,7 +610,7 @@ namespace SecureSmartTuitionSystem.Services.Billing
                     nameof(stripeEventId));
             }
 
-            if (amountPaidInSen <= 0)
+            if (amountPaidInSen < 0 || (!allowZero && amountPaidInSen == 0))
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(amountPaidInSen),

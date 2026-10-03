@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +10,6 @@ using SecureSmartTuitionSystem.ViewModels.Enrollment;
 
 namespace SecureSmartTuitionSystem.Controllers
 {
-    [AllowAnonymous]
     [EnableRateLimiting("PublicFormPolicy")]
     public class EnrollmentController : Controller
     {
@@ -46,12 +45,37 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
+        [Authorize(Roles = "Parent,Student"), HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddSubjects(int studentId)
+        {
+            if (User.Identity?.IsAuthenticated != true) return Challenge();
+            if (!User.IsInRole("Parent") && !User.IsInRole("Student")) return Forbid();
+            string? userId = _userManager.GetUserId(User);
+            var student = await _context.StudentProfiles.Include(x => x.ApplicationUser).Include(x => x.ParentStudents).ThenInclude(x => x.ParentProfile).ThenInclude(x => x.ApplicationUser)
+                .FirstOrDefaultAsync(x => x.StudentProfileId == studentId && x.IsActive &&
+                    ((User.IsInRole("Student") && x.ApplicationUserId == userId) || (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))));
+            if (student == null) return NotFound();
+            var parent = student.ParentStudents.Where(x => x.IsActive && (User.IsInRole("Student") || x.ParentProfile.ApplicationUserId == userId)).OrderBy(x => x.ParentProfileId).Select(x => x.ParentProfile).FirstOrDefault();
+            if (parent == null) { TempData["ErrorMessage"] = "An active guardian link is required before adding subjects."; return RedirectToAction("Index", "LearningClasses"); }
+            var details = new StudentDetailsViewModel { StudentName = student.FullName, StudentIdentificationNumber = student.IdentificationNumber, StudentDateOfBirth = student.DateOfBirth,
+                StudentGender = student.Gender, StudentSchool = student.School, StudentEmail = student.ApplicationUser?.Email, StudentHasNoEmail = string.IsNullOrWhiteSpace(student.ApplicationUser?.Email) };
+            var guardian = new GuardianDetailsViewModel { UseExistingParentAccount = true, ExistingParentVerified = true, ExistingParentEmail = parent.ApplicationUser.Email,
+                VerifiedParentName = parent.FullName, VerifiedParentEmail = parent.ApplicationUser.Email };
+            HttpContext.Session.SetString(StudentDetailsSessionKey, JsonSerializer.Serialize(details)); HttpContext.Session.SetString(GuardianDetailsSessionKey, JsonSerializer.Serialize(guardian));
+            HttpContext.Session.SetString(ExistingParentUserIdSessionKey, parent.ApplicationUserId); HttpContext.Session.SetInt32("Enrollment.AddSubjectStudentId", student.StudentProfileId);
+            HttpContext.Session.Remove("Enrollment.SelectedClassIds"); HttpContext.Session.Remove("Enrollment.RequestedStartDate"); HttpContext.Session.Remove(LastSubmittedApplicationIdSessionKey);
+            return RedirectToAction("SelectClasses", "EnrollmentSubmission");
+        }
+
+        [AllowAnonymous]
         [HttpGet]
         public IActionResult Start()
         {
             /*
              * Clear any previous incomplete enrollment.
              */
+            HttpContext.Session.Remove("Enrollment.AddSubjectStudentId");
+            HttpContext.Session.Remove("Enrollment.RequestedStartDate");
             HttpContext.Session.Remove(
                 StudentDetailsSessionKey);
 
@@ -74,9 +98,12 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
+        [AllowAnonymous]
         [HttpGet]
         public IActionResult StudentDetails()
         {
+            if (HttpContext.Session.GetInt32("Enrollment.AddSubjectStudentId").HasValue)
+                return RedirectToAction("SelectClasses", "EnrollmentSubmission");
             string? json =
                 HttpContext.Session.GetString(
                     StudentDetailsSessionKey);
@@ -96,6 +123,7 @@ namespace SecureSmartTuitionSystem.Controllers
          * CHECK EXISTING STUDENT IC
          * =====================================================
          */
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> CheckStudentIc(
             string icNumber)
@@ -133,6 +161,7 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> StudentDetails(
@@ -209,9 +238,12 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
+        [AllowAnonymous]
         [HttpGet]
         public IActionResult GuardianDetails()
         {
+            if (HttpContext.Session.GetInt32("Enrollment.AddSubjectStudentId").HasValue)
+                return RedirectToAction("SelectClasses", "EnrollmentSubmission");
             if (!HasStudentDetails())
             {
                 return ReturnToStudentDetails();
@@ -265,6 +297,7 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult>
@@ -429,6 +462,7 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult BackToStudentDetails(
@@ -572,6 +606,7 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult GuardianDetails(

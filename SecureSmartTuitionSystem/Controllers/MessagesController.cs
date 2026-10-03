@@ -1,3 +1,4 @@
+using System.Data;
 using System.IO.Compression;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -13,7 +14,7 @@ using SecureSmartTuitionSystem.ViewModels.Communication;
 
 namespace SecureSmartTuitionSystem.Controllers
 {
-    [Authorize(Roles = "Admin,Parent")]
+    [Authorize(Roles = "Admin,Parent,Student,Tutor")]
     public sealed class MessagesController : Controller
     {
         private const long MaximumFileSize = 10 * 1024 * 1024;
@@ -70,6 +71,14 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            var preferences = await _context.ConversationUserPreferences.Where(x => x.UserId == userId)
+                .ToDictionaryAsync(x => x.ConversationId);
+            if (id.HasValue && preferences.TryGetValue(id.Value, out var opened) && opened.IsHidden)
+            {
+                opened.IsHidden = false;
+                await _context.SaveChangesAsync();
+            }
+
             var conversations = await accessible
                 .AsNoTracking()
                 .Include(item => item.ParentUser)
@@ -77,6 +86,12 @@ namespace SecureSmartTuitionSystem.Controllers
                     .ThenInclude(message => message.Attachments)
                 .OrderByDescending(item => item.LastMessageAt ?? item.CreatedAt)
                 .ToListAsync();
+
+            conversations = conversations.Where(c => !preferences.TryGetValue(c.ConversationId, out var preference) ||
+                    !preference.IsHidden || c.Messages.Any(m => !m.IsDeletedForEveryone && !hiddenMessageIds.Contains(m.ChatMessageId) &&
+                        (!preference.HiddenAtUtc.HasValue || m.SentAt > preference.HiddenAtUtc.Value)))
+                .OrderByDescending(c => preferences.TryGetValue(c.ConversationId, out var preference) && preference.IsPinned)
+                .ThenByDescending(c => c.LastMessageAt ?? c.CreatedAt).ToList();
 
             Conversation? active = id.HasValue
                 ? conversations.FirstOrDefault(item => item.ConversationId == id.Value)
@@ -90,7 +105,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     ? active?.ParentUser.FullName ?? active?.ParentUser.UserName ?? string.Empty
                     : "EduSmart Administration",
                 ActiveParticipantEmail = isAdmin
-                    ? active?.ParentUser.Email ?? string.Empty
+                    ? active?.ParentUser.UserName ?? string.Empty
                     : "Official support conversation",
                 Conversations = conversations.Select(item =>
                 {
@@ -103,12 +118,13 @@ namespace SecureSmartTuitionSystem.Controllers
                     return new ConversationListItemViewModel
                     {
                         ConversationId = item.ConversationId,
+                        IsPinned = preferences.TryGetValue(item.ConversationId, out var preference) && preference.IsPinned,
                         ParticipantUserId = item.ParentUserId,
                         ParticipantName = isAdmin
                             ? item.ParentUser.FullName ?? item.ParentUser.UserName ?? "Parent"
                             : "EduSmart Administration",
                         ParticipantEmail = isAdmin
-                            ? item.ParentUser.Email ?? string.Empty
+                            ? item.ParentUser.UserName ?? string.Empty
                             : "Official support conversation",
                         LastMessagePreview = last == null
                             ? "No messages yet"
@@ -118,29 +134,30 @@ namespace SecureSmartTuitionSystem.Controllers
                                 last.Attachments.Count > 0),
                         LastMessageAt = last?.SentAt,
                         UnreadCount = item.Messages.Count(message =>
-                            message.SenderUserId != userId &&
+                            (isAdmin ? message.SenderUserId == item.ParentUserId : message.SenderUserId != userId) &&
                             !message.IsDeletedForEveryone &&
                             !hiddenMessageIds.Contains(message.ChatMessageId) &&
-                            !message.ReadAt.HasValue)
+                            !message.ReadAt.HasValue &&
+                            (!preferences.TryGetValue(item.ConversationId, out var hiddenPreference) || !hiddenPreference.IsHidden ||
+                             !hiddenPreference.HiddenAtUtc.HasValue || message.SentAt > hiddenPreference.HiddenAtUtc.Value))
                     };
                 }).ToList()
             };
 
             if (isAdmin)
             {
-                model.AvailableParents = await _context.ParentProfiles
-                    .AsNoTracking()
-                    .Include(item => item.ApplicationUser)
-                    .Where(item => item.ApplicationUser.IsActive)
-                    .OrderBy(item => item.FullName)
-                    .Select(item => new ParentContactViewModel
-                    {
-                        UserId = item.ApplicationUserId,
-                        Name = item.FullName,
-                        ParentUserName = item.ApplicationUser.UserName ?? string.Empty,
-                        Email = item.ApplicationUser.Email ?? string.Empty
-                    })
-                    .ToListAsync();
+                var contacts = await (from user in _context.Users.AsNoTracking()
+                    join membership in _context.UserRoles on user.Id equals membership.UserId
+                    join role in _context.Roles on membership.RoleId equals role.Id
+                    where user.IsActive && (role.Name == "Parent" || role.Name == "Student" || role.Name == "Tutor")
+                    select new { user.Id, user.FullName, user.UserName, user.Email, Role = role.Name }).ToListAsync();
+                model.AvailableParents = contacts.GroupBy(x => x.Id).Select(group =>
+                {
+                    var contact = group.OrderBy(x => x.Role == "Parent" ? 0 : x.Role == "Student" ? 1 : 2).First();
+                    return new ParentContactViewModel { UserId = contact.Id, Name = contact.FullName ?? contact.UserName ?? "User",
+                        ParentUserName = contact.UserName ?? "", Email = contact.Email ?? "", Role = contact.Role ?? "User" };
+                }).OrderBy(x => x.Role == "Parent" ? 0 : x.Role == "Student" ? 1 : 2)
+                  .ThenBy(x => x.ParentUserName, StringComparer.OrdinalIgnoreCase).ToList();
             }
 
             if (active != null)
@@ -245,7 +262,7 @@ namespace SecureSmartTuitionSystem.Controllers
             return Json(new { readMessageIds });
         }
 
-        [Authorize(Roles = "Parent")]
+        [Authorize(Roles = "Parent,Student,Tutor")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> StartParent()
@@ -261,9 +278,10 @@ namespace SecureSmartTuitionSystem.Controllers
             string userId = CurrentUserId();
             if (!await AccessibleConversations(userId, User.IsInRole("Admin"))
                 .AnyAsync(x => x.ConversationId == conversationId)) return NotFound();
+            bool isAdmin = User.IsInRole("Admin");
             var unread = await _context.ChatMessages.Where(x =>
                 x.ConversationId == conversationId && x.ChatMessageId <= lastVisibleMessageId &&
-                x.SenderUserId != userId && !x.IsDeletedForEveryone && !x.ReadAt.HasValue &&
+                (isAdmin ? x.SenderUserId == x.Conversation.ParentUserId : x.SenderUserId != userId) && !x.IsDeletedForEveryone && !x.ReadAt.HasValue &&
                 !_context.MessageUserDeletions.Any(d => d.ChatMessageId == x.ChatMessageId && d.UserId == userId))
                 .ToListAsync();
             var now = DateTime.UtcNow;
@@ -277,14 +295,13 @@ namespace SecureSmartTuitionSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Start(string parentUserId)
         {
-            bool isParent = await _context.ParentProfiles
-                .AsNoTracking()
-                .AnyAsync(item => item.ApplicationUserId == parentUserId);
-
-            if (!isParent)
-            {
-                return NotFound();
-            }
+            bool validContact = await (from user in _context.Users
+                join membership in _context.UserRoles on user.Id equals membership.UserId
+                join role in _context.Roles on membership.RoleId equals role.Id
+                where user.Id == parentUserId && user.IsActive &&
+                    (role.Name == "Parent" || role.Name == "Student" || role.Name == "Tutor")
+                select user.Id).AnyAsync();
+            if (!validContact) return NotFound();
 
             Conversation conversation = await GetOrCreateParentConversation(parentUserId);
 
@@ -359,6 +376,7 @@ namespace SecureSmartTuitionSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditMessage(EditMessageViewModel model)
         {
+            await using var editTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             string userId = CurrentUserId();
             ChatMessage? message = await _context.ChatMessages
                 .Include(item => item.Conversation)
@@ -399,6 +417,7 @@ namespace SecureSmartTuitionSystem.Controllers
             message.ProtectedContent = _protection.ProtectText(content);
             message.EditedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+            await editTransaction.CommitAsync();
 
             return RedirectToAction(nameof(Index),
                 new { id = message.ConversationId });
@@ -472,7 +491,8 @@ namespace SecureSmartTuitionSystem.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Download(int id)
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> Download(int id, bool preview = false)
         {
             string userId = CurrentUserId();
             bool isAdmin = User.IsInRole("Admin");
@@ -510,8 +530,33 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            if (preview)
+            {
+                if (attachment.ContentType is not ("image/png" or "image/jpeg")) return BadRequest();
+                Response.Headers["X-Content-Type-Options"] = "nosniff";
+                return File(bytes, attachment.ContentType);
+            }
             string safeName = Path.GetFileName(attachment.OriginalFileName);
             return File(bytes, "application/octet-stream", safeName);
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConversationPreference(int conversationId, string operation, bool pinned = false, int? activeConversationId = null)
+        {
+            if (operation is not ("pin" or "delete")) return BadRequest();
+            string userId = CurrentUserId();
+            await using var tx = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            if (!await AccessibleConversations(userId, User.IsInRole("Admin")).AnyAsync(x => x.ConversationId == conversationId)) return NotFound();
+            var preference = await _context.ConversationUserPreferences.FirstOrDefaultAsync(x => x.UserId == userId && x.ConversationId == conversationId);
+            if (preference == null)
+            {
+                preference = new ConversationUserPreference { UserId = userId, ConversationId = conversationId };
+                _context.ConversationUserPreferences.Add(preference);
+            }
+            if (operation == "pin") preference.IsPinned = pinned;
+            else { preference.IsHidden = true; preference.HiddenAtUtc = DateTime.UtcNow; preference.IsPinned = false; }
+            await _context.SaveChangesAsync(); await tx.CommitAsync();
+            return RedirectToAction(nameof(Index), new { id = operation == "delete" && activeConversationId == conversationId ? (int?)null : activeConversationId });
         }
 
         private IQueryable<Conversation> AccessibleConversations(string userId, bool isAdmin)

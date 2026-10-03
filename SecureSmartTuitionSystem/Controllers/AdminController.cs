@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +6,7 @@ using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.ViewModels.Admin;
+using SecureSmartTuitionSystem.Services.Enrollment;
 
 namespace SecureSmartTuitionSystem.Controllers
 {
@@ -14,19 +15,25 @@ namespace SecureSmartTuitionSystem.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ClassScheduleService _schedules;
 
         public AdminController(
             ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            ClassScheduleService schedules)
         {
             _context = context;
             _userManager = userManager;
+            _schedules = schedules;
         }
 
         public async Task<IActionResult> Index()
         {
             var tutors =
                 await _userManager.GetUsersInRoleAsync("Tutor");
+
+            var today = ClassScheduleService.Today;
+            var lessons = await _schedules.GetLessonsAsync(today, today);
 
             var model = new AdminDashboardViewModel
             {
@@ -46,31 +53,14 @@ namespace SecureSmartTuitionSystem.Controllers
                             application.Status ==
                                 EnrollmentStatus.PendingReview),
 
-                RecentClasses =
-                    await _context.ClassSessions
-                        .AsNoTracking()
-                        .Include(session => session.Subject)
-                        .OrderByDescending(session =>
-                            session.CreatedAt)
-                        .Take(5)
-                        .Select(session =>
-                            new AdminClassItemViewModel
-                            {
-                                ClassCode =
-                                    session.ClassCode,
-
-                                SubjectName =
-                                    session.Subject.SubjectName,
-
-                                AcademicLevel =
-                                    session.Subject.AcademicLevel,
-
-                                Schedule =
-                                    session.DayOfWeek + ", " +
-                                    session.StartTime
-                                        .ToString("hh:mm tt")
-                            })
-                        .ToListAsync(),
+                TodayClasses = lessons.Select(lesson => new AdminClassItemViewModel
+                {
+                    ClassName = lesson.Class.ClassName ?? "Class",
+                    Schedule = $"{lesson.Start:hh:mm tt} – {lesson.End:hh:mm tt} MYT",
+                    Status = lesson.Status,
+                    StatusCssClass = lesson.Cancelled ? "status-danger"
+                        : lesson.Replacement ? "status-warning" : "status-success"
+                }).ToList(),
 
                 PendingEnrollments =
                     await _context.EnrollmentApplications

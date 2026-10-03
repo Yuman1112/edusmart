@@ -67,7 +67,7 @@
             }
         </div>
 
-        <form method="get"
+        <form method="get" data-live-filter
               asp-controller="Classes"
               asp-action="Index"
               id="browseFilterForm"
@@ -326,27 +326,3 @@
     </section>
 </div>
 
-@section Scripts {
-    <script nonce="@Context.Items["CspNonce"]">
-        (() => {
-            "use strict";
-
-            const filterForm =
-                document.getElementById("browseFilterForm");
-
-            if (!filterForm) {
-                return;
-            }
-
-            const filters =
-                filterForm.querySelectorAll(
-                    ".browse-filter-input");
-
-            filters.forEach(filter => {
-                filter.addEventListener("change", () => {
-                    filterForm.submit();
-                });
-            });
-        })();
-    </script>
-}

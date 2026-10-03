@@ -75,7 +75,7 @@
 
 <form asp-controller="ClassSessions"
       asp-action="Index"
-      method="get"
+      method="get" data-live-filter
       id="classFilterForm"
       class="class-filter-card">
 
@@ -527,7 +527,7 @@
 
                                                         <button type="submit"
                                                                 class="dropdown-item action-complete"
-                                                                data-confirm="Mark this entire class session as completed?">
+                                                                data-confirm="Complete this class after its term and all replacements have ended?">
 
                                                             <i class="bi bi-check2-circle"></i>
                                                             Mark as Completed
@@ -536,20 +536,7 @@
                                                 </li>
 
                                                 <li>
-                                                    <form asp-controller="ClassSessions"
-                                                          asp-action="Cancel"
-                                                          asp-route-id="@session.ClassSessionId"
-                                                          method="post"
-                                                          class="dropdown-action-form">
-
-                                                        <button type="submit"
-                                                                class="dropdown-item action-cancel"
-                                                                data-confirm="Are you sure you want to cancel this class session?">
-
-                                                            <i class="bi bi-x-circle"></i>
-                                                            Cancel Class
-                                                        </button>
-                                                    </form>
+                                                    <a asp-controller="ClassSchedules" asp-action="Index" asp-route-classSessionId="@session.ClassSessionId" class="dropdown-item action-cancel"><i class="bi bi-calendar-x"></i> Cancel a dated lesson</a>
                                                 </li>
                                             }
                                             else
@@ -672,7 +659,7 @@
                                 }
 
                                 if (filterForm) {
-                                    filterForm.requestSubmit();
+                                    // Shared live-filters.js submits after dependent selections reset.
                                 }
                             }
                         );

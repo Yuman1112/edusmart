@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using SecureSmartTuitionSystem.Models.Identity;
 
 namespace SecureSmartTuitionSystem.Models.Enrollment
@@ -33,6 +33,7 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
         // in the following billing month.
         public DateTime? DropEffectiveDate { get; set; }
 
+        [StringLength(500)] public string? WithdrawalReason { get; set; }
         public DateTime? EndedAt { get; set; }
 
         public bool HardcopyMaterialsRequested { get; set; }

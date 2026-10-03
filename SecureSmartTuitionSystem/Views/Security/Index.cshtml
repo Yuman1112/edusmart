@@ -18,37 +18,43 @@
         <button type="submit" class="outline-button">Encrypt existing notes</button>
     </form>
 </div>
-<form method="get" class="row g-3 mb-4">
-    <div class="col-md-2"><label for="from" class="form-label">From (UTC)</label><input id="from" name="from" type="date" value="@Model.From?.ToString("yyyy-MM-dd")" class="form-control" /></div>
-    <div class="col-md-2"><label for="to" class="form-label">To (UTC)</label><input id="to" name="to" type="date" value="@Model.To?.ToString("yyyy-MM-dd")" class="form-control" /></div>
-    <div class="col-md-3"><label for="userId" class="form-label">User ID</label><input id="userId" name="userId" value="@Model.UserId" maxlength="450" class="form-control" /></div>
+<form method="get" id="securityFilters" class="row g-3 mb-4" data-filter-url="@Url.Action("Index", "Security")">
+    <div class="col-md-2"><label for="from" class="form-label">From (MYT)</label><input id="from" name="from" type="date" value="@Model.From?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-md-2"><label for="to" class="form-label">To (MYT)</label><input id="to" name="to" type="date" value="@Model.To?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-md-3"><label for="userId" class="form-label">User name / learner or tutor ID</label><input id="userId" name="userId" value="@Model.UserId" maxlength="450" class="form-control" /></div>
     <div class="col-md-2"><label for="severity" class="form-label">Severity</label><select id="severity" name="severity" class="form-select"><option value="">All</option>
         @foreach (var level in Enum.GetValues<SecuritySeverity>()) { <option value="@level" selected="@(Model.Severity == level)">@level</option> }
     </select></div>
     <div class="col-md-3"><label for="eventName" class="form-label">Event</label><input id="eventName" name="eventName" value="@Model.EventName" maxlength="100" class="form-control" /></div>
-    <div class="col-12"><button type="submit" class="primary-button">Apply filters</button> <a asp-action="Index" class="outline-button">Reset</a></div>
+    <div class="col-12"><a asp-action="Index" class="outline-button" data-security-reset>Reset</a><noscript><button type="submit" class="primary-button">Filter</button></noscript></div>
 </form>
-<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
-    <thead><tr><th>Time (UTC)</th><th>User</th><th>Event</th><th>Severity</th><th>Record</th><th>Details</th><th>Integrity</th></tr></thead>
+<p id="securityFilterStatus" class="text-muted" role="status" aria-live="polite">Filters update automatically.</p>
+<div id="securityResults" aria-live="polite">
+<div class="card"><div class="table-responsive"><table data-server-paged="true" class="table table-hover align-middle mb-0">
+    <thead><tr><th>Time (MYT, UTC+8)</th><th>User</th><th>Event</th><th>Severity</th><th>Record</th><th>Details</th><th>Integrity</th></tr></thead>
     <tbody>
     @if (Model.Rows.Count == 0) { <tr><td colspan="7" class="text-center py-4">No matching activity.</td></tr> }
     @foreach (var row in Model.Rows)
     {
         var entry = row.Entry;
         <tr class="@((int)entry.Severity >= (int)SecuritySeverity.High || !row.IntegrityValid ? "table-warning" : "")">
-            <td class="text-nowrap">@entry.OccurredAtUtc.ToString("dd MMM yyyy HH:mm:ss")</td>
-            <td>@entry.ActorName</td><td>@entry.EventName</td><td>@entry.Severity</td>
-            <td>@entry.EntityName @entry.EntityKey</td>
-            <td>@entry.Summary<small class="d-block text-muted">IP: @entry.RemoteIp · Trace: @entry.TraceId</small></td>
+            <td class="text-nowrap">@entry.OccurredAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm:ss")</td>
+            <td>@(System.Text.RegularExpressions.Regex.IsMatch(entry.ActorName ?? "", @"^AD\d+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ? "Administrator" : System.Text.RegularExpressions.Regex.IsMatch(entry.ActorName ?? "", @"^[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}$") ? "System user" : entry.ActorName)</td><td>@entry.EventName</td><td>@entry.Severity</td>
+            <td>@entry.EntityName</td>
+            <td>@entry.Summary<small class="d-block text-muted">IP: @entry.RemoteIp</small></td>
             <td><span class="badge @(row.IntegrityValid ? "bg-success" : "bg-danger")">@(row.IntegrityValid ? "Verified" : "Review required")</span></td>
         </tr>
     }
     </tbody>
 </table></div></div>
-<div class="d-flex justify-content-between align-items-center mt-3">
-    <span>@Model.TotalRecords record(s) · Page @Model.PageNumber of @Model.TotalPages</span>
-    <div>
-        @if (Model.PageNumber > 1) { <a asp-action="Index" asp-route-pageNumber="@(Model.PageNumber - 1)" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity" class="outline-button">Previous</a> }
-        @if (Model.PageNumber < Model.TotalPages) { <a asp-action="Index" asp-route-pageNumber="@(Model.PageNumber + 1)" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity" class="outline-button">Next</a> }
-    </div>
+<nav class="table-pagination" aria-label="Security activity pages">
+<span class="table-pagination-summary">@Model.TotalRecords record(s) · Page @Model.PageNumber of @Model.TotalPages · 25 per page</span>
+<div class="table-pagination-controls">
+@if (Model.PageNumber > 1) { <a class="table-page-button" asp-action="Index" asp-route-pageNumber="1" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity">First</a><a class="table-page-button" asp-action="Index" asp-route-pageNumber="@(Model.PageNumber - 1)" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity">Previous</a> }
+else { <button type="button" class="table-page-button" disabled>First</button><button type="button" class="table-page-button" disabled>Previous</button> }
+@for (int number = Math.Max(1, Model.PageNumber - 2); number <= Math.Min(Model.TotalPages, Model.PageNumber + 2); number++) { <a class="table-page-button @(number == Model.PageNumber ? "active" : "")" aria-current="@(number == Model.PageNumber ? "page" : null)" asp-action="Index" asp-route-pageNumber="@number" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity">@number</a> }
+@if (Model.PageNumber < Model.TotalPages) { <a class="table-page-button" asp-action="Index" asp-route-pageNumber="@(Model.PageNumber + 1)" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity">Next</a><a class="table-page-button" asp-action="Index" asp-route-pageNumber="@Model.TotalPages" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity">Last</a> }
+else { <button type="button" class="table-page-button" disabled>Next</button><button type="button" class="table-page-button" disabled>Last</button> }
+</div></nav>
 </div>
+@section Scripts { <script src="~/js/security-filters.js" asp-append-version="true"></script> }

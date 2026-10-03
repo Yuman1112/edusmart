@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Services.Enrollment;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -83,8 +84,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     .Where(enrollment =>
                         classIds.Contains(
                             enrollment.ClassSessionId) &&
-                        enrollment.Status ==
-                            StudentEnrollmentStatus.Active)
+                        (enrollment.Status == StudentEnrollmentStatus.Active || (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > ClassScheduleService.Today))))
                     .GroupBy(enrollment =>
                         enrollment.ClassSessionId)
                     .Select(group =>
@@ -103,8 +103,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     .Where(enrollment =>
                         classIds.Contains(
                             enrollment.ClassSessionId) &&
-                        enrollment.Status ==
-                            StudentEnrollmentStatus.Active)
+                        (enrollment.Status == StudentEnrollmentStatus.Active || (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > ClassScheduleService.Today))))
                     .Select(enrollment =>
                         enrollment.StudentProfileId)
                     .Distinct()
@@ -122,9 +121,7 @@ namespace SecureSmartTuitionSystem.Controllers
                         activeClasses.Count,
 
                     TodayClassCount =
-                        activeClasses.Count(session =>
-                            session.DayOfWeek ==
-                                DateTime.Today.DayOfWeek),
+                        (await new ClassScheduleService(_context).GetLessonsAsync(ClassScheduleService.Today, ClassScheduleService.Today, tutor.Id)).Count(x => !x.Cancelled),
 
                     ActiveStudentCount =
                         activeStudentCount,
@@ -221,14 +218,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     session.Status ==
                         ClassSessionStatus.Active);
 
-            DayOfWeek today =
-                DateTime.Today.DayOfWeek;
-
-            int todayClassCount =
-                await tutorClassesQuery.CountAsync(session =>
-                    session.Status ==
-                        ClassSessionStatus.Active &&
-                    session.DayOfWeek == today);
+            int todayClassCount = (await new ClassScheduleService(_context).GetLessonsAsync(ClassScheduleService.Today, ClassScheduleService.Today, tutor.Id)).Count(x => !x.Cancelled);
 
             /*
              * Subject filter options only include subjects
@@ -307,8 +297,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     .Where(enrollment =>
                         classIds.Contains(
                             enrollment.ClassSessionId) &&
-                        enrollment.Status ==
-                            StudentEnrollmentStatus.Active)
+                        (enrollment.Status == StudentEnrollmentStatus.Active || (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > ClassScheduleService.Today))))
                     .GroupBy(enrollment =>
                         enrollment.ClassSessionId)
                     .Select(group =>
@@ -461,8 +450,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     .CountAsync(enrollment =>
                         enrollment.ClassSessionId ==
                             session.ClassSessionId &&
-                        enrollment.Status ==
-                            StudentEnrollmentStatus.Active);
+                        (enrollment.Status == StudentEnrollmentStatus.Active || (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > ClassScheduleService.Today))));
 
             var model =
                 new TutorClassDetailsViewModel

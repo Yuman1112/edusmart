@@ -28,7 +28,7 @@
     <div class="enrollment-card submitted-card">
         <div class="submitted-icon"><i class="bi bi-check-circle"></i></div>
         <span class="enrollment-eyebrow">Application received</span>
-        <h1>Enrollment Application Submitted</h1>
+        <h1>@(ViewData["IsAdditionalEnrollment"] as bool? == true ? "Additional Subjects Submitted" : "Enrollment Application Submitted")</h1>
         <p class="submission-message">
             <span>
                 Your application has been sent for administrator review.

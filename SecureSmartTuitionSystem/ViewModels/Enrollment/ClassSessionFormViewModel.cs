@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using SecureSmartTuitionSystem.Models.Enrollment;
 
@@ -7,6 +7,10 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
     public class ClassSessionFormViewModel
     {
         public int? ClassSessionId { get; set; }
+        [Required, DataType(DataType.Date), Display(Name = "Start Date")]
+        public DateTime? StartDate { get; set; }
+        [DataType(DataType.Date), Display(Name = "End Date")]
+        public DateTime? EndDate { get; set; }
 
         [Required(ErrorMessage = "Please select an education stage.")]
         [Display(Name = "Education Stage")]
@@ -69,6 +73,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
             1,
             100,
             ErrorMessage = "Capacity must be between 1 and 100.")]
+        [Display(Name = "Maximum Capacity")]
         public int Capacity { get; set; } = 20;
 
         public List<SelectListItem> EducationStages { get; set; }

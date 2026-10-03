@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -61,8 +61,15 @@ namespace SecureSmartTuitionSystem.Controllers
                     .Where(enrollment =>
                         enrollment.StudentProfileId ==
                             studentProfile.StudentProfileId &&
-                        enrollment.Status ==
-                            StudentEnrollmentStatus.Active)
+                        enrollment.StartDate <= DateTime.UtcNow.AddHours(8).Date &&
+                        enrollment.StartDate.Year == DateTime.UtcNow.AddHours(8).Year &&
+                        (!enrollment.EndedAt.HasValue || enrollment.EndedAt > DateTime.UtcNow.AddHours(8).Date) &&
+                        (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate > DateTime.UtcNow.AddHours(8).Date) &&
+                        (enrollment.ClassSession.StartDate ?? enrollment.ClassSession.CreatedAt.AddHours(8)).Year == DateTime.UtcNow.AddHours(8).Year &&
+                        enrollment.ClassSession.Status == ClassSessionStatus.Active &&
+                        (enrollment.ClassSession.StartDate == null || enrollment.ClassSession.StartDate <= DateTime.UtcNow.AddHours(8).Date) &&
+                        (enrollment.ClassSession.EndDate == null || enrollment.ClassSession.EndDate >= DateTime.UtcNow.AddHours(8).Date) &&
+                        (enrollment.Status == StudentEnrollmentStatus.Active || (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date))))
                     .OrderBy(enrollment =>
                         enrollment.ClassSession.DayOfWeek)
                     .ThenBy(enrollment =>

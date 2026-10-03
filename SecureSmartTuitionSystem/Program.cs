@@ -51,6 +51,10 @@ builder.Services.AddSingleton<SecurityEventService>();
 builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection(SecuritySettings.SectionName));
 builder.Services.AddHostedService<SecurityAlertWorker>();
 builder.Services.AddHostedService<BillExpiryWorker>();
+builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService>();
+builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Enrollment.LearningAccessService>();
+builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Enrollment.EnrollmentExitService>();
+builder.Services.AddHostedService<SecureSmartTuitionSystem.Services.Enrollment.EnrollmentLifecycleWorker>();
 
 var protection = builder.Services.AddDataProtection().UseCryptographicAlgorithms(
     new AuthenticatedEncryptorConfiguration {

@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Services.Enrollment;
 using SecureSmartTuitionSystem.Models.Security;
 using System.Data;
 using System.Security.Claims;
@@ -379,6 +380,15 @@ namespace SecureSmartTuitionSystem.Controllers
                     });
             }
 
+            string? academicError = await ValidateAcademicBill(bill);
+            if (academicError != null) { TempData["ErrorMessage"] = academicError + " Ask Admin to review this application before payment."; return RedirectToAction(nameof(Checkout), new { token, preserveSession }); }
+
+            if (bill.TotalAmount == 0m)
+            {
+                try { await _paymentCompletionService.CompleteZeroBillAsync(bill.BillId, HttpContext.RequestAborted); return View("FreeCompleted"); }
+                catch (InvalidOperationException) { TempData["ErrorMessage"] = "This free enrollment cannot be completed. Ask Admin to review its class availability."; return RedirectToAction(nameof(Checkout), new { token, preserveSession }); }
+            }
+
             if (bill.TotalAmount <= 0)
             {
                 TempData["ErrorMessage"] =
@@ -427,6 +437,24 @@ namespace SecureSmartTuitionSystem.Controllers
 
             try
             {
+                // Recheck inside the serializable transaction; repeated clicks reuse the open Checkout.
+                await _context.Entry(bill).ReloadAsync();
+                await _context.Entry(bill.EnrollmentApplication).ReloadAsync();
+                if ((bill.Status != BillStatus.PendingPayment && bill.Status != BillStatus.Overdue) || bill.EnrollmentApplication.Status != SecureSmartTuitionSystem.Models.Enrollment.EnrollmentStatus.ApprovedPendingPayment)
+                    return NotFound();
+                academicError = await ValidateAcademicBill(bill);
+                if (academicError != null) { TempData["ErrorMessage"] = academicError; return RedirectToAction(nameof(Checkout), new { token, preserveSession }); }
+                var pendingCheckout = await _context.Payments.Where(x => x.BillId == bill.BillId && x.PaymentProvider == "Stripe" && x.Status == PaymentStatus.Pending && x.ProviderCheckoutSessionId != null)
+                    .OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync();
+                if (pendingCheckout != null)
+                {
+                    var existingSession = await new SessionService(_stripeClient).GetAsync(pendingCheckout.ProviderCheckoutSessionId!);
+                    if (existingSession.Status == "open" && !string.IsNullOrWhiteSpace(existingSession.Url)) { await transaction.CommitAsync(); return Redirect(existingSession.Url); }
+                    if (existingSession.Status == "complete") { TempData["ErrorMessage"] = "Payment confirmation is being processed. Do not start another payment."; return RedirectToAction(nameof(Checkout), new { token, preserveSession }); }
+                    if (existingSession.Status != "expired") return BadRequest();
+                    pendingCheckout.Status = PaymentStatus.Failed; pendingCheckout.FailedAt = DateTime.UtcNow; pendingCheckout.FailureReason = "Checkout session expired before payment.";
+                }
+
                 string paymentNumber =
                     await GenerateNextPaymentNumberAsync();
 
@@ -1146,6 +1174,40 @@ namespace SecureSmartTuitionSystem.Controllers
                 preserveSession;
 
             return View();
+        }
+
+        private async Task<string?> ValidateAcademicBill(SecureSmartTuitionSystem.Models.Billing.Bill bill)
+        {
+            var app = bill.EnrollmentApplication;
+            var classes = await _context.ClassSessions.AsNoTracking().Where(c => _context.Set<SecureSmartTuitionSystem.Models.Enrollment.EnrollmentApplicationSubject>().Any(x => x.EnrollmentApplicationId == app.EnrollmentApplicationId && x.ClassSessionId == c.ClassSessionId)).ToListAsync();
+            if (classes.Count == 0) return "No valid classes are linked to this bill.";
+            if (app.RequestedStartDate.Date < ClassScheduleService.Today)
+                return "The selected enrollment start date has passed. Admin must cancel the unpaid application so a new request can use a future start date.";
+            return await new EnrollmentRulesService(_context).ValidateAsync(
+                classes.Select(x => x.ClassSessionId).ToList(), app.RequestedStartDate,
+                app.ExistingStudentProfileId, app.EnrollmentApplicationId,
+                durationMonths: app.EnrollmentDurationMonths);
+        }
+
+        [Authorize(Roles = "Admin"), HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> RetryEnrollment(int applicationId)
+        {
+            var payment = await _context.Payments.Include(x => x.Bill).ThenInclude(x => x.EnrollmentApplication)
+                .FirstOrDefaultAsync(x => x.Bill.EnrollmentApplicationId == applicationId && x.Status == PaymentStatus.Succeeded && x.Bill.EnrollmentApplication.Status == SecureSmartTuitionSystem.Models.Enrollment.EnrollmentStatus.PaymentConfirmed);
+            if (payment == null) return NotFound();
+            try
+            {
+                if (payment.PaymentProvider == "Free") await _paymentCompletionService.CompleteZeroBillAsync(payment.BillId, HttpContext.RequestAborted);
+                else
+                {
+                    var session = await new SessionService(_stripeClient).GetAsync(payment.ProviderCheckoutSessionId!);
+                    if (session.PaymentStatus != "paid") return BadRequest();
+                    await _paymentCompletionService.CompleteStripePaymentAsync(session.Id, session.PaymentIntentId, payment.ProviderEventId ?? $"recovery-{session.Id}", session.AmountTotal ?? 0, session.Currency ?? "myr", HttpContext.RequestAborted);
+                }
+                TempData["SuccessMessage"] = "Enrollment fulfillment completed without a new charge.";
+            }
+            catch (InvalidOperationException) { TempData["ErrorMessage"] = "Payment remains recorded as paid. Resolve enrollment/account availability before retrying fulfillment."; }
+            return RedirectToAction("Details", "AdminEnrollments", new { id = applicationId });
         }
 
         private async Task MarkPaymentFailedAsync(

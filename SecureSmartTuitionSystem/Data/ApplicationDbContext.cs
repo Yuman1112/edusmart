@@ -32,6 +32,9 @@ namespace SecureSmartTuitionSystem.Data
             _auditChanges = auditChanges;
         }
 
+        public DbSet<EnrollmentExitRequest> EnrollmentExitRequests => Set<EnrollmentExitRequest>();
+        public DbSet<ClassLessonChange> ClassLessonChanges => Set<ClassLessonChange>();
+        public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
         public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
         public DbSet<SecurityEmailDelivery> SecurityEmailDeliveries => Set<SecurityEmailDelivery>();
 
@@ -154,6 +157,8 @@ namespace SecureSmartTuitionSystem.Data
         public DbSet<AnnouncementRead> AnnouncementReads =>
             Set<AnnouncementRead>();
 
+        public DbSet<ConversationUserPreference> ConversationUserPreferences => Set<ConversationUserPreference>();
+
         public DbSet<Conversation> Conversations =>
             Set<Conversation>();
 
@@ -192,6 +197,29 @@ namespace SecureSmartTuitionSystem.Data
             ConfigureBilling(builder);
             ConfigureCommunication(builder);
             ConfigureSecurity(builder);
+            builder.Entity<EnrollmentExitRequest>(entity =>
+            {
+                entity.HasIndex(x => x.StudentEnrollmentId).IsUnique();
+                entity.HasIndex(x => x.ProviderRefundId).IsUnique().HasFilter("[ProviderRefundId] IS NOT NULL");
+                entity.Property(x => x.EffectiveDate).HasColumnType("date");
+                entity.HasOne(x => x.StudentEnrollment).WithMany().HasForeignKey(x => x.StudentEnrollmentId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Payment).WithMany().HasForeignKey(x => x.PaymentId).OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<ClassLessonChange>(entity =>
+            {
+                entity.HasIndex(x => new { x.ClassSessionId, x.OriginalDate }).IsUnique();
+                entity.Property(x => x.OriginalDate).HasColumnType("date");
+                entity.Property(x => x.ReplacementDate).HasColumnType("date");
+                entity.HasOne(x => x.ClassSession).WithMany().HasForeignKey(x => x.ClassSessionId).OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<ClassSession>().Property(x => x.StartDate).HasColumnType("date");
+            builder.Entity<ClassSession>().Property(x => x.EndDate).HasColumnType("date");
+            builder.Entity<UserNotification>(entity =>
+            {
+                entity.HasIndex(x => new { x.UserId, x.CreatedAtUtc });
+                entity.Property(x => x.AvailableFromDate).HasColumnType("date");
+                entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            });
         }
 
         private void ConfigureSecurity(ModelBuilder builder)
@@ -219,6 +247,7 @@ namespace SecureSmartTuitionSystem.Data
             var converter = new ValueConverter<string?, string?>(
                 value => value == null ? null : _financialProtection.Encrypt(value),
                 value => value == null ? null : _financialProtection.Decrypt(value));
+            builder.Entity<EnrollmentExitRequest>().Property(x => x.ReviewNote).HasConversion(converter).HasColumnType("nvarchar(max)").Metadata.SetMaxLength(null);
             builder.Entity<Payment>().Property(x => x.FailureReason)
                 .HasConversion(converter).HasColumnType("nvarchar(max)")
                 .Metadata.SetMaxLength(null);
@@ -280,6 +309,14 @@ namespace SecureSmartTuitionSystem.Data
                     .WithMany()
                     .HasForeignKey(item => item.ParentUserId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<ConversationUserPreference>(entity =>
+            {
+                entity.HasIndex(x => new { x.UserId, x.ConversationId }).IsUnique();
+                entity.Property(x => x.UserId).HasMaxLength(450).IsRequired();
+                entity.HasOne(x => x.Conversation).WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<ChatMessage>(entity =>

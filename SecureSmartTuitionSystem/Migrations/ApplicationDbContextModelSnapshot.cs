@@ -188,7 +188,7 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("ApplicationUserId")
                         .IsUnique();
 
-                    b.ToTable("AdminProfiles", (string)null);
+                    b.ToTable("AdminProfiles");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Billing.Bill", b =>
@@ -277,7 +277,7 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsUnique()
                         .HasFilter("[PaymentAccessTokenHash] IS NOT NULL");
 
-                    b.ToTable("Bills", (string)null);
+                    b.ToTable("Bills");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Billing.BillItem", b =>
@@ -314,7 +314,7 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasIndex("BillId");
 
-                    b.ToTable("BillItems", (string)null);
+                    b.ToTable("BillItems");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Billing.Payment", b =>
@@ -393,7 +393,7 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsUnique()
                         .HasFilter("[ProviderPaymentIntentId] IS NOT NULL");
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.Announcement", b =>
@@ -444,7 +444,7 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasIndex("TargetAudience", "IsArchived");
 
-                    b.ToTable("Announcements", (string)null);
+                    b.ToTable("Announcements");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.AnnouncementRead", b =>
@@ -472,7 +472,7 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasIndex("UserId", "ReadAt");
 
-                    b.ToTable("AnnouncementReads", (string)null);
+                    b.ToTable("AnnouncementReads");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.ChatMessage", b =>
@@ -521,7 +521,7 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasIndex("ConversationId", "SentAt");
 
-                    b.ToTable("ChatMessages", (string)null);
+                    b.ToTable("ChatMessages");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.Conversation", b =>
@@ -552,7 +552,42 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("ParentUserId")
                         .IsUnique();
 
-                    b.ToTable("Conversations", (string)null);
+                    b.ToTable("Conversations");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.ConversationUserPreference", b =>
+                {
+                    b.Property<long>("ConversationUserPreferenceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ConversationUserPreferenceId"));
+
+                    b.Property<int>("ConversationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("HiddenAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("ConversationUserPreferenceId");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("UserId", "ConversationId")
+                        .IsUnique();
+
+                    b.ToTable("ConversationUserPreferences");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.MessageAttachment", b =>
@@ -593,7 +628,7 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasIndex("ChatMessageId");
 
-                    b.ToTable("MessageAttachments", (string)null);
+                    b.ToTable("MessageAttachments");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.MessageUserDeletion", b =>
@@ -621,7 +656,114 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("ChatMessageId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("MessageUserDeletions", (string)null);
+                    b.ToTable("MessageUserDeletions");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.UserNotification", b =>
+                {
+                    b.Property<long>("UserNotificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("UserNotificationId"));
+
+                    b.Property<DateTime?>("AvailableFromDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("UserNotificationId");
+
+                    b.HasIndex("UserId", "CreatedAtUtc");
+
+                    b.ToTable("UserNotifications");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.ClassLessonChange", b =>
+                {
+                    b.Property<int>("ClassLessonChangeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ClassLessonChangeId"));
+
+                    b.Property<string>("CancellationReason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CancelledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChangedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OriginalDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly>("OriginalEndTime")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly>("OriginalStartTime")
+                        .HasColumnType("time");
+
+                    b.Property<string>("RecipientIdsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReplacementDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly?>("ReplacementEndTime")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly?>("ReplacementStartTime")
+                        .HasColumnType("time");
+
+                    b.Property<string>("ReplacementVenue")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("StudentIdsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ClassLessonChangeId");
+
+                    b.HasIndex("ClassSessionId", "OriginalDate")
+                        .IsUnique();
+
+                    b.ToTable("ClassLessonChanges");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", b =>
@@ -650,12 +792,18 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<int>("DayOfWeek")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("date");
+
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("time");
 
                     b.Property<string>("Remark")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("date");
 
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("time");
@@ -688,7 +836,7 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasIndex("TutorUserId");
 
-                    b.ToTable("ClassSessions", (string)null);
+                    b.ToTable("ClassSessions");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.EnrollmentApplication", b =>
@@ -877,7 +1025,7 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasIndex("SubmittedByUserId");
 
-                    b.ToTable("EnrollmentApplications", (string)null);
+                    b.ToTable("EnrollmentApplications");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.EnrollmentApplicationSubject", b =>
@@ -905,7 +1053,87 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("EnrollmentApplicationId", "ClassSessionId")
                         .IsUnique();
 
-                    b.ToTable("EnrollmentApplicationSubjects", (string)null);
+                    b.ToTable("EnrollmentApplicationSubjects");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.EnrollmentExitRequest", b =>
+                {
+                    b.Property<int>("EnrollmentExitRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EnrollmentExitRequestId"));
+
+                    b.Property<decimal>("ApprovedRefund")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("EffectiveDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("EstimatedRefund")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("PaymentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProviderRefundId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("RefundCompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RefundStartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RefundStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RequestedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ReviewNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReviewedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("StudentEnrollmentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("EnrollmentExitRequestId");
+
+                    b.HasIndex("PaymentId");
+
+                    b.HasIndex("ProviderRefundId")
+                        .IsUnique()
+                        .HasFilter("[ProviderRefundId] IS NOT NULL");
+
+                    b.HasIndex("StudentEnrollmentId")
+                        .IsUnique();
+
+                    b.ToTable("EnrollmentExitRequests");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.EnrollmentStatusHistory", b =>
@@ -941,7 +1169,7 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasIndex("EnrollmentApplicationId", "ChangedAt");
 
-                    b.ToTable("EnrollmentStatusHistories", (string)null);
+                    b.ToTable("EnrollmentStatusHistories");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.StudentEnrollment", b =>
@@ -986,6 +1214,10 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<int>("StudentProfileId")
                         .HasColumnType("int");
 
+                    b.Property<string>("WithdrawalReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.HasKey("StudentEnrollmentId");
 
                     b.HasIndex("ClassSessionId");
@@ -996,7 +1228,7 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsUnique()
                         .HasFilter("[Status] IN (0, 1)");
 
-                    b.ToTable("StudentEnrollments", (string)null);
+                    b.ToTable("StudentEnrollments");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.Subject", b =>
@@ -1032,7 +1264,7 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("EducationStage", "SubjectName", "AcademicLevel")
                         .IsUnique();
 
-                    b.ToTable("Subjects", (string)null);
+                    b.ToTable("Subjects");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", b =>
@@ -1149,7 +1381,7 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("ApplicationUserId")
                         .IsUnique();
 
-                    b.ToTable("ParentProfiles", (string)null);
+                    b.ToTable("ParentProfiles");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.ParentStudent", b =>
@@ -1189,7 +1421,7 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("ParentProfileId", "StudentProfileId")
                         .IsUnique();
 
-                    b.ToTable("ParentStudents", (string)null);
+                    b.ToTable("ParentStudents");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.StudentProfile", b =>
@@ -1254,7 +1486,7 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("StudentNumber")
                         .IsUnique();
 
-                    b.ToTable("StudentProfiles", (string)null);
+                    b.ToTable("StudentProfiles");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Security.AuditLogEntry", b =>
@@ -1342,7 +1574,7 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasKey("AuditLogEntryId");
 
-                    b.ToTable("SecurityEmailDeliveries", (string)null);
+                    b.ToTable("SecurityEmailDeliveries");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorProfile", b =>
@@ -1390,7 +1622,7 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasIndex("ApplicationUserId")
                         .IsUnique();
 
-                    b.ToTable("TutorProfiles", (string)null);
+                    b.ToTable("TutorProfiles");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1548,6 +1780,25 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("ParentUser");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.ConversationUserPreference", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Communication.Conversation", "Conversation")
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.MessageAttachment", b =>
                 {
                     b.HasOne("SecureSmartTuitionSystem.Models.Communication.ChatMessage", "ChatMessage")
@@ -1576,6 +1827,28 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("ChatMessage");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.UserNotification", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.ClassLessonChange", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", "ClassSession")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassSession");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", b =>
@@ -1645,6 +1918,24 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("ClassSession");
 
                     b.Navigation("EnrollmentApplication");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.EnrollmentExitRequest", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Billing.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.StudentEnrollment", "StudentEnrollment")
+                        .WithMany()
+                        .HasForeignKey("StudentEnrollmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
+
+                    b.Navigation("StudentEnrollment");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Enrollment.EnrollmentStatusHistory", b =>

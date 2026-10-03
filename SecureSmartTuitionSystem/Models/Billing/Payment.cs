@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SecureSmartTuitionSystem.Models.Billing
@@ -19,7 +19,7 @@ namespace SecureSmartTuitionSystem.Models.Billing
         public int BillId { get; set; }
 
         [Column(TypeName = "decimal(10,2)")]
-        [Range(typeof(decimal), "0.01", "99999999.99")]
+        [Range(typeof(decimal), "0", "99999999.99")]
         public decimal Amount { get; set; }
 
         [Required]

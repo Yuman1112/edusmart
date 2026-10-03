@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorClassDetailsViewModel
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorClassDetailsViewModel
 
 @using SecureSmartTuitionSystem.Models.Enrollment
 
@@ -39,10 +39,6 @@
     <header class="tutor-details-header">
 
         <div class="tutor-details-title">
-
-            <span class="class-code">
-                @Model.ClassCode
-            </span>
 
             <h2>
                 @Model.ClassName
@@ -317,3 +313,5 @@
     </footer>
 
 </section>
+<div class="mt-4"><a class="btn btn-primary" asp-controller="ClassSchedules" asp-action="Index" asp-route-classSessionId="@Model.ClassSessionId">Class Calendar</a> <a class="btn btn-outline-primary" asp-controller="ClassSchedules" asp-action="Pending">Pending Replacements</a></div>
+@await Component.InvokeAsync("ClassMembers", new { classSessionId = Model.ClassSessionId })

@@ -1,10 +1,2 @@
 @model int
-
-@if (Model > 0)
-{
-    <span class="announcement-unread-badge"
-          title="@Model unread announcement(s)"
-          aria-label="@Model unread announcement(s)">
-        @(Model > 99 ? "99+" : Model.ToString())
-    </span>
-}
+<span class="announcement-unread-badge" data-announcement-unread-total hidden="@(Model == 0)" title="@Model unread announcement(s)" aria-label="@Model unread announcement(s)">@(Model > 99 ? "99+" : Model.ToString())</span>

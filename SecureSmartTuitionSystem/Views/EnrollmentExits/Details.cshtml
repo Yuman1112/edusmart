@@ -1,0 +1,29 @@
+@model SecureSmartTuitionSystem.Models.Enrollment.EnrollmentExitRequest
+@using SecureSmartTuitionSystem.Models.Enrollment
+@{ ViewData["Title"] = "Withdrawal & Refund Details"; bool admin = User.IsInRole("Admin"); decimal quote = (decimal)ViewBag.CurrentQuote; }
+<div class="page-header"><div><h1>Withdrawal &amp; Refund Details</h1><p>@Model.StudentEnrollment.StudentProfile.FullName</p></div></div>
+@if (TempData["ErrorMessage"] != null) { <div class="alert alert-danger">@TempData["ErrorMessage"]</div> }
+@if (TempData["SuccessMessage"] != null) { <div class="alert alert-success">@TempData["SuccessMessage"]</div> }
+<section class="class-details-card"><dl class="row"><dt class="col-sm-4">Class</dt><dd class="col-sm-8">@Model.StudentEnrollment.ClassSession.ClassName</dd><dt class="col-sm-4">Withdrawal effective date</dt><dd class="col-sm-8">@Model.EffectiveDate.ToString("dd MMM yyyy")</dd><dt class="col-sm-4">Reason</dt><dd class="col-sm-8">@Model.Reason</dd><dt class="col-sm-4">Estimated eligible refund</dt><dd class="col-sm-8">RM @Model.EstimatedRefund.ToString("F2")</dd><dt class="col-sm-4">Refund amount submitted</dt><dd class="col-sm-8">RM @Model.ApprovedRefund.ToString("F2")</dd><dt class="col-sm-4">Refund status</dt><dd class="col-sm-8">@Model.RefundStatus</dd><dt class="col-sm-4">Review note</dt><dd class="col-sm-8">@(Model.ReviewNote ?? "Awaiting review / no review required")</dd></dl>
+@if (Model.RefundStatus == ExitRefundStatus.NoRefundDue) { <p>No refundable future prepaid tuition was found. Free or already-used periods do not create a cash refund.</p> }
+@if (Model.RefundStatus == ExitRefundStatus.PendingReview) { <p>Admin reviews only unused future billing months; the recorded withdrawal date remains fixed even if review is delayed. The original bill stays as the payment record.</p> }
+@if (Model.RefundStatus == ExitRefundStatus.PendingProvider || Model.RefundStatus == ExitRefundStatus.Processing) { <p>The refund is not yet confirmed as successful. Admin must check its payment-provider status.</p> }
+@if (Model.RefundStatus == ExitRefundStatus.Completed) { <p>The provider confirms the refund succeeded. The bank may take additional time to display it.</p> }
+@if (!string.IsNullOrWhiteSpace(Model.LastError)) { <div class="alert alert-warning">@Model.LastError</div> }
+</section>
+@if (admin) {
+<section class="class-details-card mt-3"><h2>Admin review</h2><p>Withdrawal is recorded by the student or parent and does not need approval. Review the record and save a note below.</p>
+<form asp-action="Review" method="post" class="mb-3"><input type="hidden" name="id" value="@Model.EnrollmentExitRequestId" /><label for="withdrawalReviewNote" class="form-label">Withdrawal review note (optional)</label><textarea id="withdrawalReviewNote" name="note" class="form-control mb-2" maxlength="500">@Model.ReviewNote</textarea><button class="btn btn-primary">Save review note</button></form>
+<h3>Refund processing</h3><p>Current maximum eligible tuition: RM @quote.ToString("F2"). Original bill: @(Model.Payment?.Bill?.BillNumber ?? "No paid Stripe bill"). Refunds return through the original payment provider; this form does not accept bank-account changes or cash-refund details.</p>
+@if (Model.RefundStatus == ExitRefundStatus.PendingReview || Model.RefundStatus == ExitRefundStatus.Processing) {
+<form asp-action="Process" method="post" class="mb-3"><input type="hidden" name="id" value="@Model.EnrollmentExitRequestId" /><label for="refundNote" class="form-label">Refund note (optional)</label><textarea id="refundNote" name="note" class="form-control mb-2" maxlength="500" placeholder="Leave blank to use the standard refund explanation." aria-describedby="refundNoteHelp"></textarea><p id="refundNoteHelp" class="text-muted">If blank, the system records that unused future prepaid tuition is refunded using the calculated amount and original payment.</p><label class="d-block mb-3"><input name="confirmed" type="checkbox" value="true" required /> Confirm the server-calculated amount and original payment.</label><button class="btn btn-primary">@(Model.RefundStatus == ExitRefundStatus.Processing ? "Retry same refund safely" : "Submit eligible refund")</button></form>
+}
+
+@if (Model.RefundStatus == ExitRefundStatus.Processing || Model.RefundStatus == ExitRefundStatus.PendingProvider || Model.RefundStatus == ExitRefundStatus.Failed || Model.RefundStatus == ExitRefundStatus.Completed) {
+<form asp-action="Sync" method="post" class="mt-3"><input type="hidden" name="id" value="@Model.EnrollmentExitRequestId" />
+@if (string.IsNullOrWhiteSpace(Model.ProviderRefundId)) { <label for="providerRefund" class="form-label">Payment provider reconciliation reference</label><input type="password" autocomplete="off" name="refundId" id="providerRefund" class="form-control mb-2" maxlength="255" placeholder="Enter the matching provider reference (masked)" required /> }
+else { <p>Payment provider refund is linked.</p> }
+<button class="btn btn-outline-primary">Refresh / reconcile provider status</button></form> }
+</section>
+}
+<a class="btn btn-outline-secondary mt-3" asp-action="Index">Back to withdrawals</a>

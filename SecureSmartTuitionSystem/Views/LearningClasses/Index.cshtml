@@ -1,0 +1,54 @@
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.LearningClassesModel
+@using SecureSmartTuitionSystem.Services.Enrollment
+@{
+    ViewData["Title"] = "My Classes";
+    var calendar = Model.Calendar;
+    var previous = calendar.Mode == "month" ? calendar.Anchor.AddMonths(-1) : calendar.Anchor.AddDays(calendar.Mode == "week" ? -7 : -1);
+    var next = calendar.Mode == "month" ? calendar.Anchor.AddMonths(1) : calendar.Anchor.AddDays(calendar.Mode == "week" ? 7 : 1);
+}
+<div class="page-header"><div><h1>My Classes</h1><p>Your lessons and replacements · Malaysia time (MYT). Class access begins on the enrollment start date.</p></div></div>
+@if (User.IsInRole("Parent") && Model.Children.Count > 0)
+{
+<form method="get" data-live-filter class="learner-calendar-child"><label for="childChoice" class="form-label">Child</label><input type="hidden" name="date" value="@calendar.Anchor.ToString("yyyy-MM-dd")" /><input type="hidden" name="mode" value="@calendar.Mode" /><select name="studentId" id="childChoice" class="form-select">@foreach (var child in Model.Children) { <option value="@child.StudentProfileId" selected="@(Model.Student?.StudentProfileId == child.StudentProfileId)">@child.FullName (@child.StudentNumber)</option> }</select><noscript><button class="btn btn-primary mt-2">View</button></noscript></form>
+}
+@if (Model.Student == null) { <div class="alert alert-info">No linked student profile.</div> }
+else
+{
+<div id="enrollment-actions"><strong>@Model.Student.FullName (@Model.Student.StudentNumber)</strong><form asp-controller="Enrollment" asp-action="AddSubjects" method="post"><input type="hidden" name="studentId" value="@Model.Student.StudentProfileId" /><button type="submit" class="btn btn-primary">Add Subjects</button></form><a class="btn btn-outline-secondary" asp-controller="EnrollmentExits" asp-action="Index">Withdrawals &amp; Refunds</a></div>
+@if (Model.NextStartDate.HasValue && !Model.Enrollments.Any()) { <div class="alert alert-info">Your enrollment begins on @Model.NextStartDate.Value.ToString("dd MMM yyyy"). Classes open on that date. Announcements and general support messages remain available.</div> }
+<section class="calendar-controls" aria-label="My class calendar controls"><div class="calendar-control-row calendar-control-primary">
+<div class="calendar-date-navigation">
+<a class="btn btn-outline-primary" asp-action="Index" asp-route-studentId="@Model.Student.StudentProfileId" asp-route-date="@previous.ToString("yyyy-MM-dd")" asp-route-mode="@calendar.Mode" aria-label="Previous period"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+<strong>@(calendar.Mode == "month" ? calendar.Anchor.ToString("MMMM yyyy") : calendar.Mode == "today" ? calendar.Anchor.ToString("dd MMM yyyy") : $"{calendar.From:dd MMM} – {calendar.To:dd MMM yyyy}")</strong>
+<a class="btn btn-outline-primary" asp-action="Index" asp-route-studentId="@Model.Student.StudentProfileId" asp-route-date="@next.ToString("yyyy-MM-dd")" asp-route-mode="@calendar.Mode" aria-label="Next period"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+</div><div class="calendar-view-modes" aria-label="Calendar view">
+<a class="btn @(calendar.Mode == "today" ? "btn-primary" : "btn-outline-primary")" asp-action="Index" asp-route-studentId="@Model.Student.StudentProfileId" asp-route-mode="today">Today</a>
+<a class="btn @(calendar.Mode == "week" ? "btn-primary" : "btn-outline-primary")" asp-action="Index" asp-route-studentId="@Model.Student.StudentProfileId" asp-route-date="@calendar.Anchor.ToString("yyyy-MM-dd")" asp-route-mode="week">Week</a>
+<a class="btn @(calendar.Mode == "month" ? "btn-primary" : "btn-outline-primary")" asp-action="Index" asp-route-studentId="@Model.Student.StudentProfileId" asp-route-date="@calendar.Anchor.ToString("yyyy-MM-dd")" asp-route-mode="month">Month</a>
+</div></div></section>
+<div class="schedule-legend"><span><i class="legend-dot" aria-hidden="true"></i>Scheduled</span><span><i class="legend-dot cancelled" aria-hidden="true"></i>Cancelled</span><span><i class="legend-dot replacement" aria-hidden="true"></i>Replacement</span></div>
+<div class="schedule-scroll"><div class="schedule-grid @(calendar.Mode == "today" ? "schedule-single" : "")">
+@if (calendar.Mode != "today") { foreach (var name in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" }) { <div class="schedule-weekday">@name</div> } }
+@if (calendar.Mode == "month") { for (var i = 0; i < ((int)calendar.From.DayOfWeek + 6) % 7; i++) { <div class="schedule-empty" aria-hidden="true"></div> } }
+@for (var date = calendar.From; date <= calendar.To; date = date.AddDays(1))
+{
+    var lessons = Model.Lessons.Where(x => x.Date.Date == date).ToList();
+    <section class="schedule-day @(date == ClassScheduleService.Today ? "schedule-today" : "")">
+    <a class="schedule-day-label" asp-action="Index" asp-route-studentId="@Model.Student.StudentProfileId" asp-route-date="@date.ToString("yyyy-MM-dd")" asp-route-mode="today">@date.ToString("dd MMM")</a>
+    @foreach (var lesson in lessons)
+    {
+        <article class="schedule-lesson @(lesson.Cancelled ? "schedule-cancelled" : lesson.Replacement ? "schedule-replacement" : "")">
+        <a class="calendar-class-link" asp-action="Details" asp-route-id="@lesson.Class.ClassSessionId" asp-route-studentId="@Model.Student.StudentProfileId" asp-route-date="@lesson.Date.ToString("yyyy-MM-dd")" asp-route-changeId="@lesson.ChangeId" asp-route-replacement="@lesson.Replacement"><strong>@lesson.Class.ClassName</strong></a>
+        <span>@lesson.Start.ToString("HH:mm") – @lesson.End.ToString("HH:mm")</span><small>@lesson.Status</small>
+        </article>
+    }
+    @if (lessons.Count == 0) { <small class="text-muted">No classes</small> }
+    </section>
+}
+@if (calendar.Mode == "month") { var trailing = (7 - (((int)calendar.To.DayOfWeek + 6) % 7 + 1)) % 7; for (var i = 0; i < trailing; i++) { <div class="schedule-empty" aria-hidden="true"></div> } }
+</div></div>
+@if (Model.Enrollments.Any()) { <section class="class-details-card mt-4"><h2>My Enrolled Classes</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>No.</th><th>Class</th><th>Subject</th><th>Start Date</th><th>Status</th></tr></thead><tbody>
+@{ int no = 0; }
+@foreach (var e in Model.Enrollments) { no++; <tr><td>@no</td><td>@e.ClassSession.ClassName</td><td>@e.ClassSession.Subject.SubjectName</td><td>@e.StartDate.ToString("dd MMM yyyy")</td><td>@(e.Status == SecureSmartTuitionSystem.Models.Enrollment.StudentEnrollmentStatus.PendingDrop ? "Withdrawal scheduled" : "Active")</td></tr> }
+</tbody></table></div></section> }
+}

@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Billing.PaymentCheckoutViewModel
+@model SecureSmartTuitionSystem.ViewModels.Billing.PaymentCheckoutViewModel
 @using SecureSmartTuitionSystem.Models.Billing
 
 @{
@@ -243,12 +243,10 @@
                         <i class="bi bi-lock-fill"></i>
 
                         <div>
-                            <strong>Secure Test Checkout</strong>
+                            <strong>@(Model.TotalAmount == 0m ? "Free enrollment confirmation" : "Secure Checkout")</strong>
 
                             <span>
-                                You will be redirected to Stripe.
-                                No real money will be charged in
-                                Test Mode.
+                                @(Model.TotalAmount == 0m ? "Confirm your enrollment without a card payment." : "Continue to Stripe to complete your payment.")
                             </span>
                         </div>
                     </div>
@@ -270,8 +268,7 @@
 
                             <i class="bi bi-credit-card"></i>
 
-                            Pay RM
-                            @Model.TotalAmount.ToString("F2")
+                            @(Model.TotalAmount == 0m ? "Confirm free enrollment" : $"Pay RM {Model.TotalAmount:F2}")
                         </button>
                     </form>
                 </section>

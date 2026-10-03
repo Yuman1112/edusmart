@@ -13,6 +13,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/messages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/conversation-menu.css" asp-append-version="true" />
 }
 
 <div class="message-page">
@@ -45,13 +46,24 @@
             @if (Model.IsAdmin && Model.AvailableParents.Any())
             {
                 <form asp-action="Start" method="post" class="new-conversation-form">
-                    <label for="parentUserId">Start a conversation</label>
+                    <label for="contactSearch">Start a conversation</label>
+                    <label class="visually-hidden" for="contactRole">Contact role</label>
+                    <select id="contactRole" class="form-select" aria-label="Filter contacts by role"><option value="">All roles</option>@foreach (var role in Model.AvailableParents.Select(x => x.Role).Distinct()) { <option value="@role">@role</option> }</select>
+                    <input type="search" id="contactSearch" class="form-control" maxlength="100" autocomplete="off" placeholder="Search name or ID" aria-label="Search parent, student or tutor" aria-controls="contactSearchResults" />
+                    <ul id="contactSearchResults" class="contact-search-results" aria-label="Matching contacts" hidden></ul>
+                    <p id="contactSearchStatus" class="contact-search-status" role="status" aria-live="polite"></p>
+                    <label class="visually-hidden" for="parentUserId">Choose contact</label>
                     <div>
                         <select id="parentUserId" name="parentUserId" class="form-select" required>
-                            <option value="">Select parent</option>
-                            @foreach (var parent in Model.AvailableParents)
+                            <option value="">Select parent, student or tutor</option>
+                            @foreach (var group in Model.AvailableParents.GroupBy(x => x.Role))
                             {
-                                <option value="@parent.UserId">@parent.Name (@parent.ParentUserName)</option>
+                                <optgroup label="@group.Key">
+                                @foreach (var contact in group)
+                                {
+                                    <option value="@contact.UserId">@contact.Name (@contact.ParentUserName)</option>
+                                }
+                                </optgroup>
                             }
                         </select>
                         <button type="submit" aria-label="Open conversation">
@@ -78,6 +90,7 @@
 
                 @foreach (var conversation in Model.Conversations)
                 {
+                    <div class="conversation-entry" data-conversation-row data-id="@conversation.ConversationId" data-pinned="@(conversation.IsPinned ? "true" : "false")" data-name="@conversation.ParticipantName">
                     <a asp-action="Index"
                        asp-route-id="@conversation.ConversationId"
                        data-conversation-id="@conversation.ConversationId"
@@ -85,7 +98,7 @@
                         <span class="conversation-avatar">@Initial(conversation.ParticipantName)</span>
                         <span class="conversation-copy">
                             <span class="conversation-row">
-                                <strong>@conversation.ParticipantName</strong>
+                                <strong>@conversation.ParticipantName @if (conversation.IsPinned) { <i class="bi bi-pin-angle-fill conversation-pin" title="Pinned" aria-label="Pinned"></i> }</strong>
                                 @if (conversation.LastMessageAt.HasValue)
                                 {
                                     <time>@conversation.LastMessageAt.Value.ToLocalTime().ToString("dd MMM")</time>
@@ -99,6 +112,8 @@
                             </span>
                         </span>
                     </a>
+                    <button type="button" class="conversation-options" aria-label="@($"Conversation options for {conversation.ParticipantName}")" aria-haspopup="menu" aria-controls="conversationContextMenu" aria-expanded="false"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></button>
+                    </div>
                 }
             </div>
         </aside>
@@ -130,7 +145,30 @@
                     </span>
                 </header>
 
+                <details class="chat-tools"><summary>Search / media / files</summary>
+                    <label for="conversationSearch">Search this conversation</label><input id="conversationSearch" class="form-control form-control-sm" maxlength="100" placeholder="Search messages or attachment names" />
+                    <div class="chat-tools-tabs"><button type="button" data-chat-tab="messages" class="btn btn-sm btn-primary" aria-pressed="true">Messages</button><button type="button" data-chat-tab="media" class="btn btn-sm btn-outline-primary" aria-pressed="false">Media</button><button type="button" data-chat-tab="files" class="btn btn-sm btn-outline-primary" aria-pressed="false">Files</button></div>
+                </details>
                 <div class="chat-messages" id="chatMessages">
+                    <div id="conversationMedia" class="chat-media-gallery" hidden>
+                    @foreach (var message in Model.Messages.Where(x => !x.IsDeletedForEveryone))
+                    {
+                        foreach (var file in message.Attachments.Where(x => x.ContentType == "image/png" || x.ContentType == "image/jpeg"))
+                        {
+                            <figure class="chat-media-item" data-media-search="@file.FileName"><a asp-action="Download" asp-route-id="@file.MessageAttachmentId" target="_blank" rel="noopener"><img src="@Url.Action("Download", new { id = file.MessageAttachmentId, preview = true })" loading="lazy" alt="@file.FileName" /></a><figcaption>@file.FileName<br /><small>@message.SentAt.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</small></figcaption></figure>
+                        }
+                    }
+                    <p class="chat-media-empty">No matching photos.</p></div>
+                    <div id="conversationFiles" class="chat-files-list" hidden>
+                    @foreach (var message in Model.Messages.Where(x => !x.IsDeletedForEveryone))
+                    {
+                        foreach (var file in message.Attachments.Where(x => x.ContentType != "image/png" && x.ContentType != "image/jpeg"))
+                        {
+                            <div class="chat-file-item" data-media-search="@file.FileName"><a asp-action="Download" asp-route-id="@file.MessageAttachmentId">@file.FileName</a><small>@FileSize(file.FileSize) · @message.SentAt.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</small></div>
+                        }
+                    }
+                    <p class="chat-media-empty">No matching files.</p></div>
+
                     @if (!Model.Messages.Any())
                     {
                         <div class="chat-welcome">
@@ -310,6 +348,24 @@
     </div>
 </div>
 
+<div id="conversationContextMenu" class="conversation-context-menu" role="menu" aria-label="Conversation options" hidden>
+    <button type="button" role="menuitem" data-conversation-command="open"><i class="bi bi-chat" aria-hidden="true"></i> Open conversation</button>
+    <button type="button" role="menuitem" data-conversation-command="pin"><i class="bi bi-pin-angle" aria-hidden="true"></i> <span data-pin-label>Pin</span></button>
+    <button type="button" role="menuitem" data-conversation-command="delete" class="conversation-delete"><i class="bi bi-trash" aria-hidden="true"></i> Delete conversation</button>
+</div>
+<form id="conversationPreferenceForm" asp-action="ConversationPreference" method="post" hidden>
+    <input type="hidden" name="conversationId" />
+    <input type="hidden" name="operation" />
+    <input type="hidden" name="pinned" />
+    <input type="hidden" name="activeConversationId" value="@Model.ActiveConversationId" />
+</form>
+<dialog id="deleteConversationDialog" class="conversation-delete-dialog" aria-labelledby="deleteConversationTitle">
+    <h2 id="deleteConversationTitle">Delete conversation?</h2>
+    <p data-delete-name></p><p>This removes the conversation from your list. Chat history is retained, and a new message will bring the conversation back.</p>
+    <div class="conversation-dialog-actions"><button type="button" class="outline-button" data-delete-cancel>Keep conversation</button><button type="button" class="btn btn-danger" data-delete-confirm>Delete from my list</button></div>
+</dialog>
+
 @section Scripts {
     <script src="~/js/messages.js" asp-append-version="true"></script>
+    <script src="~/js/conversation-menu.js" asp-append-version="true"></script>
 }

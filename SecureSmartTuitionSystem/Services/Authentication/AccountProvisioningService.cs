@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+using SecureSmartTuitionSystem.Services.Enrollment;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Enrollment;
@@ -53,6 +54,11 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                 throw new InvalidOperationException(
                     "The enrollment application has no classes.");
             }
+
+            var ruleError = await new EnrollmentRulesService(_context).ValidateAsync(
+                application.SelectedSubjects.Select(x => x.ClassSessionId).ToList(), application.RequestedStartDate,
+                application.ExistingStudentProfileId, application.EnrollmentApplicationId, cancellationToken, durationMonths: application.EnrollmentDurationMonths);
+            if (ruleError != null) throw new InvalidOperationException(ruleError);
 
             ParentProfile parentProfile =
                 await GetOrCreateParentProfileAsync(
@@ -630,15 +636,13 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                     await _context.StudentEnrollments
                         .AnyAsync(
                             enrollment =>
-                                enrollment.StudentProfileId ==
+                                enrollment.StartDate.Year == application.RequestedStartDate.Year && enrollment.StudentProfileId ==
                                 studentProfile.StudentProfileId &&
                                 enrollment.ClassSessionId ==
                                 selected.ClassSessionId &&
                                 (enrollment.Status ==
                                     StudentEnrollmentStatus.Active ||
-                                 enrollment.Status ==
-                                    StudentEnrollmentStatus
-                                        .PendingDrop),
+                                 (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > ClassScheduleService.Today))),
                             cancellationToken);
 
                 if (enrollmentExists)

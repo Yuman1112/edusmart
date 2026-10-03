@@ -127,3 +127,71 @@ document.addEventListener("DOMContentLoaded", function () {
         document.addEventListener("visibilitychange", refreshReadStatuses);
     }
 });
+
+(() => {
+    const input = document.getElementById("conversationSearch");
+    if (!input) return;
+    let tab = "messages";
+    const media = document.getElementById("conversationMedia");
+    const files = document.getElementById("conversationFiles");
+    function applyFilter() {
+        const value = input.value.trim().toLocaleLowerCase();
+        document.querySelectorAll("#chatMessages .message-bubble-row").forEach(row => {
+            row.hidden = tab !== "messages" || (Boolean(value) && !row.textContent.toLocaleLowerCase().includes(value));
+        });
+        [media, files].forEach((panel, index) => {
+            if (!panel) return;
+            panel.hidden = tab !== (index === 0 ? "media" : "files");
+            let visible = 0;
+            panel.querySelectorAll("[data-media-search]").forEach(item => {
+                item.hidden = Boolean(value) && !item.dataset.mediaSearch.toLocaleLowerCase().includes(value);
+                if (!item.hidden) visible++;
+            });
+            const empty = panel.querySelector(".chat-media-empty");
+            if (empty) empty.hidden = visible !== 0;
+        });
+    }
+    input.addEventListener("input", applyFilter);
+    document.querySelectorAll("[data-chat-tab]").forEach(button => button.addEventListener("click", () => {
+        tab = button.dataset.chatTab;
+        document.querySelectorAll("[data-chat-tab]").forEach(other => {
+            const selected = other === button;
+            other.setAttribute("aria-pressed", String(selected));
+            other.classList.toggle("btn-primary", selected);
+            other.classList.toggle("btn-outline-primary", !selected);
+        });
+        applyFilter();
+    }));
+})();
+
+(() => {
+    const search = document.getElementById("contactSearch"), select = document.getElementById("parentUserId"), list = document.getElementById("contactSearchResults"), status = document.getElementById("contactSearchStatus"), role = document.getElementById("contactRole");
+    if (!search || !select || !list || !status) return;
+    const contacts = Array.from(select.options).filter(x => x.value).map(x => ({ id: x.value, label: x.textContent, role: x.parentElement.label || "" }));
+    function matches(contact) {
+        const term = search.value.trim().toLocaleLowerCase();
+        return (!role?.value || contact.role === role.value) && (!term || `${contact.label} ${contact.role}`.toLocaleLowerCase().includes(term));
+    }
+    function refresh() {
+        const previous = select.value; const found = contacts.filter(matches);
+        select.replaceChildren();
+        const placeholder = document.createElement("option"); placeholder.value = ""; placeholder.textContent = "Select contact"; select.append(placeholder);
+        for (const roleName of [...new Set(found.map(x => x.role))]) {
+            const group = document.createElement("optgroup"); group.label = roleName;
+            found.filter(x => x.role === roleName).forEach(contact => { const option = document.createElement("option"); option.value = contact.id; option.textContent = contact.label; group.append(option); }); select.append(group);
+        }
+        select.value = found.some(x => x.id === previous) ? previous : "";
+        list.replaceChildren(); list.hidden = !search.value.trim();
+        status.textContent = found.length ? `${found.length} matching contact(s). Choose a result or use the dropdown.` : "No matching contacts.";
+        found.slice(0, 50).forEach(contact => {
+            const item = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = `${contact.label} · ${contact.role}`;
+            button.addEventListener("click", () => { select.value = contact.id; list.hidden = true; status.textContent = `Selected ${contact.label}. Press + to open.`; }); item.append(button); list.append(item);
+        });
+        if (found.length > 50) status.textContent += " Showing the first 50; type more to narrow the results.";
+    }
+    search.addEventListener("input", () => { select.value = ""; refresh(); });
+    role?.addEventListener("change", () => { select.value = ""; refresh(); });
+    search.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); list.querySelector("button")?.focus(); } if (event.key === "Escape") list.hidden = true; });
+    select.addEventListener("change", () => { list.hidden = true; status.textContent = select.value ? `Selected ${select.selectedOptions[0].textContent}. Press + to open.` : "Choose a contact."; });
+    refresh();
+})();

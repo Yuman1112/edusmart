@@ -15,7 +15,7 @@ namespace SecureSmartTuitionSystem.ViewComponents
         {
             string? userId = UserClaimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(userId) ||
-                !(UserClaimsPrincipal.IsInRole("Admin") || UserClaimsPrincipal.IsInRole("Parent")))
+                !(UserClaimsPrincipal.IsInRole("Admin") || UserClaimsPrincipal.IsInRole("Parent") || UserClaimsPrincipal.IsInRole("Student") || UserClaimsPrincipal.IsInRole("Tutor")))
                 return Content(string.Empty);
 
             return View(await MessageUnreadQuery.ForUser(

@@ -970,3 +970,8 @@
             });
     </script>
 }
+
+@if (Model.Status == EnrollmentStatus.PaymentConfirmed)
+{
+<div class="class-details-card mt-3"><h2>Paid enrollment needs fulfillment</h2><p>The verified payment is retained. Resolve class/account issues, then retry enrollment creation without charging again.</p><form asp-controller="Payments" asp-action="RetryEnrollment" method="post"><input type="hidden" name="applicationId" value="@Model.EnrollmentApplicationId" /><button class="btn btn-primary">Retry enrollment fulfillment</button></form></div>
+}

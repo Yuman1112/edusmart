@@ -194,7 +194,7 @@
 <!-- Filter card -->
 <form asp-controller="AdminEnrollments"
       asp-action="Index"
-      method="get"
+      method="get" data-live-filter
       id="enrollmentFilterForm"
       class="enrollment-filter-card">
 
@@ -549,7 +549,7 @@
                             "change",
                             function () {
                                 if (filterForm) {
-                                    filterForm.requestSubmit();
+                                    // Shared live filtering handles this change.
                                 }
                             });
                     });

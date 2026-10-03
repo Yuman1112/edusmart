@@ -1,7 +1,9 @@
 ﻿@model int
 
 @{
-    var steps = new[]
+    bool additional = Context.Session.GetInt32("Enrollment.AddSubjectStudentId").HasValue || ViewData["IsAdditionalEnrollment"] as bool? == true;
+    int currentStep = additional ? Model - 2 : Model;
+    var steps = additional ? new[] { "Classes", "Options", "Submitted" } : new[]
     {
         "Student",
         "Guardian",
@@ -12,19 +14,19 @@
 }
 
 <nav aria-label="Enrollment progress" class="mb-4">
-    <ol class="enrollment-steps">
+    <ol class="enrollment-steps @(additional ? "enrollment-steps-additional" : "")">
         @for (var index = 0; index < steps.Length; index++)
         {
             var number = index + 1;
 
-            var state = number == Model
+            var state = number == currentStep
             ? "is-current"
-            : number < Model
+            : number < currentStep
             ? "is-complete"
             : "";
 
             <li class="enrollment-step @state"
-                aria-current="@(number == Model ? "step" : null)">
+                aria-current="@(number == currentStep ? "step" : null)">
                 <span class="enrollment-step-number">
                     @number
                 </span>

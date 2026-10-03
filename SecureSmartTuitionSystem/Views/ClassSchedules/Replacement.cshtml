@@ -1,0 +1,14 @@
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.ReplacementModel
+@{ ViewData["Title"] = "Schedule Replacement"; }
+<div class="page-header"><div><h1>Schedule replacement</h1><p>@Model.Original?.ClassSession.ClassName · Original lesson: @Model.Original?.OriginalDate.ToString("dd MMM yyyy")</p></div></div>
+<div class="class-form-card"><p>Choose a future date and time. The tutor and original students must be available. A replacement may be held after the class term ends, but must remain within the original academic year.</p>
+<form id="replacementForm" asp-action="Replacement" method="post" data-check-url="@Url.Action("CheckReplacement", "ClassSchedules")"><div asp-validation-summary="All" class="text-danger"></div><input asp-for="ChangeId" type="hidden" />
+<div class="row g-3"><div class="col-md-4"><label asp-for="Date" class="form-label"></label><input asp-for="Date" type="date" max="@(new DateTime(Model.Original!.OriginalDate.Year, 12, 31).ToString("yyyy-MM-dd"))" class="form-control" /></div>
+<div class="col-md-4"><label asp-for="Start" class="form-label">Start time (MYT)</label><input asp-for="Start" type="time" class="form-control" /></div>
+<div class="col-md-4"><label asp-for="End" class="form-label">End time (MYT)</label><input asp-for="End" type="time" class="form-control" /></div>
+<div class="col-12"><label asp-for="Venue" class="form-label">Google Meet link</label><input asp-for="Venue" class="form-control" maxlength="250" /></div></div>
+<p id="replacementCheckStatus" class="replacement-check-status text-muted mt-3" role="status" aria-live="polite">Choose a date and time to check availability.</p>
+<div class="mt-3"><button id="saveReplacement" type="submit" class="btn btn-primary" data-confirm="Save this replacement and notify all affected users?">Save replacement</button> <a class="btn btn-outline-secondary" asp-action="Pending">Back</a></div>
+</form></div>
+
+@section Scripts { <script src="~/js/replacement-check.js" asp-append-version="true"></script> }

@@ -1,0 +1,18 @@
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.ClassMembersModel
+@using SecureSmartTuitionSystem.Models.Enrollment
+@using SecureSmartTuitionSystem.Services.Enrollment
+<section class="class-details-card mt-4"><h2>Class Members</h2><p>Withdrawal takes effect next month. Previous enrollment and payment records are retained.</p>
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>No</th><th>Student ID</th><th>Name</th><th>Start date</th><th>Status</th><th>Effective end</th>@if (Model.CanWithdraw) { <th>Action</th> }</tr></thead><tbody>
+@{ int no = 0; }
+@foreach (var e in Model.Members)
+{
+    no++;
+    var ended = e.DropEffectiveDate.HasValue && e.DropEffectiveDate.Value <= ClassScheduleService.Today;
+    var status = ended ? "Dropped" : e.Status == StudentEnrollmentStatus.Active && e.StartDate.Date > ClassScheduleService.Today ? "Starts later" : e.Status.ToString();
+    <tr><td>@no</td><td>@e.StudentProfile.StudentNumber</td><td>@e.StudentProfile.FullName</td><td>@e.StartDate.ToString("dd MMM yyyy")</td><td>@status</td><td>@e.DropEffectiveDate?.ToString("dd MMM yyyy")</td>
+    @if (Model.CanWithdraw) {
+    <td><a asp-controller="EnrollmentExits" asp-action="Index" asp-route-studentProfileId="@e.StudentProfileId">Withdrawal history</a></td> }
+    </tr>
+}
+@if (!Model.Members.Any()) { <tr><td colspan="7">No enrolled members yet.</td></tr> }
+</tbody></table></div></section>

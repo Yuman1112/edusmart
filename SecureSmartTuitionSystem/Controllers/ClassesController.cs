@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
@@ -51,19 +51,19 @@ namespace SecureSmartTuitionSystem.Controllers
             var query = _context.ClassSessions
                 .AsNoTracking()
                 .Where(session =>
-                    session.Status == ClassSessionStatus.Active &&
+                    session.Status == ClassSessionStatus.Active && (!session.EndDate.HasValue || session.EndDate.Value >= DateTime.UtcNow.AddHours(8).Date) &&
+                        (session.StartDate ?? session.CreatedAt.AddHours(8)).Year >= DateTime.UtcNow.AddHours(8).Year &&
                     session.Subject.IsActive &&
 
                     // Only show classes with remaining seats.
                     _context.StudentEnrollments.Count(enrollment =>
-                        enrollment.ClassSessionId ==
+                        enrollment.StartDate.Year >= DateTime.UtcNow.AddHours(8).Year && enrollment.ClassSessionId ==
                             session.ClassSessionId &&
                         (
                             enrollment.Status ==
                                 StudentEnrollmentStatus.Active ||
 
-                            enrollment.Status ==
-                                StudentEnrollmentStatus.PendingDrop
+                            (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date))
                         )) < session.Capacity);
 
             /*
@@ -145,7 +145,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             session.EndTime.ToString("hh:mm tt"),
 
                         Venue =
-                            session.Venue,
+                            "Online class",
 
                         MonthlyFee =
                             session.Subject.MonthlyFee,
@@ -163,9 +163,8 @@ namespace SecureSmartTuitionSystem.Controllers
                                         enrollment.Status ==
                                             StudentEnrollmentStatus.Active ||
 
-                                        enrollment.Status ==
-                                            StudentEnrollmentStatus.PendingDrop
-                                    ))
+                                        (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date))
+                                    )) - _context.Set<EnrollmentApplicationSubject>().Count(x => x.ClassSessionId == session.ClassSessionId && (x.EnrollmentApplication.Status == EnrollmentStatus.ApprovedPendingPayment || x.EnrollmentApplication.Status == EnrollmentStatus.PaymentConfirmed))
                     })
                 .ToListAsync();
 

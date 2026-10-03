@@ -3,8 +3,8 @@
 
 @{
     ViewData["Title"] = "Enrollment Options";
-    string minimumDate = DateTime.Today.ToString("yyyy-MM-dd");
-    string maximumDate = DateTime.Today.AddYears(1).ToString("yyyy-MM-dd");
+    string minimumDate = SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today.ToString("yyyy-MM-dd");
+    string maximumDate = SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today.AddYears(1).ToString("yyyy-MM-dd");
     var selectedClasses = Model.AvailableClasses
         .Where(item => Model.SelectedClassSessionIds.Contains(item.ClassSessionId))
         .ToList();
@@ -31,7 +31,7 @@
         <div class="enrollment-card">
             <div class="enrollment-card-header">
                 <div>
-                    <span class="enrollment-eyebrow">Step 4 of 5</span>
+                    <span class="enrollment-eyebrow">@(Context.Session.GetInt32("Enrollment.AddSubjectStudentId").HasValue ? "Step 2 of 3" : "Step 4 of 5")</span>
                     <h1>Enrollment Options</h1>
                     <p>Choose the enrollment plan, learning materials and delivery preferences.</p>
                 </div>
@@ -86,13 +86,21 @@
                         <select asp-for="EnrollmentDurationMonths" class="form-select"
                                 id="enrollmentDurationMonths">
                             <option value="1">1 Month — Original price</option>
+                            <option value="2">2 Months — Year-end balance, no discount</option>
                             <option value="3">3 Months — 3% tuition discount</option>
                             <option value="6">6 Months — 5% tuition discount</option>
                             <option value="9">9 Months — 8% tuition discount</option>
                             <option value="12">12 Months — 10% tuition discount</option>
                         </select>
                         <span asp-validation-for="EnrollmentDurationMonths" class="text-danger"></span>
-                        <div class="form-text">Discount applies to tuition fees only.</div>
+                    </div>
+                    <div class="enrollment-plan-guidance full-width">
+                        <i class="bi bi-info-circle" aria-hidden="true"></i>
+                        <div>
+                            <p id="academicPlanStatus" class="enrollment-plan-summary" role="status" aria-live="polite" data-term-end="@Model.SelectedTermEndDate?.ToString("yyyy-MM-dd")"></p>
+                            <p>Discounts apply to tuition fees only. Plans must end by 31 December or the class term end date, whichever comes first.</p>
+                            <p>Tuition includes the selected start month. A partial first month is charged at the full monthly rate.</p>
+                        </div>
                     </div>
                     <div class="form-group full-width" id="finalTwoWeeksSection" hidden>
                         <div class="enrollment-warning-card">
@@ -391,12 +399,29 @@
                             10
                         );
 
-                    return [1, 3, 6, 9, 12]
+                    return [1, 2, 3, 6, 9, 12]
                         .includes(months)
                             ? months
                             : 1;
                 }
 
+                function updateAcademicPlans() {
+                    const status = document.getElementById("academicPlanStatus");
+                    const date = requestedStartDate.value;
+                    if (!date) return;
+                    const start = new Date(date + "T00:00:00");
+                    let limit = new Date(start.getFullYear(), 11, 31);
+                    if (status.dataset.termEnd) { const term = new Date(status.dataset.termEnd + "T00:00:00"); if (term < limit) limit = term; }
+                    let maximum = limit < start ? 0 : (limit.getFullYear() - start.getFullYear()) * 12 + limit.getMonth() - start.getMonth() + 1;
+                    if (limit.getDate() < new Date(limit.getFullYear(), limit.getMonth() + 1, 0).getDate()) maximum--;
+                    maximum = Math.max(0, Math.min(12, maximum));
+                    const allowed = [1, 3, 6, 9, 12].filter(x => x <= maximum); if (maximum === 2) allowed.push(2);
+                    Array.from(durationSelect.options).forEach(option => { const available = allowed.includes(Number(option.value)); option.disabled = !available; option.hidden = !available; });
+                    if (!allowed.includes(Number(durationSelect.value))) durationSelect.value = allowed.length ? String(Math.min(...allowed)) : "";
+                    durationSelect.setCustomValidity(allowed.length ? "" : "No complete prepaid month remains within this class term.");
+                    status.textContent = `Academic year ${start.getFullYear()} (January–December) · Up to ${maximum} prepaid ${maximum === 1 ? "month" : "months"}.`;
+                    updateFees();
+                }
                 function updateFees() {
                     const months =
                         getSelectedMonths();
@@ -664,6 +689,8 @@
                 updateHardcopySection();
                 updateDeliveryRegion();
                 updateFinalTwoWeeks();
+                requestedStartDate.addEventListener("change", updateAcademicPlans);
+                updateAcademicPlans();
                 updateFees();
             }
         );

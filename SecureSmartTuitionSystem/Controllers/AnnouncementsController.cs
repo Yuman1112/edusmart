@@ -244,7 +244,7 @@ namespace SecureSmartTuitionSystem.Controllers
         {
             return View(new AnnouncementFormViewModel
             {
-                PublishAt = DateTime.Now,
+                PublishAt = DateTime.UtcNow.AddHours(8),
                 ExpiryUnit = AnnouncementExpiryUnit.None
             });
         }
@@ -273,8 +273,8 @@ namespace SecureSmartTuitionSystem.Controllers
                 Title = model.Title.Trim(),
                 Content = model.Content.Trim(),
                 TargetAudience = model.TargetAudience,
-                PublishAt = model.PublishAt.ToUniversalTime(),
-                ExpiresAt = CalculateExpiry(model)?.ToUniversalTime(),
+                PublishAt = ToMalaysiaUtc(model.PublishAt),
+                ExpiresAt = CalculateExpiry(model) is DateTime expiry ? ToMalaysiaUtc(expiry) : null,
                 CreatedAt = DateTime.UtcNow,
                 CreatedByUserId = userId
             };
@@ -303,8 +303,8 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
-            DateTime localPublish = announcement.PublishAt.ToLocalTime();
-            DateTime? localExpiry = announcement.ExpiresAt?.ToLocalTime();
+            DateTime localPublish = MalaysiaLocal(announcement.PublishAt);
+            DateTime? localExpiry = announcement.ExpiresAt.HasValue ? MalaysiaLocal(announcement.ExpiresAt.Value) : null;
             (AnnouncementExpiryUnit unit, int? duration) =
                 GetExpirySelection(localPublish, localExpiry);
 
@@ -348,8 +348,8 @@ namespace SecureSmartTuitionSystem.Controllers
             announcement.Title = model.Title.Trim();
             announcement.Content = model.Content.Trim();
             announcement.TargetAudience = model.TargetAudience;
-            announcement.PublishAt = model.PublishAt.ToUniversalTime();
-            announcement.ExpiresAt = CalculateExpiry(model)?.ToUniversalTime();
+            announcement.PublishAt = ToMalaysiaUtc(model.PublishAt);
+            announcement.ExpiresAt = CalculateExpiry(model) is DateTime expiry ? ToMalaysiaUtc(expiry) : null;
             announcement.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -480,6 +480,11 @@ namespace SecureSmartTuitionSystem.Controllers
                     ? value
                     : string.Empty;
         }
+
+        private static DateTime ToMalaysiaUtc(DateTime local) =>
+            DateTime.SpecifyKind(local, DateTimeKind.Unspecified).AddHours(-8);
+        private static DateTime MalaysiaLocal(DateTime utc) =>
+            DateTime.SpecifyKind(utc, DateTimeKind.Utc).AddHours(8);
 
         private static DateTime? CalculateExpiry(
             AnnouncementFormViewModel model)

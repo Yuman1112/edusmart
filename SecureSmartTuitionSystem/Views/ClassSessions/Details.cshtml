@@ -1,6 +1,7 @@
-﻿@model SecureSmartTuitionSystem.Models.Enrollment.ClassSession
+@model SecureSmartTuitionSystem.Models.Enrollment.ClassSession
 
 @using SecureSmartTuitionSystem.Models.Enrollment
+@using SecureSmartTuitionSystem.Services.Enrollment
 
 @{
     ViewData["Title"] = "Class Session Details";
@@ -122,6 +123,16 @@
             </div>
 
             <div class="class-detail-item">
+                <span>Start Date</span>
+                <strong>@ClassScheduleService.FirstDate(Model).ToString("dd MMM yyyy")</strong>
+            </div>
+
+            <div class="class-detail-item">
+                <span>End Date</span>
+                <strong>@AcademicYearPolicy.ClassEnd(Model).ToString("dd MMM yyyy")</strong>
+            </div>
+
+            <div class="class-detail-item">
                 <span>Time</span>
                 <strong>@Model.StartTime.ToString("hh:mm tt") – @Model.EndTime.ToString("hh:mm tt")</strong>
             </div>
@@ -170,3 +181,6 @@
         </div>
     </section>
 </div>
+
+@await Component.InvokeAsync("ClassMembers", new { classSessionId = Model.ClassSessionId })
+

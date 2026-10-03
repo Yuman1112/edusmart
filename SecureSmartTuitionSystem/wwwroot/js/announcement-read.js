@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 method: "POST", body: new FormData(form), credentials: "same-origin",
                 headers: { "X-Requested-With": "XMLHttpRequest" }, cache: "no-store"
             });
-            if (response.ok) acknowledged = true;
+            if (response.ok) { acknowledged = true; document.dispatchEvent(new Event("edusmart:unread-changed")); }
         } catch { /* Do not clear unread state when acknowledgement fails. */ }
     }
     acknowledge();

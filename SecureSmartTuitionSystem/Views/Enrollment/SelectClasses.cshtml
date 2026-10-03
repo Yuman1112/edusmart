@@ -2,12 +2,13 @@
 
 @{
     ViewData["Title"] = "Select Classes";
+    bool additional = Context.Session.GetInt32("Enrollment.AddSubjectStudentId").HasValue;
 
     string minimumStartDate =
-        DateTime.Today.ToString("yyyy-MM-dd");
+        SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today.ToString("yyyy-MM-dd");
 
     string maximumStartDate =
-        DateTime.Today.AddYears(1).ToString("yyyy-MM-dd");
+        SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today.AddYears(1).ToString("yyyy-MM-dd");
 }
 
 @section Styles {
@@ -30,7 +31,7 @@
             <div class="enrollment-card-header">
                 <div>
                     <span class="enrollment-eyebrow">
-                        Step 3 of 5
+                        @(additional ? "Step 1 of 3" : "Step 3 of 5")
                     </span>
 
                     <h1>Select Classes</h1>
@@ -50,6 +51,7 @@
                  class="text-danger validation-summary">
             </div>
 
+            <section class="enrollment-section"><label for="requestedStartDate" class="form-label">Enrollment Start Date</label><input asp-for="RequestedStartDate" id="requestedStartDate" type="date" required min="@minimumStartDate" max="@maximumStartDate" class="form-control" /><span asp-validation-for="RequestedStartDate" class="text-danger"></span><p class="form-text">Only classes valid for this date and academic year are shown. Changing the year clears ineligible selections.</p></section>
             <!-- Applicant summary -->
             <section class="enrollment-section">
                 <div class="enrollment-section-title">
@@ -216,6 +218,7 @@
 
                             <article class="selectable-class-card"
                                      data-class-id="@classItem.ClassSessionId"
+                                     data-term-start="@classItem.TermStart.ToString("yyyy-MM-dd")" data-term-end="@classItem.TermEnd.ToString("yyyy-MM-dd")"
                                      data-stage="@classItem.EducationStage"
                                      data-level="@classItem.AcademicLevel"
                                      data-subject="@classItem.SubjectName"
@@ -362,6 +365,12 @@
             </section>
 
             <div class="enrollment-form-actions">
+                @if (additional)
+                {
+                    <a class="outline-button" asp-controller="LearningClasses" asp-action="Index" asp-route-studentId="@Context.Session.GetInt32("Enrollment.AddSubjectStudentId")"><i class="bi bi-arrow-left"></i> Back: My Classes</a>
+                }
+                else
+                {
                 <button type="submit"
                         formaction="@Url.Action(
                                                                             "BackToGuardianDetails",
@@ -372,6 +381,8 @@
                     <i class="bi bi-arrow-left"></i>
                     Back: Guardian Details
                 </button>
+
+                }
 
                 <button type="submit"
                         class="primary-button">
@@ -753,8 +764,11 @@
                         !selectedSubject ||
                         cardSubject === selectedSubject;
 
+                    const date = requestedStartDate?.value || "";
+                    const yearMatches = Boolean(date) && date.slice(0, 4) === card.dataset.termStart.slice(0, 4) && date >= card.dataset.termStart && date <= card.dataset.termEnd;
+                    if (!yearMatches) { const checkbox = card.querySelector(".class-selection-checkbox"); if (checkbox) checkbox.checked = false; }
                     const shouldDisplay =
-                        stageMatches &&
+                        yearMatches && stageMatches &&
                         levelMatches &&
                         subjectMatches;
 
@@ -1072,10 +1086,7 @@
                 }
             );
 
-            requestedStartDate?.addEventListener(
-                "change",
-                updateFinalTwoWeeksWarning
-            );
+            requestedStartDate?.addEventListener("change", () => { filterClassCards(); updateSelectionSummary(); updateFinalTwoWeeksWarning(); });
 
             reviewButton?.addEventListener(
                 "click",

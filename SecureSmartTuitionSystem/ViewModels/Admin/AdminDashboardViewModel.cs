@@ -10,7 +10,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Admin
 
         public int PendingEnrollmentCount { get; set; }
 
-        public List<AdminClassItemViewModel> RecentClasses { get; set; }
+        public List<AdminClassItemViewModel> TodayClasses { get; set; }
             = new();
 
         public List<PendingEnrollmentItemViewModel>
@@ -20,13 +20,13 @@ namespace SecureSmartTuitionSystem.ViewModels.Admin
 
     public class AdminClassItemViewModel
     {
-        public string ClassCode { get; set; } = string.Empty;
-
-        public string SubjectName { get; set; } = string.Empty;
-
-        public string AcademicLevel { get; set; } = string.Empty;
+        public string ClassName { get; set; } = string.Empty;
 
         public string Schedule { get; set; } = string.Empty;
+
+        public string Status { get; set; } = string.Empty;
+
+        public string StatusCssClass { get; set; } = "status-success";
     }
 
     public class PendingEnrollmentItemViewModel
