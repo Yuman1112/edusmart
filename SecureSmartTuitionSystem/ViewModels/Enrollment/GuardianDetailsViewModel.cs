@@ -36,14 +36,14 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         [Display(Name = "Email Address")]
         public string? GuardianEmail { get; set; }
 
-        [Phone(ErrorMessage = "Please enter a valid phone number.")]
-        [StringLength(30)]
+        [RegularExpression(@"^01[0-9]-[0-9]{7,8}$", ErrorMessage = "Please enter a valid Malaysian phone number.")]
+        [StringLength(12)]
         [Display(Name = "Phone Number")]
         public string? GuardianPhoneNumber { get; set; }
 
-        [RegularExpression(@"^\d{6}-\d{2}-\d{4}$", ErrorMessage = "Please enter the IC number in the format 000000-00-0000.")]
+        [RegularExpression(@"^\d{6}-\d{2}-\d{4}$", ErrorMessage = "Please enter a valid IC number (000000-00-0000).")]
         [StringLength(14)]
-        [Display(Name = "Identification Number")]
+        [Display(Name = "IC Number")]
         public string? GuardianIdentificationNumber { get; set; }
 
         public IEnumerable<ValidationResult> Validate(

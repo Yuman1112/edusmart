@@ -1,0 +1,43 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorDetailsViewModel
+<section class="class-details-section">
+    <h3><i class="bi bi-clock-history" aria-hidden="true"></i> Status Change History</h3>
+    <p class="text-muted">Up to 100 most recent recorded status changes. Times are Malaysia time (UTC+8).</p>
+    @if (Model.StatusHistoryHasUnverifiedEntries)
+    {
+        <div class="alert alert-warning" role="alert">Some status records could not be verified and are not displayed. Review the Security Audit Logs.</div>
+    }
+    @if (Model.StatusHistory.Count == 0)
+    {
+        <p class="text-muted">No verified status changes have been recorded yet.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Time (MYT)</th>
+                        <th scope="col">Action</th>
+                        <th scope="col">Previous Status</th>
+                        <th scope="col">New Status</th>
+                        <th scope="col">Changed By</th>
+                        <th scope="col">Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.StatusHistory)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@DateTime.SpecifyKind(item.OccurredAtUtc, DateTimeKind.Utc).AddHours(8).ToString("dd MMM yyyy, HH:mm")</td>
+                            <td>@item.Action</td>
+                            <td>@item.PreviousStatus</td>
+                            <td>@item.NewStatus</td>
+                            <td class="text-break">@item.ActorName</td>
+                            <td class="text-break">@item.Reason</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

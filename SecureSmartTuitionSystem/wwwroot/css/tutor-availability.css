@@ -1,0 +1,98 @@
+﻿/* Styles apply only to the tutor availability timetable. */
+
+.tutor-availability .availability-scroll {
+    max-height: 570px;
+    overflow: auto;
+    border: 1px solid #cce3eb;
+    border-radius: 12px;
+}
+
+.tutor-availability .availability-table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: #003b64;
+}
+
+.tutor-availability .availability-table th,
+.tutor-availability .availability-table td {
+    border-bottom: 1px solid #e1edf1;
+    border-right: 1px solid #e1edf1;
+    text-align: center;
+}
+
+.tutor-availability .availability-table th {
+    padding: 12px 10px;
+}
+
+.tutor-availability .availability-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #eaf8fa;
+}
+
+.tutor-availability .availability-table tbody th {
+    background: #f7fbfc;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.tutor-availability .availability-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 46px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.tutor-availability .availability-cell:has(input:checked) {
+    background: #d3f4ef;
+}
+
+.tutor-availability .availability-cell:focus-within {
+    outline: 2px solid #009bab;
+    outline-offset: -2px;
+}
+
+.tutor-availability .availability-cell input {
+    width: 20px;
+    height: 20px;
+    accent-color: #009bab;
+    cursor: pointer;
+}
+
+.tutor-availability .availability-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+}
+
+.tutor-availability .availability-tools[hidden],
+.tutor-availability .availability-table tr[hidden] {
+    display: none !important;
+}
+
+.tutor-availability .availability-tools > div {
+    min-width: 130px;
+}
+
+.tutor-availability .availability-table tbody th {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+}
+
+#tutor-availability-form #saveTutorAvailability:disabled,
+#tutor-availability-form #saveTutorAvailability:disabled:hover {
+    background: #e9eff3;
+    border: 1px solid #d3dee5;
+    color: #64748b;
+    opacity: 1;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}

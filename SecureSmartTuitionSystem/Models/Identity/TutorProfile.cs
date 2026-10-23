@@ -21,9 +21,9 @@ namespace SecureSmartTuitionSystem.Models
         [StringLength(500)]
         public string? TeachingExperience { get; set; }
 
-        [Required]
+        // Optional: Additional teaching expertise.
         [StringLength(200)]
-        public string AreaOfExpertise { get; set; } = string.Empty;
+        public string? AreaOfExpertise { get; set; }
 
         public bool IsActive { get; set; } = true;
 
@@ -32,5 +32,9 @@ namespace SecureSmartTuitionSystem.Models
         public DateTime? UpdatedAt { get; set; }
 
         public ApplicationUser ApplicationUser { get; set; } = null!;
+
+        // One Tutor can teach multiple levels and subjects.
+        public ICollection<TutorTeachingSubject> TeachingSubjects
+        { get; set; } = new List<TutorTeachingSubject>();
     }
 }

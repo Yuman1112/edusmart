@@ -1,0 +1,99 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorAvailabilityOverviewViewModel
+@using SecureSmartTuitionSystem.Services.Tutor
+
+@{
+    ViewData["Title"] = "Tutor Availability";
+
+    int[] days = { 1, 2, 3, 4, 5, 6, 0 };
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/class-sessions.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/tutor-form.css"
+          asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>Tutor Availability</h1>
+        <p>@Model.TutorId · @Model.FullName</p>
+    </div>
+
+    <a asp-controller="TutorManagement"
+       asp-action="Details"
+       asp-route-userId="@Model.UserId"
+       class="outline-button">
+        <i class="bi bi-arrow-left"
+           aria-hidden="true"></i>
+        Back
+    </a>
+</div>
+
+<div class="class-form-card tutor-create-card">
+    <section class="class-form-section">
+        <h2>
+            <i class="bi bi-calendar-week"
+               aria-hidden="true"></i>
+            Weekly Teaching Availability
+        </h2>
+
+        <div class="tutor-info-note mb-4">
+            <i class="bi bi-info-circle"
+               aria-hidden="true"></i>
+
+            <span>
+                All times are Malaysia time (UTC+8).
+                These times are maintained by the tutor.
+                Existing classes and replacements are checked
+                separately when scheduling.
+            </span>
+        </div>
+
+        @if (Model.SelectedSlots.Count == 0)
+        {
+            <div class="alert alert-warning" role="status">
+                No available teaching slots.
+                Ask this tutor to save My Availability
+                before assigning a new class.
+            </div>
+        }
+
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <caption>
+                    Weekly availability ·
+                    @((Model.SelectedSlots.Count / 2m).ToString("0.#"))
+                    hours
+                </caption>
+
+                <thead>
+                    <tr>
+                        <th scope="col">Day</th>
+                        <th scope="col">Available Times</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (int day in days)
+                    {
+                        <tr>
+                            <th scope="row">
+                                @((DayOfWeek)day)
+                            </th>
+
+                            <td>
+                                @TutorAvailabilityService.DescribeDay(
+                                Model.SelectedSlots,
+                                                        day)
+                        </td>
+                    </tr>
+                                        }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

@@ -1,0 +1,201 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorDetailsViewModel
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>My Profile</h1>
+        <p>View your personal information and teaching profile.</p>
+    </div>
+    <div class="class-detail-header-actions">
+        <a id="own-profile-edit-link"
+           asp-controller="Tutor"
+           asp-action="EditProfile"
+           class="primary-button">
+            <i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile
+        </a>
+        <a asp-controller="Tutor" asp-action="Index" class="outline-button">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
+        </a>
+    </div>
+</div>
+
+@if (TempData["OwnProfileSuccess"] is string success)
+{
+    <div id="own-profile-success"
+         class="alert alert-success"
+         role="status">
+        @success
+    </div>
+}
+@if (TempData["OwnProfileWarning"] is string warning)
+{
+    <div id="own-profile-warning"
+         class="alert alert-warning"
+         role="alert">
+        @warning
+    </div>
+}
+@if (TempData["OwnProfileInfo"] is string info)
+{
+    <div class="alert alert-info" role="status">@info</div>
+}
+
+<div id="own-email-watch-notice"
+     class="alert alert-info"
+     role="status"
+     aria-live="polite"
+     hidden>
+
+    <span id="own-email-watch-message"></span>
+
+    <a id="own-email-sign-in"
+       asp-area="Identity"
+       asp-page="/Account/Login"
+       asp-route-returnUrl="@Url.Action("MyProfile", "Tutor")"
+       class="outline-button ms-2 d-none"
+       hidden>
+        Sign In Again
+    </a>
+</div>
+
+<div id="own-profile-card"
+     class="class-details-card"
+     data-email-watch-url="@Url.Action("EmailChangeOutcome", "Tutor")"
+     data-email-watch-token="@Model.EmailChangeWatchToken">
+    <div class="class-details-title">
+        <h2>@Model.UserName - @Model.FullName</h2>
+        <span class="status-pill status-success">Active</span>
+    </div>
+
+    <section class="class-details-section">
+        <h3><i class="bi bi-person-vcard-fill" aria-hidden="true"></i> Personal Information</h3>
+        <div class="class-details-grid">
+            <div class="class-detail-item"><span>Tutor ID</span><strong>@Model.UserName</strong></div>
+            <div class="class-detail-item"><span>Full Name</span><strong>@Model.FullName</strong></div>
+            <div class="class-detail-item">
+                <span>Email Address</span><strong id="own-profile-email"
+                                                  class="text-break">@Model.Email</strong>
+            </div>
+            <div class="class-detail-item">
+                <span>Phone Number</span>
+                <strong>@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "Not provided" : Model.PhoneNumber)</strong>
+            </div>
+        </div>
+    </section>
+
+
+    @if (Model.PendingEmailRequestId.HasValue && !string.IsNullOrWhiteSpace(Model.PendingEmail))
+    {
+        bool expired = !Model.PendingEmailExpiresAtUtc.HasValue
+        || Model.PendingEmailExpiresAtUtc.Value <= DateTime.UtcNow;
+
+        <section id="own-profile-pending-email"
+                 class="class-details-section">
+            <h3><i class="bi bi-envelope-check" aria-hidden="true"></i> Pending Email Change</h3>
+            <div class="class-details-grid">
+                <div class="class-detail-item">
+                    <span>Awaiting Verification</span>
+                    <strong id="own-profile-pending-address"
+                            class="text-break">@Model.PendingEmail</strong>
+                </div>
+            </div>
+            <p id="own-profile-pending-description"
+               class="text-muted mt-3">
+                @(expired
+                            ? "The verification link has expired. Resend it to issue a new link."
+                            : "Your current account email remains unchanged until the new address is verified.")
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <form asp-controller="Tutor" asp-action="ResendOwnEmailVerification"
+                      method="post" asp-antiforgery="true">
+                    <input type="hidden" name="requestId" value="@Model.PendingEmailRequestId" />
+                    <button type="submit" class="outline-button">Resend Verification Email</button>
+                </form>
+                <form asp-controller="Tutor" asp-action="CancelOwnEmailChange"
+                      method="post" asp-antiforgery="true">
+                    <input type="hidden" name="requestId" value="@Model.PendingEmailRequestId" />
+                    <button type="submit" class="outline-button">Cancel Email Change</button>
+                </form>
+            </div>
+        </section>
+    }
+
+    <section class="class-details-section">
+        <h3><i class="bi bi-mortarboard-fill" aria-hidden="true"></i> Professional Information</h3>
+        <div class="class-details-grid">
+            <div class="class-detail-item"><span>Qualification</span><strong>@Model.Qualification</strong></div>
+            <div class="class-detail-item">
+                <span>Area of Expertise</span>
+                <strong>@(string.IsNullOrWhiteSpace(Model.AreaOfExpertise) ? "Not provided" : Model.AreaOfExpertise)</strong>
+            </div>
+            <div class="class-detail-item class-detail-wide">
+                <span>Teaching Experience</span>
+                <strong class="class-remark">@(string.IsNullOrWhiteSpace(Model.TeachingExperience) ? "Not provided" : Model.TeachingExperience)</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="class-details-section">
+        <h3><i class="bi bi-book-fill" aria-hidden="true"></i> Teaching Subjects &amp; Levels</h3>
+        @if (Model.TeachingLevels.Any())
+        {
+            @foreach (var stageGroup in Model.TeachingLevels.GroupBy(x => x.EducationStage))
+            {
+                var stageId = stageGroup.Key.ToLowerInvariant();
+                <div class="tutor-teaching-stage">
+                    <div class="tutor-teaching-stage-header">
+                        <div class="tutor-teaching-stage-title">
+                            <i class="bi bi-mortarboard-fill" aria-hidden="true"></i>
+                            <span>@stageGroup.Key</span>
+                        </div>
+                    </div>
+                    <div class="accordion tutor-teaching-accordion" id="profile-accordion-@stageId">
+                        @foreach (var level in stageGroup)
+                        {
+                            var levelId = level.AcademicLevel.ToLowerInvariant().Replace(" ", "-");
+                            var collapseId = $"profile-{stageId}-{levelId}";
+                            var headingId = $"heading-{collapseId}";
+                            <div class="accordion-item">
+                                <h4 class="accordion-header" id="@headingId">
+                                    <button class="accordion-button collapsed" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#@collapseId"
+                                            aria-expanded="false" aria-controls="@collapseId">
+                                        <span class="tutor-accordion-level">@(System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(level.AcademicLevel.ToLowerInvariant()))</span>
+                                        <span class="tutor-accordion-count">@level.SubjectNames.Count @(level.SubjectNames.Count == 1 ? "Subject" : "Subjects")</span>
+                                    </button>
+                                </h4>
+                                <div id="@collapseId" class="accordion-collapse collapse"
+                                     aria-labelledby="@headingId" data-bs-parent="#profile-accordion-@stageId">
+                                    <div class="accordion-body">
+                                        <div class="tutor-teaching-subjects">
+                                            @foreach (var subject in level.SubjectNames)
+                                            {
+                                                <span class="tutor-teaching-subject-badge">@subject</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted mb-0">No teaching subjects selected.</p>
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/tutor-profile-email-watch.js"
+            asp-append-version="true"></script>
+}

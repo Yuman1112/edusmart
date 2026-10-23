@@ -28,7 +28,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public DateTime? StudentDateOfBirth { get; set; }
 
         [Required(
-            ErrorMessage = "Please select a gender.")]
+            ErrorMessage = "Please select the student's gender.")]
         [Display(Name = "Gender")]
         public string StudentGender { get; set; } = string.Empty;
 
@@ -62,7 +62,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                     "Please enter the student's email address or select that the student does not have an email address.",
                     new[]
                     {
-            nameof(StudentEmail)
+                        nameof(StudentEmail)
                     });
             }
 

@@ -1,0 +1,224 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorExportViewModel
+@{
+    ViewData["Title"] = "Export Tutor Records";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
+}
+<div class="page-header">
+    <div><h1>Export Tutor Records</h1><p>Review the matching records and choose a download format.</p></div>
+    <a asp-controller="TutorManagement" asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
+</div>
+<div class="class-form-card mb-4">
+    <form asp-controller="TutorManagement" asp-action="Export" method="get">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-4"><label asp-for="Search" class="form-label">Search Tutor</label><input asp-for="Search" class="form-control" maxlength="1000" placeholder="Name, ID, email or expertise" /></div>
+            <div class="col-12 col-md-3"><label asp-for="Status" class="form-label"></label><select asp-for="Status" class="form-select"><option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+            <div class="col-12 col-md-3"><label asp-for="Setup" class="form-label">Account Setup</label><select asp-for="Setup" class="form-select"><option value="">All Setup Statuses</option><option value="pending">Pending</option><option value="completed">Completed</option></select></div>
+            <div class="col-12 col-md-2"><button type="submit" class="primary-button">Preview</button></div>
+        </div>
+    </form>
+</div>
+<div class="class-form-card tutor-create-card">
+    <section class="class-form-section">
+        <h2><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i> Records to Export (@Model.TotalRecords)</h2>
+        @if (Model.TotalRecords == 0)
+        {
+            <div class="alert alert-info" role="status">No tutor records match these filters. Change the filters before exporting.</div>
+        }
+        else
+        {
+            <p class="text-muted">
+                Previewing up to 100 records. Column sorting applies to this preview only.
+                The download includes all matching records, ordered by Tutor ID,
+                using the latest data when you confirm.
+            </p>
+            <div class="table-responsive">
+                <table id="tutor-export-preview" class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col" aria-sort="ascending">
+                                <button type="button"
+                                        class="tutor-sort-header"
+                                        data-export-sort="tutorId"
+                                        aria-label="Sort by Tutor ID">
+                                    Tutor
+                                    <i class="bi bi-arrow-up" aria-hidden="true"></i>
+                                </button>
+                            </th>
+
+                            <th scope="col" aria-sort="none">
+                                <button type="button"
+                                        class="tutor-sort-header"
+                                        data-export-sort="qualification"
+                                        aria-label="Sort by qualification">
+                                    Qualification
+                                    <i class="bi bi-arrow-down-up" aria-hidden="true"></i>
+                                </button>
+                            </th>
+
+                            <th scope="col">Teaching Subjects &amp; Levels</th>
+
+                            <th scope="col" aria-sort="none">
+                                <button type="button"
+                                        class="tutor-sort-header"
+                                        data-export-sort="status"
+                                        aria-label="Sort by status">
+                                    Status
+                                    <i class="bi bi-arrow-down-up" aria-hidden="true"></i>
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.PreviewRows)
+                        {
+                            <tr data-tutor-id="@row.TutorId"
+                                data-qualification="@row.Qualification"
+                                data-status="@(row.IsActive ? "Active" : "Inactive")">
+
+                                <td>
+                                    <strong>@row.FullName</strong>
+                                    <br />
+                                    <small>@row.TutorId</small>
+                                </td>
+
+                                <td>@row.Qualification</td>
+
+                                <td class="text-break">
+                                    @(string.IsNullOrEmpty(row.TeachingSummary)
+                                                                ? "Not recorded"
+                                                                : row.TeachingSummary)
+                        </td>
+
+                                <td>
+                                    <span class="tutor-management-badge @(row.IsActive ? "tutor-badge-success" : "tutor-badge-inactive")">
+                                        @(row.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+                            </tr>
+                                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+    <form asp-controller="TutorManagement" asp-action="DownloadTutorRecords" method="post">
+        @Html.AntiForgeryToken()
+        <input asp-for="Search" type="hidden" id="download-export-search" /><input asp-for="Status" type="hidden" id="download-export-status" /><input asp-for="Setup" type="hidden" id="download-export-setup" />
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-5"><label asp-for="Format" class="form-label">File Format</label><select asp-for="Format" class="form-select"><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV (.csv)</option></select></div>
+            <div class="col-12 col-md-7"><p class="text-muted mb-0">Includes contact details, qualifications, teaching subjects and account status. Dates are Malaysia time (UTC+8). CSV values are protected against spreadsheet formulas; Excel preserves phone numbers as text.</p></div>
+        </div>
+        <div class="class-form-actions mt-4">
+            <a asp-controller="TutorManagement" asp-action="Index" class="outline-button">Cancel</a>
+            <button type="submit" class="primary-button" disabled="@(Model.TotalRecords == 0)"><i class="bi bi-download" aria-hidden="true"></i> Confirm &amp; Download</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script nonce="@Context.Items["CspNonce"]">
+        (() => {
+            const table =
+                document.getElementById("tutor-export-preview");
+
+            if (!table || !table.tBodies.length) {
+                return;
+            }
+
+            const tbody = table.tBodies[0];
+
+            const headers = Array.from(
+                table.querySelectorAll("[data-export-sort]")
+            );
+
+            const collator = new Intl.Collator("en", {
+                numeric: true,
+                sensitivity: "base"
+            });
+
+            let currentSort = "tutorId";
+            let ascending = true;
+
+            function getValue(row, field) {
+                return row.dataset[field] || "";
+            }
+
+            function updateIndicators() {
+                headers.forEach(button => {
+                    const active =
+                        button.dataset.exportSort === currentSort;
+
+                    button.closest("th").setAttribute(
+                        "aria-sort",
+                        active
+                            ? (ascending ? "ascending" : "descending")
+                            : "none"
+                    );
+
+                    const icon = button.querySelector("i");
+
+                    if (icon) {
+                        icon.className = active
+                            ? (ascending
+                                ? "bi bi-arrow-up"
+                                : "bi bi-arrow-down")
+                            : "bi bi-arrow-down-up";
+                    }
+                });
+            }
+
+            headers.forEach(button => {
+                button.addEventListener("click", () => {
+                    const field = button.dataset.exportSort;
+
+                    if (!field) {
+                        return;
+                    }
+
+                    if (currentSort === field) {
+                        ascending = !ascending;
+                    } else {
+                        currentSort = field;
+                        ascending = true;
+                    }
+
+                    // Include all preview rows across pagination.
+                    const rows = Array.from(tbody.rows);
+
+                    rows.sort((a, b) => {
+                        const comparison = collator.compare(
+                            getValue(a, currentSort),
+                            getValue(b, currentSort)
+                        );
+
+                        if (comparison !== 0) {
+                            return ascending
+                                ? comparison
+                                : -comparison;
+                        }
+
+                        return collator.compare(
+                            getValue(a, "tutorId"),
+                            getValue(b, "tutorId")
+                        );
+                    });
+
+                    const fragment =
+                        document.createDocumentFragment();
+
+                    rows.forEach(row => fragment.appendChild(row));
+
+                    tbody.appendChild(fragment);
+
+                    updateIndicators();
+                });
+            });
+
+            updateIndicators();
+        })();
+    </script>
+}

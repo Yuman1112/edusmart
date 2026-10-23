@@ -44,6 +44,64 @@ namespace SecureSmartTuitionSystem.Data
             await SeedStudentProfileAsync(context, userManager);
         }
 
+        public static async Task SeedEnrollmentTestTutorAsync(
+    IServiceProvider serviceProvider,
+    IConfiguration configuration)
+        {
+            if (!configuration.GetValue<bool>("Testing:SeedTutor"))
+            {
+                return;
+            }
+
+            using IServiceScope scope = serviceProvider.CreateScope();
+
+            var userManager = scope.ServiceProvider
+                .GetRequiredService<UserManager<ApplicationUser>>();
+
+            var context = scope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
+
+            var tutor = await userManager.FindByNameAsync(TutorUserName);
+
+            if (tutor != null)
+            {
+                return;
+            }
+
+            if (await userManager.FindByEmailAsync(TutorEmail) != null)
+            {
+                throw new InvalidOperationException(
+                    "The test tutor email is already used by another account.");
+            }
+
+            await using var transaction =
+                await context.Database.BeginTransactionAsync();
+
+            tutor = new ApplicationUser
+            {
+                UserName = TutorUserName,
+                Email = TutorEmail,
+                FullName = "Test Tutor",
+                IsActive = true,
+                EmailConfirmed = false,
+                MustChangePassword = true,
+                LockoutEnabled = true
+            };
+
+            // Used for class assignment; no login password is created.
+            EnsureIdentitySucceeded(
+                await userManager.CreateAsync(tutor),
+                "Unable to create the test tutor.");
+
+            EnsureIdentitySucceeded(
+                await userManager.AddToRoleAsync(tutor, "Tutor"),
+                "Unable to assign the Tutor role.");
+
+            await SeedTutorProfileAsync(context, userManager);
+
+            await transaction.CommitAsync();
+        }
+
         private static async Task CreateRolesAsync(
             RoleManager<IdentityRole> roleManager)
         {

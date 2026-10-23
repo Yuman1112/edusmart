@@ -1,0 +1,339 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.CreateTutorViewModel
+
+@{
+    ViewData["Title"] = "Add Tutor";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/class-sessions.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/tutor-form.css"
+          asp-append-version="true" />
+}
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+    <div>
+        <h1>Add Tutor</h1>
+        <p>
+            Create a new tutor account and assign teaching
+            subjects and academic levels.
+        </p>
+    </div>
+
+    <a asp-controller="TutorManagement"
+       asp-action="Index"
+       class="outline-button">
+        <i class="bi bi-arrow-left"></i>
+        Back
+    </a>
+</div>
+
+<!-- MAIN FORM CARD -->
+<div class="class-form-card tutor-create-card">
+
+    <form id="create-tutor-form"
+          asp-controller="TutorManagement"
+          asp-action="Create"
+          method="post"
+          data-check-email-url="@Url.Action("CheckEmail", "TutorManagement")"
+          novalidate>
+
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="All"
+             class="text-danger mb-3"
+             role="alert"></div>
+
+        <!-- ====================================== -->
+        <!-- SECTION 1: PERSONAL INFORMATION -->
+        <!-- ====================================== -->
+        <section class="class-form-section">
+
+            <h2>
+                <i class="bi bi-person-vcard"></i>
+                Personal Information
+            </h2>
+
+            <div class="row g-4">
+
+                <!-- FULL NAME -->
+                <div class="col-12 col-md-6">
+                    <label asp-for="FullName"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="FullName"
+                           class="form-control"
+                           maxlength="100"
+                           autocomplete="name"
+                           placeholder="Full name as per IC" />
+
+                    <span asp-validation-for="FullName"
+                          class="text-danger"></span>
+                </div>
+
+                <!-- EMAIL -->
+                <div class="col-12 col-md-6">
+                    <label asp-for="Email"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="Email"
+                           type="email"
+                           class="form-control"
+                           maxlength="256"
+                           autocomplete="email"
+                           placeholder="tutor@example.com"
+                           aria-describedby="email-check-status" />
+
+                    <div id="email-check-status"
+                         class="form-text"
+                         role="status"
+                         aria-live="polite">
+                    </div>
+
+                    <span asp-validation-for="Email"
+                          class="text-danger"></span>
+                </div>
+
+                <!-- PHONE NUMBER -->
+                <div class="col-12 col-md-6">
+                    <label asp-for="PhoneNumber"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="PhoneNumber"
+                           id="tutorPhone"
+                           type="tel"
+                           class="form-control"
+                           inputmode="numeric"
+                           maxlength="12"
+                           autocomplete="tel"
+                           placeholder="012-3456789" />
+
+                    <span asp-validation-for="PhoneNumber"
+                          class="text-danger"></span>
+                </div>
+
+            </div>
+
+            <div class="tutor-info-note mt-4">
+                <i class="bi bi-info-circle"></i>
+                <span>
+                    A Tutor ID will be generated automatically.
+                    The tutor will receive an email to create
+                    their own password.
+                </span>
+            </div>
+
+        </section>
+
+        <!-- ====================================== -->
+        <!-- SECTION 2: PROFESSIONAL INFORMATION -->
+        <!-- ====================================== -->
+        <section class="class-form-section">
+
+            <h2>
+                <i class="bi bi-mortarboard"></i>
+                Professional Information
+            </h2>
+
+            <div class="row g-4">
+
+                <!-- QUALIFICATION -->
+                <div class="col-12 col-md-6">
+                    <label asp-for="Qualification"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="Qualification"
+                           class="form-control"
+                           maxlength="200"
+                           placeholder="e.g. Bachelor of Education (Mathematics)" />
+
+                    <span asp-validation-for="Qualification"
+                          class="text-danger"></span>
+                </div>
+
+                <!-- AREA OF EXPERTISE -->
+                <div class="col-12 col-md-6">
+                    <label asp-for="AreaOfExpertise"
+                           class="form-label">
+                    </label>
+
+                    <input asp-for="AreaOfExpertise"
+                           class="form-control"
+                           maxlength="200"
+                           placeholder="e.g. Algebra, geometry and SPM preparation" />
+
+                    <span asp-validation-for="AreaOfExpertise"
+                          class="text-danger"></span>
+                </div>
+
+                <!-- TEACHING EXPERIENCE -->
+                <div class="col-12">
+                    <label asp-for="TeachingExperience"
+                           class="form-label">
+                    </label>
+
+                    <textarea asp-for="TeachingExperience"
+                              class="form-control"
+                              maxlength="500"
+                              rows="3"
+                              placeholder="e.g. 3 years teaching Form 4–5 Mathematics"></textarea>
+
+                    <span asp-validation-for="TeachingExperience"
+                          class="text-danger"></span>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ====================================== -->
+        <!-- SECTION 3: TEACHING SUBJECTS & LEVELS -->
+        <!-- ====================================== -->
+        <section class="class-form-section">
+
+            <h2 class="tutor-teaching-heading">
+                <i class="bi bi-book-half"></i>
+                Teaching Subjects &amp; Levels
+                <span class="text-danger">*</span>
+            </h2>
+
+            <p class="tutor-section-description">
+                Click a Year or Form card to select an academic level and display its subjects.
+                Choose at least one subject for every selected level.
+                Both Primary and Secondary levels can be selected.
+            </p>
+
+            <!-- PRIMARY / SECONDARY TABS -->
+            <ul class="nav nav-tabs tutor-stage-tabs"
+                id="teaching-stage-tabs"
+                role="tablist">
+
+                <li class="nav-item" role="presentation">
+                    <button type="button"
+                            class="nav-link active"
+                            id="primary-tab"
+                            role="tab"
+                            aria-selected="true"
+                            aria-controls="teaching-stage-content"
+                            data-stage="Primary">
+                        <i class="bi bi-book"></i>
+                        Primary
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button type="button"
+                            class="nav-link"
+                            id="secondary-tab"
+                            role="tab"
+                            aria-selected="false"
+                            aria-controls="teaching-stage-content"
+                            data-stage="Secondary">
+                        <i class="bi bi-mortarboard"></i>
+                        Secondary
+                    </button>
+                </li>
+            </ul>
+
+            <!-- ACADEMIC LEVELS -->
+            <div id="teaching-stage-content"
+                 role="tabpanel"
+                 aria-labelledby="primary-tab">
+
+                <div class="tutor-teaching-panel">
+
+                    <h3 class="tutor-panel-title">
+                        Academic Levels
+                    </h3>
+
+                    <div id="teaching-levels-container"
+                         class="row g-3">
+                    </div>
+
+                    <!-- SUBJECTS FOR ACTIVE LEVEL -->
+                    <div id="teaching-subjects-container"
+                         class="tutor-subjects-panel">
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- SELECTED TEACHING LEVELS -->
+            <div class="tutor-selection-panel">
+
+                <div class="tutor-selection-header">
+
+                    <h3 class="tutor-panel-title mb-0">
+                        <i class="bi bi-check2-square"></i>
+                        Selected Teaching Levels
+                    </h3>
+
+                    <span id="teaching-level-count"
+                          class="tutor-level-count">
+                        0 levels
+                    </span>
+                </div>
+
+                <div id="teaching-selection-summary"
+                     class="d-flex flex-wrap gap-2">
+
+                    <span class="text-muted small">
+                        No academic levels selected.
+                    </span>
+                </div>
+            </div>
+
+            <!-- MODEL BINDING -->
+            <div id="teaching-levels-hidden"></div>
+
+            <span asp-validation-for="TeachingLevels"
+                  id="teaching-levels-error"
+                  class="text-danger d-block mt-2"
+                  role="alert">
+            </span>
+
+            <!-- RESTORE DATA AFTER SERVER VALIDATION -->
+            <script id="initial-teaching-levels"
+                    type="application/json">
+                @Html.Raw(
+                    System.Text.Json.JsonSerializer.Serialize(
+                                    Model.TeachingLevels
+                    )
+                                                                )
+            </script>
+
+        </section>
+
+        <!-- ====================================== -->
+        <!-- FORM ACTIONS -->
+        <!-- ====================================== -->
+        <div class="class-form-actions">
+
+            <a asp-controller="TutorManagement"
+               asp-action="Index"
+               class="outline-button">
+                Cancel
+            </a>
+
+            <button type="submit"
+                    class="primary-button">
+                <i class="bi bi-person-plus"></i>
+                Create Tutor &amp; Send Email
+            </button>
+
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/tutor-create.js"
+            asp-append-version="true"></script>
+}

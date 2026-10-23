@@ -1,0 +1,252 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.EditOwnTutorProfileViewModel
+@{
+    ViewData["Title"] = "Edit My Profile";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div><h1>Edit My Profile</h1><p>Update your personal information, professional details and teaching subjects.</p></div>
+    <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
+    </a>
+</div>
+
+<div class="class-form-card tutor-create-card">
+    <form id="edit-tutor-form" asp-controller="Tutor" asp-action="EditProfile" method="post" novalidate>
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+        <section class="class-form-section">
+            <h2><i class="bi bi-person-vcard" aria-hidden="true"></i> Personal Information</h2>
+            <div class="row g-4">
+                <div class="col-12 col-md-6">
+                    <label asp-for="TutorId" class="form-label">Tutor ID</label>
+                    <input asp-for="TutorId" class="form-control tutor-readonly-field" readonly aria-readonly="true" />
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="FullName" class="form-label"></label>
+                    <input asp-for="FullName" class="form-control" maxlength="100" autocomplete="name" />
+                    <span asp-validation-for="FullName" class="text-danger"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="Email" class="form-label">Email Address</label>
+                    <input asp-for="Email"
+                           type="email"
+                           class="form-control"
+                           maxlength="254"
+                           autocomplete="email" />
+
+                    <span asp-validation-for="Email"
+                          class="text-danger"></span>
+                </div>
+                
+                <div class="col-12 col-md-6">
+                    <label asp-for="PhoneNumber" class="form-label"></label>
+                    <input asp-for="PhoneNumber" type="tel" class="form-control" maxlength="12" autocomplete="tel" placeholder="012-3456789" />
+                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="tutor-info-note mt-4">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                <span>Your Tutor ID cannot be changed. A new email address must be verified before it replaces your current email.</span>
+            </div>
+        </section>
+
+        <section class="class-form-section">
+            <h2><i class="bi bi-mortarboard" aria-hidden="true"></i> Professional Information</h2>
+            <div class="row g-4">
+                <div class="col-12 col-md-6">
+                    <label asp-for="Qualification" class="form-label"></label>
+                    <input asp-for="Qualification" class="form-control" maxlength="200" placeholder="e.g. Bachelor of Education" />
+                    <span asp-validation-for="Qualification" class="text-danger"></span>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label asp-for="AreaOfExpertise" class="form-label"></label>
+                    <input asp-for="AreaOfExpertise" class="form-control" maxlength="200" placeholder="e.g. Mathematics, SPM preparation" />
+                    <span asp-validation-for="AreaOfExpertise" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="TeachingExperience" class="form-label"></label>
+                    <textarea asp-for="TeachingExperience" class="form-control" maxlength="500" rows="3"></textarea>
+                    <span asp-validation-for="TeachingExperience" class="text-danger"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="class-form-section">
+
+            <h2 class="tutor-teaching-heading">
+
+                <i class="bi bi-book-half"
+                   aria-hidden="true"></i>
+
+                Teaching Subjects &amp; Levels
+
+            </h2>
+
+            <p class="tutor-section-description">
+                Select the academic levels you can teach.
+                Click Select Subjects or Edit Subjects to manage
+                the subjects for each level. At least one subject
+                is required for every selected level.
+                Both Primary and Secondary levels can be selected.
+            </p>
+
+            <!-- =============================================
+                 PRIMARY / SECONDARY TABS
+            ============================================= -->
+
+            <ul class="nav nav-tabs tutor-stage-tabs"
+                id="teaching-stage-tabs"
+                role="tablist">
+
+                <!-- Primary -->
+                <li class="nav-item"
+                    role="presentation">
+
+                    <button type="button"
+                            class="nav-link active"
+                            id="primary-tab"
+                            role="tab"
+                            aria-selected="true"
+                            aria-controls="teaching-stage-content"
+                            data-stage="Primary">
+
+                        <i class="bi bi-book"
+                           aria-hidden="true"></i>
+
+                        Primary
+
+                    </button>
+
+                </li>
+
+                <!-- Secondary -->
+                <li class="nav-item"
+                    role="presentation">
+
+                    <button type="button"
+                            class="nav-link"
+                            id="secondary-tab"
+                            role="tab"
+                            aria-selected="false"
+                            aria-controls="teaching-stage-content"
+                            data-stage="Secondary">
+
+                        <i class="bi bi-mortarboard"
+                           aria-hidden="true"></i>
+
+                        Secondary
+
+                    </button>
+
+                </li>
+
+            </ul>
+
+            <!-- =============================================
+                 ACADEMIC LEVELS AND SUBJECTS
+            ============================================= -->
+
+            <div id="teaching-stage-content"
+                 role="tabpanel"
+                 aria-labelledby="primary-tab">
+
+                <div class="tutor-teaching-panel">
+
+                    <h3 class="tutor-panel-title">
+                        Academic Levels
+                    </h3>
+
+                    <!-- Generated by tutor-edit.js -->
+                    <div id="teaching-levels-container"
+                         class="row g-3">
+                    </div>
+
+                    <!-- Subject Checkboxes -->
+                    <div id="teaching-subjects-container"
+                         class="tutor-subjects-panel">
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =============================================
+                 SELECTED LEVELS SUMMARY
+            ============================================= -->
+
+            <div class="tutor-selection-panel">
+
+                <div class="tutor-selection-header">
+
+                    <h3 class="tutor-panel-title mb-0">
+
+                        <i class="bi bi-check2-square"
+                           aria-hidden="true"></i>
+
+                        Selected Teaching Levels
+
+                    </h3>
+
+                    <span id="teaching-level-count"
+                          class="tutor-level-count">
+                        0 levels
+                    </span>
+
+                </div>
+
+                <div id="teaching-selection-summary"
+                     class="d-flex flex-wrap gap-2">
+                </div>
+
+            </div>
+
+            <!-- =============================================
+                 HIDDEN INPUTS FOR ASP.NET MODEL BINDING
+            ============================================= -->
+
+            <div id="teaching-levels-hidden"></div>
+
+            <span asp-validation-for="TeachingLevels"
+                  id="teaching-levels-error"
+                  class="text-danger d-block mt-2"
+                  role="alert">
+            </span>
+
+            <!-- =============================================
+                 EXISTING TUTOR TEACHING SELECTIONS
+            ============================================= -->
+
+            <script id="initial-teaching-levels"
+                    type="application/json">
+                @Html.Raw(
+                    System.Text.Json.JsonSerializer.Serialize(
+                        Model.TeachingLevels,
+                        new System.Text.Json.JsonSerializerOptions
+                        {
+                                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Default
+                        }))
+            </script>
+
+        </section>
+
+        <div class="class-form-actions">
+            <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button">Cancel</a>
+            <button type="submit" id="saveTutorChanges" class="primary-button" disabled>
+                <i class="bi bi-check-lg" aria-hidden="true"></i> Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/tutor-edit.js" asp-append-version="true"></script>
+}

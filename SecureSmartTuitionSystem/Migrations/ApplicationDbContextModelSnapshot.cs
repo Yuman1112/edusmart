@@ -1315,6 +1315,10 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PendingTutorEmail")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("nvarchar(max)");
 
@@ -1323,6 +1327,19 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("TutorEmailChangeExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("TutorEmailChangeRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("TutorEmailChangeRequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TutorEmailChangeRequestedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
@@ -1577,6 +1594,33 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("SecurityEmailDeliveries");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorAvailabilitySlot", b =>
+                {
+                    b.Property<int>("TutorAvailabilitySlotId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TutorAvailabilitySlotId"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Day")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Slot")
+                        .HasColumnType("int");
+
+                    b.HasKey("TutorAvailabilitySlotId");
+
+                    b.HasIndex("ApplicationUserId", "Day", "Slot")
+                        .IsUnique();
+
+                    b.ToTable("TutorAvailabilitySlots");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorProfile", b =>
                 {
                     b.Property<int>("TutorProfileId")
@@ -1590,7 +1634,6 @@ namespace SecureSmartTuitionSystem.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("AreaOfExpertise")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
@@ -1623,6 +1666,40 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsUnique();
 
                     b.ToTable("TutorProfiles");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorTeachingSubject", b =>
+                {
+                    b.Property<int>("TutorTeachingSubjectId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TutorTeachingSubjectId"));
+
+                    b.Property<string>("AcademicLevel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("EducationStage")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("SubjectCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("TutorProfileId")
+                        .HasColumnType("int");
+
+                    b.HasKey("TutorTeachingSubjectId");
+
+                    b.HasIndex("TutorProfileId", "EducationStage", "AcademicLevel", "SubjectCode")
+                        .IsUnique();
+
+                    b.ToTable("TutorTeachingSubjects");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -2031,6 +2108,17 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorAvailabilitySlot", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "ApplicationUser")
+                        .WithMany()
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApplicationUser");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorProfile", b =>
                 {
                     b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "ApplicationUser")
@@ -2040,6 +2128,17 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsRequired();
 
                     b.Navigation("ApplicationUser");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorTeachingSubject", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.TutorProfile", "TutorProfile")
+                        .WithMany("TeachingSubjects")
+                        .HasForeignKey("TutorProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TutorProfile");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Billing.Bill", b =>
@@ -2088,6 +2187,11 @@ namespace SecureSmartTuitionSystem.Migrations
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.StudentProfile", b =>
                 {
                     b.Navigation("ParentStudents");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorProfile", b =>
+                {
+                    b.Navigation("TeachingSubjects");
                 });
 #pragma warning restore 612, 618
         }

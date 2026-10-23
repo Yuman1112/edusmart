@@ -1,0 +1,93 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.ChangeTutorStatusViewModel
+@{
+    bool activating = Model.Activate == true;
+    ViewData["Title"] = activating ? "Reactivate Tutor" : "Deactivate Tutor";
+    bool blocked = !activating && Model.BlockingAssignments.Count > 0;
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+}
+<div class="page-header">
+    <div>
+        <h1>@ViewData["Title"]</h1>
+        <p>Review the tutor account before changing its status.</p>
+    </div>
+    <a asp-controller="TutorManagement" asp-action="Details" asp-route-userId="@Model.UserId" class="outline-button">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
+    </a>
+</div>
+<div class="class-form-card tutor-create-card">
+    <section class="class-form-section">
+        <h2><i class="bi bi-person-vcard" aria-hidden="true"></i> Tutor Account</h2>
+        <dl class="row mb-4">
+            <dt class="col-sm-4">Tutor ID</dt>
+            <dd class="col-sm-8">@Model.TutorId</dd>
+            <dt class="col-sm-4">Full Name</dt>
+            <dd class="col-sm-8">@Model.FullName</dd>
+            <dt class="col-sm-4">Status After Confirmation</dt>
+            <dd class="col-sm-8">@(activating ? "Active" : "Inactive")</dd>
+        </dl>
+        @if (activating)
+        {
+            <div class="tutor-info-note mb-3">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                <span>This restores account access. The tutor will need to sign in again. Account setup requirements remain in place.</span>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning" role="status">
+                This prevents the tutor from signing in and revokes existing logins on their next request.
+                Any pending email change will be cancelled. Current email, profile, teaching availability and historical records are preserved.
+            </div>
+        }
+        @if (blocked)
+        {
+            <div class="alert alert-danger" role="alert">
+                This tutor still has scheduled lessons or outstanding replacements. Resolve these commitments before deactivating the account.
+            </div>
+            <ul>
+                @foreach (string assignment in Model.BlockingAssignments)
+                {
+                    <li>@assignment</li>
+                }
+            </ul>
+        }
+        @if (activating && Model.SetupPending)
+        {
+            <div class="alert alert-info" role="status">Account setup is incomplete. After reactivation, resend the setup email from the Tutor list.</div>
+        }
+    </section>
+    <form asp-controller="TutorManagement" asp-action="ChangeStatus" method="post">
+        @Html.AntiForgeryToken()
+        <input asp-for="UserId" type="hidden" />
+        <input asp-for="Activate" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+        @if (!blocked)
+        {
+            <section class="class-form-section">
+                <h2><i class="bi bi-chat-left-text" aria-hidden="true"></i> Reason</h2>
+                <label asp-for="Reason" class="form-label">@(activating ? "Reason for Reactivation" : "Reason for Deactivation")</label>
+                <textarea asp-for="Reason" class="form-control" rows="3" maxlength="500"
+                          aria-describedby="status-reason-help"></textarea>
+                <span asp-validation-for="Reason" class="text-danger"></span>
+                <p id="status-reason-help" class="form-text">Required. Maximum 500 characters. This reason is recorded in the admin status history.</p>
+            </section>
+        }
+        <div class="class-form-actions">
+            <a asp-controller="TutorManagement" asp-action="Details" asp-route-userId="@Model.UserId" class="outline-button">Cancel</a>
+            @if (!blocked)
+            {
+                <button type="submit" class="primary-button">
+                    <i class="bi @(activating ? "bi-person-check" : "bi-person-dash")" aria-hidden="true"></i>
+                    @(activating ? "Confirm Reactivation" : "Confirm Deactivation")
+                </button>
+            }
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

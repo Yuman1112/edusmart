@@ -1,3 +1,8 @@
+using System.Data;
+using Microsoft.AspNetCore.DataProtection;
+using SecureSmartTuitionSystem.Models;
+using SecureSmartTuitionSystem.Services;
+using SecureSmartTuitionSystem.Services.Authentication;
 using SecureSmartTuitionSystem.Services.Enrollment;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -21,11 +26,22 @@ namespace SecureSmartTuitionSystem.Controllers
 
         public TutorController(
             ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IDataProtectionProvider protectionProvider,
+            ILogger<TutorController> profileLogger,
+            TutorEmailChangeService profileEmailChanges)
         {
             _context = context;
             _userManager = userManager;
+            _emailWatchProtector = protectionProvider.CreateProtector(
+                "EduSmart.Tutor.EmailChangeWatch.v1");
+            _profileLogger = profileLogger;
+            _profileEmailChanges = profileEmailChanges;
         }
+
+        private readonly IDataProtector _emailWatchProtector;
+        private readonly ILogger<TutorController> _profileLogger;
+        private readonly TutorEmailChangeService _profileEmailChanges;
 
 
         /*
@@ -507,5 +523,616 @@ namespace SecureSmartTuitionSystem.Controllers
 
             return View(model);
         }
+
+        // ============================================
+        // TUTOR - MY PROFILE
+        // ============================================
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> MyProfile()
+        {
+            var profile = await GetOwnTutorProfileAsync();
+            if (profile == null) return NotFound();
+
+            var user = profile.ApplicationUser;
+            var model = new TutorDetailsViewModel
+            {
+                UserId = user.Id,
+                UserName = user.UserName ?? "",
+                FullName = profile.FullName,
+                Email = user.Email ?? "",
+                PhoneNumber = user.PhoneNumber ?? "",
+                Qualification = profile.Qualification,
+                AreaOfExpertise = profile.AreaOfExpertise ?? "",
+                TeachingExperience = profile.TeachingExperience,
+                IsActive = profile.IsActive && user.IsActive,
+                SetupPending = user.MustChangePassword,
+                PendingEmail = user.PendingTutorEmail,
+                PendingEmailRequestId = user.TutorEmailChangeRequestId,
+                PendingEmailExpiresAtUtc = user.TutorEmailChangeExpiresAtUtc,
+                CreatedAt = profile.CreatedAt,
+                UpdatedAt = profile.UpdatedAt,
+                TeachingLevels = profile.TeachingSubjects
+                    .GroupBy(x => new { x.EducationStage, x.AcademicLevel })
+                    .Select(group => new TutorTeachingLevelDetailsViewModel
+                    {
+                        EducationStage = group.Key.EducationStage,
+                        AcademicLevel = group.Key.AcademicLevel,
+                        SubjectNames = group
+                            .OrderBy(x => Array.IndexOf(
+                                TeachingSubjectCatalog.SubjectDisplayOrder,
+                                x.SubjectCode))
+                            .Select(x => TeachingSubjectCatalog
+                                .GetSubjectDisplayName(x.SubjectCode))
+                            .ToList()
+                    })
+                    .OrderBy(x => x.EducationStage == "Primary" ? 0 : 1)
+                    .ThenBy(x => int.TryParse(
+                        x.AcademicLevel.Split(' ').LastOrDefault(),
+                        out int number) ? number : 99)
+                    .ToList()
+            };
+
+            if (user.TutorEmailChangeRequestId.HasValue
+                && !string.IsNullOrWhiteSpace(user.PendingTutorEmail))
+            {
+                var watchData = new[]
+                {
+                    user.Id,
+                    user.TutorEmailChangeRequestId.Value.ToString("D"),
+                    _userManager.NormalizeEmail(
+                        user.PendingTutorEmail) ?? "",
+                    DateTime.UtcNow.AddHours(2).Ticks.ToString(
+                        System.Globalization.CultureInfo.InvariantCulture)
+                };
+
+                model.EmailChangeWatchToken =
+                    _emailWatchProtector.Protect(
+                        System.Text.Json.JsonSerializer.Serialize(
+                            watchData));
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> EditProfile()
+        {
+            var profile = await GetOwnTutorProfileAsync();
+            if (profile == null) return NotFound();
+
+            var model = new EditOwnTutorProfileViewModel
+            {
+                TutorId = profile.ApplicationUser.UserName ?? "",
+                Email = profile.ApplicationUser.Email ?? "",
+                FullName = profile.FullName,
+                PhoneNumber = profile.ApplicationUser.PhoneNumber ?? "",
+                Qualification = profile.Qualification,
+                AreaOfExpertise = profile.AreaOfExpertise,
+                TeachingExperience = profile.TeachingExperience,
+                TeachingLevels = profile.TeachingSubjects
+                    .GroupBy(x => new { x.EducationStage, x.AcademicLevel })
+                    .Select(group => new TutorTeachingLevelInput
+                    {
+                        EducationStage = group.Key.EducationStage,
+                        AcademicLevel = group.Key.AcademicLevel,
+                        SubjectCodes = group.Select(x => x.SubjectCode).ToList()
+                    })
+                    .ToList()
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> EditProfile(
+            EditOwnTutorProfileViewModel model)
+        {
+            bool emailChanged = false;
+            bool profileChanged = false;
+
+            try
+            {
+                await using var transaction =
+                    await _context.Database.BeginTransactionAsync(
+                        IsolationLevel.Serializable);
+
+                var profile = await GetOwnTutorProfileAsync(tracking: true);
+                if (profile == null) return NotFound();
+
+                var user = profile.ApplicationUser;
+
+                // Account ownership comes from the signed-in user.
+                model.TutorId = user.UserName ?? "";
+                ModelState.Remove(nameof(model.TutorId));
+                model.Email = (model.Email ?? "").Trim();
+
+                if (!IsValidOwnTutorEmail(model.Email))
+                {
+                    ModelState.AddModelError(nameof(model.Email),
+                        "Please enter a valid email address.");
+                }
+
+                var levels = model.TeachingLevels ?? new();
+                model.TeachingLevels = levels;
+                ValidateOwnTeachingLevels(levels);
+
+                if (!ModelState.IsValid) return View(model);
+
+                emailChanged = !string.Equals(
+                    _userManager.NormalizeEmail(user.Email?.Trim()),
+                    _userManager.NormalizeEmail(model.Email),
+                    StringComparison.Ordinal);
+
+                static string Clean(string? value) => (value ?? "").Trim();
+
+                var requested = levels.SelectMany(level =>
+                    level.SubjectCodes.Select(code => new
+                    {
+                        Stage = TeachingSubjectCatalog.GetStageForLevel(
+                            level.AcademicLevel)!,
+                        Level = level.AcademicLevel.Trim().ToUpperInvariant(),
+                        Code = code.Trim().ToUpperInvariant()
+                    })).ToList();
+
+                var oldSubjects = profile.TeachingSubjects
+                    .Select(x => OwnSubjectKey(
+                        x.EducationStage, x.AcademicLevel, x.SubjectCode))
+                    .ToHashSet(StringComparer.Ordinal);
+
+                var newSubjects = requested
+                    .Select(x => OwnSubjectKey(x.Stage, x.Level, x.Code))
+                    .ToHashSet(StringComparer.Ordinal);
+
+                bool subjectsChanged = !oldSubjects.SetEquals(newSubjects);
+                profileChanged = subjectsChanged
+                    || Clean(profile.FullName) != Clean(model.FullName)
+                    || Clean(user.FullName) != Clean(model.FullName)
+                    || Clean(user.PhoneNumber) != Clean(model.PhoneNumber)
+                    || Clean(profile.Qualification) != Clean(model.Qualification)
+                    || Clean(profile.AreaOfExpertise) != Clean(model.AreaOfExpertise)
+                    || Clean(profile.TeachingExperience) != Clean(model.TeachingExperience);
+
+                if (!profileChanged && !emailChanged)
+                {
+                    TempData["OwnProfileInfo"] = "No changes were made to your profile.";
+                    return RedirectToAction(nameof(MyProfile));
+                }
+
+                if (profileChanged)
+                {
+                    profile.FullName = model.FullName.Trim();
+                    profile.Qualification = model.Qualification.Trim();
+                    profile.AreaOfExpertise = model.AreaOfExpertise?.Trim();
+                    profile.TeachingExperience = model.TeachingExperience?.Trim();
+                    profile.UpdatedAt = DateTime.UtcNow;
+                    user.FullName = profile.FullName;
+
+                    string phone = model.PhoneNumber.Trim();
+                    if (!string.Equals(user.PhoneNumber, phone, StringComparison.Ordinal))
+                    {
+                        user.PhoneNumber = phone;
+                        user.PhoneNumberConfirmed = false;
+                    }
+                }
+
+                if (subjectsChanged)
+                {
+                    foreach (var existing in profile.TeachingSubjects.ToList())
+                    {
+                        if (!newSubjects.Contains(OwnSubjectKey(
+                            existing.EducationStage,
+                            existing.AcademicLevel,
+                            existing.SubjectCode)))
+                        {
+                            _context.TutorTeachingSubjects.Remove(existing);
+                        }
+                    }
+
+                    foreach (var item in requested)
+                    {
+                        if (!oldSubjects.Contains(OwnSubjectKey(
+                            item.Stage, item.Level, item.Code)))
+                        {
+                            _context.TutorTeachingSubjects.Add(new TutorTeachingSubject
+                            {
+                                TutorProfileId = profile.TutorProfileId,
+                                EducationStage = item.Stage,
+                                AcademicLevel = item.Level,
+                                SubjectCode = item.Code
+                            });
+                        }
+                    }
+                }
+
+                if (emailChanged)
+                {
+                    string? error = await _profileEmailChanges.PrepareAsync(
+                        user, model.Email, user.Id);
+
+                    if (error != null)
+                    {
+                        ModelState.AddModelError(nameof(model.Email), error);
+                        return View(model);
+                    }
+                }
+                else
+                {
+                    var result = await _userManager.UpdateAsync(user);
+                    if (!result.Succeeded)
+                    {
+                        ModelState.AddModelError("",
+                            "Unable to save your profile. Reload the page and try again.");
+                        return View(model);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex) when (
+                ex is DbUpdateException
+                || ex is System.Data.Common.DbException)
+            {
+                _profileLogger.LogWarning(
+                    "Tutor self-profile update failed for {UserId}. Error type: {ErrorType}.",
+                    _userManager.GetUserId(User), ex.GetType().Name);
+
+                ModelState.AddModelError("",
+                    "Unable to save your profile. Reload the page and try again.");
+                return View(model);
+            }
+
+            if (emailChanged)
+            {
+                string userId = _userManager.GetUserId(User)!;
+                bool sent = await _profileEmailChanges.SendPendingAsync(userId);
+                string prefix = profileChanged ? "Your profile was saved. " : "";
+
+                TempData[sent ? "OwnProfileSuccess" : "OwnProfileWarning"] = sent
+                    ? prefix + "A verification email was sent to the new address. "
+                        + "Your current email remains unchanged until confirmation."
+                    : prefix + "The email change request was saved, but the email "
+                        + "could not be sent. Use Resend Verification Email.";
+            }
+            else
+            {
+                TempData["OwnProfileSuccess"] = "Your profile was updated successfully.";
+            }
+
+            return RedirectToAction(nameof(MyProfile));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResendOwnEmailVerification(
+    Guid requestId)
+        {
+            try
+            {
+                await using var transaction =
+                    await _context.Database.BeginTransactionAsync(
+                        IsolationLevel.Serializable);
+
+                var profile =
+                    await GetOwnTutorProfileAsync(tracking: true);
+
+                if (profile == null)
+                    return NotFound();
+
+                var user = profile.ApplicationUser;
+
+                if (requestId == Guid.Empty
+                    || user.TutorEmailChangeRequestId != requestId
+                    || string.IsNullOrWhiteSpace(user.PendingTutorEmail))
+                {
+                    TempData["OwnProfileWarning"] =
+                        "The pending request has changed. "
+                        + "Please reload the page.";
+
+                    return RedirectToAction(nameof(MyProfile));
+                }
+
+                if (user.TutorEmailChangeRequestedAtUtc.HasValue
+                    && user.TutorEmailChangeRequestedAtUtc.Value
+                        > DateTime.UtcNow.AddMinutes(-1))
+                {
+                    TempData["OwnProfileInfo"] =
+                        "Please wait one minute before resending.";
+
+                    return RedirectToAction(nameof(MyProfile));
+                }
+
+                string? error =
+                    await _profileEmailChanges.PrepareAsync(
+                        user,
+                        user.PendingTutorEmail!,
+                        user.Id);
+
+                if (error != null)
+                {
+                    TempData["OwnProfileWarning"] = error;
+                    return RedirectToAction(nameof(MyProfile));
+                }
+
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex) when (
+                ex is DbUpdateException
+                || ex is System.Data.Common.DbException)
+            {
+                _profileLogger.LogWarning(
+                    "Tutor self email resend failed for {UserId}. "
+                    + "Error type: {ErrorType}.",
+                    _userManager.GetUserId(User),
+                    ex.GetType().Name);
+
+                TempData["OwnProfileWarning"] =
+                    "Unable to renew the request. Please try again.";
+
+                return RedirectToAction(nameof(MyProfile));
+            }
+
+            bool sent = await _profileEmailChanges.SendPendingAsync(
+                _userManager.GetUserId(User)!);
+
+            TempData[sent ? "OwnProfileSuccess" : "OwnProfileWarning"] =
+                sent
+                    ? "A new verification email was sent. "
+                        + "Previous request links are no longer valid."
+                    : "The request was renewed, but the email "
+                        + "could not be sent. Please try again later.";
+
+            return RedirectToAction(nameof(MyProfile));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelOwnEmailChange(
+            Guid requestId)
+        {
+            try
+            {
+                await using var transaction =
+                    await _context.Database.BeginTransactionAsync(
+                        IsolationLevel.Serializable);
+
+                var profile =
+                    await GetOwnTutorProfileAsync(tracking: true);
+
+                if (profile == null)
+                    return NotFound();
+
+                var user = profile.ApplicationUser;
+
+                if (requestId == Guid.Empty
+                    || user.TutorEmailChangeRequestId != requestId)
+                {
+                    TempData["OwnProfileWarning"] =
+                        "The pending request has changed. "
+                        + "Please reload the page.";
+
+                    return RedirectToAction(nameof(MyProfile));
+                }
+
+                user.PendingTutorEmail = null;
+                user.TutorEmailChangeRequestId = null;
+                user.TutorEmailChangeRequestedAtUtc = null;
+                user.TutorEmailChangeExpiresAtUtc = null;
+                user.TutorEmailChangeRequestedByUserId = null;
+
+                var result = await _userManager.UpdateAsync(user);
+
+                if (!result.Succeeded)
+                {
+                    TempData["OwnProfileWarning"] =
+                        "Unable to cancel the request. Please try again.";
+
+                    return RedirectToAction(nameof(MyProfile));
+                }
+
+                await transaction.CommitAsync();
+
+                TempData["OwnProfileSuccess"] =
+                    "The email change request was cancelled. "
+                    + "Your current email is unchanged.";
+            }
+            catch (Exception ex) when (
+                ex is DbUpdateException
+                || ex is System.Data.Common.DbException)
+            {
+                _profileLogger.LogWarning(
+                    "Tutor self email cancellation failed for {UserId}. "
+                    + "Error type: {ErrorType}.",
+                    _userManager.GetUserId(User),
+                    ex.GetType().Name);
+
+                TempData["OwnProfileWarning"] =
+                    "Unable to cancel the request. Please try again.";
+            }
+
+            return RedirectToAction(nameof(MyProfile));
+        }
+
+        private static bool IsValidOwnTutorEmail(string? email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            email = email.Trim();
+
+            return email.Length <= 254
+                && new System.ComponentModel.DataAnnotations
+                    .EmailAddressAttribute().IsValid(email)
+                && System.Text.RegularExpressions.Regex.IsMatch(
+                    email,
+                    @"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@"
+                    + @"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+"
+                    + @"[A-Za-z]{2,63}$",
+                    System.Text.RegularExpressions.RegexOptions
+                        .CultureInvariant);
+        }
+
+        // Read-only outcome for one protected email change request.
+        // This does not accept a caller-supplied user ID or return profile data.
+        [AllowAnonymous]
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("PublicFormPolicy")]
+        public async Task<IActionResult> EmailChangeOutcome(string? statusToken)
+        {
+            Response.Headers["Referrer-Policy"] = "no-referrer";
+
+            if (string.IsNullOrWhiteSpace(statusToken) || statusToken.Length > 8192)
+                return BadRequest();
+
+            string[]? watchData;
+            try
+            {
+                watchData = System.Text.Json.JsonSerializer.Deserialize<string[]>(
+                    _emailWatchProtector.Unprotect(statusToken));
+            }
+            catch (Exception ex) when (
+                ex is System.Security.Cryptography.CryptographicException
+                || ex is System.Text.Json.JsonException)
+            {
+                return BadRequest();
+            }
+
+            if (watchData == null || watchData.Length != 4
+                || string.IsNullOrWhiteSpace(watchData[0])
+                || watchData[0].Length > 450
+                || !Guid.TryParse(watchData[1], out var requestId)
+                || requestId == Guid.Empty
+                || string.IsNullOrWhiteSpace(watchData[2])
+                || watchData[2].Length > 256
+                || !long.TryParse(watchData[3],
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out long expiresAtTicks))
+            {
+                return BadRequest();
+            }
+
+            if (expiresAtTicks <= DateTime.UtcNow.Ticks
+                || expiresAtTicks > DateTime.MaxValue.Ticks)
+                return StatusCode(StatusCodes.Status410Gone);
+
+            string userId = watchData[0];
+            var account = await _context.TutorProfiles
+                .AsNoTracking()
+                .Where(profile => profile.ApplicationUserId == userId)
+                .Select(profile => new
+                {
+                    active = profile.IsActive && profile.ApplicationUser.IsActive,
+                    profile.ApplicationUser.Email,
+                    profile.ApplicationUser.EmailConfirmed,
+                    requestId = profile.ApplicationUser.TutorEmailChangeRequestId,
+                    expiresAt = profile.ApplicationUser.TutorEmailChangeExpiresAtUtc
+                })
+                .FirstOrDefaultAsync();
+
+            if (account == null || !account.active)
+                return Json(new { state = "unavailable" });
+
+            if (account.requestId == requestId)
+            {
+                bool expired = !account.expiresAt.HasValue
+                    || account.expiresAt.Value <= DateTime.UtcNow;
+                return Json(new { state = expired ? "expired" : "pending" });
+            }
+
+            if (account.EmailConfirmed && string.Equals(
+                _userManager.NormalizeEmail(account.Email),
+                watchData[2], StringComparison.Ordinal))
+            {
+                return Json(new { state = "confirmed" });
+            }
+
+            return Json(new
+            {
+                state = account.requestId.HasValue ? "replaced" : "cancelled"
+            });
+        }
+
+
+        private async Task<TutorProfile?> GetOwnTutorProfileAsync(bool tracking = false)
+        {
+            string? userId = _userManager.GetUserId(User);
+            if (string.IsNullOrWhiteSpace(userId)) return null;
+
+            IQueryable<TutorProfile> query = _context.TutorProfiles
+                .Include(x => x.ApplicationUser)
+                .Include(x => x.TeachingSubjects)
+                .Where(x => x.ApplicationUserId == userId
+                    && x.IsActive
+                    && x.ApplicationUser.IsActive
+                    && !x.ApplicationUser.MustChangePassword);
+
+            if (!tracking) query = query.AsNoTracking();
+            return await query.FirstOrDefaultAsync();
+        }
+
+
+        private static string OwnSubjectKey(string? stage, string? level, string? code)
+        {
+            return string.Join("|", (stage ?? "").Trim().ToUpperInvariant(),
+                (level ?? "").Trim().ToUpperInvariant(),
+                (code ?? "").Trim().ToUpperInvariant());
+        }
+
+        private void ValidateOwnTeachingLevels(List<TutorTeachingLevelInput> levels)
+        {
+            void Error(string message) => ModelState.AddModelError("TeachingLevels", message);
+
+            if (levels.Count == 0 || levels.Count > 11)
+            {
+                Error("Select between one and eleven academic levels.");
+                return;
+            }
+
+            var selectedLevels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var level in levels)
+            {
+                if (level == null)
+                {
+                    Error("Invalid teaching level information.");
+                    continue;
+                }
+
+                string academicLevel = (level.AcademicLevel ?? "").Trim().ToUpperInvariant();
+                if (!TeachingSubjectCatalog.IsValidStageAndLevel(
+                    level.EducationStage, academicLevel))
+                {
+                    Error("The academic level does not match the education stage.");
+                    continue;
+                }
+
+                if (!selectedLevels.Add(academicLevel))
+                    Error("Each academic level can only be selected once.");
+
+                var codes = level.SubjectCodes;
+                if (codes == null || codes.Count == 0 || codes.Count > 20)
+                {
+                    Error("Select at least one valid subject for each academic level.");
+                    continue;
+                }
+
+                var selectedCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string? code in codes)
+                {
+                    string normalizedCode = (code ?? "").Trim().ToUpperInvariant();
+                    if (!TeachingSubjectCatalog.IsValidSubject(academicLevel, normalizedCode))
+                        Error("A selected subject is not available for its academic level.");
+                    if (!selectedCodes.Add(normalizedCode))
+                        Error("A subject cannot be selected more than once for the same level.");
+                }
+            }
+        }
+
     }
 }

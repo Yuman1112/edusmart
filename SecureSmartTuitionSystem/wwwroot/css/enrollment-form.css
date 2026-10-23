@@ -185,3 +185,49 @@
         border-radius: 16px;
     }
 }
+
+
+/* =========================================================
+   5. ENROLLMENT FORM - VALIDATION ERROR STYLING
+========================================================= */
+
+/* Invalid input: red border and warning icon */
+.enrollment-card .form-control.input-validation-error,
+.enrollment-card .form-select.input-validation-error,
+.enrollment-card .form-control.is-invalid,
+.enrollment-card .form-select.is-invalid {
+    border-color: #dc3545 !important;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3e%3ccircle cx='12' cy='12' r='9' stroke='%23dc3545' stroke-width='2'/%3e%3cpath d='M12 7v6' stroke='%23dc3545' stroke-width='2' stroke-linecap='round'/%3e%3ccircle cx='12' cy='17' r='1' fill='%23dc3545'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem 1rem;
+}
+
+    /* Invalid input focus */
+    .enrollment-card .form-control.input-validation-error:focus,
+    .enrollment-card .form-select.input-validation-error:focus,
+    .enrollment-card .form-control.is-invalid:focus,
+    .enrollment-card .form-select.is-invalid:focus {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.15);
+    }
+
+/* Validation error text */
+.enrollment-card .field-validation-error {
+    display: block;
+    margin-top: 4px;
+    color: #dc3545;
+    font-size: 0.875rem;
+}
+
+/* Do not display empty validation messages */
+.enrollment-card .field-validation-valid {
+    display: none;
+}
+
+/* Disabled fields should not show invalid styling */
+.enrollment-card .form-control:disabled,
+.enrollment-card .form-select:disabled {
+    background-image: none;
+}

@@ -10,6 +10,7 @@ using SecureSmartTuitionSystem.Models.Billing;
 using SecureSmartTuitionSystem.Models.Communication;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Models.Identity;
+using SecureSmartTuitionSystem.Models.Tutor;
 
 namespace SecureSmartTuitionSystem.Data
 {
@@ -102,6 +103,12 @@ namespace SecureSmartTuitionSystem.Data
 
         public DbSet<TutorProfile> TutorProfiles =>
             Set<TutorProfile>();
+
+        public DbSet<TutorAvailabilitySlot> TutorAvailabilitySlots =>
+            Set<TutorAvailabilitySlot>();
+
+        public DbSet<TutorTeachingSubject> TutorTeachingSubjects =>
+            Set<TutorTeachingSubject>();
 
         public DbSet<ParentProfile> ParentProfiles =>
             Set<ParentProfile>();
@@ -403,6 +410,34 @@ namespace SecureSmartTuitionSystem.Data
                         tutor =>
                             tutor.ApplicationUserId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+
+            /*
+             * Tutor Teaching Subjects & Levels
+             */
+            builder.Entity<TutorTeachingSubject>(entity =>
+            {
+                entity.HasKey(teachingSubject =>
+                    teachingSubject.TutorTeachingSubjectId);
+
+                // One Tutor can teach multiple subjects and levels.
+                entity.HasOne(teachingSubject =>
+                        teachingSubject.TutorProfile)
+                    .WithMany(tutor =>
+                        tutor.TeachingSubjects)
+                    .HasForeignKey(teachingSubject =>
+                        teachingSubject.TutorProfileId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Prevent duplicate subjects for the same tutor and level.
+                entity.HasIndex(teachingSubject => new
+                {
+                    teachingSubject.TutorProfileId,
+                    teachingSubject.EducationStage,
+                    teachingSubject.AcademicLevel,
+                    teachingSubject.SubjectCode
+                }).IsUnique();
             });
 
             /*

@@ -32,7 +32,23 @@
         ViewContext.RouteData.Values["action"]?
             .ToString() ?? "";
 
-    bool classModuleActive = currentController == "ClassSessions" || currentController == "AdminEnrollments" || currentController == "ClassSchedules" || currentController == "EnrollmentExits" || (isTutor && currentController == "Tutor" && currentAction != "Index");
+    bool tutorProfileActive =
+    currentController == "Tutor"
+    && (currentAction == "MyProfile"
+        || currentAction == "EditProfile");
+
+    bool tutorClassesActive =
+        currentController == "Tutor"
+        && (currentAction == "MyClasses"
+            || currentAction == "ClassDetails");
+
+    bool classModuleActive =
+        currentController == "ClassSessions"
+        || currentController == "AdminEnrollments"
+        || currentController == "ClassSchedules"
+        || currentController == "EnrollmentExits"
+        || (isTutor && tutorClassesActive);
+
     bool communicationActive = currentController == "Announcements" || currentController == "Messages" || (!isAdmin && currentController == "NotificationCenter");
     bool pendingActive = currentController == "ClassSchedules" && (currentAction == "Pending" || currentAction == "Replacement" || currentAction == "Unschedule");
     bool calendarActive = currentController == "ClassSchedules" && !pendingActive;
@@ -130,30 +146,306 @@
                     </a>
                 </div>
 
-
                 <nav class="sidebar-navigation" aria-label="Staff navigation">
-<a class="sidebar-link @(currentController == dashboardController && currentAction == "Index" ? "active" : "")" asp-controller="@dashboardController" asp-action="Index" aria-current="@(currentController == dashboardController && currentAction == "Index" ? "page" : null)"><i class="bi bi-house-door-fill" aria-hidden="true"></i><span>Dashboard</span></a>
-@if (isAdmin) {
-<div class="sidebar-module">
-<button type="button" class="sidebar-link sidebar-module-button @(classModuleActive ? "module-current" : "")" data-bs-toggle="collapse" data-bs-target="#classEnrollmentMenu" aria-expanded="@(classModuleActive ? "true" : "false")" aria-controls="classEnrollmentMenu"><span class="sidebar-link-content"><i class="bi bi-people-fill" aria-hidden="true"></i><span>Class &amp; Enrollment</span></span><i class="bi bi-chevron-down sidebar-module-arrow" aria-hidden="true"></i></button>
-<div id="classEnrollmentMenu" class="collapse sidebar-submenu @(classModuleActive ? "show" : "")"><a class="sidebar-submenu-link @(currentController == "ClassSessions" ? "active" : "")" asp-controller="ClassSessions" asp-action="Index" aria-current="@(currentController == "ClassSessions" ? "page" : null)"><i class="bi bi-calendar3" aria-hidden="true"></i><span>Class Sessions</span></a><a class="sidebar-submenu-link @(calendarActive ? "active" : "")" asp-controller="ClassSchedules" asp-action="Index" aria-current="@(calendarActive ? "page" : null)"><i class="bi bi-calendar-week" aria-hidden="true"></i><span>Class Calendar</span></a><a class="sidebar-submenu-link @(pendingActive ? "active" : "")" asp-controller="ClassSchedules" asp-action="Pending" aria-current="@(pendingActive ? "page" : null)"><i class="bi bi-clock-history" aria-hidden="true"></i><span>Pending Replacements</span></a><a class="sidebar-submenu-link @(currentController == "AdminEnrollments" ? "active" : "")" asp-controller="AdminEnrollments" asp-action="Index" aria-current="@(currentController == "AdminEnrollments" ? "page" : null)"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Enrollment Requests</span></a><a class="sidebar-submenu-link @(currentController == "EnrollmentExits" ? "active" : "")" asp-controller="EnrollmentExits" asp-action="Index" aria-current="@(currentController == "EnrollmentExits" ? "page" : null)"><i class="bi bi-person-dash" aria-hidden="true"></i><span>Withdrawal History</span></a></div>
-</div><a class="sidebar-link @(currentController == "Billing" ? "active" : "")" asp-controller="Billing" asp-action="Index" aria-current="@(currentController == "Billing" ? "page" : null)"><i class="bi bi-credit-card" aria-hidden="true"></i><span>Payment &amp; Billing</span></a>
-} else {
-<div class="sidebar-module">
-<button type="button" class="sidebar-link sidebar-module-button @(classModuleActive ? "module-current" : "")" data-bs-toggle="collapse" data-bs-target="#tutorClassesMenu" aria-expanded="@(classModuleActive ? "true" : "false")" aria-controls="tutorClassesMenu"><span class="sidebar-link-content"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><span>Classes</span></span><i class="bi bi-chevron-down sidebar-module-arrow" aria-hidden="true"></i></button>
-<div id="tutorClassesMenu" class="collapse sidebar-submenu @(classModuleActive ? "show" : "")"><a class="sidebar-submenu-link @(currentController == "Tutor" && currentAction != "Index" ? "active" : "")" asp-controller="Tutor" asp-action="MyClasses" aria-current="@(currentController == "Tutor" && currentAction != "Index" ? "page" : null)"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><span>My Classes</span></a><a class="sidebar-submenu-link @(calendarActive ? "active" : "")" asp-controller="ClassSchedules" asp-action="Index" aria-current="@(calendarActive ? "page" : null)"><i class="bi bi-calendar-week" aria-hidden="true"></i><span>Class Calendar</span></a><a class="sidebar-submenu-link @(pendingActive ? "active" : "")" asp-controller="ClassSchedules" asp-action="Pending" aria-current="@(pendingActive ? "page" : null)"><i class="bi bi-clock-history" aria-hidden="true"></i><span>Pending Replacements</span></a></div>
-</div><span class="sidebar-link disabled-link" aria-disabled="true" title="This module will be developed later"><i class="bi bi-people" aria-hidden="true"></i><span>Students</span></span><span class="sidebar-link disabled-link" aria-disabled="true" title="This module will be developed later"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>Assignments</span></span>
-}
-<div class="sidebar-module">
-<button type="button" class="sidebar-link sidebar-module-button @(communicationActive ? "module-current" : "")" data-bs-toggle="collapse" data-bs-target="#communicationMenu" aria-expanded="@(communicationActive ? "true" : "false")" aria-controls="communicationMenu"><span class="sidebar-link-content"><i class="bi bi-chat-dots" aria-hidden="true"></i><span>Communication</span></span><i class="bi bi-chevron-down sidebar-module-arrow" aria-hidden="true"></i></button>
-<div id="communicationMenu" class="collapse sidebar-submenu @(communicationActive ? "show" : "")"><a class="sidebar-submenu-link @(currentController == "Announcements" ? "active" : "")" asp-controller="Announcements" asp-action="Index" aria-current="@(currentController == "Announcements" ? "page" : null)"><i class="bi bi-megaphone" aria-hidden="true"></i><span>Announcements</span>@await Component.InvokeAsync("AnnouncementUnread")</a><a class="sidebar-submenu-link @(currentController == "Messages" ? "active" : "")" asp-controller="Messages" asp-action="Index" aria-current="@(currentController == "Messages" ? "page" : null)"><i class="bi bi-chat-square-text" aria-hidden="true"></i><span>Messages</span>@await Component.InvokeAsync("MessageUnread")</a>@if (!isAdmin) { <a class="sidebar-submenu-link @(currentController == "NotificationCenter" ? "active" : "")" asp-controller="NotificationCenter" asp-action="Index" aria-current="@(currentController == "NotificationCenter" ? "page" : null)"><i class="bi bi-bell" aria-hidden="true"></i><span>Notifications</span>@await Component.InvokeAsync("NotificationUnread")</a> }</div>
-</div>
-@if (isAdmin) {
-<span class="sidebar-link disabled-link" aria-disabled="true" title="This module will be developed later"><i class="bi bi-bar-chart" aria-hidden="true"></i><span>Reports &amp; Analytics</span></span><a class="sidebar-link @(currentController == "Security" ? "active" : "")" asp-controller="Security" asp-action="Index" aria-current="@(currentController == "Security" ? "page" : null)"><i class="bi bi-shield-check" aria-hidden="true"></i><span>System &amp; Security</span></a>
-} else {
-<span class="sidebar-link disabled-link" aria-disabled="true" title="This module will be developed later"><i class="bi bi-bar-chart" aria-hidden="true"></i><span>Reports</span></span>
-}
-</nav>
+
+                    <!-- Shared: Dashboard -->
+                    <a class="sidebar-link @(currentController == dashboardController && currentAction == "Index" ? "active" : "")"
+                       asp-controller="@dashboardController"
+                       asp-action="Index"
+                       aria-current="@(currentController == dashboardController && currentAction == "Index" ? "page" : null)">
+                        <i class="bi bi-house-door-fill" aria-hidden="true"></i>
+                        <span>Dashboard</span>
+                    </a>
+
+                    @if (isAdmin)
+                    {
+                        <!-- Admin: Tutor Management -->
+                        <a class="sidebar-link @((currentController == "TutorManagement" || currentController == "AdminTutorAvailability" || currentController == "TutorWorkload") ? "active" : "")"
+                           asp-controller="TutorManagement"
+                           asp-action="Index"
+                           aria-current="@((currentController == "TutorManagement" || currentController == "AdminTutorAvailability" || currentController == "TutorWorkload") ? "page" : null)">
+                            <i class="bi bi-person-badge" aria-hidden="true"></i>
+                            <span>Tutor Management</span>
+                        </a>
+
+                        <!-- Admin: Class & Enrollment -->
+                        <div class="sidebar-module">
+                            <button type="button"
+                                    class="sidebar-link sidebar-module-button @(classModuleActive ? "module-current" : "")"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#classEnrollmentMenu"
+                                    aria-expanded="@(classModuleActive ? "true" : "false")"
+                                    aria-controls="classEnrollmentMenu">
+                                <span class="sidebar-link-content">
+                                    <i class="bi bi-people-fill" aria-hidden="true"></i>
+                                    <span>Class &amp; Enrollment</span>
+                                </span>
+                                <i class="bi bi-chevron-down sidebar-module-arrow"
+                                   aria-hidden="true"></i>
+                            </button>
+
+                            <div id="classEnrollmentMenu"
+                                 class="collapse sidebar-submenu @(classModuleActive ? "show" : "")">
+
+                                <a class="sidebar-submenu-link @(currentController == "ClassSessions" ? "active" : "")"
+                                   asp-controller="ClassSessions"
+                                   asp-action="Index"
+                                   aria-current="@(currentController == "ClassSessions" ? "page" : null)">
+                                    <i class="bi bi-calendar3" aria-hidden="true"></i>
+                                    <span>Class Sessions</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(calendarActive ? "active" : "")"
+                                   asp-controller="ClassSchedules"
+                                   asp-action="Index"
+                                   aria-current="@(calendarActive ? "page" : null)">
+                                    <i class="bi bi-calendar-week" aria-hidden="true"></i>
+                                    <span>Class Calendar</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(pendingActive ? "active" : "")"
+                                   asp-controller="ClassSchedules"
+                                   asp-action="Pending"
+                                   aria-current="@(pendingActive ? "page" : null)">
+                                    <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                    <span>Pending Replacements</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(currentController == "AdminEnrollments" ? "active" : "")"
+                                   asp-controller="AdminEnrollments"
+                                   asp-action="Index"
+                                   aria-current="@(currentController == "AdminEnrollments" ? "page" : null)">
+                                    <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+                                    <span>Enrollment Requests</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(currentController == "EnrollmentExits" ? "active" : "")"
+                                   asp-controller="EnrollmentExits"
+                                   asp-action="Index"
+                                   aria-current="@(currentController == "EnrollmentExits" ? "page" : null)">
+                                    <i class="bi bi-person-dash" aria-hidden="true"></i>
+                                    <span>Withdrawal History</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Admin: Payment & Billing -->
+                        <a class="sidebar-link @(currentController == "Billing" ? "active" : "")"
+                           asp-controller="Billing"
+                           asp-action="Index"
+                           aria-current="@(currentController == "Billing" ? "page" : null)">
+                            <i class="bi bi-credit-card" aria-hidden="true"></i>
+                            <span>Payment &amp; Billing</span>
+                        </a>
+
+                        <!-- Admin: Planned Modules -->
+                        <span class="sidebar-link disabled-link"
+                              aria-disabled="true"
+                              title="This module will be developed later">
+                            <i class="bi bi-journal-bookmark" aria-hidden="true"></i>
+                            <span>Learning &amp; Assessment</span>
+                        </span>
+
+                        <span class="sidebar-link disabled-link"
+                              aria-disabled="true"
+                              title="This module will be developed later">
+                            <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                            <span>Attendance Management</span>
+                        </span>
+
+                        <span class="sidebar-link disabled-link"
+                              aria-disabled="true"
+                              title="This module will be developed later">
+                            <i class="bi bi-play-circle" aria-hidden="true"></i>
+                            <span>Video Playback Vault</span>
+                        </span>
+                    }
+                    else
+                    {
+                        <!-- Tutor: My Profile -->
+                        <a class="sidebar-link @(tutorProfileActive ? "active" : "")"
+                           asp-controller="Tutor"
+                           asp-action="MyProfile"
+                           aria-current="@(tutorProfileActive ? "page" : null)">
+
+                            <i class="bi bi-person-vcard"
+                               aria-hidden="true"></i>
+
+                            <span>My Profile</span>
+                        </a>
+
+                        <!-- Tutor: My Availability -->
+                        <a class="sidebar-link @(currentController == "TutorAvailability" ? "active" : "")"
+                           asp-controller="TutorAvailability"
+                           asp-action="Index"
+                           aria-current="@(currentController == "TutorAvailability" ? "page" : null)">
+
+                            <i class="bi bi-calendar-week"
+                               aria-hidden="true"></i>
+
+                            <span>My Availability</span>
+                        </a>
+
+                        <!-- Tutor: Classes -->
+                        <div class="sidebar-module">
+                            <button type="button"
+                                    class="sidebar-link sidebar-module-button @(classModuleActive ? "module-current" : "")"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#tutorClassesMenu"
+                                    aria-expanded="@(classModuleActive ? "true" : "false")"
+                                    aria-controls="tutorClassesMenu">
+
+                                <span class="sidebar-link-content">
+                                    <i class="bi bi-journal-bookmark"
+                                       aria-hidden="true"></i>
+                                    <span>Classes</span>
+                                </span>
+
+                                <i class="bi bi-chevron-down sidebar-module-arrow"
+                                   aria-hidden="true"></i>
+                            </button>
+
+                            <div id="tutorClassesMenu"
+                                 class="collapse sidebar-submenu @(classModuleActive ? "show" : "")">
+
+                                <a class="sidebar-submenu-link @(tutorClassesActive ? "active" : "")"
+                                   asp-controller="Tutor"
+                                   asp-action="MyClasses"
+                                   aria-current="@(tutorClassesActive ? "page" : null)">
+
+                                    <i class="bi bi-journal-bookmark"
+                                       aria-hidden="true"></i>
+
+                                    <span>My Classes</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(calendarActive ? "active" : "")"
+                                   asp-controller="ClassSchedules"
+                                   asp-action="Index"
+                                   aria-current="@(calendarActive ? "page" : null)">
+
+                                    <i class="bi bi-calendar-week"
+                                       aria-hidden="true"></i>
+
+                                    <span>Class Calendar</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(pendingActive ? "active" : "")"
+                                   asp-controller="ClassSchedules"
+                                   asp-action="Pending"
+                                   aria-current="@(pendingActive ? "page" : null)">
+
+                                    <i class="bi bi-clock-history"
+                                       aria-hidden="true"></i>
+
+                                    <span>Pending Replacements</span>
+                                </a>
+
+                            </div>
+                        </div>
+
+                        <span class="sidebar-link disabled-link"
+                              aria-disabled="true"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-people"
+                               aria-hidden="true"></i>
+
+                            <span>Students</span>
+                        </span>
+
+                        <span class="sidebar-link disabled-link"
+                              aria-disabled="true"
+                              title="This module will be developed later">
+
+                            <i class="bi bi-file-earmark-text"
+                               aria-hidden="true"></i>
+
+                            <span>Assignments</span>
+                        </span>
+                    }
+
+                    <!-- Shared: Communication -->
+                    <div class="sidebar-module">
+                        <button type="button"
+                                class="sidebar-link sidebar-module-button @(communicationActive ? "module-current" : "")"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#communicationMenu"
+                                aria-expanded="@(communicationActive ? "true" : "false")"
+                                aria-controls="communicationMenu">
+                            <span class="sidebar-link-content">
+                                <i class="bi bi-chat-dots" aria-hidden="true"></i>
+                                <span>Communication</span>
+                            </span>
+                            <i class="bi bi-chevron-down sidebar-module-arrow"
+                               aria-hidden="true"></i>
+                        </button>
+
+                        <div id="communicationMenu"
+                             class="collapse sidebar-submenu @(communicationActive ? "show" : "")">
+
+                            <a class="sidebar-submenu-link @(currentController == "Announcements" ? "active" : "")"
+                               asp-controller="Announcements"
+                               asp-action="Index"
+                               aria-current="@(currentController == "Announcements" ? "page" : null)">
+                                <i class="bi bi-megaphone" aria-hidden="true"></i>
+                                <span>Announcements</span>
+                                @await Component.InvokeAsync("AnnouncementUnread")
+                            </a>
+
+                            <a class="sidebar-submenu-link @(currentController == "Messages" ? "active" : "")"
+                               asp-controller="Messages"
+                               asp-action="Index"
+                               aria-current="@(currentController == "Messages" ? "page" : null)">
+                                <i class="bi bi-chat-square-text" aria-hidden="true"></i>
+                                <span>Messages</span>
+                                @await Component.InvokeAsync("MessageUnread")
+                            </a>
+
+                            @if (!isAdmin)
+                            {
+                                <a class="sidebar-submenu-link @(currentController == "NotificationCenter" ? "active" : "")"
+                                   asp-controller="NotificationCenter"
+                                   asp-action="Index"
+                                   aria-current="@(currentController == "NotificationCenter" ? "page" : null)">
+                                    <i class="bi bi-bell" aria-hidden="true"></i>
+                                    <span>Notifications</span>
+                                    @await Component.InvokeAsync("NotificationUnread")
+                                </a>
+                            }
+                        </div>
+                    </div>
+
+                    @if (isAdmin)
+                    {
+                        <!-- Admin: Reports & Security -->
+                        <span class="sidebar-link disabled-link"
+                              aria-disabled="true"
+                              title="This module will be developed later">
+                            <i class="bi bi-bar-chart" aria-hidden="true"></i>
+                            <span>Reports &amp; Analytics</span>
+                        </span>
+
+                        <a class="sidebar-link @(currentController == "Security" ? "active" : "")"
+                           asp-controller="Security"
+                           asp-action="Index"
+                           aria-current="@(currentController == "Security" ? "page" : null)">
+                            <i class="bi bi-shield-check" aria-hidden="true"></i>
+                            <span>System &amp; Security</span>
+                        </a>
+                    }
+                    else
+                    {
+                        <!-- Tutor: Reports -->
+                        <span class="sidebar-link disabled-link"
+                              aria-disabled="true"
+                              title="This module will be developed later">
+                            <i class="bi bi-bar-chart" aria-hidden="true"></i>
+                            <span>Reports</span>
+                        </span>
+                    }
+
+                </nav>
 
                 <!-- Logout -->
                 <div class="sidebar-bottom">

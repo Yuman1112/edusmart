@@ -1,0 +1,843 @@
+﻿
+/* =========================================================
+   EDUSMART - ADD TUTOR CREATE PAGE
+========================================================= */
+
+
+/* =========================================================
+   1. MAIN FORM
+========================================================= */
+
+.tutor-create-card {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+
+/* Keep section icons consistent with Class Sessions */
+
+.tutor-create-card .class-form-section > h2 > i {
+    color: var(--teal);
+}
+
+/* Prevent the required asterisk from becoming a block */
+
+.tutor-create-card .tutor-teaching-heading > .text-danger {
+    display: inline;
+    margin: 0;
+    font-size: inherit;
+}
+
+
+/* =========================================================
+   2. TUTOR ACCOUNT INFORMATION NOTE
+========================================================= */
+
+.tutor-info-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+    border: 1px solid #bce8ed;
+    border-radius: 9px;
+    background-color: #edfbfc;
+    color: var(--navy);
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+
+.tutor-info-note > i {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--teal);
+    font-size: 1rem;
+}
+
+.tutor-info-note > span {
+    flex: 1;
+}
+
+
+/* =========================================================
+   3. TEACHING SUBJECTS & LEVELS HEADING
+========================================================= */
+
+.tutor-create-card .tutor-teaching-heading {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 12px;
+    color: var(--navy);
+    font-size: 1.2rem;
+    font-weight: 750;
+}
+
+.tutor-create-card .tutor-teaching-heading > i {
+    color: var(--teal);
+}
+
+.tutor-section-description {
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   4. PRIMARY / SECONDARY TABS
+========================================================= */
+
+.tutor-stage-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.tutor-stage-tabs .nav-item {
+    margin-bottom: -1px;
+}
+
+.tutor-stage-tabs .nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 44px;
+    padding: 11px 24px;
+    border: 1px solid transparent;
+    border-radius: 9px 9px 0 0;
+    background: transparent;
+    color: var(--teal-dark);
+    font-size: 0.93rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.tutor-stage-tabs .nav-link > i {
+    color: var(--teal);
+    font-size: 1rem;
+}
+
+.tutor-stage-tabs .nav-link:hover {
+    border-color: var(--border);
+    background-color: #f3fbfc;
+    color: var(--navy);
+}
+
+.tutor-stage-tabs .nav-link.active {
+    border-color: var(--border);
+    border-bottom-color: #ffffff;
+    background-color: #ffffff;
+    color: var(--navy);
+    font-weight: 700;
+}
+
+.tutor-stage-tabs .nav-link.active > i {
+    color: var(--teal);
+}
+
+.tutor-stage-tabs .nav-link:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+}
+
+
+/* =========================================================
+   5. ACADEMIC LEVELS MAIN PANEL
+========================================================= */
+
+.tutor-create-card .tutor-teaching-panel {
+    width: 100%;
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-sizing: border-box;
+}
+
+/* Academic Levels / Selected Teaching Levels headings */
+
+.tutor-create-card .tutor-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 18px;
+    color: var(--navy);
+    font-size: 1rem;
+    font-weight: 750;
+    line-height: 1.4;
+}
+
+.tutor-create-card .tutor-panel-title > i {
+    color: var(--teal);
+    font-size: 1rem;
+}
+
+
+/* =========================================================
+   6. ACADEMIC LEVEL CHECKBOX CARDS
+========================================================= */
+
+#teaching-levels-container {
+    margin-bottom: 0;
+}
+
+#teaching-levels-container > div {
+    display: flex;
+}
+
+.tutor-create-card .tutor-level-card {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 60px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background-color: #ffffff;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Hover */
+
+.tutor-create-card .tutor-level-card:hover {
+    border-color: var(--teal);
+    background-color: #f8fdfd;
+}
+
+/* Selected Academic Level */
+
+.tutor-create-card .tutor-level-card.selected {
+    border-color: var(--teal);
+    background-color: #edfbfc;
+}
+
+/* Currently Viewing Subjects */
+
+.tutor-create-card .tutor-level-card.viewing {
+    box-shadow: inset 0 0 0 1px var(--teal);
+}
+
+/* Checkbox Wrapper */
+
+.tutor-create-card .tutor-level-card .form-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+/* Checkbox */
+
+.tutor-create-card .tutor-level-card .form-check-input {
+    flex-shrink: 0;
+    float: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* Academic Level Text */
+
+.tutor-create-card .tutor-level-card .form-check-label {
+    flex: 1;
+    margin: 0;
+    color: var(--navy);
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   7. CHECKBOX THEME
+========================================================= */
+
+.tutor-create-card .form-check-input {
+    border-color: #c8dfe5;
+    cursor: pointer;
+}
+
+.tutor-create-card .form-check-input:checked {
+    background-color: var(--teal);
+    border-color: var(--teal);
+}
+
+.tutor-create-card .form-check-input:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.12);
+}
+
+.tutor-create-card .form-check-label {
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   8. TEACHING SUBJECTS PANEL
+========================================================= */
+
+.tutor-create-card .tutor-subjects-panel {
+    width: 100%;
+    margin-top: 24px;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background-color: #f7fafb;
+    box-sizing: border-box;
+}
+
+/* Example: FORM 2 — Subjects */
+
+.tutor-create-card .tutor-subjects-panel h3 {
+    margin: 0 0 18px;
+    color: var(--navy);
+    font-size: 0.98rem;
+    font-weight: 750;
+    line-height: 1.4;
+}
+
+/* Subjects Grid */
+
+.tutor-create-card .tutor-subjects-panel .row {
+    row-gap: 14px;
+}
+
+/* Each Subject Checkbox */
+
+.tutor-create-card .tutor-subjects-panel .form-check {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 24px;
+    margin: 0;
+    padding: 0;
+}
+
+.tutor-create-card .tutor-subjects-panel .form-check-input {
+    flex-shrink: 0;
+    float: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
+.tutor-create-card .tutor-subjects-panel .form-check-label {
+    margin: 0;
+    color: var(--navy);
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* Empty Subjects Message */
+
+.tutor-create-card .tutor-subjects-panel .text-muted {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   9. SELECTED TEACHING LEVELS SUMMARY
+========================================================= */
+
+.tutor-create-card .tutor-selection-panel {
+    width: 100%;
+    margin-top: 24px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-sizing: border-box;
+}
+
+/* Heading + Count */
+
+.tutor-create-card .tutor-selection-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.tutor-create-card .tutor-selection-header .tutor-panel-title {
+    margin: 0;
+}
+
+/* 0 levels / 1 level / 2 levels */
+
+.tutor-create-card .tutor-level-count {
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Summary Badges */
+
+.tutor-create-card .tutor-selection-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 35px;
+    padding: 8px 14px;
+    border: 1px solid #bce8ed;
+    border-radius: 999px;
+    background-color: #edfbfc;
+    color: var(--navy);
+    font-size: 0.83rem;
+    font-weight: 650;
+    line-height: 1.3;
+}
+
+/* No academic levels selected */
+
+.tutor-create-card #teaching-selection-summary .text-muted {
+    color: var(--muted);
+    font-size: 0.88rem;
+}
+
+
+/* =========================================================
+   10. FORM VALIDATION
+========================================================= */
+
+.tutor-create-card .form-control.is-invalid {
+    border-color: #dc3545;
+}
+
+.tutor-create-card .form-control.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.12);
+}
+
+/* Teaching Levels Error */
+
+.tutor-create-card #teaching-levels-error {
+    display: block;
+    color: #dc3545;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.tutor-create-card #teaching-levels-error:empty {
+    display: none !important;
+}
+
+.tutor-create-card #teaching-levels-error:not(:empty) {
+    margin-top: 12px;
+}
+
+/* Hide the container when validation is valid */
+
+.tutor-create-card .validation-summary-valid {
+    display: none;
+}
+
+
+/* =========================================================
+   11. RESPONSIVE - TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .tutor-create-card .tutor-teaching-panel {
+        padding: 20px;
+    }
+
+    .tutor-create-card .tutor-selection-panel {
+        padding: 20px;
+    }
+
+    .tutor-create-card .tutor-subjects-panel {
+        padding: 18px;
+    }
+
+    .tutor-stage-tabs .nav-link {
+        padding: 11px 18px;
+    }
+}
+
+
+/* =========================================================
+   12. RESPONSIVE - MOBILE
+========================================================= */
+
+@media (max-width: 575.98px) {
+
+    .tutor-create-card .tutor-teaching-panel {
+        padding: 16px;
+    }
+
+    .tutor-create-card .tutor-selection-panel {
+        padding: 16px;
+    }
+
+    .tutor-create-card .tutor-subjects-panel {
+        margin-top: 18px;
+        padding: 16px;
+    }
+
+    .tutor-create-card .tutor-panel-title {
+        font-size: 0.95rem;
+    }
+
+    .tutor-stage-tabs {
+        margin-bottom: 18px;
+    }
+
+    .tutor-stage-tabs .nav-link {
+        min-height: 42px;
+        padding: 10px 14px;
+        font-size: 0.88rem;
+    }
+
+    .tutor-create-card .tutor-level-card {
+        min-height: 54px;
+        padding: 12px;
+    }
+
+    .tutor-create-card .tutor-level-card .form-check-label {
+        font-size: 0.84rem;
+    }
+
+    .tutor-create-card .tutor-selection-header {
+        align-items: flex-start;
+    }
+
+    .tutor-create-card .tutor-selection-badge {
+        padding: 7px 11px;
+        font-size: 0.78rem;
+    }
+
+    .tutor-info-note {
+        padding: 12px;
+        font-size: 0.84rem;
+    }
+}
+
+
+/* =========================================================
+   SUBJECT FULL NAME + CODE DISPLAY
+========================================================= */
+
+/* Desktop: 3 columns */
+.tutor-create-card .tutor-subjects-panel .row > div {
+    flex: 0 0 auto;
+    width: 33.333333%;
+}
+
+/* Align checkbox with subject name */
+.tutor-create-card .tutor-subjects-panel .form-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 48px;
+}
+
+/* Checkbox */
+.tutor-create-card .tutor-subjects-panel .form-check-input {
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+/* Subject name + code */
+.tutor-create-card .tutor-subjects-panel .form-check-label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+    line-height: 1.4;
+}
+
+/* Full Subject Name */
+.tutor-create-card .tutor-subject-name {
+    color: var(--navy);
+    font-size: 0.88rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+/* Subject Code */
+.tutor-create-card .tutor-subject-code {
+    color: var(--muted);
+    font-size: 0.77rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+/* Tablet: 2 columns */
+@media (max-width: 991.98px) {
+    .tutor-create-card .tutor-subjects-panel .row > div {
+        width: 50%;
+    }
+}
+
+/* Mobile: 1 column */
+@media (max-width: 575.98px) {
+    .tutor-create-card .tutor-subjects-panel .row > div {
+        width: 100%;
+    }
+}
+
+
+/* =========================================================
+   13. SHARED CREATE / EDIT - ACADEMIC LEVEL CARDS
+========================================================= */
+
+/* Three responsive cards per row; same layout on Create and Edit. */
+.tutor-create-card #teaching-levels-container > div {
+    display: flex;
+    min-width: 0;
+}
+
+.tutor-create-card .tutor-level-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    min-height: 78px;
+    padding: 13px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+.tutor-create-card .tutor-level-card:hover {
+    border-color: var(--teal);
+    background: #f8fdfd;
+}
+
+.tutor-create-card .tutor-level-card.selected {
+    border-color: #90d8de;
+    background: #f1fbfc;
+}
+
+.tutor-create-card .tutor-level-card.viewing {
+    border-color: var(--teal);
+    background: #e9f8fa;
+    box-shadow: inset 0 0 0 1px var(--teal);
+}
+
+.tutor-create-card .tutor-level-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.tutor-create-card .tutor-level-main .form-check-input {
+    float: none;
+    flex-shrink: 0;
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.tutor-create-card .tutor-level-name {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    color: var(--navy);
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tutor-create-card .tutor-level-subcount {
+    padding-left: 27px;
+    color: var(--muted);
+    font-size: .76rem;
+    line-height: 1.4;
+}
+
+.tutor-create-card .tutor-level-card.selected .tutor-level-subcount {
+    color: var(--teal-dark);
+}
+
+.tutor-create-card .tutor-level-card:focus-within {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+}
+
+@media (max-width: 575.98px) {
+    .tutor-create-card .tutor-level-card {
+        min-height: 72px;
+        padding: 12px;
+    }
+
+    .tutor-create-card .tutor-level-name {
+        font-size: .84rem;
+    }
+
+    .tutor-create-card .tutor-level-subcount {
+        font-size: .72rem;
+    }
+}
+
+
+/* =========================================================
+   EDIT TUTOR - READ-ONLY FIELDS
+========================================================= */
+
+/* Read-only Label */
+#edit-tutor-form .tutor-readonly-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 8px;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+/* Input Wrapper */
+#edit-tutor-form .tutor-readonly-wrapper {
+    position: relative;
+}
+
+/* Read-only Input */
+#edit-tutor-form .tutor-readonly-field {
+    background-color: #f3f6f8;
+    border: 1px solid #d8e1e7;
+    color: #526477;
+    cursor: text;
+    box-shadow: none;
+}
+
+/* No Hover Effect */
+#edit-tutor-form .tutor-readonly-field:hover,
+#edit-tutor-form .tutor-readonly-field:focus {
+    background-color: #f3f6f8;
+    border-color: #d8e1e7;
+    box-shadow: none;
+    outline: none;
+}
+
+/* Lock Icon */
+#edit-tutor-form .tutor-readonly-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+/* Helper Text */
+#edit-tutor-form .tutor-field-hint {
+    display: block;
+    margin-top: 7px;
+    color: #64748b;
+    font-size: 0.78rem;
+}
+
+
+/* =========================================================
+   EDIT TUTOR - SAVE BUTTON STATES
+========================================================= */
+
+/* Enabled */
+#edit-tutor-form button.primary-button#saveTutorChanges:not(:disabled) {
+    background: var(--teal);
+    border: 1px solid var(--teal);
+    color: #ffffff;
+    opacity: 1;
+    cursor: pointer;
+}
+
+/* Disabled */
+#edit-tutor-form button.primary-button#saveTutorChanges:disabled {
+    background: #e9eff3;
+    border: 1px solid #d3dee5;
+    color: #64748b;
+    opacity: 1;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Disabled Hover */
+#edit-tutor-form button.primary-button#saveTutorChanges:disabled:hover {
+    background: #e9eff3;
+    border-color: #d3dee5;
+    color: #64748b;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ==========================================
+   EMAIL CHANGE CONFIRMATION
+   ========================================== */
+
+.tutor-email-page {
+    width: 100%;
+    max-width: 920px;
+    margin: 36px auto;
+    padding: 0 12px;
+}
+
+.tutor-email-page .page-header {
+    margin-bottom: 26px;
+}
+
+.tutor-email-page .page-header h1 {
+    margin-bottom: 8px;
+    color: var(--navy, #06356b);
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.tutor-email-page .page-header p {
+    margin-bottom: 0;
+    color: var(--muted, #60758f);
+    line-height: 1.7;
+}
+
+.tutor-email-details {
+    margin-bottom: 0;
+}
+
+.tutor-email-value {
+    min-height: 52px;
+    margin: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--border, #cde5e8);
+    border-radius: 12px;
+    background: #f5fbfc;
+    color: var(--navy, #06356b);
+    overflow-wrap: anywhere;
+}
+
+.tutor-email-page .class-form-actions {
+    margin-bottom: 0;
+}
+
+@media (max-width: 575.98px) {
+    .tutor-email-page {
+        margin: 24px auto;
+        padding: 0;
+    }
+}

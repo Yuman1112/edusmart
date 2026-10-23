@@ -1,0 +1,673 @@
+﻿
+/* =========================================================
+   EDUSMART - ADMIN TUTOR MANAGEMENT
+========================================================= */
+
+
+/* =========================================================
+   1. PAGE HEADER
+========================================================= */
+
+.tutor-management-page {
+    color: var(--navy);
+}
+
+.tutor-management-title {
+    margin: 0 0 5px;
+    color: var(--navy);
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.tutor-management-subtitle {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.tutor-add-button {
+    display: inline-flex;
+    min-height: 42px;
+    padding: 9px 17px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 9px;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   2. FILTER CARD
+========================================================= */
+
+.tutor-management-filter-card {
+    width: 100%;
+    margin-bottom: 22px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: var(--shadow);
+}
+
+.tutor-management-filter-heading {
+    margin-bottom: 18px;
+}
+
+.tutor-management-filter-heading h2 {
+    display: flex;
+    margin: 0 0 4px;
+    align-items: center;
+    gap: 8px;
+    color: var(--navy);
+    font-size: 1.08rem;
+    font-weight: 750;
+}
+
+.tutor-management-filter-heading h2 i {
+    color: var(--teal);
+}
+
+.tutor-management-filter-heading p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.88rem;
+}
+
+.tutor-management-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.tutor-management-filter-grid .form-label {
+    margin-bottom: 6px;
+    color: var(--navy);
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.tutor-management-filter-grid .form-control,
+.tutor-management-filter-grid .form-select {
+    min-height: 42px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--navy);
+    background-color: #ffffff;
+}
+
+.tutor-management-filter-grid .form-control:focus,
+.tutor-management-filter-grid .form-select:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.12);
+}
+
+
+/* =========================================================
+   3. ALL TUTORS CARD
+========================================================= */
+
+.tutor-management-list-card {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: var(--shadow);
+}
+
+.tutor-management-list-header {
+    display: flex;
+    padding: 20px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.tutor-management-list-header h2 {
+    display: flex;
+    margin: 0;
+    align-items: center;
+    gap: 10px;
+    color: var(--navy);
+    font-size: 1.15rem;
+    font-weight: 750;
+}
+
+.tutor-management-list-header h2 i {
+    color: var(--navy);
+}
+
+#tutorTotalCount {
+    color: var(--muted);
+    font-size: 0.86rem;
+}
+
+
+/* =========================================================
+   4. TUTOR TABLE
+========================================================= */
+
+.tutor-management-table {
+    width: 100%;
+    min-width: 1050px;
+    margin: 0;
+}
+
+.tutor-management-table th {
+    padding: 13px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border);
+    color: var(--navy-soft);
+    background: #f4fafb;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.tutor-management-table td {
+    padding: 15px 14px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border);
+    color: var(--navy);
+    font-size: 0.88rem;
+}
+
+.tutor-management-table tbody tr:hover {
+    background: #f8fdfd;
+}
+
+.tutor-management-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Email and Expertise can wrap */
+
+.tutor-management-table td:nth-child(2),
+.tutor-management-table td:nth-child(3) {
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   5. TUTOR NAME + USER ID
+========================================================= */
+
+.tutor-list-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+}
+
+/* Tutor Name */
+
+.tutor-management-table .tutor-list-identity .tutor-name {
+    display: block;
+    color: var(--navy);
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+/* Tutor ID */
+
+.tutor-management-table .tutor-list-identity .tutor-user-id {
+    display: block;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+}
+
+
+/* =========================================================
+   6. STATUS BADGES
+========================================================= */
+
+.tutor-management-badge {
+    display: inline-flex;
+    padding: 5px 11px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+/* Active / Completed */
+
+.tutor-badge-success {
+    color: #047857;
+    background: #d1fae5;
+}
+
+/* Pending */
+
+.tutor-badge-pending {
+    color: #a65c00;
+    background: #fff0cf;
+}
+
+/* Inactive */
+
+.tutor-badge-inactive {
+    color: #64748b;
+    background: #f1f5f9;
+}
+
+
+/* =========================================================
+   7. ACTION BUTTONS
+========================================================= */
+
+/* Keep Details and More Actions side by side */
+
+.tutor-management-table td:last-child {
+    white-space: nowrap;
+}
+
+/* Details Button */
+
+.tutor-management-table td:last-child > div > a.btn {
+    display: inline-flex;
+    min-height: 34px;
+    padding: 6px 11px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-radius: 7px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Dropdown Container */
+
+.tutor-management-table .dropdown {
+    display: inline-block;
+}
+
+/* Three-Dot Button */
+
+.tutor-management-table .dropdown > button {
+    display: inline-flex;
+    width: 34px;
+    min-height: 34px;
+    padding: 5px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    font-size: 0.9rem;
+}
+
+.tutor-management-table .dropdown > button::after {
+    display: none;
+}
+
+/* Grey Three-Dot Button */
+
+.tutor-management-table .dropdown > .btn-secondary {
+    border-color: #6c757d;
+    background-color: #6c757d;
+    color: #ffffff;
+}
+
+.tutor-management-table .dropdown > .btn-secondary:hover,
+.tutor-management-table .dropdown > .btn-secondary:focus {
+    border-color: #5c636a;
+    background-color: #5c636a;
+    color: #ffffff;
+}
+
+
+/* =========================================================
+   8. ACTION DROPDOWN MENU
+========================================================= */
+
+.tutor-management-table .dropdown-menu {
+    min-width: 215px;
+    padding: 7px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background-color: #ffffff;
+    box-shadow: 0 10px 28px rgba(6, 47, 95, 0.16);
+}
+
+.tutor-management-table .dropdown-item {
+    display: flex;
+    min-height: 38px;
+    padding: 9px 11px;
+    align-items: center;
+    gap: 8px;
+    border-radius: 7px;
+    color: var(--navy);
+    font-size: 0.86rem;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.tutor-management-table .dropdown-item:hover,
+.tutor-management-table .dropdown-item:focus {
+    color: var(--navy);
+    background-color: #edfafa;
+}
+
+.tutor-management-table .dropdown-item i {
+    color: var(--teal);
+    font-size: 0.95rem;
+}
+
+.tutor-management-table .dropdown-divider {
+    margin: 7px 0;
+    border-color: var(--border);
+}
+
+/* Resend Setup Form */
+
+.tutor-management-table .dropdown-menu form {
+    margin: 0;
+}
+
+.tutor-management-table .dropdown-menu form button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+}
+
+.tutor-management-table .dropdown-menu form button:hover,
+.tutor-management-table .dropdown-menu form button:focus {
+    background-color: #edfafa;
+}
+
+
+/* =========================================================
+   9. RESPONSIVE - TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .tutor-management-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tutor-management-table {
+        min-width: 950px;
+    }
+}
+
+
+/* =========================================================
+   10. RESPONSIVE - MOBILE
+========================================================= */
+
+@media (max-width: 575.98px) {
+
+    .tutor-management-filter-card {
+        padding: 18px 14px;
+    }
+
+    .tutor-management-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tutor-management-list-header {
+        padding: 18px 14px;
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .tutor-management-table {
+        min-width: 850px;
+    }
+
+    .tutor-management-table th,
+    .tutor-management-table td {
+        padding: 12px 10px;
+    }
+
+    .tutor-management-pagination {
+        padding: 14px;
+    }
+
+    .tutor-page-buttons {
+        flex-wrap: wrap;
+    }
+}
+
+
+/* =========================================================
+   11. TUTOR DETAILS - TEACHING SUBJECTS ACCORDION
+========================================================= */
+
+.tutor-teaching-stage {
+    margin-bottom: 18px;
+    border: 1px solid #dce6e8;
+    border-radius: 12px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.tutor-teaching-stage:last-child {
+    margin-bottom: 0;
+}
+
+/* Primary / Secondary Header */
+
+.tutor-teaching-stage-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px 20px;
+    background: #f3f9fa;
+    border-bottom: 1px solid #dce6e8;
+}
+
+.tutor-teaching-stage-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #14374a;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.tutor-teaching-stage-title i {
+    color: #1e7f8c;
+}
+
+/* Accordion */
+
+.tutor-teaching-accordion .accordion-item {
+    border: 0;
+    border-bottom: 1px solid #e6edef;
+    border-radius: 0;
+}
+
+.tutor-teaching-accordion .accordion-item:last-child {
+    border-bottom: 0;
+}
+
+.tutor-teaching-accordion .accordion-button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 20px;
+    background: #ffffff;
+    color: #14374a;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.tutor-teaching-accordion .accordion-button:not(.collapsed) {
+    background: #f4fbfb;
+    color: #14374a;
+    box-shadow: none;
+}
+
+.tutor-teaching-accordion .accordion-button:focus-visible {
+    outline: 2px solid #1e7f8c;
+    outline-offset: -2px;
+    box-shadow: none;
+}
+
+.tutor-teaching-accordion .accordion-button::after {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.tutor-accordion-level {
+    font-weight: 700;
+}
+
+.tutor-accordion-count {
+    color: #60747d;
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+/* Expanded Subject List */
+
+.tutor-teaching-accordion .accordion-body {
+    padding: 4px 20px 18px;
+    background: #ffffff;
+}
+
+.tutor-teaching-subjects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tutor-teaching-subject-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 12px;
+    border: 1px solid #bde7e9;
+    border-radius: 999px;
+    background: #e8f8f9;
+    color: #087f89;
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   12. TUTOR DETAILS - ACCOUNT STATUS BADGES
+========================================================= */
+
+/* Prevent badges from stretching inside detail cards */
+
+.class-detail-item .tutor-management-badge {
+    display: inline-flex;
+    width: fit-content;
+    margin-bottom: 0;
+}
+
+
+/* =========================================================
+   13. TUTOR DETAILS - MOBILE
+========================================================= */
+
+@media (max-width: 575.98px) {
+
+    .tutor-teaching-stage-header {
+        padding: 14px 15px;
+    }
+
+    .tutor-teaching-accordion .accordion-button {
+        padding: 14px 15px;
+    }
+
+    .tutor-teaching-accordion .accordion-body {
+        padding: 4px 15px 15px;
+    }
+}
+
+
+/* =========================================================
+   14. SORTABLE TABLE HEADERS
+========================================================= */
+
+.tutor-sort-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--navy-soft);
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.tutor-sort-header i {
+    color: #8aa3b2;
+    font-size: 0.78rem;
+}
+
+.tutor-sort-header:hover,
+.tutor-sort-header:hover i,
+.tutor-sort-header.active,
+.tutor-sort-header.active i {
+    color: var(--teal);
+}
+
+.tutor-sort-header:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 4px;
+    border-radius: 2px;
+}
+
+
+/* =========================================================
+   15. THREE-DOT ACTION BUTTON
+========================================================= */
+
+.tutor-management-table .dropdown > .tutor-more-button {
+    display: inline-flex;
+    width: 34px;
+    min-height: 34px;
+    padding: 5px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #6c757d;
+    border-radius: 7px;
+    background-color: #ffffff;
+    color: #6c757d;
+    box-shadow: none;
+}
+
+.tutor-management-table .dropdown > .tutor-more-button:hover {
+    border-color: #6c757d;
+    background-color: #6c757d;
+    color: #ffffff;
+}
+
+.tutor-management-table .dropdown > .tutor-more-button:focus,
+.tutor-management-table .dropdown > .tutor-more-button.show {
+    border-color: #6c757d;
+    background-color: #ffffff;
+    color: #6c757d;
+    box-shadow: none;
+}
+
+.tutor-management-table .dropdown > .tutor-more-button::after {
+    display: none;
+}

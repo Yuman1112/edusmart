@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
+using SecureSmartTuitionSystem.Services.Tutor;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.ViewModels.Enrollment;
@@ -543,6 +544,8 @@ namespace SecureSmartTuitionSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Activate(int id)
         {
+            await using var availabilityTransaction = await _context.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable);
             var session =
                 await _context.ClassSessions
                     .FirstOrDefaultAsync(item =>
@@ -586,9 +589,42 @@ namespace SecureSmartTuitionSystem.Controllers
                 TempData["ErrorMessage"] = "Extend the class end date before reactivating an ended term.";
                 return RedirectToAction(nameof(Index));
             }
+            // Activation must also respect dated replacement lessons.
+            var startsOn = ClassScheduleService.FirstDate(session) > ClassScheduleService.Today
+                ? ClassScheduleService.FirstDate(session) : ClassScheduleService.Today;
+            var replacementLessons = await _context.ClassLessonChanges.AsNoTracking()
+                .Where(c => c.ClassSession.TutorUserId == session.TutorUserId
+                    && c.ReplacementDate >= startsOn
+                    && c.ReplacementDate <= AcademicYearPolicy.ClassEnd(session)
+                    && c.ReplacementStartTime < session.EndTime
+                    && c.ReplacementEndTime > session.StartTime)
+                .Select(c => c.ReplacementDate).ToListAsync();
+            if (replacementLessons.Any(date => date.HasValue && date.Value.DayOfWeek == session.DayOfWeek))
+            {
+                TempData["ErrorMessage"] = "This class conflicts with an existing replacement lesson.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            string? teachingError = await new TutorTeachingEligibilityService(_context)
+                .ValidateSubjectAsync(session.TutorUserId, session.SubjectId);
+
+            if (teachingError != null)
+            {
+                TempData["ErrorMessage"] = teachingError;
+                return RedirectToAction(nameof(Index));
+            }
+
+            string? availabilityError = await new TutorAvailabilityService(_context).ValidateAsync(
+                session.TutorUserId, session.DayOfWeek, session.StartTime, session.EndTime);
+            if (availabilityError != null)
+            {
+                TempData["ErrorMessage"] = availabilityError;
+                return RedirectToAction(nameof(Index));
+            }
             session.Status = ClassSessionStatus.Active;
 
             await _context.SaveChangesAsync();
+            await availabilityTransaction.CommitAsync();
 
             TempData["SuccessMessage"] =
                 $"Class {session.ClassName} was activated.";
@@ -757,6 +793,55 @@ namespace SecureSmartTuitionSystem.Controllers
             ValidateSubject(model);
             ValidateTime(model);
             ValidateGoogleMeetLink(model);
+
+            // Preserve existing assignments when only unrelated details change.
+            bool checkAvailability = !existingClassSessionId.HasValue;
+            bool checkTeachingEligibility = !existingClassSessionId.HasValue;
+
+            if (existingClassSessionId.HasValue)
+            {
+                var saved = await _context.ClassSessions.AsNoTracking()
+                    .Include(c => c.Subject)
+                    .FirstOrDefaultAsync(c => c.ClassSessionId == existingClassSessionId.Value);
+
+                checkAvailability = saved == null
+                    || saved.TutorUserId != model.TutorUserId
+                    || saved.DayOfWeek != model.DayOfWeek
+                    || saved.StartTime != model.StartTime
+                    || saved.EndTime != model.EndTime
+                    || ClassScheduleService.FirstDate(saved) != model.StartDate?.Date
+                    || (model.EndDate.HasValue && model.EndDate.Value.Date > AcademicYearPolicy.ClassEnd(saved));
+
+                checkTeachingEligibility = checkAvailability
+                    || saved == null
+                    || saved.Subject.EducationStage != model.EducationStage
+                    || saved.Subject.AcademicLevel != model.AcademicLevel
+                    || saved.Subject.SubjectName != model.SubjectName;
+            }
+
+            if (checkTeachingEligibility
+                && !string.IsNullOrWhiteSpace(model.TutorUserId)
+                && model.EducationStage.HasValue
+                && !string.IsNullOrWhiteSpace(model.AcademicLevel)
+                && !string.IsNullOrWhiteSpace(model.SubjectName))
+            {
+                string? teachingError = await new TutorTeachingEligibilityService(_context)
+                    .ValidateAsync(model.TutorUserId, model.EducationStage.Value,
+                        model.AcademicLevel, model.SubjectName);
+
+                if (teachingError != null)
+                    ModelState.AddModelError(nameof(model.TutorUserId), teachingError);
+            }
+
+            if (checkAvailability && !string.IsNullOrWhiteSpace(model.TutorUserId)
+                && model.DayOfWeek.HasValue && model.StartTime.HasValue && model.EndTime.HasValue
+                && model.StartTime.Value < model.EndTime.Value)
+            {
+                string? availabilityError = await new TutorAvailabilityService(_context).ValidateAsync(
+                    model.TutorUserId, model.DayOfWeek.Value, model.StartTime.Value, model.EndTime.Value);
+                if (availabilityError != null)
+                    ModelState.AddModelError(nameof(model.TutorUserId), availabilityError);
+            }
 
             if (!string.IsNullOrWhiteSpace(
                     model.TutorUserId))

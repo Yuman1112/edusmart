@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
@@ -257,6 +258,17 @@ builder.Services.AddScoped<
     StudentAccountSetupEmailService>();
 
 builder.Services.AddScoped<
+    ITutorAccountSetupEmailService,
+    TutorAccountSetupEmailService>();
+
+builder.Services.AddScoped<
+    ITutorEmailChangeEmailService,
+    TutorEmailChangeEmailService>();
+
+builder.Services.AddScoped<
+    TutorEmailChangeService>();
+
+builder.Services.AddScoped<
     IMessageProtectionService,
     MessageProtectionService>();
 
@@ -312,10 +324,103 @@ var app = builder.Build();
  * =====================================================
  */
 
-await DbInitializer.SeedRolesAsync(
-    app.Services,
-    seedBasicAccounts:
-        app.Environment.IsDevelopment());
+// Retry startup initialization only when Azure SQL is temporarily unavailable.
+// Each DbInitializer call creates and disposes its own service scope.
+
+const int maxInitializationAttempts = 3;
+
+var initializationTimer = System.Diagnostics.Stopwatch.StartNew();
+
+for (int attempt = 1; attempt <= maxInitializationAttempts; attempt++)
+{
+    try
+    {
+        var roleTimer = System.Diagnostics.Stopwatch.StartNew();
+
+        await DbInitializer.SeedRolesAsync(
+            app.Services,
+            seedBasicAccounts: app.Environment.IsDevelopment());
+
+        roleTimer.Stop();
+
+        app.Logger.LogWarning(
+            "PERFORMANCE: SeedRolesAsync took {ElapsedMs} ms.",
+            roleTimer.ElapsedMilliseconds);
+
+        var tutorTimer = System.Diagnostics.Stopwatch.StartNew();
+
+        await DbInitializer.SeedEnrollmentTestTutorAsync(
+            app.Services,
+            app.Configuration);
+
+        tutorTimer.Stop();
+
+        app.Logger.LogWarning(
+            "PERFORMANCE: SeedEnrollmentTestTutorAsync took {ElapsedMs} ms.",
+            tutorTimer.ElapsedMilliseconds);
+
+        initializationTimer.Stop();
+
+        app.Logger.LogWarning(
+            "PERFORMANCE: Total database initialization took {ElapsedMs} ms on attempt {Attempt}.",
+            initializationTimer.ElapsedMilliseconds,
+            attempt);
+
+        app.Logger.LogInformation(
+            "Database initialization completed on attempt {Attempt}.",
+            attempt);
+
+        break;
+    }
+    catch (Exception exception) when (
+        attempt < maxInitializationAttempts &&
+        IsDatabaseTemporarilyUnavailable(exception))
+    {
+        int delaySeconds = attempt * 5;
+
+        app.Logger.LogWarning(
+            "Azure SQL is temporarily unavailable during startup. " +
+            "Attempt {Attempt}/{MaxAttempts}. Retrying in {DelaySeconds} seconds.",
+            attempt,
+            maxInitializationAttempts,
+            delaySeconds);
+
+        await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+    }
+    catch (Exception exception)
+    {
+        app.Logger.LogCritical(
+            exception,
+            "Database initialization failed. " +
+            "Check database availability and application configuration.");
+
+        throw;
+    }
+}
+
+static bool IsDatabaseTemporarilyUnavailable(Exception exception)
+{
+    // EF Core can wrap the original SqlException.
+    for (Exception? current = exception;
+         current != null;
+         current = current.InnerException)
+    {
+        if (current is not SqlException sqlException)
+        {
+            continue;
+        }
+
+        foreach (SqlError error in sqlException.Errors)
+        {
+            if (error.Number == 40613)
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 
 /*
  * =====================================================

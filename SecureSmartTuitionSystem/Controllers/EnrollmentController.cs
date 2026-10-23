@@ -394,7 +394,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     "We couldn't find an active parent / " +
                     "guardian account matching those " +
                     "details. Please check the email and " +
-                    "identification number.");
+                    "IC number.");
 
                 return View(
                     "GuardianDetails",
@@ -739,7 +739,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 ModelState.AddModelError(
                     nameof(model.GuardianName),
                     "Please enter the parent or " +
-                    "guardian's name.");
+                    "guardian's full name.");
             }
 
             if (string.IsNullOrWhiteSpace(
@@ -747,24 +747,24 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 ModelState.AddModelError(
                     nameof(model.GuardianEmail),
-                    "Please enter an email address.");
+                    "Please enter the parent or " +
+                    "guardian's email address.");
             }
 
             if (string.IsNullOrWhiteSpace(
                 model.GuardianPhoneNumber))
             {
                 ModelState.AddModelError(
-                    nameof(
-                        model.GuardianPhoneNumber),
-                    "Please enter a phone number.");
+                    nameof(model.GuardianPhoneNumber),
+                    "Please enter the parent or " +
+                    "guardian's phone number.");
             }
 
             if (string.IsNullOrWhiteSpace(
                 model.GuardianIdentificationNumber))
             {
                 ModelState.AddModelError(
-                    nameof(
-                        model.GuardianIdentificationNumber),
+                    nameof(model.GuardianIdentificationNumber),
                     "Please enter the parent or guardian's " +
                     "identification number.");
             }

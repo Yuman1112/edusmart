@@ -26,7 +26,6 @@
     <Folder Include="Models\Security\" />
     <Folder Include="Models\Reporting\" />
     <Folder Include="Services\Communication\" />
-    <Folder Include="Services\Enrollment\" />
     <Folder Include="Services\Reporting\" />
     <Folder Include="Services\Security\" />
     <Folder Include="wwwroot\images\" />

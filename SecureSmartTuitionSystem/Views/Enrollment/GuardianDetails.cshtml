@@ -238,7 +238,7 @@
                                type="tel"
                                id="guardianPhone"
                                inputmode="numeric"
-                               maxlength="12"
+                               maxlength="13"
                                autocomplete="tel"
                                placeholder="012-3456789" />
 
@@ -266,14 +266,7 @@
                         <span asp-validation-for="GuardianIdentificationNumber"
                               class="text-danger"
                               id="guardianIcValidation">
-
                         </span>
-
-                        <div class="form-text">
-                            Enter the parent or guardian's IC number
-                            in the format 000000-00-0000.
-                        </div>
-
                     </div>
 
                 </fieldset>
@@ -470,9 +463,16 @@
                 let digits =
                     value.replace(/\D/g, "");
 
-                digits =
-                    digits.substring(0, 11);
+                // Convert Malaysian international format
+                // +60123456789 -> 0123456789
+                if (digits.startsWith("60")) {
+                    digits = "0" + digits.substring(2);
+                }
 
+                // Maximum 11 digits for local mobile number
+                digits = digits.substring(0, 11);
+
+                // Add hyphen after the first 3 digits
                 if (digits.length > 3) {
                     return (
                         digits.substring(0, 3) +
@@ -510,23 +510,27 @@
             }
 
             if (guardianForm) {
+                guardianForm.addEventListener("submit", function (event) {
 
-                guardianForm.addEventListener(
-                    "submit",
-                    function (event) {
+                    // Skip validation for Back button.
+                    if (event.submitter?.hasAttribute("formnovalidate")) {
+                        return;
+                    }
 
-                        if (checkbox.checked) {
-                            return;
-                        }
+                    // Existing Parent does not require New Guardian IC.
+                    if (checkbox.checked) {
+                        return;
+                    }
 
-                        const validIc =
-                            validateGuardianIc(
-                                guardianIc?.value ?? "");
+                    const validIc = validateGuardianIc(
+                        guardianIc?.value ?? ""
+                    );
 
-                        if (!validIc) {
-                            event.preventDefault();
-                        }
-                    });
+                    if (!validIc) {
+                        event.preventDefault();
+                        guardianIc?.focus();
+                    }
+                });
             }
 
             checkbox.addEventListener(

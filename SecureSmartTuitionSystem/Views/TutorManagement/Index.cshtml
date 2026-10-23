@@ -1,0 +1,991 @@
+﻿@model IReadOnlyList<SecureSmartTuitionSystem.ViewModels.Tutor.TutorListItem>
+
+@{
+    ViewData["Title"] = "Tutor Management";
+}
+
+<link rel="stylesheet"
+      href="~/css/tutor-management.css"
+      asp-append-version="true" />
+
+<div class="container-fluid py-4 tutor-management-page">
+
+    <!-- ==========================================
+         1. PAGE HEADER
+    ========================================== -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+
+        <div>
+            <h1 class="tutor-management-title">
+                Tutor Management
+            </h1>
+
+            <p class="tutor-management-subtitle">
+                Manage tutor accounts and account setup invitations.
+            </p>
+        </div>
+
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <button id="exportTutorRecords" type="button"
+                    class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-3 py-2"
+                    data-export-url="@Url.Action("Export", "TutorManagement")"
+                    disabled="@(Model.Count == 0)">
+                <i class="bi bi-download" aria-hidden="true"></i>
+                Export Tutor Records
+            </button>
+
+            <a asp-controller="TutorWorkload"
+               asp-action="Index"
+               class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-3 py-2">
+                <i class="bi bi-bar-chart" aria-hidden="true"></i>
+                Tutor Workload
+            </a>
+
+            <a asp-controller="TutorManagement"
+               asp-action="Create"
+               class="btn btn-primary tutor-add-button">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                Add Tutor
+            </a>
+        </div>
+
+    </div>
+
+    <!-- ==========================================
+         2. SUCCESS / WARNING MESSAGES
+    ========================================== -->
+    @if (TempData["TutorSuccess"] is string success)
+    {
+        <div class="alert alert-success" role="status">
+            @success
+        </div>
+    }
+
+    @if (TempData["TutorWarning"] is string warning)
+    {
+        <div class="alert alert-warning" role="alert">
+            @warning
+        </div>
+    }
+
+    <!-- ==========================================
+         3. FILTER TUTORS
+    ========================================== -->
+    <section class="tutor-management-filter-card"
+             aria-labelledby="filterTutorsHeading">
+
+        <div class="tutor-management-filter-heading">
+
+            <h2 id="filterTutorsHeading">
+                <i class="bi bi-funnel" aria-hidden="true"></i>
+                Filter Tutors
+            </h2>
+
+            <p>
+                The tutor list updates automatically.
+            </p>
+
+        </div>
+
+        <div class="tutor-management-filter-grid">
+
+            <!-- Search Tutor -->
+            <div>
+                <label for="tutorSearch" class="form-label">
+                    Search Tutor
+                </label>
+
+                <input type="search"
+                       id="tutorSearch"
+                       class="form-control"
+                       placeholder="Search by name, ID or email" />
+            </div>
+
+            <!-- Tutor Status -->
+            <div>
+                <label for="tutorStatusFilter" class="form-label">
+                    Status
+                </label>
+
+                <select id="tutorStatusFilter" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+
+            <!-- Account Setup -->
+            <div>
+                <label for="tutorSetupFilter" class="form-label">
+                    Account Setup
+                </label>
+
+                <select id="tutorSetupFilter" class="form-select">
+                    <option value="">All Setup Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ==========================================
+         4. ALL TUTORS
+    ========================================== -->
+    <section class="tutor-management-list-card"
+             aria-labelledby="allTutorsHeading">
+
+        <div class="tutor-management-list-header">
+
+            <h2 id="allTutorsHeading">
+                <i class="bi bi-people" aria-hidden="true"></i>
+                All Tutors
+            </h2>
+
+            <span id="tutorTotalCount" aria-live="polite">
+                @Model.Count tutor(s)
+            </span>
+
+        </div>
+
+        <!-- Tutor Table -->
+        <div class="table-responsive">
+
+            <table class="table align-middle tutor-management-table">
+
+                <!-- ==========================================
+                     5. SORTABLE COLUMN HEADERS
+                ========================================== -->
+                <thead>
+                    <tr>
+
+                        <!-- Tutor Name -->
+                        <th scope="col"
+                            aria-sort="none">
+
+                            <button type="button"
+                                    class="tutor-sort-header"
+                                    data-sort="name"
+                                    aria-label="Sort by tutor name">
+                                Tutor
+                                <i class="bi bi-arrow-down-up"
+                                   aria-hidden="true"></i>
+                            </button>
+
+                        </th>
+
+                        <!-- Email -->
+                        <th scope="col"
+                            aria-sort="none">
+
+                            <button type="button"
+                                    class="tutor-sort-header"
+                                    data-sort="email"
+                                    aria-label="Sort by email">
+                                Email
+                                <i class="bi bi-arrow-down-up"
+                                   aria-hidden="true"></i>
+                            </button>
+
+                        </th>
+
+                        <!-- Expertise -->
+                        <th scope="col"
+                            aria-sort="none">
+
+                            <button type="button"
+                                    class="tutor-sort-header"
+                                    data-sort="expertise"
+                                    aria-label="Sort by expertise">
+                                Expertise
+                                <i class="bi bi-arrow-down-up"
+                                   aria-hidden="true"></i>
+                            </button>
+
+                        </th>
+
+                        <!-- Status -->
+                        <th scope="col"
+                            aria-sort="none">
+
+                            <button type="button"
+                                    class="tutor-sort-header"
+                                    data-sort="status"
+                                    aria-label="Sort by tutor status">
+                                Status
+                                <i class="bi bi-arrow-down-up"
+                                   aria-hidden="true"></i>
+                            </button>
+
+                        </th>
+
+                        <!-- Account Setup -->
+                        <th scope="col"
+                            aria-sort="none">
+
+                            <button type="button"
+                                    class="tutor-sort-header"
+                                    data-sort="setup"
+                                    aria-label="Sort by account setup status">
+                                Account Setup
+                                <i class="bi bi-arrow-down-up"
+                                   aria-hidden="true"></i>
+                            </button>
+
+                        </th>
+
+                        <!-- Actions - No Sorting -->
+                        <th scope="col">
+                            Actions
+                        </th>
+
+                    </tr>
+                </thead>
+
+                <!-- ==========================================
+                     6. TUTOR DATA ROWS
+                ========================================== -->
+                <tbody id="tutorTableBody">
+
+                    @foreach (var tutor in Model)
+                    {
+                        <tr class="tutor-data-row"
+                            data-user-id="@tutor.UserId"
+                            data-search="@($"{tutor.UserName} {tutor.FullName} {tutor.Email} {tutor.AreaOfExpertise}".ToLowerInvariant())"
+                            data-sort-user-id="@tutor.UserName"
+                            data-sort-name="@tutor.FullName"
+                            data-sort-email="@tutor.Email"
+                            data-sort-expertise="@tutor.AreaOfExpertise"
+                            data-status="@(tutor.IsActive ? "active" : "inactive")"
+                            data-setup="@(tutor.SetupPending ? "pending" : "completed")">
+
+                            <!-- Tutor Name + User ID -->
+                            <td>
+                                <div class="tutor-list-identity">
+
+                                    <strong class="tutor-name">
+                                        @tutor.FullName
+                                    </strong>
+
+                                    <span class="tutor-user-id">
+                                        @tutor.UserName
+                                    </span>
+
+                                </div>
+                            </td>
+
+                            <!-- Email -->
+                            <td>
+                                @tutor.Email
+                            </td>
+
+                            <!-- Expertise -->
+                            <td>
+                                @tutor.AreaOfExpertise
+                            </td>
+
+                            <!-- Tutor Status -->
+                            <td>
+                                <span class="tutor-management-badge tutor-status-badge @(tutor.IsActive ? "tutor-badge-success" : "tutor-badge-inactive")">
+                                    @(tutor.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+
+                            <!-- Account Setup -->
+                            <td>
+                                <span class="tutor-management-badge tutor-setup-badge @(tutor.SetupPending ? "tutor-badge-pending" : "tutor-badge-success")">
+                                    @(tutor.SetupPending ? "Pending" : "Completed")
+                                </span>
+                            </td>
+
+                            <!-- ==================================
+                                 7. ACTIONS
+                            ================================== -->
+                            <td>
+                                <div class="d-flex align-items-center gap-2 flex-nowrap">
+
+                                    <!-- Details Button -->
+                                    <a asp-controller="TutorManagement"
+                                       asp-action="Details"
+                                       asp-route-userId="@tutor.UserId"
+                                       class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                        <i class="bi bi-eye"
+                                           aria-hidden="true"></i>
+                                        Details
+                                    </a>
+
+                                    <!-- Three-Dot Dropdown -->
+                                    <div class="dropdown tutor-action-dropdown">
+
+                                        <button type="button"
+                                                class="btn btn-sm tutor-more-button"
+                                                data-bs-toggle="dropdown"
+                                                data-bs-auto-close="true"
+                                                aria-expanded="false"
+                                                aria-label="More actions for @tutor.FullName">
+
+                                            <i class="bi bi-three-dots-vertical"
+                                               aria-hidden="true"></i>
+
+                                        </button>
+
+                                        <ul class="dropdown-menu dropdown-menu-end tutor-action-menu">
+
+                                            <!-- Edit Tutor -->
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   asp-controller="TutorManagement"
+                                                   asp-action="Edit"
+                                                   asp-route-userId="@tutor.UserId">
+
+                                                    <i class="bi bi-pencil-square"
+                                                       aria-hidden="true"></i>
+                                                    Edit Tutor
+                                                </a>
+                                            </li>
+
+                                            <!-- View Availability -->
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   asp-controller="AdminTutorAvailability"
+                                                   asp-action="Index"
+                                                   asp-route-userId="@tutor.UserId">
+
+                                                    <i class="bi bi-calendar-week"
+                                                       aria-hidden="true"></i>
+                                                    View Availability
+                                                </a>
+                                            </li>
+
+                                            <!-- Resend Setup: active accounts with pending setup only -->
+                                            <li class="tutor-resend-divider @(tutor.IsActive && tutor.SetupPending ? "" : "d-none")">
+                                                <hr class="dropdown-divider" />
+                                            </li>
+
+                                            <li class="tutor-resend-action @(tutor.IsActive && tutor.SetupPending ? "" : "d-none")">
+                                                <form asp-controller="TutorManagement"
+                                                      asp-action="ResendSetup"
+                                                      method="post">
+
+                                                    @Html.AntiForgeryToken()
+
+                                                    <input type="hidden"
+                                                           name="userId"
+                                                           value="@tutor.UserId" />
+
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="bi bi-envelope"
+                                                           aria-hidden="true"></i>
+                                                        Resend Setup Email
+                                                    </button>
+                                                </form>
+                                            </li>
+
+                                            <li>
+                                                <hr class="dropdown-divider" />
+                                            </li>
+
+                                            <!-- Active Tutor -->
+                                            <li class="tutor-deactivate-action @(tutor.IsActive ? "" : "d-none")">
+                                                <a class="dropdown-item text-danger"
+                                                   asp-controller="TutorManagement"
+                                                   asp-action="ChangeStatus"
+                                                   asp-route-userId="@tutor.UserId"
+                                                   asp-route-activate="false">
+
+                                                    <i class="bi bi-person-dash text-danger"
+                                                       aria-hidden="true"></i>
+                                                    Deactivate Tutor
+                                                </a>
+                                            </li>
+
+                                            <!-- Inactive Tutor -->
+                                            <li class="tutor-reactivate-action @(tutor.IsActive ? "d-none" : "")">
+                                                <a class="dropdown-item"
+                                                   asp-controller="TutorManagement"
+                                                   asp-action="ChangeStatus"
+                                                   asp-route-userId="@tutor.UserId"
+                                                   asp-route-activate="true">
+
+                                                    <i class="bi bi-person-check"
+                                                       aria-hidden="true"></i>
+                                                    Reactivate Tutor
+                                                </a>
+                                            </li>
+
+                                        </ul>
+
+                                    </div>
+
+                                </div>
+                            </td>
+
+                        </tr>
+                    }
+
+                    <!-- Empty Search Result -->
+                    <tr id="tutorEmptyRow"
+                        style="display:none;">
+
+                        <td colspan="6"
+                            class="text-center text-muted py-4">
+                            No tutors found.
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+</div>
+
+@section Scripts {
+
+    <script nonce="@Context.Items["CspNonce"]">
+
+        (() => {
+            "use strict";
+
+            // ============================================
+            // 1. ELEMENT REFERENCES
+            // ============================================
+
+            const searchInput =
+                document.getElementById("tutorSearch");
+
+            const statusFilter =
+                document.getElementById("tutorStatusFilter");
+
+            const setupFilter =
+                document.getElementById("tutorSetupFilter");
+
+            const tableBody =
+                document.getElementById("tutorTableBody");
+
+            const rows = Array.from(
+                document.querySelectorAll(".tutor-data-row")
+            );
+
+            const emptyRow =
+                document.getElementById("tutorEmptyRow");
+
+            const totalCount =
+                document.getElementById("tutorTotalCount");
+
+            const sortHeaders = Array.from(
+                document.querySelectorAll(".tutor-sort-header")
+            );
+
+
+            // ============================================
+            // 2. SORTING STATE
+            // ============================================
+
+            document.getElementById("exportTutorRecords")?.addEventListener("click", event => {
+                const button = event.currentTarget;
+                if (button.disabled) return;
+                const url = new URL(button.dataset.exportUrl, window.location.origin);
+                url.searchParams.set("search", searchInput.value.trim());
+                url.searchParams.set("status", statusFilter.value);
+                url.searchParams.set("setup", setupFilter.value);
+                window.location.assign(url.href);
+            });
+
+            let currentSort = "userId";
+            let currentDirection = "asc";
+
+            const collator = new Intl.Collator(
+                undefined,
+                {
+                    numeric: true,
+                    sensitivity: "base"
+                }
+            );
+
+
+            // ============================================
+            // 3. GET SORT VALUE
+            // ============================================
+
+            function getSortValue(row, field) {
+
+                switch (field) {
+
+                    case "userId":
+                        return row.dataset.sortUserId || "";
+
+                    case "name":
+                        return row.dataset.sortName || "";
+
+                    case "email":
+                        return row.dataset.sortEmail || "";
+
+                    case "expertise":
+                        return row.dataset.sortExpertise || "";
+
+                    case "status":
+                        return row.dataset.status || "";
+
+                    case "setup":
+                        return row.dataset.setup || "";
+
+                    default:
+                        return row.dataset.sortUserId || "";
+                }
+            }
+
+
+            // ============================================
+            // 4. SORT TUTOR ROWS
+            // ============================================
+
+            function sortTutorRows() {
+
+                const direction =
+                    currentDirection === "desc" ? -1 : 1;
+
+                const sortedRows = [...rows].sort((a, b) => {
+
+                    const valueA =
+                        getSortValue(a, currentSort);
+
+                    const valueB =
+                        getSortValue(b, currentSort);
+
+                    const comparison =
+                        collator.compare(valueA, valueB);
+
+                    if (comparison !== 0) {
+                        return comparison * direction;
+                    }
+
+                    // Secondary sorting:
+                    // Tutor ID Ascending for equal values.
+                    return collator.compare(
+                        a.dataset.sortUserId || "",
+                        b.dataset.sortUserId || ""
+                    );
+                });
+
+                // Move existing rows into sorted order.
+                sortedRows.forEach(row => {
+                    tableBody.insertBefore(row, emptyRow);
+                });
+            }
+
+
+            // ============================================
+            // 5. UPDATE SORTING ICONS
+            // ============================================
+
+            function updateSortIndicators() {
+
+                sortHeaders.forEach(header => {
+
+                    const isActive =
+                        header.dataset.sort === currentSort;
+
+                    const icon =
+                        header.querySelector("i");
+
+                    const tableHeader =
+                        header.closest("th");
+
+                    header.classList.toggle(
+                        "active",
+                        isActive
+                    );
+
+                    header.setAttribute(
+                        "aria-pressed",
+                        isActive ? "true" : "false"
+                    );
+
+                    if (tableHeader) {
+
+                        tableHeader.setAttribute(
+                            "aria-sort",
+                            isActive
+                                ? (currentDirection === "asc"
+                                    ? "ascending"
+                                    : "descending")
+                                : "none"
+                        );
+                    }
+
+                    if (!icon) {
+                        return;
+                    }
+
+                    if (!isActive) {
+
+                        icon.className =
+                            "bi bi-arrow-down-up";
+
+                    } else if (currentDirection === "asc") {
+
+                        icon.className =
+                            "bi bi-arrow-up";
+
+                    } else {
+
+                        icon.className =
+                            "bi bi-arrow-down";
+                    }
+                });
+            }
+
+
+            // ============================================
+            // 6. SEARCH + FILTER + SORT
+            // ============================================
+
+            function updateTable() {
+
+                const search =
+                    searchInput.value.trim().toLowerCase();
+
+                const status =
+                    statusFilter.value;
+
+                const setup =
+                    setupFilter.value;
+
+                let visibleCount = 0;
+
+                rows.forEach(row => {
+
+                    const matchesSearch =
+                        (row.dataset.search || "").includes(search);
+
+                    const matchesStatus =
+                        !status || row.dataset.status === status;
+
+                    const matchesSetup =
+                        !setup || row.dataset.setup === setup;
+
+                    const isVisible =
+                        matchesSearch &&
+                        matchesStatus &&
+                        matchesSetup;
+
+                    row.style.display =
+                        isVisible ? "" : "none";
+
+                    if (isVisible) {
+                        visibleCount++;
+                    }
+                });
+
+                emptyRow.style.display =
+                    visibleCount === 0 ? "" : "none";
+
+                totalCount.textContent =
+                    `${visibleCount} tutor(s)`;
+
+                const exportButton = document.getElementById("exportTutorRecords");
+                if (exportButton) exportButton.disabled = visibleCount === 0;
+
+                sortTutorRows();
+
+                updateSortIndicators();
+            }
+
+
+            // ============================================
+            // 7. FILTER EVENT LISTENERS
+            // ============================================
+
+            searchInput.addEventListener(
+                "input",
+                updateTable
+            );
+
+            statusFilter.addEventListener(
+                "change",
+                updateTable
+            );
+
+            setupFilter.addEventListener(
+                "change",
+                updateTable
+            );
+
+
+            // ============================================
+            // 8. COLUMN HEADER SORTING
+            // ============================================
+
+            sortHeaders.forEach(header => {
+
+                header.addEventListener("click", () => {
+
+                    const selectedSort =
+                        header.dataset.sort;
+
+                    if (!selectedSort) {
+                        return;
+                    }
+
+                    if (currentSort === selectedSort) {
+
+                        // Same header:
+                        // Ascending -> Descending
+                        // Descending -> Ascending
+
+                        currentDirection =
+                            currentDirection === "asc"
+                                ? "desc"
+                                : "asc";
+
+                    } else {
+
+                        // Different header:
+                        // Start with Ascending
+
+                        currentSort = selectedSort;
+                        currentDirection = "asc";
+                    }
+
+                    updateTable();
+                });
+            });
+
+
+            // ============================================
+            // 9. INITIAL TABLE
+            // ============================================
+
+            updateTable();
+
+
+            // ============================================
+            // 10. AUTO-REFRESH TUTOR STATUSES
+            // ============================================
+
+            const statusUrl =
+                '@Url.Action("GetTutorStatuses", "TutorManagement")';
+
+            let refreshing = false;
+
+            async function refreshTutorStatuses() {
+
+                if (document.hidden || refreshing) {
+                    return;
+                }
+
+                refreshing = true;
+
+                try {
+
+                    const response = await fetch(statusUrl, {
+                        method: "GET",
+                        credentials: "same-origin",
+                        cache: "no-store",
+                        headers: {
+                            "Accept": "application/json"
+                        }
+                    });
+
+                    if (!response.ok || response.redirected) {
+                        return;
+                    }
+
+                    const statuses = await response.json();
+
+                    if (!Array.isArray(statuses)) {
+                        return;
+                    }
+
+                    const statusMap = new Map(
+                        statuses.map(item => [
+                            item.userId,
+                            item
+                        ])
+                    );
+
+                    let changed = false;
+
+                    rows.forEach(row => {
+
+                        const tutor =
+                            statusMap.get(row.dataset.userId);
+
+                        if (!tutor ||
+                            typeof tutor.isActive !== "boolean" ||
+                            typeof tutor.setupPending !== "boolean") {
+                            return;
+                        }
+
+                        const newStatus =
+                            tutor.isActive ? "active" : "inactive";
+
+                        const newSetup =
+                            tutor.setupPending ? "pending" : "completed";
+
+
+                        // ------------------------------------
+                        // Update Active / Inactive
+                        // ------------------------------------
+
+                        if (row.dataset.status !== newStatus) {
+
+                            row.dataset.status = newStatus;
+
+                            const badge =
+                                row.querySelector(".tutor-status-badge");
+
+                            if (badge) {
+
+                                badge.textContent =
+                                    tutor.isActive
+                                        ? "Active"
+                                        : "Inactive";
+
+                                badge.classList.toggle(
+                                    "tutor-badge-success",
+                                    tutor.isActive
+                                );
+
+                                badge.classList.toggle(
+                                    "tutor-badge-inactive",
+                                    !tutor.isActive
+                                );
+                            }
+
+                            changed = true;
+                        }
+
+
+                        // ------------------------------------
+                        // Update Pending / Completed
+                        // ------------------------------------
+
+                        if (row.dataset.setup !== newSetup) {
+
+                            row.dataset.setup = newSetup;
+
+                            const badge =
+                                row.querySelector(".tutor-setup-badge");
+
+                            if (badge) {
+
+                                badge.textContent =
+                                    tutor.setupPending
+                                        ? "Pending"
+                                        : "Completed";
+
+                                badge.classList.toggle(
+                                    "tutor-badge-pending",
+                                    tutor.setupPending
+                                );
+
+                                badge.classList.toggle(
+                                    "tutor-badge-success",
+                                    !tutor.setupPending
+                                );
+                            }
+
+                            changed = true;
+                        }
+
+                        // ------------------------------------
+                        // Update Deactivate / Reactivate Actions
+                        // ------------------------------------
+
+                        const deactivateAction =
+                            row.querySelector(".tutor-deactivate-action");
+
+                        const reactivateAction =
+                            row.querySelector(".tutor-reactivate-action");
+
+                        deactivateAction?.classList.toggle(
+                            "d-none",
+                            !tutor.isActive
+                        );
+
+                        reactivateAction?.classList.toggle(
+                            "d-none",
+                            tutor.isActive
+                        );
+
+                        // ------------------------------------
+                        // Update Resend Setup Email Action
+                        // ------------------------------------
+
+                        const canResend =
+                            tutor.isActive && tutor.setupPending;
+
+                        const divider =
+                            row.querySelector(".tutor-resend-divider");
+
+                        const action =
+                            row.querySelector(".tutor-resend-action");
+
+                        divider?.classList.toggle(
+                            "d-none",
+                            !canResend
+                        );
+
+                        action?.classList.toggle(
+                            "d-none",
+                            !canResend
+                        );
+                    });
+
+
+                    // Reapply filters and sorting
+                    // after status changes.
+                    if (changed) {
+                        updateTable();
+                    }
+
+                } catch {
+
+                    // Keep existing statuses if refresh fails.
+
+                } finally {
+
+                    refreshing = false;
+                }
+            }
+
+
+            // ============================================
+            // 11. AUTOMATIC REFRESH
+            // ============================================
+
+            // Poll every 15 seconds.
+            const refreshInterval =
+                setInterval(refreshTutorStatuses, 15000);
+
+            // Refresh when returning to the browser tab.
+            document.addEventListener(
+                "visibilitychange",
+                () => {
+
+                    if (!document.hidden) {
+                        void refreshTutorStatuses();
+                    }
+                }
+            );
+
+            // Stop polling when leaving the page.
+            window.addEventListener(
+                "pagehide",
+                () => {
+                    clearInterval(refreshInterval);
+                }
+            );
+
+        })();
+
+    </script>
+}

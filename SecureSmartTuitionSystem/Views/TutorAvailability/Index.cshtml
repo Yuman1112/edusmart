@@ -1,0 +1,187 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorAvailabilityViewModel
+
+@{
+    ViewData["Title"] = "My Availability";
+
+    int[] days = { 1, 2, 3, 4, 5, 6, 0 };
+
+    string[] names =
+    {
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday"
+    };
+
+    var selected =
+        (Model.SelectedSlots ?? new List<int>()).ToHashSet();
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/class-sessions.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/tutor-form.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/tutor-availability.css"
+          asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>My Availability</h1>
+        <p>Set the weekly times when you are available to teach.</p>
+    </div>
+
+    <a asp-controller="Tutor"
+       asp-action="MyProfile"
+       class="outline-button">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        Back
+    </a>
+</div>
+
+@if (TempData["TutorAvailabilitySuccess"] is string success)
+{
+    <div class="alert alert-success" role="status">
+        @success
+    </div>
+}
+
+@if (TempData["TutorAvailabilityInfo"] is string info)
+{
+    <div class="alert alert-info" role="status">
+        @info
+    </div>
+}
+
+<div class="class-form-card tutor-create-card tutor-availability">
+    <form id="tutor-availability-form"
+          asp-controller="TutorAvailability"
+          asp-action="Index"
+          method="post">
+
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="All"
+             class="text-danger mb-3"
+             role="alert">
+        </div>
+
+        <section class="class-form-section">
+            <h2>
+                <i class="bi bi-calendar-week"
+                   aria-hidden="true"></i>
+                Weekly Teaching Availability
+            </h2>
+
+            <div class="tutor-info-note mb-4">
+                <i class="bi bi-info-circle"
+                   aria-hidden="true"></i>
+
+                <span>
+                    All times are Malaysia time (UTC+8).
+                    Each box represents 30 minutes.
+                    Select every box that covers your available teaching time.
+                    Leaving all boxes unselected means you have no available slots.
+                    Saving availability does not change your existing classes.
+                </span>
+            </div>
+
+            <p id="availability-help">
+                Tick a box to mark it available; untick it to remove
+                availability. This pattern repeats every week.
+            </p>
+
+            <div class="availability-scroll"
+                 tabindex="0"
+                 role="region"
+                 aria-label="Weekly availability timetable">
+
+                <table class="availability-table"
+                       aria-describedby="availability-help">
+
+                    <caption class="visually-hidden">
+                        Weekly teaching availability in 30-minute intervals
+                    </caption>
+
+                    <thead>
+                        <tr>
+                            <th scope="col">Time</th>
+
+                            @foreach (string dayName in names)
+                            {
+                                <th scope="col">@dayName</th>
+                            }
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @for (int slot = 0; slot < 48; slot++)
+                        {
+                            string start =
+                            $"{slot / 2:00}:{(slot % 2) * 30:00}";
+
+                            int endMinutes = (slot + 1) * 30;
+
+                            string end =
+                            $"{endMinutes / 60:00}:{endMinutes % 60:00}";
+
+                            <tr>
+                                <th scope="row">@start–@end</th>
+
+                                @for (
+                                                            int dayIndex = 0;
+                                                            dayIndex < days.Length;
+                                                            dayIndex++)
+                                {
+                                    int value =
+                                    days[dayIndex] * 48 + slot;
+
+                                    <td>
+                                        <label class="availability-cell">
+                                            <input type="checkbox"
+                                                   name="SelectedSlots"
+                                                   value="@value"
+                                                   checked="@selected.Contains(value)"
+                                                   aria-label="@($"{names[dayIndex]} {start} to {end}")" />
+                                        </label>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="class-form-actions">
+            <a asp-controller="Tutor"
+               asp-action="MyProfile"
+               class="outline-button">
+                Cancel
+            </a>
+
+            <button id="saveTutorAvailability"
+                    type="submit"
+                    class="primary-button"
+                    disabled>
+                <i class="bi bi-check-lg"
+                   aria-hidden="true"></i>
+                Save Availability
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/tutor-availability.js"
+            asp-append-version="true"></script>
+}

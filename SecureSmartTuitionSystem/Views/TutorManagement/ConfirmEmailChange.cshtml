@@ -1,0 +1,148 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.ConfirmTutorEmailChangeViewModel
+
+@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+
+    string heading = Model.Confirmed
+        ? "Email Updated"
+        : Model.CanConfirm
+            ? "Confirm Email Change"
+            : "Email Change Unavailable";
+
+    string description = Model.Confirmed
+        ? "Your account email has been updated successfully."
+        : Model.CanConfirm
+            ? "Review your new email address before confirming."
+            : "This verification link cannot be used.";
+
+    ViewData["Title"] = heading;
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/class-sessions.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/tutor-form.css"
+          asp-append-version="true" />
+}
+
+<div class="tutor-email-page">
+
+    <div class="page-header">
+        <div>
+            <h1>@heading</h1>
+            <p>@description</p>
+        </div>
+    </div>
+
+    <div class="class-form-card tutor-create-card">
+
+        @if (Model.Confirmed || Model.CanConfirm)
+        {
+            <section class="class-form-section">
+                <h2>
+                    <i class="bi bi-envelope-check"
+                       aria-hidden="true"></i>
+                    Account Email
+                </h2>
+
+                <dl class="row g-4 tutor-email-details">
+                    <div class="col-12 col-md-4">
+                        <dt class="form-label">Tutor ID</dt>
+                        <dd class="tutor-email-value">
+                            @Model.TutorId
+                        </dd>
+                    </div>
+
+                    <div class="col-12 col-md-8">
+                        <dt class="form-label">New Email Address</dt>
+                        <dd class="tutor-email-value">
+                            @Model.NewEmail
+                        </dd>
+                    </div>
+                </dl>
+            </section>
+        }
+
+        @if (Model.Confirmed)
+        {
+            @if (!string.IsNullOrWhiteSpace(Model.InfoMessage))
+            {
+                <div class="tutor-info-note mb-4">
+                    <i class="bi bi-info-circle"
+                       aria-hidden="true"></i>
+                    <span>@Model.InfoMessage</span>
+                </div>
+            }
+
+            <div class="class-form-actions">
+                <a asp-area="Identity"
+                   asp-page="/Account/Login"
+                   class="primary-button">
+                    <i class="bi bi-box-arrow-in-right"
+                       aria-hidden="true"></i>
+                    Go to Sign In
+                </a>
+            </div>
+        }
+        else if (Model.CanConfirm)
+        {
+            <form asp-area=""
+                  asp-controller="TutorManagement"
+                  asp-action="ConfirmEmailChange"
+                  method="post"
+                  asp-antiforgery="true">
+
+                <input asp-for="UserId" type="hidden" />
+                <input asp-for="RequestId" type="hidden" />
+                <input asp-for="Token" type="hidden" />
+
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3"
+                     role="alert"></div>
+
+                <div class="tutor-info-note mb-4">
+                    <i class="bi bi-info-circle"
+                       aria-hidden="true"></i>
+                    <span>
+                        Your account email will change after confirmation.
+                        If you were not expecting this change, close this
+                        page and contact your EduSmart administrator.
+                    </span>
+                </div>
+
+                <div class="class-form-actions">
+                    <button type="submit"
+                            class="primary-button">
+                        <i class="bi bi-check-lg"
+                           aria-hidden="true"></i>
+                        Confirm Email Change
+                    </button>
+                </div>
+            </form>
+        }
+        else
+        {
+            <div class="alert alert-warning" role="alert">
+                @(Model.ErrorMessage
+                            ?? "This verification link is invalid or expired.")
+        </div>
+
+            <p class="text-muted mb-4">
+                Contact your EduSmart administrator to request
+                a new verification email.
+            </p>
+
+            <div class="class-form-actions">
+                <a asp-area="Identity"
+                   asp-page="/Account/Login"
+                   class="primary-button">
+                    Go to Sign In
+                </a>
+            </div>
+                }
+
+    </div>
+</div>

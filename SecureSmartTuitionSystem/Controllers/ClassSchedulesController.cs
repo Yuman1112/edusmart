@@ -7,7 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Services.Enrollment;
+using SecureSmartTuitionSystem.Services.Tutor;
 using SecureSmartTuitionSystem.ViewModels.Enrollment;
+
 namespace SecureSmartTuitionSystem.Controllers;
 [Authorize(Roles = "Admin,Tutor")]
 public sealed class ClassSchedulesController(ApplicationDbContext db, ClassScheduleService schedules) : Controller
@@ -128,6 +130,19 @@ public sealed class ClassSchedulesController(ApplicationDbContext db, ClassSched
             errors.Add("Choose a future date and time (through 2100).");
         if (model.Date.Value.Date == c.OriginalDate && model.Start == c.OriginalStartTime && model.End == c.OriginalEndTime)
             errors.Add("Choose a different date or time from the cancelled lesson.");
+        
+        bool timetableChanged = c.ReplacementDate?.Date != model.Date.Value.Date
+            || c.ReplacementStartTime != model.Start || c.ReplacementEndTime != model.End;
+        if (errors.Count == 0 && timetableChanged)
+        {
+            string? teachingError = await new TutorTeachingEligibilityService(db)
+                .ValidateSubjectAsync(c.ClassSession.TutorUserId, c.ClassSession.SubjectId);
+            if (teachingError != null) errors.Add(teachingError);
+
+            string? availabilityError = await new TutorAvailabilityService(db).ValidateAsync(
+                c.ClassSession.TutorUserId, model.Date.Value.DayOfWeek, model.Start.Value, model.End.Value);
+            if (availabilityError != null) errors.Add(availabilityError);
+        }
         if (errors.Count == 0 && await schedules.HasConflictAsync(c, model.Date.Value.Date, model.Start.Value, model.End.Value))
             errors.Add("The tutor or an affected student already has a class during this time.");
         return errors;

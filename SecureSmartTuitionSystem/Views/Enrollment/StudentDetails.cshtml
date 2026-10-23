@@ -429,6 +429,60 @@
                     return digits;
                 }
 
+                function clearAutoFilledValidation() {
+
+                    const fields = [
+                        dateOfBirthInput,
+                        genderSelect
+                    ];
+
+                    const form = numberInput.closest("form");
+
+                    const validator =
+                        window.jQuery && form
+                            ? window.jQuery(form).data("validator")
+                            : null;
+
+                    fields.forEach(function (field) {
+
+                        // Only clear errors after a value is filled.
+                        if (!field || !field.value) {
+                            return;
+                        }
+
+                        // Remove red border and warning icon.
+                        field.classList.remove(
+                            "input-validation-error",
+                            "is-invalid"
+                        );
+
+                        field.removeAttribute("aria-invalid");
+
+                        // Clear the corresponding validation message.
+                        const validationMessage = form?.querySelector(
+                            '[data-valmsg-for="' + field.name + '"]'
+                        );
+
+                        if (validationMessage) {
+                            validationMessage.textContent = "";
+
+                            validationMessage.classList.remove(
+                                "field-validation-error"
+                            );
+
+                            validationMessage.classList.add(
+                                "field-validation-valid"
+                            );
+                        }
+
+                        // Clear stale jQuery Validation state.
+                        if (validator) {
+                            delete validator.invalid[field.name];
+                            delete validator.submitted[field.name];
+                        }
+                    });
+                }
+
                 function populateDetailsFromIc() {
 
                     const digits =
@@ -530,6 +584,8 @@
                         lastDigit % 2 === 0
                             ? "Female"
                             : "Male";
+
+                    clearAutoFilledValidation();
 
                     return validAge;
                 }
