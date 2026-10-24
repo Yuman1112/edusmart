@@ -1,0 +1,152 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceIndexViewModel
+
+@{
+    ViewData["Title"] = "Attendance Management";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/attendance.css"
+          asp-append-version="true" />
+}
+
+<div class="attendance-page">
+    <div class="page-header">
+        <div>
+            <h1>Attendance Management</h1>
+            <p>
+                @(Model.IsAdmin
+                                ? "Review attendance for scheduled classes."
+                                : "Record attendance for your assigned lessons.")
+            </p>
+        </div>
+    </div>
+
+    <div class="class-form-card mb-4">
+        <form asp-action="Index"
+              method="get"
+              class="row g-3 align-items-end">
+
+            <div class="col-12 col-md-6">
+                <label for="attendance-week" class="form-label">
+                    Date Within Week
+                </label>
+
+                <input id="attendance-week"
+                       type="date"
+                       name="week"
+                       value="@Model.WeekStart.ToString("yyyy-MM-dd")"
+                       min="2000-01-01"
+                       max="2100-12-31"
+                       required
+                       class="form-control" />
+            </div>
+
+            <div class="col-12 col-md-6">
+                <button type="submit" class="primary-button">
+                    View Lessons
+                </button>
+            </div>
+        </form>
+
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <a asp-action="Index"
+               asp-route-week="@Model.WeekStart.AddDays(-7).ToString("yyyy-MM-dd")"
+               class="outline-button">
+                Previous Week
+            </a>
+
+            <a asp-action="Index" class="outline-button">
+                This Week
+            </a>
+
+            <a asp-action="Index"
+               asp-route-week="@Model.WeekStart.AddDays(7).ToString("yyyy-MM-dd")"
+               class="outline-button">
+                Next Week
+            </a>
+        </div>
+    </div>
+
+    <div class="class-form-card">
+        <h2 class="h5">
+            @Model.WeekStart.ToString("dd MMM yyyy") –
+            @Model.WeekEnd.ToString("dd MMM yyyy") · MYT (UTC+8)
+        </h2>
+
+        <p class="text-muted">
+            Attendance can be edited during the lesson.
+            Final submission or the lesson end time locks the records.
+            Unrecorded attendance is not counted as absence.
+        </p>
+
+        @if (Model.Lessons.Count == 0)
+        {
+            <div class="alert alert-info">
+                No lessons or saved attendance records for this week.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Date / Time</th>
+                            <th scope="col">Class</th>
+                            <th scope="col">Tutor</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Attendance</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var row in Model.Lessons)
+                        {
+                            <tr>
+                                <td>
+                                    @row.Date.ToString("ddd, dd MMM yyyy")
+                                    <br />
+                                    <small>
+                                        @row.Start.ToString("HH:mm")–@row.End.ToString("HH:mm")
+                                    </small>
+                                </td>
+
+                                <td>
+                                    <strong>@row.ClassCode</strong>
+                                    <br />
+                                    <small>@row.ClassName</small>
+                                </td>
+
+                                <td>@row.TutorName</td>
+
+                                <td>
+                                    @(row.Replacement ? "Replacement" : "Regular")
+                                </td>
+
+                                <td>
+                                    <span class="tutor-management-badge @(row.State == "Submitted" ? "tutor-badge-success" : "tutor-badge-pending")">
+                                        @row.State
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <a asp-action="Sheet"
+                                       asp-route-classId="@row.ClassSessionId"
+                                       asp-route-date="@row.Date.ToString("yyyy-MM-dd")"
+                                       asp-route-changeId="@row.ChangeId"
+                                       asp-route-replacement="@row.Replacement"
+                                       asp-route-savedId="@row.SavedId"
+                                       class="outline-button">
+                                        Open Attendance
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

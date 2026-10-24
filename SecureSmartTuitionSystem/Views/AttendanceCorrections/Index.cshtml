@@ -1,0 +1,320 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceCorrectionListViewModel
+@using SecureSmartTuitionSystem.Models.Attendance
+
+@{
+    ViewData["Title"] = "Attendance Corrections";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/attendance.css"
+          asp-append-version="true" />
+}
+
+<div class="attendance-page">
+    <div class="page-header">
+        <div>
+            <h1>Attendance Corrections</h1>
+            <p>
+                @(Model.IsAdmin
+                                ? "Review correction requests before applying changes."
+                                : "Track your correction requests and review outcomes.")
+            </p>
+        </div>
+
+        @if (!User.IsInRole("Admin") && !User.IsInRole("Tutor"))
+        {
+            <a asp-controller="Attendance"
+               asp-action="Report"
+               class="outline-button">
+                Back to Records
+            </a>
+        }
+    </div>
+
+    @if (TempData["AttendanceCorrectionSuccess"] is string success)
+    {
+        <div class="alert alert-success" role="status">
+            @success
+        </div>
+    }
+
+    @if (TempData["AttendanceCorrectionError"] is string error)
+    {
+        <div class="alert alert-danger" role="alert">
+            @error
+        </div>
+    }
+
+    <div class="class-form-card mb-4">
+        <form asp-action="Index"
+              method="get"
+              class="d-flex flex-wrap align-items-end gap-3">
+
+            <div>
+                <label for="correction-status" class="form-label">
+                    Request Status
+                </label>
+
+                <select name="status"
+                        id="correction-status"
+                        class="form-select">
+
+                    <option value="pending"
+                            selected="@(Model.Status == "pending")">
+                        Pending
+                    </option>
+
+                    <option value="approved"
+                            selected="@(Model.Status == "approved")">
+                        Approved
+                    </option>
+
+                    <option value="rejected"
+                            selected="@(Model.Status == "rejected")">
+                        Rejected
+                    </option>
+
+                    <option value="all"
+                            selected="@(Model.Status == "all")">
+                        All
+                    </option>
+                </select>
+            </div>
+
+            <button type="submit" class="primary-button">
+                View Requests
+            </button>
+        </form>
+    </div>
+
+    <div class="class-form-card">
+        <p class="text-muted">
+            Showing the latest 500 matching requests.
+            Times shown are MYT (UTC+8).
+        </p>
+
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="alert alert-info">
+                No correction requests match this status.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Student</th>
+                            <th scope="col">Lesson</th>
+                            <th scope="col">Requested Change</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            var canReview =
+                            Model.IsAdmin
+                            && row.Decision == CorrectionDecision.Pending;
+
+                            <tr>
+                                <td>
+                                    <strong>@row.Student</strong>
+                                </td>
+
+                                <td>
+                                    @row.ClassCode
+                                    <br />
+                                    <small>
+                                        @row.Date.ToString("dd MMM yyyy")
+                                    </small>
+                                </td>
+
+                                <td>
+                                    @(row.PreviousStatus?.ToString() ?? "Unrecorded")
+                                    → @row.RequestedStatus
+                                </td>
+
+                                <td>
+                                    <span class="tutor-management-badge @(row.Decision == CorrectionDecision.Approved ? "tutor-badge-success" : row.Decision == CorrectionDecision.Rejected ? "tutor-badge-inactive" : "tutor-badge-pending")">
+                                        @row.Decision
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <button type="button"
+                                            class="outline-button"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#correction-modal"
+                                            data-can-review="@(canReview ? "true" : "false")"
+                                            data-id="@row.Id"
+                                            data-version="@row.RowVersion"
+                                            data-student="@row.Student"
+                                            data-class="@row.ClassCode"
+                                            data-date="@row.Date.ToString("dd MMM yyyy")"
+                                            data-current="@(row.CurrentStatus?.ToString() ?? "Unrecorded")"
+                                            data-previous="@(row.PreviousStatus?.ToString() ?? "Unrecorded")"
+                                            data-requested="@row.RequestedStatus"
+                                            data-reason="@row.Reason"
+                                            data-requester="@row.RequestedBy"
+                                            data-requested-at="@row.RequestedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm")"
+                                            data-status="@row.Decision"
+                                            data-review-remark="@row.ReviewRemark"
+                                            data-reviewer="@row.ReviewedBy"
+                                            data-reviewed-at="@row.ReviewedAtUtc?.AddHours(8).ToString("dd MMM yyyy HH:mm")">
+                                        @(canReview ? "Review" : "View Details")
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="modal fade"
+         id="correction-modal"
+         tabindex="-1"
+         aria-labelledby="correction-modal-title"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5"
+                        id="correction-modal-title">
+                        Attendance Correction
+                    </h2>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+
+                <form asp-action="Review"
+                      method="post"
+                      id="correction-review-form"
+                      novalidate>
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="id"
+                           id="correction-review-id" />
+
+                    <input type="hidden"
+                           name="rowVersion"
+                           id="correction-review-version" />
+
+                    <div class="modal-body">
+                        <dl class="attendance-correction-details">
+                            <dt>Student</dt>
+                            <dd data-detail="student"></dd>
+
+                            <dt>Class / Lesson</dt>
+                            <dd data-detail="lesson"></dd>
+
+                            <dt>Current Attendance</dt>
+                            <dd data-detail="current"></dd>
+
+                            <dt>Requested Change</dt>
+                            <dd data-detail="change"></dd>
+
+                            <dt>Request Status</dt>
+                            <dd data-detail="status"></dd>
+
+                            <dt>Request Reason</dt>
+                            <dd data-detail="reason"></dd>
+
+                            <dt>Requested By</dt>
+                            <dd data-detail="requester"></dd>
+
+                            <dt>Requested At</dt>
+                            <dd data-detail="requestedAt"></dd>
+                        </dl>
+
+                        <div id="correction-review-fields" hidden>
+                            <label for="correction-review-remark"
+                                   class="form-label">
+                                Review Remarks
+                                <span class="text-danger">*</span>
+                            </label>
+
+                            <textarea id="correction-review-remark"
+                                      name="reviewRemark"
+                                      class="form-control"
+                                      rows="3"
+                                      maxlength="500"
+                                      required
+                                      aria-describedby="correction-review-help correction-review-error"
+                                      placeholder="Explain your approval or rejection."></textarea>
+
+                            <span id="correction-review-error"
+                                  class="correction-field-error"
+                                  aria-live="polite"></span>
+
+                            <small id="correction-review-help"
+                                   class="text-muted">
+                                Required for approval and rejection.
+                                Visible to the applicant.
+                            </small>
+                        </div>
+
+                        <div id="correction-review-history" hidden>
+                            <h3 class="h6">Review Outcome</h3>
+
+                            <dl class="attendance-correction-details mb-0">
+                                <dt>Review Remarks</dt>
+                                <dd data-detail="reviewRemark"></dd>
+
+                                <dt>Reviewed By</dt>
+                                <dd data-detail="reviewer"></dd>
+
+                                <dt>Reviewed At</dt>
+                                <dd data-detail="reviewedAt"></dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="outline-button"
+                                data-bs-dismiss="modal"
+                                id="correction-close">
+                            Cancel
+                        </button>
+
+                        <button type="submit"
+                                name="decision"
+                                value="reject"
+                                class="outline-button"
+                                id="correction-reject"
+                                hidden>
+                            Reject
+                        </button>
+
+                        <button type="submit"
+                                name="decision"
+                                value="approve"
+                                class="primary-button"
+                                id="correction-approve"
+                                hidden>
+                            Approve
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/attendance-corrections.js"
+            asp-append-version="true"></script>
+}

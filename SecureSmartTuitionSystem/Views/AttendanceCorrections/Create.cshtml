@@ -1,0 +1,99 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceCorrectionViewModel
+
+@{
+    ViewData["Title"] = "Request Attendance Correction";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/attendance.css"
+          asp-append-version="true" />
+}
+
+<div class="attendance-page">
+    <div class="page-header">
+        <div>
+            <h1>Request Attendance Correction</h1>
+            <p>
+                Submit a reason for an administrator to review.
+            </p>
+        </div>
+    </div>
+
+    <div class="class-form-card tutor-create-card">
+        <p>
+            <strong>@Model.Student</strong>
+            <br />
+            @Model.ClassCode · @Model.Date.ToString("dd MMM yyyy")
+        </p>
+
+        <p>
+            Current attendance:
+            <strong>
+                @(Model.CurrentStatus?.ToString() ?? "Unrecorded")
+            </strong>
+        </p>
+
+        <div class="alert alert-info">
+            Submitting a request does not change attendance.
+            Only an administrator can approve the correction.
+        </div>
+
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger"
+                 role="alert"></div>
+
+            <input asp-for="RecordId" type="hidden" />
+
+            <div class="mb-3">
+                <label asp-for="RequestedStatus" class="form-label">
+                    Requested Attendance
+                </label>
+
+                <select asp-for="RequestedStatus"
+                        class="form-select"
+                        aria-describedby="requested-status-error">
+                    <option value="">Select status</option>
+                    <option value="1">Present</option>
+                    <option value="2">Absent</option>
+                    <option value="3">Late</option>
+                </select>
+
+                <span asp-validation-for="RequestedStatus"
+                      id="requested-status-error"
+                      class="correction-field-error"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Reason" class="form-label">
+                    Reason
+                </label>
+
+                <textarea asp-for="Reason"
+                          class="form-control"
+                          rows="4"
+                          maxlength="500"
+                          aria-describedby="reason-error"></textarea>
+
+                <span asp-validation-for="Reason"
+                      id="reason-error"
+                      class="correction-field-error"></span>
+            </div>
+
+            <div class="class-form-actions">
+                <a asp-controller="Attendance"
+                   asp-action="Report"
+                   class="outline-button">
+                    Cancel
+                </a>
+
+                <button type="submit" class="primary-button">
+                    Submit Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

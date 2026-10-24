@@ -1,0 +1,1 @@
+﻿document.getElementById("attendance-print")?.addEventListener("click", () => window.print());

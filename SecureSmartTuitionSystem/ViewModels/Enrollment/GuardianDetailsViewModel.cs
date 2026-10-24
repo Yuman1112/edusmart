@@ -42,7 +42,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public string? GuardianPhoneNumber { get; set; }
 
         [RegularExpression(@"^\d{6}-\d{2}-\d{4}$", ErrorMessage = "Please enter a valid IC number (000000-00-0000).")]
-        [StringLength(14)]
+        [StringLength(14, ErrorMessage = "Please enter a valid IC number (000000-00-0000).")]
         [Display(Name = "IC Number")]
         public string? GuardianIdentificationNumber { get; set; }
 
@@ -86,7 +86,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                     digits.Substring(4, 2));
 
             var currentTwoDigitYear =
-                DateTime.Today.Year % 100;
+                DateTime.UtcNow.AddHours(8).Date.Year % 100;
 
             var fullYear =
                 yy <= currentTwoDigitYear

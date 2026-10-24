@@ -1,0 +1,193 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceSheetViewModel
+@using SecureSmartTuitionSystem.Models.Attendance
+
+@{
+    ViewData["Title"] = "Class Attendance";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/attendance.css"
+          asp-append-version="true" />
+}
+
+<div class="attendance-page">
+    <div class="page-header">
+        <div>
+            <h1>Class Attendance</h1>
+            <p>@Model.ClassCode · @Model.ClassName</p>
+        </div>
+
+        <a asp-action="Index"
+           asp-route-week="@Model.Date.ToString("yyyy-MM-dd")"
+           class="outline-button">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            Back
+        </a>
+    </div>
+
+    @if (TempData["AttendanceSuccess"] is string success)
+    {
+        <div class="alert alert-success" role="status">
+            @success
+        </div>
+    }
+
+    <div class="class-form-card tutor-create-card">
+        <p>
+            <strong>
+                @Model.Date.ToString("ddd, dd MMM yyyy") ·
+                @Model.Start.ToString("HH:mm")–@Model.End.ToString("HH:mm") MYT
+            </strong>
+            <br />
+            @Model.TutorName · @(Model.Replacement ? "Replacement" : "Regular")
+        </p>
+
+        <div class="alert alert-info"
+             id="attendance-state"
+             role="status">
+            @Model.State.
+            @(Model.CanEdit
+                        ? "Save a draft while taking attendance. Final submission locks this sheet immediately; otherwise it locks at the lesson end time."
+                        : "This sheet is read only. Attendance can only be edited by the assigned tutor during the lesson and before final submission.")
+        </div>
+
+        <form asp-action="Save"
+              method="post"
+              id="attendance-sheet-form"
+              data-ends-at="@(Model.Date.ToString("yyyy-MM-dd") + "T" + Model.End.ToString("HH:mm:ss") + "+08:00")">
+
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="All"
+                 class="text-danger"
+                 role="alert"></div>
+
+            <input asp-for="ClassSessionId" type="hidden" />
+
+            <input asp-for="Date"
+                   type="hidden"
+                   value="@Model.Date.ToString("yyyy-MM-dd")" />
+
+            <input asp-for="ChangeId" type="hidden" />
+            <input asp-for="Replacement" type="hidden" />
+            <input asp-for="RowVersion" type="hidden" />
+
+            @if (Model.Students.Count == 0)
+            {
+                <div class="alert alert-info">
+                    No students are entitled to attend this lesson.
+                    Attendance cannot be saved.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle"
+                           data-server-paged="true">
+                        <thead>
+                            <tr>
+                                <th scope="col">Student</th>
+                                <th scope="col">Attendance</th>
+                                <th scope="col">Remark (optional)</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @for (int i = 0; i < Model.Students.Count; i++)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            @Model.Students[i].StudentName
+                                        </strong>
+                                        <br />
+                                        <small>
+                                            @Model.Students[i].StudentNumber
+                                        </small>
+
+                                        <input asp-for="Students[i].StudentProfileId"
+                                               type="hidden" />
+                                    </td>
+
+                                    <td>
+                                        @if (Model.CanEdit)
+                                        {
+                                            <select asp-for="Students[i].Status"
+                                                    class="form-select"
+                                                    aria-label="Attendance for @Model.Students[i].StudentName">
+                                                <option value="">Unrecorded</option>
+                                                <option value="1">Present</option>
+                                                <option value="2">Absent</option>
+                                                <option value="3">Late</option>
+                                            </select>
+                                        }
+                                        else
+                                        {
+                                            <span class="tutor-management-badge @(Model.Students[i].Status == AttendanceStatus.Present ? "tutor-badge-success" : Model.Students[i].Status == AttendanceStatus.Absent ? "tutor-badge-inactive" : "tutor-badge-pending")">
+                                                @(Model.Students[i].Status?.ToString() ?? "Unrecorded")
+                                            </span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @if (Model.CanEdit)
+                                        {
+                                            <input asp-for="Students[i].Remark"
+                                                   class="form-control"
+                                                   maxlength="300"
+                                                   aria-label="Remark for @Model.Students[i].StudentName" />
+                                        }
+                                        else
+                                        {
+                                            <span>
+                                                @(string.IsNullOrWhiteSpace(Model.Students[i].Remark)
+                                                                                    ? "—"
+                                                                                    : Model.Students[i].Remark)
+                                </span>
+                                                                }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div class="class-form-actions mt-4">
+                <a asp-action="Index"
+                   asp-route-week="@Model.Date.ToString("yyyy-MM-dd")"
+                   class="outline-button">
+                    Back to Lessons
+                </a>
+
+                @if (Model.CanEdit && Model.Students.Count > 0)
+                {
+                    <button type="submit"
+                            name="FinalSubmit"
+                            value="false"
+                            class="outline-button"
+                            id="attendance-save-draft"
+                            disabled>
+                        Save Draft
+                    </button>
+
+                    <button type="submit"
+                            name="FinalSubmit"
+                            value="true"
+                            class="primary-button"
+                            id="attendance-final-submit">
+                        Submit &amp; Lock
+                    </button>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="~/js/attendance-sheet.js"
+            asp-append-version="true"></script>
+}

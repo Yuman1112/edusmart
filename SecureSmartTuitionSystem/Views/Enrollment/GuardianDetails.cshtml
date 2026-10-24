@@ -304,241 +304,27 @@
 
 
 @section Scripts {
-
     <partial name="_ValidationScriptsPartial" />
-
+    <script src="~/js/enrollment-ic.js" asp-append-version="true"></script>
     <script nonce="@Context.Items["CspNonce"]">
         (() => {
-
-            const checkbox =
-                document.getElementById(
-                    "UseExistingParentAccount");
-
-            const existingFields =
-                document.getElementById(
-                    "existing-parent-fields");
-
-            const newFields =
-                document.getElementById(
-                    "new-parent-fields");
-
-            const guardianPhone =
-                document.getElementById(
-                    "guardianPhone");
-
-            const guardianIcValidation =
-                document.getElementById(
-                    "guardianIcValidation");
-
-            const guardianIc =
-                document.getElementById(
-                    "guardianIc");
-
-            const guardianForm =
-                document.getElementById(
-                    "guardianForm");
-
-            function updateGuardianFields() {
-
-                const useExisting =
-                    checkbox.checked;
-
-                // Show Existing Parent fields when checkbox is checked.
-                existingFields.hidden =
-                    !useExisting;
-
-                // Hide New Parent fields when checkbox is checked.
-                newFields.hidden =
-                    useExisting;
-
-                newFields.disabled =
-                    useExisting;
+            const checkbox = document.getElementById("UseExistingParentAccount");
+            const existingFields = document.getElementById("existing-parent-fields");
+            const newFields = document.getElementById("new-parent-fields");
+            const phone = document.getElementById("guardianPhone");
+            function updateFields() {
+                existingFields.hidden = !checkbox.checked;
+                newFields.hidden = checkbox.checked;
+                newFields.disabled = checkbox.checked;
             }
-
-            function formatIcNumber(value) {
-
-                let digits =
-                    value.replace(/\D/g, "");
-
-                digits =
-                    digits.substring(0, 12);
-
-                if (digits.length > 8) {
-                    return (
-                        digits.substring(0, 6) +
-                        "-" +
-                        digits.substring(6, 8) +
-                        "-" +
-                        digits.substring(8)
-                    );
-                }
-
-                if (digits.length > 6) {
-                    return (
-                        digits.substring(0, 6) +
-                        "-" +
-                        digits.substring(6)
-                    );
-                }
-
-                return digits;
-            }
-
-            function validateGuardianIc(value) {
-
-                if (!guardianIcValidation) {
-                    return true;
-                }
-
-                const digits =
-                    value.replace(/\D/g, "");
-
-                /*
-                 * Empty value is handled by server-side /
-                 * required validation.
-                 */
-                if (digits.length === 0) {
-
-                    guardianIcValidation.textContent =
-                        "";
-
-                    return true;
-                }
-
-                if (digits.length !== 12) {
-
-                    guardianIcValidation.textContent =
-                        "Please enter the IC number in the format 000000-00-0000.";
-
-                    return false;
-                }
-
-                const yy =
-                    parseInt(
-                        digits.substring(0, 2));
-
-                const mm =
-                    parseInt(
-                        digits.substring(2, 4));
-
-                const dd =
-                    parseInt(
-                        digits.substring(4, 6));
-
-                const currentTwoDigitYear =
-                    new Date().getFullYear() % 100;
-
-                const fullYear =
-                    yy <= currentTwoDigitYear
-                        ? 2000 + yy
-                        : 1900 + yy;
-
-                const date =
-                    new Date(
-                        fullYear,
-                        mm - 1,
-                        dd);
-
-                const validDate =
-                    date.getFullYear() === fullYear &&
-                    date.getMonth() === mm - 1 &&
-                    date.getDate() === dd;
-
-                if (!validDate) {
-
-                    guardianIcValidation.textContent =
-                        "The IC number contains an invalid date of birth.";
-
-                    return false;
-                }
-
-                guardianIcValidation.textContent =
-                    "";
-
-                return true;
-            }
-
-            function formatPhoneNumber(value) {
-
-                let digits =
-                    value.replace(/\D/g, "");
-
-                // Convert Malaysian international format
-                // +60123456789 -> 0123456789
-                if (digits.startsWith("60")) {
-                    digits = "0" + digits.substring(2);
-                }
-
-                // Maximum 11 digits for local mobile number
-                digits = digits.substring(0, 11);
-
-                // Add hyphen after the first 3 digits
-                if (digits.length > 3) {
-                    return (
-                        digits.substring(0, 3) +
-                        "-" +
-                        digits.substring(3)
-                    );
-                }
-
-                return digits;
-            }
-
-            if (guardianIc) {
-                guardianIc.addEventListener(
-                    "input",
-                    function () {
-
-                        this.value =
-                            formatIcNumber(
-                                this.value);
-
-                        validateGuardianIc(
-                            this.value);
-                    });
-            }
-
-            if (guardianPhone) {
-                guardianPhone.addEventListener(
-                    "input",
-                    function () {
-
-                        this.value =
-                            formatPhoneNumber(
-                                this.value);
-                    });
-            }
-
-            if (guardianForm) {
-                guardianForm.addEventListener("submit", function (event) {
-
-                    // Skip validation for Back button.
-                    if (event.submitter?.hasAttribute("formnovalidate")) {
-                        return;
-                    }
-
-                    // Existing Parent does not require New Guardian IC.
-                    if (checkbox.checked) {
-                        return;
-                    }
-
-                    const validIc = validateGuardianIc(
-                        guardianIc?.value ?? ""
-                    );
-
-                    if (!validIc) {
-                        event.preventDefault();
-                        guardianIc?.focus();
-                    }
-                });
-            }
-
-            checkbox.addEventListener(
-                "change",
-                updateGuardianFields);
-
-            updateGuardianFields();
-
+            phone?.addEventListener("input", () => {
+                let digits = phone.value.replace(/\D/g, "");
+                if (digits.startsWith("60")) digits = "0" + digits.slice(2);
+                digits = digits.slice(0,11);
+                phone.value = digits.length > 3 ? digits.slice(0,3) + "-" + digits.slice(3) : digits;
+            });
+            checkbox.addEventListener("change",updateFields);
+            updateFields();
         })();
     </script>
 }

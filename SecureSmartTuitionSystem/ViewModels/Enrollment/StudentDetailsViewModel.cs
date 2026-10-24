@@ -12,23 +12,23 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public string StudentName { get; set; } = string.Empty;
 
         [Required(
-            ErrorMessage = "Please enter the student's IC number.")]
+            ErrorMessage = "Please enter the IC number.")]
         [StringLength(
             14,
             ErrorMessage =
-                "The IC number cannot exceed 14 characters.")]
+                "Please enter a valid IC number (000000-00-0000).")]
         [Display(Name = "IC Number")]
         public string StudentIdentificationNumber { get; set; }
             = string.Empty;
 
         [Required(
-            ErrorMessage = "Please select the student's date of birth.")]
+            ErrorMessage = "Please enter a valid IC number to fill the date of birth automatically.")]
         [DataType(DataType.Date)]
         [Display(Name = "Date of Birth")]
         public DateTime? StudentDateOfBirth { get; set; }
 
         [Required(
-            ErrorMessage = "Please select the student's gender.")]
+            ErrorMessage = "Please enter a valid IC number to fill the gender automatically.")]
         [Display(Name = "Gender")]
         public string StudentGender { get; set; } = string.Empty;
 
@@ -71,7 +71,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
             // ==========================================
             if (StudentDateOfBirth.HasValue)
             {
-                if (StudentDateOfBirth.Value.Date >= DateTime.Today)
+                if (StudentDateOfBirth.Value.Date >= DateTime.UtcNow.AddHours(8).Date)
                 {
                     yield return new ValidationResult(
                         "The date of birth must be earlier than today.",
@@ -117,14 +117,14 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
             // IC VALIDATION
             // ==========================================
             if (!string.IsNullOrWhiteSpace(
-                StudentIdentificationNumber))    
+                StudentIdentificationNumber))
             {
                 if (!Regex.IsMatch(
                         StudentIdentificationNumber,
                         @"^\d{6}-\d{2}-\d{4}$"))
                 {
                     yield return new ValidationResult(
-                        "Please enter the IC number in the format 000000-00-0000.",
+                        "Please enter a valid IC number (000000-00-0000).",
                         new[]
                         {
                             nameof(
@@ -153,7 +153,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                         digits.Substring(4, 2));
 
                 var currentTwoDigitYear =
-                    DateTime.Today.Year % 100;
+                    DateTime.UtcNow.AddHours(8).Date.Year % 100;
 
                 var fullYear =
                     yy <= currentTwoDigitYear
@@ -226,7 +226,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         private static int CalculateAge(
             DateTime dateOfBirth)
         {
-            var today = DateTime.Today;
+            var today = DateTime.UtcNow.AddHours(8).Date;
 
             var age =
                 today.Year - dateOfBirth.Year;

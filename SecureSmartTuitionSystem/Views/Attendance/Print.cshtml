@@ -1,0 +1,20 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReportViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Attendance Report - EduSmart</title>
+    <link rel="stylesheet" href="~/css/attendance-print.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="print-actions"><button type="button" id="attendance-print">Print / Save as PDF</button><p>Choose “Save as PDF” in your browser's print dialog to download a PDF.</p></div>
+    <h1>EduSmart · Attendance Report</h1>
+    <p>Generated @DateTime.UtcNow.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</p>
+    <partial name="_ReportResults" model="Model" />
+    <script src="~/js/attendance-print.js" asp-append-version="true"></script>
+</body>
+</html>

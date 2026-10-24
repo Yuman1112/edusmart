@@ -1,0 +1,218 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReportViewModel
+
+@{
+    ViewData["Title"] = "Attendance Records";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/attendance.css"
+          asp-append-version="true" />
+}
+
+<div class="attendance-page">
+    <div class="page-header">
+        <div>
+            <h1>Attendance Records</h1>
+            <p>
+                View attendance for the classes and students available to your account.
+            </p>
+        </div>
+
+        @if (!User.IsInRole("Admin")
+            && !User.IsInRole("Tutor")
+            && Model.CanCorrect)
+        {
+            <a asp-controller="AttendanceCorrections"
+               asp-action="Index"
+               class="outline-button">
+                Correction Requests
+            </a>
+        }
+    </div>
+
+    <div class="class-form-card mb-4">
+        <form asp-action="Report" method="get">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label for="attendance-from" class="form-label">
+                        From
+                    </label>
+
+                    <input id="attendance-from"
+                           name="From"
+                           type="date"
+                           class="form-control"
+                           value="@Model.Filter.From.ToString("yyyy-MM-dd")"
+                           required />
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label for="attendance-to" class="form-label">
+                        To
+                    </label>
+
+                    <input id="attendance-to"
+                           name="To"
+                           type="date"
+                           class="form-control"
+                           value="@Model.Filter.To.ToString("yyyy-MM-dd")"
+                           required />
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label for="attendance-class" class="form-label">
+                        Class
+                    </label>
+
+                    <select id="attendance-class"
+                            name="ClassId"
+                            class="form-select">
+                        <option value="">All Classes</option>
+
+                        @foreach (var choice in Model.Classes)
+                        {
+                            <option value="@choice.Id"
+                                    selected="@(Model.Filter.ClassId == choice.Id)">
+                                @choice.Text
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label for="attendance-student" class="form-label">
+                        Student
+                    </label>
+
+                    <select id="attendance-student"
+                            name="StudentId"
+                            class="form-select">
+                        <option value="">All Available Students</option>
+
+                        @foreach (var choice in Model.Students)
+                        {
+                            <option value="@choice.Id"
+                                    selected="@(Model.Filter.StudentId == choice.Id)">
+                                @choice.Text
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label for="attendance-status" class="form-label">
+                        Attendance
+                    </label>
+
+                    <select id="attendance-status"
+                            name="Status"
+                            class="form-select">
+                        <option value="">All Statuses</option>
+
+                        <option value="1"
+                                selected="@(Model.Filter.Status == "1")">
+                            Present
+                        </option>
+
+                        <option value="2"
+                                selected="@(Model.Filter.Status == "2")">
+                            Absent
+                        </option>
+
+                        <option value="3"
+                                selected="@(Model.Filter.Status == "3")">
+                            Late
+                        </option>
+
+                        <option value="unrecorded"
+                                selected="@(Model.Filter.Status == "unrecorded")">
+                            Unrecorded
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-8">
+                    <button type="submit" class="primary-button">
+                        View Records
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.CanExport)
+    {
+        <div class="class-form-card mb-4">
+            <form asp-action="Download"
+                  method="post"
+                  class="d-flex flex-wrap gap-2">
+
+                @Html.AntiForgeryToken()
+
+                <input name="From"
+                       type="hidden"
+                       value="@Model.Filter.From.ToString("yyyy-MM-dd")" />
+
+                <input name="To"
+                       type="hidden"
+                       value="@Model.Filter.To.ToString("yyyy-MM-dd")" />
+
+                <input name="ClassId"
+                       type="hidden"
+                       value="@Model.Filter.ClassId" />
+
+                <input name="StudentId"
+                       type="hidden"
+                       value="@Model.Filter.StudentId" />
+
+                <input name="Status"
+                       type="hidden"
+                       value="@Model.Filter.Status" />
+
+                <button type="submit"
+                        id="attendance-export"
+                        class="primary-button"
+                        disabled="@(Model.Total == 0 || Model.ExportLimitExceeded)">
+                    <i class="bi bi-download" aria-hidden="true"></i>
+                    Download Excel
+                </button>
+
+                <a id="attendance-print-link"
+                   hidden="@(Model.Total == 0 || Model.ExportLimitExceeded)"
+                   asp-action="Print"
+                   asp-route-From="@Model.Filter.From.ToString("yyyy-MM-dd")"
+                   asp-route-To="@Model.Filter.To.ToString("yyyy-MM-dd")"
+                   asp-route-ClassId="@Model.Filter.ClassId"
+                   asp-route-StudentId="@Model.Filter.StudentId"
+                   asp-route-Status="@Model.Filter.Status"
+                   target="_blank"
+                   rel="noopener"
+                   class="outline-button">
+                    Print / Save as PDF
+                </a>
+            </form>
+        </div>
+    }
+
+    <p id="attendance-refresh-status"
+       class="text-muted"
+       role="status"
+       data-refresh-url="@Url.Action("Report", new {
+           From = Model.Filter.From.ToString("yyyy-MM-dd"),
+           To = Model.Filter.To.ToString("yyyy-MM-dd"),
+           ClassId = Model.Filter.ClassId,
+           StudentId = Model.Filter.StudentId,
+           Status = Model.Filter.Status,
+           fragment = true
+       })">
+        Records refresh automatically while this page is visible.
+    </p>
+
+    <partial name="_ReportResults" model="Model" />
+</div>
+
+@section Scripts {
+    <script src="~/js/attendance-report.js"
+            asp-append-version="true"></script>
+}

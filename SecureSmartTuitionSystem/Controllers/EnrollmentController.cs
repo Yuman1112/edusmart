@@ -765,8 +765,7 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 ModelState.AddModelError(
                     nameof(model.GuardianIdentificationNumber),
-                    "Please enter the parent or guardian's " +
-                    "identification number.");
+                    "Please enter the IC number.");
             }
 
             if (!ModelState.IsValid)

@@ -191,6 +191,203 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("AdminProfiles");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Attendance.AttendanceCorrectionRequest", b =>
+                {
+                    b.Property<int>("AttendanceCorrectionRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AttendanceCorrectionRequestId"));
+
+                    b.Property<int>("AttendanceRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Decision")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PreviousStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RequestedByName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("RequestedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("RequestedStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewRemark")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedByName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ReviewedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("AttendanceCorrectionRequestId");
+
+                    b.HasIndex("AttendanceRecordId")
+                        .IsUnique()
+                        .HasFilter("[Decision] = 0");
+
+                    b.HasIndex("RequestedByUserId", "RequestedAtUtc");
+
+                    b.ToTable("AttendanceCorrectionRequests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AttendanceCorrection_Decision", "[Decision] IN (0,1,2)");
+
+                            t.HasCheckConstraint("CK_AttendanceCorrection_Status", "[RequestedStatus] IN (1,2,3)");
+                        });
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Attendance.AttendanceLesson", b =>
+                {
+                    b.Property<int>("AttendanceLessonId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AttendanceLessonId"));
+
+                    b.Property<string>("ClassCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int?>("ClassLessonChangeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClassName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("IsReplacement")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LessonDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("OriginalDate")
+                        .HasColumnType("date");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime?>("SubmittedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TutorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TutorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("AttendanceLessonId");
+
+                    b.HasIndex("ClassLessonChangeId");
+
+                    b.HasIndex("TutorUserId", "LessonDate");
+
+                    b.HasIndex("ClassSessionId", "OriginalDate", "IsReplacement")
+                        .IsUnique();
+
+                    b.ToTable("AttendanceLessons", (string)null);
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Attendance.AttendanceRecord", b =>
+                {
+                    b.Property<int>("AttendanceRecordId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AttendanceRecordId"));
+
+                    b.Property<int>("AttendanceLessonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Remark")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int?>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StudentName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("StudentNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("StudentProfileId")
+                        .HasColumnType("int");
+
+                    b.HasKey("AttendanceRecordId");
+
+                    b.HasIndex("StudentProfileId");
+
+                    b.HasIndex("AttendanceLessonId", "StudentProfileId")
+                        .IsUnique();
+
+                    b.ToTable("AttendanceRecords", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AttendanceRecord_Status", "[Status] IS NULL OR [Status] IN (1,2,3)");
+                        });
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Billing.Bill", b =>
                 {
                     b.Property<int>("BillId")
@@ -1764,6 +1961,62 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("ApplicationUser");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Attendance.AttendanceCorrectionRequest", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Attendance.AttendanceRecord", "AttendanceRecord")
+                        .WithMany()
+                        .HasForeignKey("AttendanceRecordId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AttendanceRecord");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Attendance.AttendanceLesson", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.ClassLessonChange", "ClassLessonChange")
+                        .WithMany()
+                        .HasForeignKey("ClassLessonChangeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", "ClassSession")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "TutorUser")
+                        .WithMany()
+                        .HasForeignKey("TutorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassLessonChange");
+
+                    b.Navigation("ClassSession");
+
+                    b.Navigation("TutorUser");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Attendance.AttendanceRecord", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Attendance.AttendanceLesson", "AttendanceLesson")
+                        .WithMany("Records")
+                        .HasForeignKey("AttendanceLessonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.StudentProfile", "StudentProfile")
+                        .WithMany()
+                        .HasForeignKey("StudentProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AttendanceLesson");
+
+                    b.Navigation("StudentProfile");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Billing.Bill", b =>
                 {
                     b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.EnrollmentApplication", "EnrollmentApplication")
@@ -2139,6 +2392,11 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsRequired();
 
                     b.Navigation("TutorProfile");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Attendance.AttendanceLesson", b =>
+                {
+                    b.Navigation("Records");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Billing.Bill", b =>

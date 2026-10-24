@@ -6,6 +6,7 @@ using SecureSmartTuitionSystem.Models.Security;
 using SecureSmartTuitionSystem.Services.Security;
 using System.Security.Claims;
 using SecureSmartTuitionSystem.Models;
+using SecureSmartTuitionSystem.Models.Attendance;
 using SecureSmartTuitionSystem.Models.Billing;
 using SecureSmartTuitionSystem.Models.Communication;
 using SecureSmartTuitionSystem.Models.Enrollment;
@@ -101,6 +102,15 @@ namespace SecureSmartTuitionSystem.Data
         public DbSet<AdminProfile> AdminProfiles =>
             Set<AdminProfile>();
 
+        public DbSet<AttendanceLesson> AttendanceLessons =>
+            Set<AttendanceLesson>();
+
+        public DbSet<AttendanceRecord> AttendanceRecords =>
+            Set<AttendanceRecord>();
+
+        public DbSet<AttendanceCorrectionRequest> AttendanceCorrectionRequests =>
+            Set<AttendanceCorrectionRequest>();
+
         public DbSet<TutorProfile> TutorProfiles =>
             Set<TutorProfile>();
 
@@ -182,6 +192,8 @@ namespace SecureSmartTuitionSystem.Data
             ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.ConfigureAttendance();
 
             // AddDefaultIdentity uses 128-character provider/token keys at runtime.
             // Apply the same mapping when the design-time factory builds the model.
