@@ -9,14 +9,15 @@ namespace SecureSmartTuitionSystem.Controllers;
 [Authorize]
 public sealed class NotificationCenterController(ApplicationDbContext db) : Controller
 {
-    [HttpGet] public async Task<IActionResult> Index(int page = 1)
+    [HttpGet] public async Task<IActionResult> Index(int page = 1, bool unreadOnly = false)
     {
         page = Math.Clamp(page, 1, 10000);
         var id = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var today = ClassScheduleService.Today;
         var query = db.UserNotifications.AsNoTracking().Where(x => x.UserId == id && (x.AvailableFromDate == null || x.AvailableFromDate <= today));
+        if (unreadOnly) query = query.Where(x => x.ReadAtUtc == null);
         int count = await query.CountAsync(); int pages = Math.Max(1, (int)Math.Ceiling(count / 25d)); page = Math.Clamp(page, 1, pages);
-        ViewBag.Page = page; ViewBag.TotalPages = pages; ViewBag.TotalRecords = count;
+        ViewBag.Page = page; ViewBag.TotalPages = pages; ViewBag.TotalRecords = count; ViewBag.UnreadOnly = unreadOnly;
         return View(await query.OrderByDescending(x => x.CreatedAtUtc).ThenByDescending(x => x.UserNotificationId).Skip((page - 1) * 25).Take(25).ToListAsync());
     }
     [HttpGet, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -36,22 +37,32 @@ public sealed class NotificationCenterController(ApplicationDbContext db) : Cont
         return Json(new { announcements, notifications });
     }
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ReadAll(int page = 1)
+    public async Task<IActionResult> ReadAll(int page = 1, bool unreadOnly = false)
     {
         var id = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var today = ClassScheduleService.Today;
         await db.UserNotifications.Where(x => x.UserId == id && x.ReadAtUtc == null &&
             (x.AvailableFromDate == null || x.AvailableFromDate <= today))
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.ReadAtUtc, (DateTime?)DateTime.UtcNow));
-        return RedirectToAction(nameof(Index), new { page });
+        return RedirectToAction(nameof(Index), new { page, unreadOnly });
     }
-    [HttpPost, ValidateAntiForgeryToken] public async Task<IActionResult> Read(long id, int page = 1)
+    [HttpPost, ValidateAntiForgeryToken] public async Task<IActionResult> Read(long id, int page = 1, bool unreadOnly = false)
     {
         var user = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var today = ClassScheduleService.Today;
         var n = await db.UserNotifications.FirstOrDefaultAsync(x => x.UserNotificationId == id && x.UserId == user && (x.AvailableFromDate == null || x.AvailableFromDate <= today));
         if (n == null) return NotFound();
         if (n.ReadAtUtc == null) { n.ReadAtUtc = DateTime.UtcNow; await db.SaveChangesAsync(); }
-        return RedirectToAction(nameof(Index), new { page });
+        return RedirectToAction(nameof(Index), new { page, unreadOnly });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken] public async Task<IActionResult> MarkUnread(long id, int page = 1, bool unreadOnly = false)
+    {
+        var user = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var today = ClassScheduleService.Today;
+        var n = await db.UserNotifications.FirstOrDefaultAsync(x => x.UserNotificationId == id && x.UserId == user && (x.AvailableFromDate == null || x.AvailableFromDate <= today));
+        if (n == null) return NotFound();
+        if (n.ReadAtUtc != null) { n.ReadAtUtc = null; await db.SaveChangesAsync(); }
+        return RedirectToAction(nameof(Index), new { page, unreadOnly });
     }
 }

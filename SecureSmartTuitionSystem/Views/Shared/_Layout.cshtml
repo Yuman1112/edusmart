@@ -67,7 +67,7 @@
         || currentController == "EnrollmentExits"
         || (isTutor && tutorClassesActive);
 
-    bool communicationActive = currentController == "Announcements" || currentController == "Messages" || (!isAdmin && currentController == "NotificationCenter");
+    bool communicationActive = currentController == "Announcements" || currentController == "Messages" || currentController == "Faq" || (!isAdmin && currentController == "NotificationCenter");
     bool pendingActive = currentController == "ClassSchedules" && (currentAction == "Pending" || currentAction == "Replacement" || currentAction == "Unschedule");
     bool calendarActive = currentController == "ClassSchedules" && !pendingActive;
 
@@ -254,6 +254,13 @@
                            aria-current="@(currentController == "Billing" ? "page" : null)">
                             <i class="bi bi-credit-card" aria-hidden="true"></i>
                             <span>Payment &amp; Billing</span>
+                        </a>
+
+                        <a class="sidebar-link @(currentController == "BillingCoverage" ? "active" : "")"
+                           asp-controller="BillingCoverage" asp-action="Index"
+                           aria-current="@(currentController == "BillingCoverage" ? "page" : null)">
+                            <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                            <span>Enrollment Plan Periods</span>
                         </a>
 
                         <!-- Admin: Planned Modules -->
@@ -512,6 +519,14 @@
 
                             @if (!isAdmin)
                             {
+                                <a class="sidebar-submenu-link @(currentController == "Faq" ? "active" : "")"
+                                   asp-controller="Faq" asp-action="Index" aria-current="@(currentController == "Faq" ? "page" : null)">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i><span>FAQ &amp; Support</span>
+                                </a>
+                            }
+
+                            @if (!isAdmin)
+                            {
                                 <a class="sidebar-submenu-link @(currentController == "NotificationCenter" ? "active" : "")"
                                    asp-controller="NotificationCenter"
                                    asp-action="Index"
@@ -527,12 +542,12 @@
                     @if (isAdmin)
                     {
                         <!-- Admin: Reports & Security -->
-                        <span class="sidebar-link disabled-link"
-                              aria-disabled="true"
-                              title="This module will be developed later">
+                        <a class="sidebar-link @(currentController == "Reports" ? "active" : "")"
+                           asp-controller="Reports" asp-action="Index"
+                           aria-current="@(currentController == "Reports" ? "page" : null)">
                             <i class="bi bi-bar-chart" aria-hidden="true"></i>
                             <span>Reports &amp; Analytics</span>
-                        </span>
+                        </a>
 
                         <a class="sidebar-link @(currentController == "Security" ? "active" : "")"
                            asp-controller="Security"
@@ -634,10 +649,11 @@
                         {
                             <a asp-controller="@(User.IsInRole("Parent") ? "Parent" : "Student")" asp-action="Index" class="public-nav-link @(currentController == "Parent" || currentController == "Student" ? "active" : "")"><i class="bi bi-grid" aria-hidden="true"></i>Dashboard</a>
                             <div class="learner-nav-group dropdown">
-                                <button type="button" class="public-nav-link dropdown-toggle @(currentController == "LearningClasses" || currentController == "EnrollmentSubmission" || currentController == "EnrollmentExits" ? "active" : "")" data-bs-toggle="dropdown" aria-expanded="false">Class &amp; Enrollment</button>
+                                <button type="button" class="public-nav-link dropdown-toggle @(currentController == "LearningClasses" || currentController == "EnrollmentSubmission" || currentController == "EnrollmentHistory" || currentController == "EnrollmentExits" ? "active" : "")" data-bs-toggle="dropdown" aria-expanded="false">Class &amp; Enrollment</button>
                                 <div class="dropdown-menu learner-nav-menu">
                                     <a class="dropdown-item @(currentController == "LearningClasses" ? "active" : "")" asp-controller="LearningClasses" asp-action="Index">My Classes</a>
                                     <a class="dropdown-item" href="@Url.Action("Index", "LearningClasses")#enrollment-actions">Add Subjects</a>
+                                    <a class="dropdown-item @(currentController == "EnrollmentHistory" ? "active" : "")" asp-controller="EnrollmentHistory" asp-action="Index">Enrollment History</a>
                                     <a class="dropdown-item @(currentController == "EnrollmentExits" ? "active" : "")" asp-controller="EnrollmentExits" asp-action="Index">Withdrawals &amp; Refunds</a>
                                 </div>
                             </div>
@@ -655,6 +671,7 @@
                                 <div class="dropdown-menu learner-nav-menu">
                                     <a class="dropdown-item @(currentController == "Announcements" ? "active" : "")" asp-controller="Announcements" asp-action="Index">Announcements @await Component.InvokeAsync("AnnouncementUnread")</a>
                                     <a class="dropdown-item @(currentController == "Messages" ? "active" : "")" asp-controller="Messages" asp-action="Index">Messages @await Component.InvokeAsync("MessageUnread")</a>
+                                    <a class="dropdown-item @(currentController == "Faq" ? "active" : "")" asp-controller="Faq" asp-action="Index">FAQ &amp; Support</a>
                                     <a class="dropdown-item @(currentController == "NotificationCenter" ? "active" : "")" asp-controller="NotificationCenter" asp-action="Index">Notifications @await Component.InvokeAsync("NotificationUnread")</a>
                                 </div>
                             </div>

@@ -1,7 +1,9 @@
-﻿namespace SecureSmartTuitionSystem.ViewModels.Enrollment
+namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 {
     public class BrowseClassesViewModel
     {
+        public string? SelectedStage { get; set; }
+
         public string? SelectedSubject { get; set; }
 
         public string? SelectedLevel { get; set; }

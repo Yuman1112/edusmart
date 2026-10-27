@@ -384,6 +384,12 @@ namespace SecureSmartTuitionSystem.Controllers
                         histories
                 };
 
+            viewModel.DuplicateCandidates = await new StudentDuplicateReviewService(_context)
+                .FindAsync(application.StudentName, application.StudentDateOfBirth,
+                    application.StudentIdentificationNumber, application.ExistingStudentProfileId,
+                    application.EnrollmentApplicationId, HttpContext.RequestAborted);
+            viewModel.DuplicateReviewVersion = StudentDuplicateReviewService.ReviewVersion(viewModel.DuplicateCandidates);
+
             return View(viewModel);
         }
 
@@ -443,6 +449,16 @@ namespace SecureSmartTuitionSystem.Controllers
                         {
                             id = model.EnrollmentApplicationId
                         });
+                }
+
+                // Prevent a bill/payment link from being issued for an
+                // application that cannot safely be bound to the family.
+                string? guardianLinkError = await new GuardianAccountLinkPolicy(_context)
+                    .ValidateAsync(application, HttpContext.RequestAborted);
+                if (guardianLinkError != null)
+                {
+                    TempData["ErrorMessage"] = guardianLinkError;
+                    return RedirectToAction(nameof(Details), new { id = application.EnrollmentApplicationId });
                 }
 
                 if (application.SelectedSubjects.Count == 0)
@@ -572,6 +588,31 @@ namespace SecureSmartTuitionSystem.Controllers
                     application.ExistingStudentProfileId, application.EnrollmentApplicationId, durationMonths: application.EnrollmentDurationMonths);
                 if (ruleError != null) { TempData["ErrorMessage"] = ruleError; return RedirectToAction(nameof(Details), new { id = application.EnrollmentApplicationId }); }
 
+                // Recompute within the approval transaction. Client-side checks
+                // are convenience only; a direct POST must pass the same review.
+                var duplicateCandidates = await new StudentDuplicateReviewService(_context)
+                    .FindAsync(application.StudentName, application.StudentDateOfBirth,
+                        application.StudentIdentificationNumber, application.ExistingStudentProfileId,
+                        application.EnrollmentApplicationId, HttpContext.RequestAborted);
+                if (!StudentDuplicateReviewService.IsReviewComplete(duplicateCandidates,
+                    model.DuplicateReviewConfirmed, model.DuplicateReviewVersion, model.DuplicateReviewReason))
+                {
+                    TempData["ErrorMessage"] = "Review the current possible duplicate records, confirm that this is a different student, and provide a reason of 10 to 200 characters before approval. If it is the same student, reject this application and arrange the correct existing-student enrollment.";
+                    return RedirectToAction(nameof(Details), new { id = application.EnrollmentApplicationId });
+                }
+
+                string approvalHistoryRemarks = string.IsNullOrWhiteSpace(model.Remarks)
+                    ? "Enrollment application approved."
+                    : model.Remarks.Trim();
+                if (duplicateCandidates.Count > 0)
+                {
+                    string review = $"Duplicate review: {duplicateCandidates.Count} candidate(s); confirmed different student. Reason: {model.DuplicateReviewReason!.Trim()}";
+                    // Preserve the mandatory review reason within the existing
+                    // 500-character history column; optional remarks use the rest.
+                    int available = 500 - review.Length - 3;
+                    approvalHistoryRemarks = review + " | " + approvalHistoryRemarks[..Math.Min(available, approvalHistoryRemarks.Length)];
+                }
+
                 EnrollmentStatus previousStatus =
                     application.Status;
 
@@ -609,11 +650,7 @@ namespace SecureSmartTuitionSystem.Controllers
                         ChangedByUserId =
                             adminUserId,
 
-                        Remarks =
-                            string.IsNullOrWhiteSpace(
-                                model.Remarks)
-                                ? "Enrollment application approved."
-                                : model.Remarks.Trim()
+                        Remarks = approvalHistoryRemarks
                     });
 
                 /*

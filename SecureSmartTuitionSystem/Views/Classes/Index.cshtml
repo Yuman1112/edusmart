@@ -52,7 +52,8 @@
                 </p>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(
+            @if (!string.IsNullOrWhiteSpace(Model.SelectedStage) ||
+                        !string.IsNullOrWhiteSpace(
                         Model.SelectedSubject) ||
                         !string.IsNullOrWhiteSpace(
                         Model.SelectedLevel))
@@ -74,53 +75,34 @@
               class="browse-filter-grid">
 
             <div class="browse-form-field">
-                <label for="subjectFilter">
-                    Subject
-                </label>
-
-                <select id="subjectFilter"
-                        name="subject"
-                        class="form-select browse-filter-input">
-
-                    <option value="">
-                        All Subjects
-                    </option>
-
-                    @foreach (var subject in Model.Subjects)
-                    {
-                        <option value="@subject"
-                                selected="@(subject ==
-                                                                    Model.SelectedSubject)">
-                        @subject
-                    </option>
-                                        }
+                <label for="stageFilter">Academic Stage</label>
+                <select id="stageFilter" name="stage" class="form-select browse-filter-input">
+                    <option value="">All Academic Stages</option>
+                    <option value="Primary" selected="@(Model.SelectedStage == "Primary")">Primary</option>
+                    <option value="Secondary" selected="@(Model.SelectedStage == "Secondary")">Secondary</option>
                 </select>
             </div>
-
             <div class="browse-form-field">
-                <label for="levelFilter">
-                    Academic Level
-                </label>
-
-                <select id="levelFilter"
-                        name="level"
-                        class="form-select browse-filter-input">
-
-                    <option value="">
-                        All Academic Levels
-                    </option>
-
-                    @foreach (var level in
-                                        Model.AcademicLevels)
+                <label for="levelFilter">Academic Level</label>
+                <select id="levelFilter" name="level" class="form-select browse-filter-input">
+                    <option value="">All Academic Levels</option>
+                    @foreach (var item in Model.AcademicLevels)
                     {
-                        <option value="@level"
-                                selected="@(level ==
-                                                                    Model.SelectedLevel)">
-                        @level
-                    </option>
-                                        }
+                        <option value="@item" selected="@(item == Model.SelectedLevel)">@item</option>
+                    }
                 </select>
             </div>
+            <div class="browse-form-field">
+                <label for="subjectFilter">Subject</label>
+                <select id="subjectFilter" name="subject" class="form-select browse-filter-input">
+                    <option value="">All Subjects</option>
+                    @foreach (var item in Model.Subjects)
+                    {
+                        <option value="@item" selected="@(string.Equals(item, Model.SelectedSubject, StringComparison.OrdinalIgnoreCase))">@item</option>
+                    }
+                </select>
+            </div>
+            <noscript><button type="submit" class="browse-primary-button">Apply filters</button></noscript>
         </form>
     </section>
 
@@ -326,3 +308,7 @@
     </section>
 </div>
 
+
+@section Scripts {
+    <script src="~/js/browse-class-filters.js" asp-append-version="true"></script>
+}

@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReportViewModel
+@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReportViewModel
 
 @{
     ViewData["Title"] = "Attendance Records";
@@ -32,7 +32,7 @@
     </div>
 
     <div class="class-form-card mb-4">
-        <form asp-action="Report" method="get">
+        <form asp-action="Report" method="get" data-live-filter>
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-md-3">
                     <label for="attendance-from" class="form-label">

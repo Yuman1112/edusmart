@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorExportViewModel
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorExportViewModel
 @{
     ViewData["Title"] = "Export Tutor Records";
 }
@@ -12,7 +12,7 @@
     <a asp-controller="TutorManagement" asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
 </div>
 <div class="class-form-card mb-4">
-    <form asp-controller="TutorManagement" asp-action="Export" method="get">
+    <form asp-controller="TutorManagement" asp-action="Export" method="get" data-live-filter>
         <div class="row g-3 align-items-end">
             <div class="col-12 col-md-4"><label asp-for="Search" class="form-label">Search Tutor</label><input asp-for="Search" class="form-control" maxlength="1000" placeholder="Name, ID, email or expertise" /></div>
             <div class="col-12 col-md-3"><label asp-for="Status" class="form-label"></label><select asp-for="Status" class="form-select"><option value="">All Statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>

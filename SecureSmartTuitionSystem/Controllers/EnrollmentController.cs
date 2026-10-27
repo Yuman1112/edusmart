@@ -270,8 +270,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     HttpContext.Session.GetString(
                         ExistingParentUserIdSessionKey);
 
-                if (string.IsNullOrWhiteSpace(
-                    existingParentUserId))
+                if (string.IsNullOrWhiteSpace(existingParentUserId) ||
+                    !User.IsInRole("Parent") || _userManager.GetUserId(User) != existingParentUserId)
                 {
                     model.ExistingParentVerified =
                         false;
@@ -328,6 +328,17 @@ namespace SecureSmartTuitionSystem.Controllers
             model.VerifiedParentEmail =
                 null;
 
+            // A publicly known email and four IC digits do not establish
+            // account ownership. An authenticated Parent is required.
+            if (User.Identity?.IsAuthenticated != true || !User.IsInRole("Parent"))
+            {
+                ModelState.AddModelError(string.Empty,
+                    "Please sign in to your parent / guardian account before verifying it.");
+                return View("GuardianDetails", model);
+            }
+            string? signedInParentId = _userManager.GetUserId(User);
+            if (string.IsNullOrWhiteSpace(signedInParentId)) return Forbid();
+
             if (string.IsNullOrWhiteSpace(
                 model.ExistingParentEmail))
             {
@@ -375,6 +386,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     .Include(parent =>
                         parent.ApplicationUser)
                     .FirstOrDefaultAsync(parent =>
+                        parent.ApplicationUserId == signedInParentId &&
                         parent.ApplicationUser
                             .NormalizedEmail ==
                             normalizedEmail &&
@@ -609,7 +621,7 @@ namespace SecureSmartTuitionSystem.Controllers
         [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult GuardianDetails(
+        public async Task<IActionResult> GuardianDetails(
             GuardianDetailsViewModel model)
         {
             if (!HasStudentDetails())
@@ -633,8 +645,8 @@ namespace SecureSmartTuitionSystem.Controllers
                  * The account must be verified before the
                  * user can continue.
                  */
-                if (string.IsNullOrWhiteSpace(
-                    existingParentUserId))
+                if (string.IsNullOrWhiteSpace(existingParentUserId) ||
+                    !User.IsInRole("Parent") || _userManager.GetUserId(User) != existingParentUserId)
                 {
                     ModelState.AddModelError(
                         string.Empty,
@@ -770,6 +782,14 @@ namespace SecureSmartTuitionSystem.Controllers
 
             if (!ModelState.IsValid)
             {
+                return View(model);
+            }
+
+            // Do not silently attach an existing account through the new-account path.
+            if (await _userManager.FindByEmailAsync(model.GuardianEmail!.Trim()) != null)
+            {
+                ModelState.AddModelError(string.Empty,
+                    "We couldn't continue with these details. If you already have an EduSmart account, sign in and select the existing account option. Otherwise, contact the centre for assistance.");
                 return View(model);
             }
 

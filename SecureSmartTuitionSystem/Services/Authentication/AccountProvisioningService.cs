@@ -1,4 +1,4 @@
-using SecureSmartTuitionSystem.Services.Enrollment;
+﻿using SecureSmartTuitionSystem.Services.Enrollment;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
@@ -54,6 +54,13 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                 throw new InvalidOperationException(
                     "The enrollment application has no classes.");
             }
+
+            // Recheck after payment: account identity or links may have changed
+            // since approval. A conflict must go to paid-fulfillment review,
+            // never to automatic attachment by email.
+            string? guardianLinkError = await new GuardianAccountLinkPolicy(_context)
+                .ValidateAsync(application, cancellationToken);
+            if (guardianLinkError != null) throw new InvalidOperationException(guardianLinkError);
 
             var ruleError = await new EnrollmentRulesService(_context).ValidateAsync(
                 application.SelectedSubjects.Select(x => x.ClassSessionId).ToList(), application.RequestedStartDate,
@@ -219,66 +226,8 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                     application.GuardianEmail);
 
             if (existingUser != null)
-            {
-                bool isParent =
-                    await _userManager.IsInRoleAsync(
-                        existingUser,
-                        "Parent");
-
-                if (!isParent)
-                {
-                    throw new InvalidOperationException(
-                        "The guardian email belongs to a " +
-                        "non-parent system account.");
-                }
-
-                var existingProfile =
-                    await _context.ParentProfiles
-                        .Include(profile =>
-                            profile.ApplicationUser)
-                        .FirstOrDefaultAsync(
-                            profile =>
-                                profile.ApplicationUserId ==
-                                existingUser.Id,
-                            cancellationToken);
-
-                if (existingProfile != null)
-                {
-                    return existingProfile;
-                }
-
-                var missingProfile =
-                    new ParentProfile
-                    {
-                        ApplicationUserId =
-                            existingUser.Id,
-
-                        FullName =
-                            application.GuardianName,
-
-                        IdentificationNumber =
-                            application
-                                .GuardianIdentificationNumber,
-
-                        IdentificationLast4 =
-                            application
-                                .GuardianIdentificationLast4,
-
-                        CreatedAt =
-                            DateTime.UtcNow,
-
-                        ApplicationUser =
-                            existingUser
-                    };
-
-                _context.ParentProfiles.Add(
-                    missingProfile);
-
-                await _context.SaveChangesAsync(
-                    cancellationToken);
-
-                return missingProfile;
-            }
+                throw new InvalidOperationException(
+                    "The guardian account needs review before enrollment fulfillment. Contact an administrator.");
 
             /*
              * Create a new passwordless Parent account.

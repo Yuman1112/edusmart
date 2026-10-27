@@ -5,14 +5,12 @@
 <div class="page-header"><div><h1>Withdrawals &amp; Refunds</h1><p>Stop regular classes without deleting enrollment and payment history.</p></div></div>
 @if (TempData["SuccessMessage"] != null) { <div class="alert alert-success">@TempData["SuccessMessage"]</div> }
 @if (TempData["ErrorMessage"] != null) { <div class="alert alert-danger">@TempData["ErrorMessage"]</div> }
-@if (!admin) {
 <div class="exit-policy"><strong>Withdrawal and refund policy</strong><p class="mb-0">Withdrawal takes effect on the first day of next month. This month's tuition is retained. Future unused prepaid tuition is reviewed by Admin, using the original discounted fee. Hardcopy and delivery fees are excluded from the automatic quote. A refund decision does not cancel the withdrawal. Existing replacement entitlement is retained.</p></div>
-}
-@if (!admin && enrollments.Any()) {
+@if (enrollments.Any()) {
 <section class="class-details-card mb-4"><h2>Withdraw from a class</h2><form asp-action="Stop" method="post" id="withdrawalForm">
-@if (User.IsInRole("Parent")) {
-<label for="withdrawalChild" class="form-label">Child</label>
-<select id="withdrawalChild" class="form-select mb-3" required><option value="">Choose your child</option>
+@if (User.IsInRole("Parent") || admin) {
+<label for="withdrawalChild" class="form-label">@(admin ? "Student" : "Child")</label>
+<select id="withdrawalChild" class="form-select mb-3" required><option value="">@(admin ? "Choose a student" : "Choose your child")</option>
 @foreach (var child in enrollments.GroupBy(e => e.StudentProfileId).Select(g => g.First().StudentProfile)) {
 <option value="@child.StudentProfileId">@child.FullName (@child.StudentNumber)</option>
 }

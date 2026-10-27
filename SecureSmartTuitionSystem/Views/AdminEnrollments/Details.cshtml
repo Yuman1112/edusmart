@@ -123,6 +123,64 @@
         <!-- Main content -->
         <div class="enrollment-details-main">
 
+            @if (Model.CanApprove)
+            {
+                <section class="enrollment-details-card enrollment-duplicate-review"
+                         aria-labelledby="duplicateReviewTitle">
+                    <div class="enrollment-details-card-header">
+                        <h2 id="duplicateReviewTitle">
+                            <i class="bi bi-person-check" aria-hidden="true"></i>
+                            Student Record Check
+                        </h2>
+                    </div>
+                    <div class="enrollment-details-card-body">
+                        @if (Model.DuplicateCandidates.Count > 0)
+                        {
+                            <div class="enrollment-duplicate-notice" role="status">
+                                <strong>Possible duplicate student - review required</strong>
+                                <p>These records share the applicant's birthdate and have a similar name.
+                                    Compare the records before approving. A similar name does not prove that
+                                    they are the same person.</p>
+                            </div>
+                            <div class="enrollment-duplicate-table-wrap" role="region"
+                                 aria-label="Possible duplicate student records" tabindex="0">
+                                <table class="table enrollment-duplicate-table">
+                                    <caption>Possible matches for @Model.StudentName
+                                        (born @Model.StudentDateOfBirth.ToString("dd MMM yyyy")).</caption>
+                                    <thead>
+                                        <tr><th scope="col">Record</th><th scope="col">Student</th>
+                                            <th scope="col">Birthdate</th><th scope="col">Name similarity</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var candidate in Model.DuplicateCandidates)
+                                        {
+                                            <tr>
+                                                <td><strong>@candidate.Reference</strong>
+                                                    <span class="enrollment-duplicate-source">@candidate.Source</span>
+                                                </td>
+                                                <td>@candidate.StudentName</td>
+                                                <td>@candidate.DateOfBirth.ToString("dd MMM yyyy")</td>
+                                                <td>@((candidate.Similarity * 100).ToString("F1"))%</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="enrollment-duplicate-help">If this is the same student, reject this
+                                application and arrange enrollment through the correct existing account.
+                                If this is a different student, record your review in Confirm Approval.
+                                The system will not merge records or link families automatically.</p>
+                        }
+                        else
+                        {
+                            <p class="enrollment-duplicate-help">No additional similar-name records with
+                                the same birthdate were found. Review the applicant's details and class
+                                eligibility before approval.</p>
+                        }
+                    </div>
+                </section>
+            }
+
             <!-- Application information -->
             <section class="enrollment-details-card">
 
@@ -701,9 +759,35 @@
                         </p>
 
                         <p class="text-muted">
-                            The application will proceed to
-                            payment verification.
+                            Approval creates a bill and proceeds to payment. Enrollment and new
+                            account activation take place only after successful payment is verified.
                         </p>
+
+                        <input type="hidden" name="DuplicateReviewVersion"
+                               value="@Model.DuplicateReviewVersion" />
+                        @if (Model.DuplicateCandidates.Count > 0)
+                        {
+                            <div class="enrollment-duplicate-notice">
+                                <strong>Possible duplicate records must be reviewed.</strong>
+                                <div class="form-check mt-3">
+                                    <input type="checkbox" class="form-check-input"
+                                           id="DuplicateReviewConfirmed" name="DuplicateReviewConfirmed"
+                                           value="true" required />
+                                    <label class="form-check-label" for="DuplicateReviewConfirmed">
+                                        I reviewed the possible matches and confirmed that the applicant
+                                        is a different student.
+                                    </label>
+                                </div>
+                                <label for="DuplicateReviewReason" class="form-label mt-3">Review reason</label>
+                                <textarea id="DuplicateReviewReason" name="DuplicateReviewReason"
+                                          class="form-control" rows="3" minlength="10" maxlength="200"
+                                          required aria-describedby="duplicateReviewHelp"></textarea>
+                                <p id="duplicateReviewHelp" class="enrollment-duplicate-help mt-2">
+                                    Explain how you confirmed the students are different (10-200 characters).
+                                    Do not enter full identification numbers or other unnecessary personal data.
+                                </p>
+                            </div>
+                        }
 
                         <label for="ApprovalRemarks"
                                class="form-label">

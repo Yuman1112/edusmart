@@ -125,15 +125,16 @@ namespace SecureSmartTuitionSystem.Controllers
         public async Task<IActionResult> ContinueToOptions(
             EnrollmentSelectionViewModel model)
         {
-            if (GetStudentDetailsFromSession() == null)
-            {
-                return ReturnToStudentDetails();
-            }
+            var studentDetails = GetStudentDetailsFromSession();
+            if (studentDetails == null) return ReturnToStudentDetails();
+            var guardianDetails = GetGuardianDetailsFromSession();
+            if (guardianDetails == null) return ReturnToGuardianDetails();
 
-            if (GetGuardianDetailsFromSession() == null)
-            {
-                return ReturnToGuardianDetails();
-            }
+            // Display-only identity fields must be restored from the trusted session on POST.
+            model.StudentName = studentDetails.StudentName;
+            model.GuardianName = GetGuardianDisplayName(guardianDetails);
+            ModelState.Remove(nameof(model.StudentName));
+            ModelState.Remove(nameof(model.GuardianName));
 
             model.SelectedClassSessionIds =
                 model.SelectedClassSessionIds
@@ -196,26 +197,6 @@ namespace SecureSmartTuitionSystem.Controllers
                 }
             }
             HttpContext.Session.SetString("Enrollment.RequestedStartDate", model.RequestedStartDate!.Value.ToString("yyyy-MM-dd"));
-
-            bool mixedStage = selectedClasses
-                .Select(item => item.Subject.EducationStage)
-                .Distinct()
-                .Count() > 1;
-
-            bool mixedLevel = selectedClasses
-                .Select(item => item.Subject.AcademicLevel.Trim().ToUpper())
-                .Distinct()
-                .Count() > 1;
-
-            if (mixedStage || mixedLevel)
-            {
-                ModelState.AddModelError(
-                    nameof(model.SelectedClassSessionIds),
-                    "All selected classes must have the same education stage and academic level.");
-
-                await PopulateSelectionViewModelAsync(model);
-                return View(SelectClassesViewPath, model);
-            }
 
             SaveSelectedClassIdsToSession(
                 model.SelectedClassSessionIds);
@@ -320,6 +301,13 @@ namespace SecureSmartTuitionSystem.Controllers
                 return ReturnToGuardianDetails();
             }
 
+            // An existing parent for a new child must still be signed in at
+            // the final POST. AddSubjects has its own linked-student check above.
+            if (!addStudentId.HasValue && guardianDetails.UseExistingParentAccount &&
+                (!User.IsInRole("Parent") || _userManager.GetUserId(User) !=
+                    HttpContext.Session.GetString(ExistingParentUserIdSessionKey)))
+                return Forbid();
+
             model.StudentName =
                 studentDetails.StudentName;
 
@@ -327,6 +315,8 @@ namespace SecureSmartTuitionSystem.Controllers
                 GetGuardianDisplayName(
                     guardianDetails);
 
+            ModelState.Remove(nameof(model.StudentName));
+            ModelState.Remove(nameof(model.GuardianName));
             if (model.SelectedClassSessionIds == null ||
                 model.SelectedClassSessionIds.Count == 0)
             {
@@ -381,42 +371,6 @@ namespace SecureSmartTuitionSystem.Controllers
                             model.SelectedClassSessionIds),
                         "One or more selected classes " +
                         "could not be found.");
-
-                    await PopulateSelectionViewModelAsync(
-                        model);
-
-                    return View(
-                        EnrollmentOptionsViewPath,
-                        model);
-                }
-
-                bool mixedEducationStage =
-                    selectedClasses
-                        .Select(classSession =>
-                            classSession.Subject
-                                .EducationStage)
-                        .Distinct()
-                        .Count() > 1;
-
-                bool mixedAcademicLevel =
-                    selectedClasses
-                        .Select(classSession =>
-                            classSession.Subject
-                                .AcademicLevel
-                                .Trim()
-                                .ToUpper())
-                        .Distinct()
-                        .Count() > 1;
-
-                if (mixedEducationStage ||
-                    mixedAcademicLevel)
-                {
-                    ModelState.AddModelError(
-                        nameof(
-                            model.SelectedClassSessionIds),
-                        "All selected classes must belong " +
-                        "to the same education stage and " +
-                        "academic level.");
 
                     await PopulateSelectionViewModelAsync(
                         model);
@@ -867,10 +821,10 @@ namespace SecureSmartTuitionSystem.Controllers
                         StudentHasNoEmail =
                             studentDetails.StudentHasNoEmail,
 
-                        AcademicLevel =
-                            selectedClasses[0]
-                                .Subject
-                                .AcademicLevel,
+                        // Student school level is not collected here. Preserve an existing
+                        // student's level; do not infer a new student's level from a class.
+                        AcademicLevel = string.IsNullOrWhiteSpace(existingStudent?.AcademicLevel)
+                            ? "Not provided" : existingStudent.AcademicLevel.Trim(),
 
                         RequestedStartDate =
                             model.RequestedStartDate!
@@ -970,6 +924,11 @@ namespace SecureSmartTuitionSystem.Controllers
                         });
                 }
 
+                var duplicateCandidates = await new StudentDuplicateReviewService(_context)
+                    .FindAsync(application.StudentName, application.StudentDateOfBirth,
+                        application.StudentIdentificationNumber, application.ExistingStudentProfileId,
+                        cancellationToken: HttpContext.RequestAborted);
+
                 application.StatusHistories.Add(
                     new EnrollmentStatusHistory
                     {
@@ -985,8 +944,9 @@ namespace SecureSmartTuitionSystem.Controllers
                         ChangedByUserId =
                             submittedByUserId,
 
-                        Remarks =
-                            "Enrollment application submitted."
+                        Remarks = duplicateCandidates.Count > 0
+                            ? "Enrollment application submitted. Possible duplicate student detected by same-birthdate Jaro-Winkler comparison; administrator review required."
+                            : "Enrollment application submitted."
                     });
 
                 _context.EnrollmentApplications.Add(

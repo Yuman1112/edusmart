@@ -1,0 +1,32 @@
+@model SecureSmartTuitionSystem.ViewModels.Billing.BillingCoverageViewModel
+@{ ViewData["Title"] = "Enrollment Plan Periods"; }
+<div class="page-header"><div><h1>Enrollment Plan Periods</h1><p>Review the months stated in existing enrollment plans and their initial bill status.</p></div></div>
+<div class="alert alert-info">This is a read-only review of initial enrollment plans. It does not generate charges or prove that a particular month may be billed or refunded. Review withdrawals, refunds, adjustments and other bills before making any billing decision.</div>
+<form method="get" data-live-filter class="d-flex flex-wrap align-items-end gap-2 mb-3">
+    <div><label for="month" class="form-label">Month</label><input id="month" name="month" type="month" min="2000-01" max="2100-12" class="form-control" value="@Model.Month" required /></div>
+    <button type="submit" class="btn btn-primary">View plans</button>
+</form>
+<section class="dashboard-card"><div class="table-responsive"><table class="table align-middle" data-server-paged="true">
+<thead><tr><th>Student</th><th>Class</th><th>Application</th><th>Stated plan months</th><th>Initial bill</th><th>Enrollment</th><th>Review</th></tr></thead><tbody>
+@foreach (var row in Model.Rows) {
+<tr><td>@row.Student (@row.StudentNumber)</td><td>@row.Class</td><td>@row.ApplicationNumber</td>
+<td>@row.StartMonth.ToString("MMM yyyy") – @row.EndMonth.ToString("MMM yyyy")</td>
+<td>@(row.BillNumber ?? "Unavailable") — @row.BillStatus</td>
+<td>@row.EnrollmentStatus@if (row.DropEffectiveDate.HasValue) { <div>Drop from @row.DropEffectiveDate.Value.ToString("dd MMM yyyy")</div> } @if (row.EndedAt.HasValue) { <div>Ended @row.EndedAt.Value.ToString("dd MMM yyyy")</div> }</td>
+<td>@(row.NeedsReview ? "Check refunds, withdrawals or bill record" : "Check before billing")</td></tr>
+}
+@if (Model.Rows.Count == 0) { <tr><td colspan="7">No existing enrollment plans found for this month.</td></tr> }
+</tbody></table></div>
+<nav class="table-pagination" aria-label="Plan periods pages">
+<span class="table-pagination-summary">@if (Model.TotalRecords == 0) { <text>0 rows · 25 per page</text> } else { <text>@((Model.Page - 1) * 25 + 1)–@Math.Min(Model.Page * 25, Model.TotalRecords) of @Model.TotalRecords rows · 25 per page</text> }</span>
+<div class="table-pagination-controls">
+@if (Model.Page > 1) {
+<a class="table-page-button" asp-action="Index" asp-route-month="@Model.Month" asp-route-page="1">First</a><a class="table-page-button" asp-action="Index" asp-route-month="@Model.Month" asp-route-page="@(Model.Page - 1)">Previous</a>
+} else { <button type="button" class="table-page-button" disabled>First</button><button type="button" class="table-page-button" disabled>Previous</button> }
+@for (var n = Math.Max(1, Model.Page - 2); n <= Math.Min(Model.TotalPages, Model.Page + 2); n++) {
+    @if (n == Model.Page) { <span class="table-page-button active" aria-current="page">@n</span> } else { <a class="table-page-button" asp-action="Index" asp-route-month="@Model.Month" asp-route-page="@n">@n</a> }
+}
+@if (Model.Page < Model.TotalPages) {
+<a class="table-page-button" asp-action="Index" asp-route-month="@Model.Month" asp-route-page="@(Model.Page + 1)">Next</a><a class="table-page-button" asp-action="Index" asp-route-month="@Model.Month" asp-route-page="@Model.TotalPages">Last</a>
+} else { <button type="button" class="table-page-button" disabled>Next</button><button type="button" class="table-page-button" disabled>Last</button> }
+</div></nav></section>

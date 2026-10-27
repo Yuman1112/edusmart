@@ -1,0 +1,107 @@
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.EnrollmentHistoryViewModel
+@using SecureSmartTuitionSystem.Models.Enrollment
+@{
+    ViewData["Title"] = "Enrollment History";
+    var rowNumber = Model.RowOffset;
+}
+<div class="container-fluid py-4">
+    <section class="dashboard-card shared-table-card" aria-label="Enrollment history records">
+        <header class="dashboard-card-header">
+            <div>
+                <h1 class="h4 mb-1">Enrollment History</h1>
+                <p class="mb-0">Review your enrollment applications and their current status.</p>
+            </div>
+            <span class="text-muted">@Model.TotalRows row(s)</span>
+        </header>
+    <form method="get" data-live-filter class="d-flex gap-2 flex-wrap p-3">
+        <label for="status" class="visually-hidden">Application status</label>
+        <select name="status" id="status" class="form-select w-auto">
+            <option value="">All statuses</option>
+            @foreach (var value in Enum.GetValues<EnrollmentStatus>())
+            {
+                <option value="@((int)value)" selected="@(Model.Status == value)">@System.Text.RegularExpressions.Regex.Replace(value.ToString(), "([a-z])([A-Z])", "$1 $2")</option>
+            }
+        </select>
+        <button class="btn btn-primary" type="submit">Filter</button>
+    </form>
+        <div class="table-responsive">
+            <table class="table align-middle" data-server-paged="true">
+                <thead><tr>
+                    <th scope="col">No</th>
+                    <th scope="col">Student</th>
+                    <th scope="col">Classes</th>
+                    <th scope="col">Submitted</th>
+                    <th scope="col">Start date</th>
+                    <th scope="col">Plan</th>
+                    <th scope="col">Status</th>
+                </tr></thead>
+                <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    // Keep an application visible even if a legacy record has no classes.
+                    var classes = row.Classes.Count > 0 ? row.Classes : new List<string> { "—" };
+                    foreach (var className in classes)
+                    {
+                        rowNumber++;
+                        <tr>
+                            <td>@rowNumber</td>
+                            <td>@row.StudentName</td>
+                            <td>@className</td>
+                            <td>@row.SubmittedAt.AddHours(8).ToString("dd MMM yyyy HH:mm")</td>
+                            <td>@row.RequestedStartDate.ToString("dd MMM yyyy")</td>
+                            <td>@row.DurationMonths month(s)</td>
+                            <td>
+                                @System.Text.RegularExpressions.Regex.Replace(row.Status.ToString(), "([a-z])([A-Z])", "$1 $2")
+                                @if (row.Status == EnrollmentStatus.Rejected && !string.IsNullOrWhiteSpace(row.RejectionReason))
+                                {
+                                    <div>Reason: @row.RejectionReason</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr><td colspan="7">No enrollment applications found.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <nav class="table-pagination" aria-label="Enrollment history pages">
+            <span class="table-pagination-summary">@(Model.TotalRows == 0 ? "0 rows · 25 per page" : $"{Model.RowOffset + 1}–{Model.RowOffset + Model.Rows.Count} of {Model.TotalRows} rows · 25 per page")</span>
+            <div class="table-pagination-controls">
+                @if (Model.Page > 1)
+                {
+                    <a class="table-page-button" asp-action="Index" asp-route-page="1" asp-route-status="@Model.Status">First</a>
+                    <a class="table-page-button" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-status="@Model.Status">Previous</a>
+                }
+                else
+                {
+                    <button type="button" class="table-page-button" disabled>First</button>
+                    <button type="button" class="table-page-button" disabled>Previous</button>
+                }
+                @for (var pageNumber = Math.Max(1, Model.Page - 2); pageNumber <= Math.Min(Model.TotalPages, Model.Page + 2); pageNumber++)
+                {
+                    @if (pageNumber == Model.Page)
+                    {
+                        <span class="table-page-button active" aria-current="page">@pageNumber</span>
+                    }
+                    else
+                    {
+                        <a class="table-page-button" asp-action="Index" asp-route-page="@pageNumber" asp-route-status="@Model.Status">@pageNumber</a>
+                    }
+                }
+                @if (Model.Page < Model.TotalPages)
+                {
+                    <a class="table-page-button" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-status="@Model.Status">Next</a>
+                    <a class="table-page-button" asp-action="Index" asp-route-page="@Model.TotalPages" asp-route-status="@Model.Status">Last</a>
+                }
+                else
+                {
+                    <button type="button" class="table-page-button" disabled>Next</button>
+                    <button type="button" class="table-page-button" disabled>Last</button>
+                }
+            </div>
+        </nav>
+    </section>
+</div>

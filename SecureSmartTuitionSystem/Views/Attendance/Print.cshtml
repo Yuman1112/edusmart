@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReportViewModel
+@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReportViewModel
 @{
     Layout = null;
 }
@@ -8,6 +8,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Attendance Report - EduSmart</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/attendance-print.css" asp-append-version="true" />
 </head>
 <body>
@@ -15,6 +18,7 @@
     <h1>EduSmart · Attendance Report</h1>
     <p>Generated @DateTime.UtcNow.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</p>
     <partial name="_ReportResults" model="Model" />
+    <script src="~/js/table-pagination.js" asp-append-version="true"></script>
     <script src="~/js/attendance-print.js" asp-append-version="true"></script>
 </body>
 </html>

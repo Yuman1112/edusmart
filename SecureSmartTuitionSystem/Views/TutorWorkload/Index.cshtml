@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorWorkloadViewModel
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorWorkloadViewModel
 @{
     ViewData["Title"] = "Tutor Workload";
     string weekValue = Model.WeekStart.ToString("yyyy-MM-dd");
@@ -14,7 +14,7 @@
     </a>
 </div>
 <div class="class-form-card mb-4">
-    <form asp-controller="TutorWorkload" asp-action="Index" method="get">
+    <form asp-controller="TutorWorkload" asp-action="Index" method="get" data-live-filter>
         <div class="row g-3 align-items-end">
             <div class="col-12 col-md-4">
                 <label for="workload-week" class="form-label">Date Within Week</label>

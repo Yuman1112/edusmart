@@ -46,7 +46,7 @@
         </tr>
     }
     </tbody>
-</table></div></div>
+</table></div>
 <nav class="table-pagination" aria-label="Security activity pages">
 <span class="table-pagination-summary">@Model.TotalRecords record(s) · Page @Model.PageNumber of @Model.TotalPages · 25 per page</span>
 <div class="table-pagination-controls">
@@ -56,5 +56,6 @@ else { <button type="button" class="table-page-button" disabled>First</button><b
 @if (Model.PageNumber < Model.TotalPages) { <a class="table-page-button" asp-action="Index" asp-route-pageNumber="@(Model.PageNumber + 1)" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity">Next</a><a class="table-page-button" asp-action="Index" asp-route-pageNumber="@Model.TotalPages" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" asp-route-userId="@Model.UserId" asp-route-eventName="@Model.EventName" asp-route-severity="@Model.Severity">Last</a> }
 else { <button type="button" class="table-page-button" disabled>Next</button><button type="button" class="table-page-button" disabled>Last</button> }
 </div></nav>
+</div>
 </div>
 @section Scripts { <script src="~/js/security-filters.js" asp-append-version="true"></script> }

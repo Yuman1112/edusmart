@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    EDUSMART - BROWSE AVAILABLE CLASSES
 ========================================================= */
 
@@ -121,7 +121,7 @@
 .browse-filter-grid {
     display: grid;
     padding: 21px 22px 23px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
 }
 

@@ -59,6 +59,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 
         public bool FinalTwoWeeksConfirmed { get; set; }
 
+        public bool FinalTwoWeeksFeeAcknowledged { get; set; }
+
         [StringLength(
             500,
             ErrorMessage =
@@ -198,6 +200,13 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                 bool isFinalTwoWeeks =
                     selectedDate.Day >=
                     finalTwoWeeksStartDay;
+
+                if (isFinalTwoWeeks && !FinalTwoWeeksFeeAcknowledged)
+                {
+                    yield return new ValidationResult(
+                        "Please acknowledge the full monthly fee for a partial month.",
+                        new[] { nameof(FinalTwoWeeksFeeAcknowledged) });
+                }
 
                 if (isFinalTwoWeeks &&
                     !FinalTwoWeeksConfirmed)

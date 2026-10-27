@@ -35,7 +35,6 @@
                     <h1>Enrollment Options</h1>
                     <p>Choose the enrollment plan, learning materials and delivery preferences.</p>
                 </div>
-                <div class="enrollment-step-icon"><i class="bi bi-sliders"></i></div>
             </div>
 
             <div asp-validation-summary="ModelOnly" class="text-danger validation-summary"></div>
@@ -115,6 +114,11 @@
                                 <span><strong>I understand and want to continue.</strong></span>
                             </label>
                             <span asp-validation-for="FinalTwoWeeksConfirmed" class="text-danger"></span>
+                            <label class="enrollment-option-label">
+                                <input asp-for="FinalTwoWeeksFeeAcknowledged" class="form-check-input" id="finalTwoWeeksFeeAcknowledged" />
+                                <span>I understand that the full monthly tuition applies even if the first month is partial.</span>
+                            </label>
+                            <span asp-validation-for="FinalTwoWeeksFeeAcknowledged" class="text-danger"></span>
                         </div>
                     </div>
                     <div class="form-group full-width">
@@ -238,12 +242,12 @@
 
             <section class="selection-summary-card billing-summary-card">
                 <div class="billing-summary-heading">
-                    <div><span>Billing Information</span><strong>Estimated Fee Summary</strong></div>
-                    <span>@selectedClasses.Count class(es)</span>
+                    <h2>Billing Information</h2>
+                    <span>@selectedClasses.Count @(selectedClasses.Count == 1 ? "class" : "classes")</span>
                 </div>
                 <div class="billing-breakdown">
-                    <div><span>Monthly Tuition Fee</span><strong id="monthlyTuition">RM 0.00</strong></div>
-                    <div><span id="subtotalLabel">1-Month Tuition</span><strong id="tuitionSubtotal">RM 0.00</strong></div>
+                    <div><span>Monthly Tuition Rate (reference)</span><strong id="monthlyTuition">RM 0.00 / month</strong></div>
+                    <div><span id="subtotalLabel">Tuition Subtotal</span><strong id="tuitionSubtotal">RM 0.00</strong></div>
                     <div class="discount-row"><span id="discountLabel">Tuition Discount (0%)</span><strong id="discountAmount">− RM 0.00</strong></div>
                     <div><span id="hardcopyLabel">Hardcopy Materials (0 subjects × 1 month)</span><strong id="hardcopyFee">RM 0.00</strong>
                     </div>                    <div><span>Delivery Fee</span><strong id="shippingFee">RM 0.00</strong></div>
@@ -324,6 +328,8 @@
                     document.getElementById(
                         "finalTwoWeeksConfirmed"
                     );
+
+                const finalTwoWeeksFeeAcknowledged = document.getElementById("finalTwoWeeksFeeAcknowledged");
 
                 const selectedClassItems =
                     Array.from(
@@ -487,19 +493,13 @@
                     document.getElementById(
                         "monthlyTuition"
                     ).textContent =
-                        formatMoney(
-                            monthlyTuitionFee
-                        );
+                        formatMoney(monthlyTuitionFee) + " / month";
 
                     document.getElementById(
                         "subtotalLabel"
                     ).textContent =
-                        months +
-                        (
-                            months === 1
-                                ? "-Month Tuition"
-                                : "-Month Tuition"
-                        );
+                        "Tuition Subtotal (" + formatMoney(monthlyTuitionFee) +
+                        " × " + months + (months === 1 ? " month)" : " months)");
 
                     document.getElementById(
                         "tuitionSubtotal"
@@ -623,8 +623,8 @@
                         finalTwoWeeksSection.hidden =
                             true;
 
-                        finalTwoWeeksConfirmed.required =
-                            false;
+                        finalTwoWeeksConfirmed.required = false;
+                        finalTwoWeeksFeeAcknowledged.required = false;
 
                         return;
                     }
@@ -657,12 +657,12 @@
                     finalTwoWeeksSection.hidden =
                         !isFinalTwoWeeks;
 
-                    finalTwoWeeksConfirmed.required =
-                        isFinalTwoWeeks;
+                    finalTwoWeeksConfirmed.required = isFinalTwoWeeks;
+                    finalTwoWeeksFeeAcknowledged.required = isFinalTwoWeeks;
 
                     if (!isFinalTwoWeeks) {
-                        finalTwoWeeksConfirmed.checked =
-                            false;
+                        finalTwoWeeksConfirmed.checked = false;
+                        finalTwoWeeksFeeAcknowledged.checked = false;
                     }
                 }
 

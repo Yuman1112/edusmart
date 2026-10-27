@@ -26,6 +26,8 @@
                 </div>
             }
 
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
             <form asp-controller="Enrollment"
                   asp-action="GuardianDetails"
                   method="post"
@@ -61,12 +63,20 @@
                         </strong>
 
                         <div class="mt-1">
-                            Enter the email and last 4 digits of the
+                            Sign in to your parent / guardian account first. Then enter the email and last 4 digits of the
                             identification number registered with your
                             EduSmart account.
                         </div>
 
                     </div>
+
+                    @if (User.Identity?.IsAuthenticated != true)
+                    {
+                        <p>After signing in, start the enrollment form again to protect your session.</p>
+                        <p><a asp-area="Identity" asp-page="/Account/Login"
+                              asp-route-returnUrl="/Enrollment/Start"
+                              class="outline-button">Sign in to your existing account</a></p>
+                    }
 
                     @if (Model.ExistingParentVerified)
                     {

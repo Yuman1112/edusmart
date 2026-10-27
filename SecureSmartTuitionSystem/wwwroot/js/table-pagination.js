@@ -1,8 +1,27 @@
 (() => {
     const size = 25;
+    // Give each table its own card when its page does not already provide one.
+    // Keep an existing card when the scroll region is its direct child.
+    function tableCard(table) {
+        const scroll = table.closest('.table-responsive, .billing-table-wrapper, .payment-table-wrapper, .receipt-table-wrapper, .availability-scroll, .reports-table-wrap, .enrollment-duplicate-table-wrap');
+        const region = scroll || table;
+        if (region.parentElement?.classList.contains('shared-table-card')) return region.parentElement;
+        const parent = region.parentElement;
+        const existingCard = parent?.matches('.dashboard-card, .card, .billing-table-card, .billing-detail-card, .payment-card, .receipt-card, .tutor-management-list-card, .class-form-card, .class-details-card, .reports-card');
+        if (existingCard && parent.querySelectorAll('table').length === 1) {
+            parent.classList.add('shared-table-card');
+            return parent;
+        }
+        const card = document.createElement('div');
+        card.className = 'shared-table-card';
+        region.before(card);
+        card.append(region);
+        return card;
+    }
     function enhance(root = document) {
         root.querySelectorAll("table").forEach(table => {
-            if (table.dataset.serverPaged === "true" || table.dataset.tablePaged === "true") return;
+            const card = tableCard(table);
+            if (table.dataset.pagination === "off" || table.dataset.serverPaged === "true" || table.dataset.tablePaged === "true") return;
             table.dataset.tablePaged = "true";
             let page = 1;
             const nav = document.createElement("nav");
@@ -10,11 +29,13 @@
             const summary = document.createElement("span"); summary.className = "table-pagination-summary";
             const controls = document.createElement("div"); controls.className = "table-pagination-controls";
             nav.append(summary, controls);
-            const wrapper = table.closest(".table-responsive"); (wrapper || table).after(nav);
+            card.append(nav);
             function draw(returnFocus = false) {
                 // Read current order so table sorting and inserted/removed rows remain correct.
                 const rows = Array.from(table.tBodies).flatMap(body => Array.from(body.rows))
                     .filter(row => !(row.cells.length === 1 && row.cells[0].colSpan > 1));
+                // Document pages keep the controls hidden when all items fit.
+                nav.hidden = table.dataset.pagination === "when-needed" && rows.length <= size;
                 const pages = Math.max(1, Math.ceil(rows.length / size));
                 page = Math.max(1, Math.min(page, pages));
                 rows.forEach((row, index) => row.classList.toggle("table-page-hidden", index < (page - 1) * size || index >= page * size));

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using SecureSmartTuitionSystem.Models.Enrollment;
+using SecureSmartTuitionSystem.Services.Enrollment;
 
 namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 {
@@ -77,6 +78,9 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 
     public class AdminEnrollmentDetailsViewModel
     {
+        public List<StudentDuplicateCandidate> DuplicateCandidates { get; set; } = new();
+        public string DuplicateReviewVersion { get; set; } = string.Empty;
+
         public int EnrollmentApplicationId { get; set; }
 
         public string ApplicationNumber { get; set; }
@@ -258,6 +262,14 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 
     public class ApproveEnrollmentViewModel
     {
+        public bool DuplicateReviewConfirmed { get; set; }
+
+        [StringLength(64)]
+        public string? DuplicateReviewVersion { get; set; }
+
+        [StringLength(200)]
+        public string? DuplicateReviewReason { get; set; }
+
         [Required]
         public int EnrollmentApplicationId { get; set; }
 

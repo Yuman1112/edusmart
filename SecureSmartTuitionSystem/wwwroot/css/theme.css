@@ -117,6 +117,9 @@
     font-size: .83rem
 }
 
+/* Checkout and receipt hide controls when all items fit on one page. */
+.table-pagination[hidden] { display: none !important; }
+
 .table-pagination-controls {
     display: flex;
     align-items: center;
@@ -203,7 +206,7 @@
 
 /* Consistent on-screen tables; document printing keeps its original layout. */
 @media screen {
-    :is(.table,.billing-table,.payment-table,.receipt-table) {
+    :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) {
         width: 100%;
         border-collapse: collapse;
         color: var(--navy);
@@ -211,7 +214,7 @@
         font-size: .86rem
     }
 
-        :is(.table,.billing-table,.payment-table,.receipt-table) thead th {
+        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) thead th {
             background: var(--surface-muted) !important;
             color: var(--navy) !important;
             font-size: .72rem !important;
@@ -221,27 +224,71 @@
             text-align: left
         }
 
-        :is(.table,.billing-table,.payment-table,.receipt-table) th,
-        :is(.table,.billing-table,.payment-table,.receipt-table) td {
+        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) th,
+        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) td {
             padding: 15px 14px !important;
             border-bottom: 1px solid var(--border)
         }
 
-        :is(.table,.billing-table,.payment-table,.receipt-table) tbody td {
+        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) tbody td {
             font-size: .86rem !important;
             line-height: 1.5
         }
 
-        :is(.table,.billing-table,.payment-table,.receipt-table) thead :is(button,a) {
+        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) thead :is(button,a) {
             font-size: inherit;
             color: inherit
         }
 
-        :is(.table,.billing-table,.payment-table,.receipt-table) tbody tr:last-child td {
+        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) tbody tr:last-child td {
             border-bottom: 0
         }
 }
 
+
+/* Shared Class Sessions table appearance on screen.
+   Status badges, warning rows, form controls and numeric alignment stay intact. */
+@media screen {
+    :is(.dashboard-card, .class-form-card, .class-details-card, .card,
+        .billing-table-card, .billing-detail-card, .payment-card, .receipt-card,
+        .tutor-management-list-card, .reports-card):has(table) {
+        border: 1px solid rgba(202, 230, 233, 0.95) !important;
+        border-radius: 17px !important;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: var(--shadow) !important;
+    }
+
+    :is(.dashboard-card, .billing-table-card, .tutor-management-list-card):has(table)
+        > :is(.dashboard-card-header, .billing-table-heading, .tutor-management-list-header) {
+        display: flex;
+        min-height: 76px;
+        padding: 20px 23px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    :is(.table, .billing-table, .payment-table, .receipt-table, .availability-table) {
+        --bs-table-bg: var(--white);
+        --bs-table-striped-bg: var(--white);
+        --bs-table-striped-color: var(--navy);
+        margin-bottom: 0;
+    }
+
+    :is(.table, .billing-table, .payment-table, .receipt-table, .availability-table)
+        tbody :is(td, th) {
+        vertical-align: middle;
+        line-height: 1.5;
+        border-bottom: 1px solid var(--border);
+    }
+
+    :is(.table, .billing-table, .payment-table, .receipt-table, .availability-table)
+        tbody tr:not(.table-warning):not(.table-danger):not(.table-success):hover > :is(td, th) {
+        --bs-table-accent-bg: #f8fdfd;
+        background-color: #f8fdfd;
+    }
+}
 
 /* Match the Class Sessions / Enrollment Requests outer table card. */
 .replacement-list-card {
@@ -262,5 +309,23 @@
 
     .table-pagination {
         padding: 16px
+    }
+}
+
+/* A consistent outer border for every on-screen table, including pages with
+   custom scroll wrappers. Document print layouts retain their own styling. */
+@media screen {
+    .shared-table-card {
+        border: 1px solid rgba(202, 230, 233, .95) !important;
+        border-radius: 17px !important;
+        background: #fff;
+        box-shadow: var(--shadow) !important;
+        overflow: hidden;
+    }
+    .shared-table-card > .table-pagination {
+        border-top: 1px solid var(--border);
+    }
+    .shared-table-card > .table-pagination[hidden] {
+        display: none !important;
     }
 }

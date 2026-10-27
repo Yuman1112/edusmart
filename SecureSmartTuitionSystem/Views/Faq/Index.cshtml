@@ -1,0 +1,56 @@
+@model SecureSmartTuitionSystem.ViewModels.Communication.FaqViewModel
+@using SecureSmartTuitionSystem.Services.Communication
+@{
+    ViewData["Title"] = "FAQ & Support";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/faq.css" asp-append-version="true" />
+}
+<div class="page-header"><div><h1>FAQ &amp; Support</h1><p>Find answers to common questions or contact the centre.</p></div></div>
+<div class="faq-layout">
+    <section class="faq-card" aria-labelledby="faqQuestionsTitle">
+        <h2 id="faqQuestionsTitle">Choose a question</h2>
+        <div class="faq-questions">
+            @foreach (var item in FaqService.Entries)
+            {
+                <form asp-controller="Faq" asp-action="Index" method="post">
+                    <button type="submit" name="Topic" value="@item.Id" class="faq-question">@item.Question <span aria-hidden="true">›</span></button>
+                </form>
+            }
+        </div>
+        <form asp-controller="Faq" asp-action="Index" method="post" class="faq-search">
+            <label asp-for="Question" class="form-label">Or type a short question</label>
+            <p class="faq-hint" id="faqPrivacy">Please do not include IC numbers, passwords, payment details or other sensitive information.</p>
+            <textarea asp-for="Question" class="form-control" maxlength="300" rows="3" aria-describedby="faqPrivacy" placeholder="For example: Where can I see my receipt?"></textarea>
+            <span asp-validation-for="Question" class="text-danger" role="alert"></span>
+            <button type="submit" class="primary-button">Find an answer</button>
+        </form>
+    </section>
+    <section class="faq-card" aria-live="polite" aria-labelledby="faqAnswerTitle">
+        <h2 id="faqAnswerTitle">Answer</h2>
+        @if (Model.Answer != null)
+        {
+            <h3>@Model.Answer.Question</h3>
+            <p>@Model.Answer.Answer</p>
+        }
+        else if (Model.Searched && ViewData.ModelState.IsValid)
+        {
+            <p>We couldn't find a matching answer. Try a different question or contact the centre.</p>
+        }
+        else { <p class="faq-hint">Choose a question or type one to get started.</p> }
+        <div class="faq-support">
+            <h3>Need more help?</h3>
+            <p>Send a message to a staff member through EduSmart.</p>
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-controller="Messages" asp-action="Index" class="outline-button">Open messages</a>
+            }
+            else
+            {
+                <form asp-controller="Messages" asp-action="StartParent" method="post">
+                    <button type="submit" class="outline-button">Talk to a staff member</button>
+                </form>
+            }
+        </div>
+    </section>
+</div>

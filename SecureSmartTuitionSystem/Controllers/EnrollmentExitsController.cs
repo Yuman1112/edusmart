@@ -25,9 +25,8 @@ public sealed class EnrollmentExitsController(ApplicationDbContext db, Enrollmen
             .Include(x => x.StudentEnrollment).ThenInclude(x => x.ClassSession)
             .OrderByDescending(x => x.RequestedAtUtc).ToListAsync());
     }
-    [Authorize(Roles = "Parent,Student"), HttpPost, ValidateAntiForgeryToken] public async Task<IActionResult> Stop(int enrollmentId, string reason, bool confirmed)
+    [Authorize(Roles = "Admin,Parent,Student"), HttpPost, ValidateAntiForgeryToken] public async Task<IActionResult> Stop(int enrollmentId, string reason, bool confirmed)
     {
-        if (User.IsInRole("Admin")) return Forbid();
         if (!confirmed) return BadRequest();
         try { var request = await exits.StopAsync(User, enrollmentId, reason); TempData["SuccessMessage"] = $"Withdrawal recorded for {request.EffectiveDate:dd MMM yyyy}. Estimated eligible tuition refund: RM {request.EstimatedRefund:F2}; this is not a completed refund."; }
         catch (InvalidOperationException ex) { TempData["ErrorMessage"] = ex.Message; }

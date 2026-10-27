@@ -3,225 +3,71 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Enrollment;
+using SecureSmartTuitionSystem.Services.Enrollment;
 using SecureSmartTuitionSystem.ViewModels.Enrollment;
 
-namespace SecureSmartTuitionSystem.Controllers
+namespace SecureSmartTuitionSystem.Controllers;
+
+public class ClassesController(ApplicationDbContext context) : Controller
 {
-    public class ClassesController : Controller
+    private static readonly string[] PrimaryLevels = ["YEAR 1", "YEAR 2", "YEAR 3", "YEAR 4", "YEAR 5", "YEAR 6"];
+    private static readonly string[] SecondaryLevels = ["FORM 1", "FORM 2", "FORM 3", "FORM 4", "FORM 5"];
+
+    [AllowAnonymous, HttpGet]
+    public async Task<IActionResult> Index(string? subject, string? level, string? stage)
     {
-        private readonly ApplicationDbContext _context;
-
-        private static readonly string[] OrderedAcademicLevels =
+        string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToUpperInvariant();
+        subject = Normalize(subject);
+        level = Normalize(level);
+        stage = Normalize(stage);
+        EducationStage? selectedStage = stage switch { "PRIMARY" => EducationStage.Primary, "SECONDARY" => EducationStage.Secondary, _ => null };
+        stage = selectedStage?.ToString();
+        var levels = selectedStage switch
         {
-            "YEAR 1",
-            "YEAR 2",
-            "YEAR 3",
-            "YEAR 4",
-            "YEAR 5",
-            "YEAR 6",
-            "FORM 1",
-            "FORM 2",
-            "FORM 3",
-            "FORM 4",
-            "FORM 5"
+            EducationStage.Primary => PrimaryLevels.ToList(),
+            EducationStage.Secondary => SecondaryLevels.ToList(),
+            _ => PrimaryLevels.Concat(SecondaryLevels).ToList()
         };
-
-        public ClassesController(ApplicationDbContext context)
+        // A stale URL or a change in stage must not retain an incompatible level.
+        if (level != null && !levels.Contains(level, StringComparer.OrdinalIgnoreCase)) { level = null; subject = null; }
+        var today = ClassScheduleService.Today;
+        var query = context.ClassSessions.AsNoTracking().Where(c =>
+            c.Status == ClassSessionStatus.Active && c.Subject.IsActive &&
+            (!c.EndDate.HasValue || c.EndDate.Value.Date >= today) &&
+            (c.StartDate ?? c.CreatedAt.AddHours(8)).Year >= today.Year &&
+            context.StudentEnrollments.Count(e => e.ClassSessionId == c.ClassSessionId && e.StartDate.Year >= today.Year &&
+                (e.Status == StudentEnrollmentStatus.Active || e.Status == StudentEnrollmentStatus.PendingDrop) &&
+                (!e.DropEffectiveDate.HasValue || e.DropEffectiveDate > today) &&
+                (!e.EndedAt.HasValue || e.EndedAt > today)) +
+            context.Set<EnrollmentApplicationSubject>().Count(x => x.ClassSessionId == c.ClassSessionId &&
+                (x.EnrollmentApplication.Status == EnrollmentStatus.ApprovedPendingPayment || x.EnrollmentApplication.Status == EnrollmentStatus.PaymentConfirmed)) < c.Capacity);
+        if (selectedStage.HasValue) query = query.Where(c => c.Subject.EducationStage == selectedStage.Value);
+        if (level != null) query = query.Where(c => c.Subject.AcademicLevel.ToUpper() == level);
+        // Determine subjects before applying the subject filter, so changing subject remains possible.
+        var rows = await query.Select(c => new
         {
-            _context = context;
-        }
-
-        [AllowAnonymous]
-        public async Task<IActionResult> Index(
-            string? subject,
-            string? level,
-            string? stage)
-        {
-            subject = NormalizeOptionalValue(subject);
-            level = NormalizeOptionalValue(level);
-            stage = NormalizeOptionalValue(stage);
-
-            EducationStage? selectedStage = stage?.ToUpperInvariant() switch
+            c.ClassSessionId, c.ClassCode, c.Capacity, c.DayOfWeek, c.StartTime, c.EndTime,
+            c.Subject.SubjectName, c.Subject.AcademicLevel, c.Subject.MonthlyFee,
+            TutorName = c.TutorUser.FullName ?? c.TutorUser.Email ?? "Tutor",
+            Occupied = context.StudentEnrollments.Count(e => e.ClassSessionId == c.ClassSessionId && e.StartDate.Year >= today.Year &&
+                (e.Status == StudentEnrollmentStatus.Active || e.Status == StudentEnrollmentStatus.PendingDrop) &&
+                (!e.DropEffectiveDate.HasValue || e.DropEffectiveDate > today) && (!e.EndedAt.HasValue || e.EndedAt > today)) +
+                context.Set<EnrollmentApplicationSubject>().Count(x => x.ClassSessionId == c.ClassSessionId &&
+                    (x.EnrollmentApplication.Status == EnrollmentStatus.ApprovedPendingPayment || x.EnrollmentApplication.Status == EnrollmentStatus.PaymentConfirmed))
+        }).ToListAsync();
+        var subjects = rows.Select(x => x.SubjectName).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+        var order = PrimaryLevels.Concat(SecondaryLevels).Select((v, i) => new { v, i }).ToDictionary(x => x.v, x => x.i, StringComparer.OrdinalIgnoreCase);
+        var classes = rows.Where(x => subject == null || string.Equals(x.SubjectName.Trim(), subject, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(x => order.GetValueOrDefault(x.AcademicLevel, int.MaxValue))
+            .ThenBy(x => x.SubjectName, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.DayOfWeek).ThenBy(x => x.StartTime)
+            .Select(x => new AvailableClassItemViewModel
             {
-                "PRIMARY" => EducationStage.Primary,
-                "SECONDARY" => EducationStage.Secondary,
-                _ => null
-            };
-
-            var query = _context.ClassSessions
-                .AsNoTracking()
-                .Where(session =>
-                    session.Status == ClassSessionStatus.Active && (!session.EndDate.HasValue || session.EndDate.Value >= DateTime.UtcNow.AddHours(8).Date) &&
-                        (session.StartDate ?? session.CreatedAt.AddHours(8)).Year >= DateTime.UtcNow.AddHours(8).Year &&
-                    session.Subject.IsActive &&
-
-                    // Only show classes with remaining seats.
-                    _context.StudentEnrollments.Count(enrollment =>
-                        enrollment.StartDate.Year >= DateTime.UtcNow.AddHours(8).Year && enrollment.ClassSessionId ==
-                            session.ClassSessionId &&
-                        (
-                            enrollment.Status ==
-                                StudentEnrollmentStatus.Active ||
-
-                            (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date))
-                        )) < session.Capacity);
-
-            /*
-             * Primary button:
-             * Only Year 1 until Year 6.
-             *
-             * Secondary button:
-             * Only Form 1 until Form 5.
-             *
-             * Normal Classes button:
-             * No stage filter, so all valid classes are shown.
-             */
-            if (selectedStage.HasValue)
-            {
-                query = query.Where(session =>
-                    session.Subject.EducationStage ==
-                        selectedStage.Value);
-            }
-
-            if (!string.IsNullOrWhiteSpace(subject))
-            {
-                query = query.Where(session =>
-                    session.Subject.SubjectName == subject);
-            }
-
-            if (!string.IsNullOrWhiteSpace(level))
-            {
-                query = query.Where(session =>
-                    session.Subject.AcademicLevel == level);
-            }
-
-            var classes = await query
-                .OrderBy(session =>
-                    session.Subject.AcademicLevel == "YEAR 1" ? 1 :
-                    session.Subject.AcademicLevel == "YEAR 2" ? 2 :
-                    session.Subject.AcademicLevel == "YEAR 3" ? 3 :
-                    session.Subject.AcademicLevel == "YEAR 4" ? 4 :
-                    session.Subject.AcademicLevel == "YEAR 5" ? 5 :
-                    session.Subject.AcademicLevel == "YEAR 6" ? 6 :
-                    session.Subject.AcademicLevel == "FORM 1" ? 7 :
-                    session.Subject.AcademicLevel == "FORM 2" ? 8 :
-                    session.Subject.AcademicLevel == "FORM 3" ? 9 :
-                    session.Subject.AcademicLevel == "FORM 4" ? 10 :
-                    session.Subject.AcademicLevel == "FORM 5" ? 11 :
-                    99)
-                .ThenBy(session =>
-                    session.Subject.SubjectName)
-                .ThenBy(session =>
-                    session.DayOfWeek)
-                .ThenBy(session =>
-                    session.StartTime)
-                .Select(session =>
-                    new AvailableClassItemViewModel
-                    {
-                        ClassSessionId =
-                            session.ClassSessionId,
-
-                        ClassCode =
-                            session.ClassCode,
-
-                        SubjectName =
-                            session.Subject.SubjectName,
-
-                        AcademicLevel =
-                            session.Subject.AcademicLevel,
-
-                        TutorName =
-                            session.TutorUser.FullName
-                            ?? session.TutorUser.Email
-                            ?? "Tutor",
-
-                        Day =
-                            session.DayOfWeek.ToString(),
-
-                        StartTime =
-                            session.StartTime.ToString("hh:mm tt"),
-
-                        EndTime =
-                            session.EndTime.ToString("hh:mm tt"),
-
-                        Venue =
-                            "Online class",
-
-                        MonthlyFee =
-                            session.Subject.MonthlyFee,
-
-                        Capacity =
-                            session.Capacity,
-
-                        SeatsRemaining =
-                            session.Capacity -
-                            _context.StudentEnrollments.Count(
-                                enrollment =>
-                                    enrollment.ClassSessionId ==
-                                        session.ClassSessionId &&
-                                    (
-                                        enrollment.Status ==
-                                            StudentEnrollmentStatus.Active ||
-
-                                        (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date))
-                                    )) - _context.Set<EnrollmentApplicationSubject>().Count(x => x.ClassSessionId == session.ClassSessionId && (x.EnrollmentApplication.Status == EnrollmentStatus.ApprovedPendingPayment || x.EnrollmentApplication.Status == EnrollmentStatus.PaymentConfirmed))
-                    })
-                .ToListAsync();
-
-            /*
-             * Only show subjects and academic levels that currently
-             * have valid classes with remaining seats.
-             */
-            var availableSubjects = classes
-                .Select(item => item.SubjectName)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(item => item)
-                .ToList();
-
-            var availableLevelNames = classes
-                .Select(item => item.AcademicLevel)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            var sortedAcademicLevels = OrderedAcademicLevels
-                .Where(availableLevelNames.Contains)
-                .ToList();
-
-            /*
-             * Keep any unexpected academic level at the end instead
-             * of removing it completely.
-             */
-            sortedAcademicLevels.AddRange(
-                availableLevelNames
-                    .Where(item =>
-                        !OrderedAcademicLevels.Contains(
-                            item,
-                            StringComparer.OrdinalIgnoreCase))
-                    .OrderBy(item => item));
-
-            var model = new BrowseClassesViewModel
-            {
-                SelectedSubject = subject,
-                SelectedLevel = level,
-                Subjects = availableSubjects,
-                AcademicLevels = sortedAcademicLevels,
-                Classes = classes
-            };
-
-            ViewData["SelectedStage"] =
-                selectedStage?.ToString();
-
-            return View(model);
-        }
-
-        private static string? NormalizeOptionalValue(
-            string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return null;
-            }
-
-            return value.Trim().ToUpperInvariant();
-        }
+                ClassSessionId = x.ClassSessionId, ClassCode = x.ClassCode, SubjectName = x.SubjectName,
+                AcademicLevel = x.AcademicLevel, TutorName = x.TutorName, Day = x.DayOfWeek.ToString(),
+                StartTime = x.StartTime.ToString("hh:mm tt"), EndTime = x.EndTime.ToString("hh:mm tt"),
+                Venue = "Online class", MonthlyFee = x.MonthlyFee, Capacity = x.Capacity, SeatsRemaining = x.Capacity - x.Occupied
+            }).ToList();
+        return View(new BrowseClassesViewModel { SelectedStage = stage, SelectedLevel = level, SelectedSubject = subject,
+            AcademicLevels = levels, Subjects = subjects, Classes = classes });
     }
 }
