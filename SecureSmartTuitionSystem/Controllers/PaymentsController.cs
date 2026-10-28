@@ -1083,6 +1083,7 @@ namespace SecureSmartTuitionSystem.Controllers
 
             return new PaymentReceiptViewModel
             {
+                DownloadFileName = ReceiptFileNaming.ForRange(tuitionStartMonth, tuitionEndMonth),
                 PaymentId =
                     payment.PaymentId,
 

@@ -1,21 +1,23 @@
 @model SecureSmartTuitionSystem.ViewModels.Billing.BillingCoverageViewModel
-@{ ViewData["Title"] = "Enrollment Plan Periods"; }
+@{ ViewData["Title"] = "Enrollment Plan Periods"; var rowNumber = (Model.Page - 1) * 25; }
 <div class="page-header"><div><h1>Enrollment Plan Periods</h1><p>Review the months stated in existing enrollment plans and their initial bill status.</p></div></div>
 <div class="alert alert-info">This is a read-only review of initial enrollment plans. It does not generate charges or prove that a particular month may be billed or refunded. Review withdrawals, refunds, adjustments and other bills before making any billing decision.</div>
 <form method="get" data-live-filter class="d-flex flex-wrap align-items-end gap-2 mb-3">
-    <div><label for="month" class="form-label">Month</label><input id="month" name="month" type="month" min="2000-01" max="2100-12" class="form-control" value="@Model.Month" required /></div>
+    <div><label for="month" class="form-label">Plan covers month (optional)</label><input id="month" name="month" type="month" min="2000-01" max="2100-12" class="form-control" value="@Model.Month" /></div>
     <button type="submit" class="btn btn-primary">View plans</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Show all plans</a>
 </form>
-<section class="dashboard-card"><div class="table-responsive"><table class="table align-middle" data-server-paged="true">
-<thead><tr><th>Student</th><th>Class</th><th>Application</th><th>Stated plan months</th><th>Initial bill</th><th>Enrollment</th><th>Review</th></tr></thead><tbody>
+<p class="text-muted">@(string.IsNullOrEmpty(Model.Month) ? "Showing all linked enrollment plans, including future start dates." : $"Showing plans that include {Model.Month}.") Payment date and tuition coverage months can be different.</p>
+<section class="dashboard-card"><header class="dashboard-card-header"><h2>Enrollment plans</h2><span>@Model.TotalRecords record(s)</span></header><div class="table-responsive"><table class="table align-middle" data-server-paged="true">
+<thead><tr><th>No</th><th>Student</th><th>Class</th><th>Application</th><th>Stated plan months</th><th>Initial bill</th><th>Enrollment</th></tr></thead><tbody>
 @foreach (var row in Model.Rows) {
-<tr><td>@row.Student (@row.StudentNumber)</td><td>@row.Class</td><td>@row.ApplicationNumber</td>
-<td>@row.StartMonth.ToString("MMM yyyy") – @row.EndMonth.ToString("MMM yyyy")</td>
-<td>@(row.BillNumber ?? "Unavailable") — @row.BillStatus</td>
+<tr><td>@(++rowNumber)</td><td>@row.Student (@row.StudentNumber)</td><td>@row.Class</td><td>@row.ApplicationNumber</td>
+<td>@(row.StartMonth.Year == row.EndMonth.Year && row.StartMonth.Month == row.EndMonth.Month ? row.StartMonth.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) : $"{row.StartMonth.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)} to {row.EndMonth.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}")</td>
+<td>@(row.BillNumber ?? "Unavailable") — @row.BillStatus@if (row.NeedsReview) { <div class="text-muted small">Check refunds, withdrawals or bill record.</div> }</td>
 <td>@row.EnrollmentStatus@if (row.DropEffectiveDate.HasValue) { <div>Drop from @row.DropEffectiveDate.Value.ToString("dd MMM yyyy")</div> } @if (row.EndedAt.HasValue) { <div>Ended @row.EndedAt.Value.ToString("dd MMM yyyy")</div> }</td>
-<td>@(row.NeedsReview ? "Check refunds, withdrawals or bill record" : "Check before billing")</td></tr>
+</tr>
 }
-@if (Model.Rows.Count == 0) { <tr><td colspan="7">No existing enrollment plans found for this month.</td></tr> }
+@if (Model.Rows.Count == 0) { <tr><td colspan="7">@(string.IsNullOrEmpty(Model.Month) ? "No linked enrollment plans found. Confirm that paid enrollment fulfillment completed successfully." : "No plans cover this month. Use Show all plans to include other months.")</td></tr> }
 </tbody></table></div>
 <nav class="table-pagination" aria-label="Plan periods pages">
 <span class="table-pagination-summary">@if (Model.TotalRecords == 0) { <text>0 rows · 25 per page</text> } else { <text>@((Model.Page - 1) * 25 + 1)–@Math.Min(Model.Page * 25, Model.TotalRecords) of @Model.TotalRecords rows · 25 per page</text> }</span>

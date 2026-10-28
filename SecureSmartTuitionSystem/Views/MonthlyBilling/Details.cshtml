@@ -1,0 +1,31 @@
+@model SecureSmartTuitionSystem.Models.Billing.MonthlyInvoice
+@using SecureSmartTuitionSystem.Models.Billing
+@{ ViewData["Title"]=Model.Status==MonthlyInvoiceStatus.Paid?"Monthly Tuition Receipt":"Monthly Tuition Bill"; }
+<div class="page-header"><div><h1>@ViewData["Title"]</h1><p>@Model.Number · @Model.Month.ToString("MMM yyyy")</p></div><a asp-action="Index" class="btn btn-outline-secondary">Back to monthly bills</a></div>
+@if(TempData["SuccessMessage"] is string success) { <div class="alert alert-success">@success</div> }
+@if(TempData["ErrorMessage"] is string error) { <div class="alert alert-danger">@error</div> }
+@if(ViewBag.Returned==true && Model.Status!=MonthlyInvoiceStatus.Paid) { <div class="alert alert-info">Your return from checkout does not confirm payment. Wait for the webhook or use Check payment status below.</div> }
+<section class="dashboard-card shared-table-card"><header class="dashboard-card-header"><h2>@Model.StudentProfile.FullName</h2><span>@Model.Status</span></header>
+<div class="p-3"><p>Student: @Model.StudentProfile.StudentNumber<br />Issued: @Model.IssuedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm")<br />Due: @Model.DueAtUtc.AddHours(8).AddSeconds(-1).ToString("dd MMM yyyy HH:mm") (MYT)</p>
+@if(Model.PaidAtUtc.HasValue) { <p>Paid: @Model.PaidAtUtc.Value.AddHours(8).ToString("dd MMM yyyy HH:mm") (MYT)<br />Receipt: MR@Model.MonthlyInvoiceId.ToString("D7")</p> }</div>
+<div class="table-responsive"><table class="table align-middle" data-pagination="when-needed"><thead><tr><th>Class</th><th>Tuition</th></tr></thead><tbody>@foreach(var line in Model.Lines.OrderBy(x=>x.MonthlyInvoiceLineId)) { <tr><td>@line.Description</td><td>RM @line.Amount.ToString("F2")</td></tr> }</tbody></table></div>
+<div class="p-3"><strong>Total: RM @Model.Total.ToString("F2")</strong><p class="text-muted mb-0">One-month tuition at the enrollment fee snapshot. Initial prepaid-plan discounts and one-time materials/delivery charges are not charged again.</p></div></section>
+@if(Model.Status==MonthlyInvoiceStatus.Pending) {
+<div class="d-flex gap-2 flex-wrap mt-3">
+@if(User.IsInRole("Parent")) { <form method="post" asp-action="Pay"><input type="hidden" name="id" value="@Model.MonthlyInvoiceId" /><button type="submit" class="btn btn-primary">Pay with Stripe (test)</button></form> }
+@if((User.IsInRole("Parent")||User.IsInRole("Admin")) && Model.CheckoutSessionId!=null) { <form method="post" asp-action="CheckPayment"><input type="hidden" name="id" value="@Model.MonthlyInvoiceId" /><button type="submit" class="btn btn-outline-primary">Check payment status</button></form> }
+</div> }
+
+@if (User.IsInRole("Admin") && ViewBag.EmailStatus is List<SecureSmartTuitionSystem.ViewModels.Billing.MonthlyEmailStatus> delivery)
+{
+<section class="dashboard-card shared-table-card mt-4"><header class="dashboard-card-header"><h2>Overdue email status</h2><span>Latest 25 entries</span></header>
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Guardian</th><th>Date</th><th>Status</th><th>Details</th></tr></thead><tbody>
+@foreach (var email in delivery) { <tr><td>@email.Recipient</td><td>@email.Day.ToString("dd MMM yyyy")</td><td>@email.Status</td><td>@email.Note</td></tr> }
+@if (delivery.Count == 0) { <tr><td colspan="4">No overdue email records yet. Email warnings start after seven overdue days.</td></tr> }
+</tbody></table></div></section>
+}
+
+@if(Model.Status == MonthlyInvoiceStatus.Paid)
+{
+    <div class="mt-3"><a class="btn btn-outline-primary" asp-action="Receipt" asp-route-id="@Model.MonthlyInvoiceId">Print / Save receipt PDF</a></div>
+}

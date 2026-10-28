@@ -245,3 +245,21 @@ input[type="text"]#loginPassword {
         font-size: 1.8rem;
     }
 }
+
+/* Password setup confirmation: two clear lines, scoped to Login. */
+.login-page .login-success {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 18px;
+    margin-bottom: 24px;
+    border: 1px solid #b9e1da;
+    border-radius: 12px;
+    background: #eefaf6;
+    color: #124d48;
+    text-align: left;
+}
+.login-page .login-success-icon { flex: 0 0 auto; margin-top: 2px; color: #087f6d; font-size: 1.15rem; }
+.login-page .login-success-copy { min-width: 0; }
+.login-page .login-success-copy p { margin: 0; font-size: .95rem; line-height: 1.6; overflow-wrap: anywhere; }
+.login-page .login-success-copy .login-success-title { margin-bottom: 4px; font-weight: 600; }

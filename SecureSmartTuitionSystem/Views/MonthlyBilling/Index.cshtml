@@ -1,0 +1,27 @@
+@model SecureSmartTuitionSystem.ViewModels.Billing.MonthlyBillingIndexViewModel
+@using SecureSmartTuitionSystem.Models.Billing
+@{ ViewData["Title"]="Monthly Tuition Bills"; var now=DateTime.UtcNow; }
+<div class="page-header"><div><h1>Monthly Tuition Bills</h1><p>Monthly tuition after the initial prepaid plan ends. All amounts are in MYR.</p></div></div>
+@if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success">@success</div> }
+@if (TempData["ErrorMessage"] is string error) { <div class="alert alert-danger">@error</div> }
+<div class="alert alert-info">Outstanding monthly tuition: <strong>RM @Model.Outstanding.ToString("F2")</strong>. Initial enrollment bills and receipts remain in <a asp-controller="Billing" asp-action="Index">Payment &amp; Billing</a>.</div>
+<form method="get" data-live-filter class="d-flex gap-3 flex-wrap align-items-end mb-3">
+    <div><label for="month" class="form-label">Month</label><input id="month" name="month" type="month" min="2000-01" max="@DateTime.UtcNow.AddHours(8).ToString("yyyy-MM")" value="@Model.Month" class="form-control" /></div>
+    <div><label for="status" class="form-label">Status</label><select id="status" name="status" class="form-select"><option value="">All statuses</option><option value="pending" selected="@(Model.Status=="pending")">Unpaid</option><option value="overdue" selected="@(Model.Status=="overdue")">Overdue</option><option value="paid" selected="@(Model.Status=="paid")">Paid</option></select></div>
+    <button type="submit" class="btn btn-primary">Filter</button><a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+</form>
+@if (User.IsInRole("Admin")) { <form asp-action="Generate" method="post" class="mb-3"><button type="submit" class="btn btn-outline-primary">Generate missing current-month bills</button></form><p class="text-muted">The hourly worker also generates the current month. Prepaid months are excluded. Historical months are not charged automatically.</p> }
+<section class="dashboard-card shared-table-card"><header class="dashboard-card-header"><h2>Monthly bills</h2><span>@Model.TotalRows bill(s)</span></header>
+<div class="table-responsive"><table class="table align-middle" data-server-paged="true"><thead><tr><th>No</th><th>Bill</th><th>Student</th><th>Month</th><th>Amount</th><th>Due date</th><th>Status</th><th>Action</th></tr></thead><tbody>
+@{ int row=(Model.Page-1)*25; }
+@foreach(var bill in Model.Rows) { row++; <tr><td>@row</td><td>@bill.Number</td><td>@bill.StudentProfile.FullName</td><td>@bill.Month.ToString("MMM yyyy")</td><td>RM @bill.Total.ToString("F2")</td><td>@bill.DueAtUtc.AddHours(8).AddSeconds(-1).ToString("dd MMM yyyy")</td><td>@(bill.Status==MonthlyInvoiceStatus.Pending && bill.DueAtUtc<now?"Overdue":bill.Status.ToString())</td><td><a asp-action="Details" asp-route-id="@bill.MonthlyInvoiceId" class="btn btn-sm btn-outline-secondary">@(bill.Status==MonthlyInvoiceStatus.Paid?"Receipt":"View")</a></td></tr> }
+@if(Model.Rows.Count==0) { <tr><td colspan="8">No monthly tuition bills match these filters. Initial and prepaid-plan receipts are available in Payment &amp; Billing. Covered prepaid months are not billed again.</td></tr> }
+</tbody></table></div>
+<nav class="table-pagination" aria-label="Monthly bill pages"><span class="table-pagination-summary">@Model.TotalRows rows · 25 per page</span><div class="table-pagination-controls">
+@foreach(var target in new[]{1,Math.Max(1,Model.Page-1),Model.Page,Math.Min(Model.TotalPages,Model.Page+1),Model.TotalPages}.Select((value,index)=>new{value,index})) {
+ var label=target.index switch {0=>"First",1=>"Previous",2=>Model.Page.ToString(),3=>"Next",_=>"Last"};
+ if(target.index==2) { <span class="table-page-button active" aria-current="page">@label</span> }
+ else if(target.value==Model.Page) { <button type="button" class="table-page-button" disabled>@label</button> }
+ else { <a class="table-page-button" asp-action="Index" asp-route-page="@target.value" asp-route-month="@Model.Month" asp-route-status="@Model.Status">@label</a> }
+}
+</div></nav></section>

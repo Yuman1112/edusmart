@@ -14,6 +14,7 @@ namespace SecureSmartTuitionSystem.Controllers
     [Route("api/stripe/webhook")]
     public class StripeWebhookController : ControllerBase
     {
+        private readonly MonthlyPaymentService _monthlyPayments;
         private readonly IPaymentCompletionService
             _paymentCompletionService;
 
@@ -27,7 +28,7 @@ namespace SecureSmartTuitionSystem.Controllers
             IPaymentCompletionService
                 paymentCompletionService,
             IOptions<StripeSettings> stripeSettings,
-            ILogger<StripeWebhookController> logger)
+            ILogger<StripeWebhookController> logger, MonthlyPaymentService monthlyPayments)
         {
             _paymentCompletionService =
                 paymentCompletionService;
@@ -37,6 +38,7 @@ namespace SecureSmartTuitionSystem.Controllers
 
             _logger =
                 logger;
+            _monthlyPayments = monthlyPayments;
         }
 
         [HttpPost]
@@ -167,6 +169,11 @@ namespace SecureSmartTuitionSystem.Controllers
 
             try
             {
+                if (session.Metadata?.GetValueOrDefault("billing_kind") == "monthly")
+                {
+                    await _monthlyPayments.CompleteAsync(session, cancellationToken);
+                    return Ok();
+                }
                 PaymentCompletionResult result =
                     await _paymentCompletionService
                         .CompleteStripePaymentAsync(

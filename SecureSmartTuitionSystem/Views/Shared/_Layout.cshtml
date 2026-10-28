@@ -67,6 +67,8 @@
         || currentController == "EnrollmentExits"
         || (isTutor && tutorClassesActive);
 
+    bool billingModuleActive = currentController == "Billing" || currentController == "Payments" || currentController == "BillingCoverage" || currentController == "MonthlyBilling";
+
     bool communicationActive = currentController == "Announcements" || currentController == "Messages" || currentController == "Faq" || (!isAdmin && currentController == "NotificationCenter");
     bool pendingActive = currentController == "ClassSchedules" && (currentAction == "Pending" || currentAction == "Replacement" || currentAction == "Unschedule");
     bool calendarActive = currentController == "ClassSchedules" && !pendingActive;
@@ -141,7 +143,8 @@
     {
         <!-- Login and Register pages -->
         <main class="auth-layout">
-            @RenderBody()
+            @await Component.InvokeAsync("BillingAccessBanner")
+                    @RenderBody()
         </main>
     }
     else if (useStaffLayout)
@@ -248,20 +251,29 @@
                         </div>
 
                         <!-- Admin: Payment & Billing -->
-                        <a class="sidebar-link @(currentController == "Billing" ? "active" : "")"
-                           asp-controller="Billing"
-                           asp-action="Index"
-                           aria-current="@(currentController == "Billing" ? "page" : null)">
-                            <i class="bi bi-credit-card" aria-hidden="true"></i>
-                            <span>Payment &amp; Billing</span>
-                        </a>
-
-                        <a class="sidebar-link @(currentController == "BillingCoverage" ? "active" : "")"
-                           asp-controller="BillingCoverage" asp-action="Index"
-                           aria-current="@(currentController == "BillingCoverage" ? "page" : null)">
-                            <i class="bi bi-calendar-check" aria-hidden="true"></i>
-                            <span>Enrollment Plan Periods</span>
-                        </a>
+                        <div class="sidebar-module">
+                            <button type="button"
+                                    class="sidebar-link sidebar-module-button @(billingModuleActive ? "module-current" : "")"
+                                    data-bs-toggle="collapse" data-bs-target="#billingMenu"
+                                    aria-expanded="@(billingModuleActive ? "true" : "false")" aria-controls="billingMenu">
+                                <span class="sidebar-link-content"><i class="bi bi-credit-card" aria-hidden="true"></i><span>Payment &amp; Billing</span></span>
+                                <i class="bi bi-chevron-down sidebar-module-arrow" aria-hidden="true"></i>
+                            </button>
+                            <div id="billingMenu" class="collapse sidebar-submenu @(billingModuleActive ? "show" : "")">
+                                <a class="sidebar-submenu-link @((currentController == "Billing" || currentController == "Payments") ? "active" : "")"
+                                   asp-controller="Billing" asp-action="Index" aria-current="@((currentController == "Billing" || currentController == "Payments") ? "page" : null)">
+                                    <i class="bi bi-receipt" aria-hidden="true"></i><span>Bills &amp; Receipts</span>
+                                </a>
+                                <a class="sidebar-submenu-link @(currentController == "BillingCoverage" ? "active" : "")"
+                                   asp-controller="BillingCoverage" asp-action="Index" aria-current="@(currentController == "BillingCoverage" ? "page" : null)">
+                                    <i class="bi bi-calendar-check" aria-hidden="true"></i><span>Enrollment Plan Periods</span>
+                                </a>
+                                <a class="sidebar-submenu-link @(currentController == "MonthlyBilling" ? "active" : "")"
+                                   asp-controller="MonthlyBilling" asp-action="Index" aria-current="@(currentController == "MonthlyBilling" ? "page" : null)">
+                                    <i class="bi bi-calendar2-week" aria-hidden="true"></i><span>Monthly Tuition Bills</span>
+                                </a>
+                            </div>
+                        </div>
 
                         <!-- Admin: Planned Modules -->
                         <span class="sidebar-link disabled-link"
@@ -615,6 +627,7 @@
                 </header>
 
                 <main class="staff-content">
+                    @await Component.InvokeAsync("BillingAccessBanner")
                     @RenderBody()
                 </main>
 
@@ -666,6 +679,7 @@
                             </a>
 
                             <a asp-controller="Billing" asp-action="Index" class="public-nav-link @(currentController == "Billing" || currentController == "Payments" ? "active" : "")"><i class="bi bi-credit-card" aria-hidden="true"></i>Payment &amp; Billing</a>
+                            <a asp-controller="MonthlyBilling" asp-action="Index" class="public-nav-link @(currentController == "MonthlyBilling" ? "active" : "")">Monthly Tuition Bills</a>
                             <div class="learner-nav-group dropdown">
                                 <button type="button" class="public-nav-link dropdown-toggle @(communicationActive ? "active" : "")" data-bs-toggle="dropdown" aria-expanded="false">Communication <span class="message-unread-badge" data-communication-unread-total hidden></span></button>
                                 <div class="dropdown-menu learner-nav-menu">
@@ -727,7 +741,8 @@
 
             <!-- Public Page Content -->
             <main class="public-content">
-                @RenderBody()
+                @await Component.InvokeAsync("BillingAccessBanner")
+                    @RenderBody()
             </main>
 
 

@@ -1,12 +1,7 @@
 @model SecureSmartTuitionSystem.ViewModels.Billing.PaymentReceiptViewModel
-@using System.Text.Json
-
 @{
-    ViewData["Title"] =
-        $"Receipt - {Model.StudentName} - {Model.TuitionPeriod}";
-
-    string receiptFileName =
-        $"Receipt - {Model.StudentName} - {Model.TuitionPeriod}";
+    string receiptFileName = Model.DownloadFileName;
+    ViewData["Title"] = receiptFileName;
 }
 
 @section Styles {
@@ -19,8 +14,8 @@
 
     <div class="receipt-toolbar">
 
-        <a asp-controller="Home"
-           asp-action="Index"
+        <a asp-controller="@Model.BackController"
+           asp-action="@Model.BackAction" asp-route-id="@Model.BackId"
            class="receipt-outline-button">
 
             <i class="bi bi-arrow-left"></i>
@@ -29,10 +24,10 @@
 
         <button type="button"
                 class="receipt-print-button"
-                id="printReceiptButton">
+                id="printReceiptButton" data-receipt-file-name="@receiptFileName">
 
             <i class="bi bi-printer"></i>
-            Print Receipt
+            Print / Save PDF
         </button>
 
     </div>
@@ -74,16 +69,20 @@
             </div>
 
             <div>
-                <span>Application Number</span>
-                <strong>@Model.ApplicationNumber</strong>
+                <span>Tuition Period</span>
+                <strong>@Model.TuitionPeriod</strong>
             </div>
+            @if (!string.IsNullOrWhiteSpace(Model.ApplicationNumber))
+            {
+                <div><span>Application Number</span><strong>@Model.ApplicationNumber</strong></div>
+            }
 
             <div>
                 <span>Payment Date</span>
 
                 <strong>
                     @(Model.CompletedAt
-                                        .ToLocalTime()
+                                        .AddHours(8)
                                         .ToString(
                                         "dd MMM yyyy, hh:mm tt"))
                 </strong>
@@ -93,7 +92,7 @@
                 <span>Payment Method</span>
 
                 <strong>
-                    @Model.PaymentProvider Test Payment
+                    @(Model.PaymentProvider == "Free" ? "Not required (zero-total bill)" : Model.PaymentProvider + " Test Payment")
                 </strong>
             </div>
 
@@ -256,8 +255,14 @@
             <i class="bi bi-shield-check"></i>
 
             <p>
-                This receipt confirms a successful Stripe
-                Sandbox test payment. No real funds were transferred.
+                @if (Model.PaymentProvider == "Free")
+                {
+                    <text>This zero-total tuition bill required no payment.</text>
+                }
+                else
+                {
+                    <text>This receipt confirms a successful Stripe Sandbox test payment. No real funds were transferred.</text>
+                }
             </p>
 
         </footer>
@@ -267,24 +272,5 @@
 </div>
 
 @section Scripts {
-    <script nonce="@Context.Items["CspNonce"]">
-        const receiptFileName =
-            @Html.Raw(JsonSerializer.Serialize(receiptFileName));
-
-        document.addEventListener(
-            "DOMContentLoaded",
-            function () {
-                document.title = receiptFileName;
-            });
-
-        function printReceipt() {
-            document.title = receiptFileName;
-
-            window.setTimeout(
-                function () {
-                    window.print();
-                },
-                200);
-        }
-    </script>
+    <script src="~/js/receipt-print.js" asp-append-version="true"></script>
 }

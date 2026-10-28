@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Billing;
 using SecureSmartTuitionSystem.ViewModels.Billing;
+using SecureSmartTuitionSystem.Services.Billing;
 
 namespace SecureSmartTuitionSystem.Controllers
 {
@@ -12,11 +13,13 @@ namespace SecureSmartTuitionSystem.Controllers
     public class BillingController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly MonthlyBillingService _monthlyBilling;
 
         public BillingController(
-            ApplicationDbContext context)
+            ApplicationDbContext context, MonthlyBillingService monthlyBilling)
         {
             _context = context;
+            _monthlyBilling = monthlyBilling;
         }
 
         [HttpGet]
@@ -77,6 +80,16 @@ namespace SecureSmartTuitionSystem.Controllers
                     .SumAsync(bill =>
                         (decimal?)bill.TotalAmount)
                     ?? 0m;
+
+            // Include both bill types within the current user's access scope.
+            // Split Pending monthly invoices by due date to avoid overlapping counts.
+            var monthly = _monthlyBilling.Accessible(User).AsNoTracking();
+            totalBillCount += await monthly.CountAsync();
+            pendingBillCount += await monthly.CountAsync(x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc >= currentTime);
+            paidBillCount += await monthly.CountAsync(x => x.Status == MonthlyInvoiceStatus.Paid);
+            overdueBillCount += await monthly.CountAsync(x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc < currentTime);
+            totalPendingAmount += await monthly.Where(x => x.Status == MonthlyInvoiceStatus.Pending)
+                .SumAsync(x => (decimal?)x.Total) ?? 0m;
 
             var query =
                 baseQuery.AsQueryable();

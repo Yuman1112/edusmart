@@ -3,6 +3,10 @@
     public sealed class PaymentReceiptViewModel
     {
         public int PaymentId { get; set; }
+        public string DownloadFileName { get; set; } = "Receipt - PAID";
+        public string BackController { get; set; } = "Home";
+        public string BackAction { get; set; } = "Index";
+        public int? BackId { get; set; }
 
         public string PaymentNumber { get; set; }
             = string.Empty;

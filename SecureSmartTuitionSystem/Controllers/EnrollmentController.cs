@@ -45,17 +45,17 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
-        [Authorize(Roles = "Parent,Student"), HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Parent,Student"), HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> AddSubjects(int studentId)
         {
             if (User.Identity?.IsAuthenticated != true) return Challenge();
-            if (!User.IsInRole("Parent") && !User.IsInRole("Student")) return Forbid();
+            if (!User.IsInRole("Admin") && !User.IsInRole("Parent") && !User.IsInRole("Student")) return Forbid();
             string? userId = _userManager.GetUserId(User);
             var student = await _context.StudentProfiles.Include(x => x.ApplicationUser).Include(x => x.ParentStudents).ThenInclude(x => x.ParentProfile).ThenInclude(x => x.ApplicationUser)
                 .FirstOrDefaultAsync(x => x.StudentProfileId == studentId && x.IsActive &&
-                    ((User.IsInRole("Student") && x.ApplicationUserId == userId) || (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))));
+                    (User.IsInRole("Admin") || (User.IsInRole("Student") && x.ApplicationUserId == userId) || (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))));
             if (student == null) return NotFound();
-            var parent = student.ParentStudents.Where(x => x.IsActive && (User.IsInRole("Student") || x.ParentProfile.ApplicationUserId == userId)).OrderBy(x => x.ParentProfileId).Select(x => x.ParentProfile).FirstOrDefault();
+            var parent = student.ParentStudents.Where(x => x.IsActive && x.ParentProfile.ApplicationUser.IsActive && (User.IsInRole("Admin") || User.IsInRole("Student") || x.ParentProfile.ApplicationUserId == userId)).OrderByDescending(x => x.IsPrimaryGuardian).ThenBy(x => x.ParentProfileId).Select(x => x.ParentProfile).FirstOrDefault();
             if (parent == null) { TempData["ErrorMessage"] = "An active guardian link is required before adding subjects."; return RedirectToAction("Index", "LearningClasses"); }
             var details = new StudentDetailsViewModel { StudentName = student.FullName, StudentIdentificationNumber = student.IdentificationNumber, StudentDateOfBirth = student.DateOfBirth,
                 StudentGender = student.Gender, StudentSchool = student.School, StudentEmail = student.ApplicationUser?.Email, StudentHasNoEmail = string.IsNullOrWhiteSpace(student.ApplicationUser?.Email) };

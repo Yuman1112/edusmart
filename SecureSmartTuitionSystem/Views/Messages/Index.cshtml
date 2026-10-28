@@ -49,11 +49,9 @@
                     <label for="contactSearch">Start a conversation</label>
                     <label class="visually-hidden" for="contactRole">Contact role</label>
                     <select id="contactRole" class="form-select" aria-label="Filter contacts by role"><option value="">All roles</option>@foreach (var role in Model.AvailableParents.Select(x => x.Role).Distinct()) { <option value="@role">@role</option> }</select>
-                    <input type="search" id="contactSearch" class="form-control" maxlength="100" autocomplete="off" placeholder="Search name or ID" aria-label="Search parent, student or tutor" aria-controls="contactSearchResults" />
-                    <ul id="contactSearchResults" class="contact-search-results" aria-label="Matching contacts" hidden></ul>
-                    <p id="contactSearchStatus" class="contact-search-status" role="status" aria-live="polite"></p>
                     <label class="visually-hidden" for="parentUserId">Choose contact</label>
-                    <div>
+                    <div class="contact-picker-row">
+                        <input type="text" id="contactSearch" class="form-control" maxlength="100" autocomplete="off" placeholder="Select contact" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="contactSearchResults" aria-label="Select or search a contact by name or ID" hidden />
                         <select id="parentUserId" name="parentUserId" class="form-select" required>
                             <option value="">Select parent, student or tutor</option>
                             @foreach (var group in Model.AvailableParents.GroupBy(x => x.Role))
@@ -70,6 +68,8 @@
                             <i class="bi bi-plus-lg"></i>
                         </button>
                     </div>
+                    <ul id="contactSearchResults" class="contact-search-results" role="listbox" aria-label="Contacts" hidden></ul>
+                    <p id="contactSearchStatus" class="contact-search-status" role="status" aria-live="polite"></p>
                 </form>
             }
 

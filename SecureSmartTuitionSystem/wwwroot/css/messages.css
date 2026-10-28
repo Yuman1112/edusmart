@@ -772,3 +772,13 @@ body.messages-page-active {
     color: var(--muted);
     font-size: .76rem
 }
+
+/* One searchable contact picker; reuse the existing EduSmart colours. */
+.new-conversation-form .contact-picker-row { margin-top: 8px; }
+.contact-picker-row #contactSearch { min-width: 0; flex: 1; margin: 0; min-height: 42px; border-radius: 9px; }
+.new-conversation-form > .contact-search-results { max-height: min(480px, 50vh); margin: 6px 0 0; overscroll-behavior: contain; }
+.contact-search-results > [role="option"] { min-height: 40px; padding: 10px; border-radius: 6px; color: var(--navy); font-size: .82rem; cursor: pointer; overflow-wrap: anywhere; }
+.contact-search-results > [role="option"]:hover,
+.contact-search-results > .contact-active { background: var(--surface-tint); color: var(--teal-dark); }
+.contact-no-results { padding: 10px; color: var(--muted); font-size: .82rem; }
+.contact-picker-row [hidden] { display: none !important; }

@@ -11,7 +11,9 @@
     var status = ended ? "Dropped" : e.Status == StudentEnrollmentStatus.Active && e.StartDate.Date > ClassScheduleService.Today ? "Starts later" : e.Status.ToString();
     <tr><td>@no</td><td>@e.StudentProfile.StudentNumber</td><td>@e.StudentProfile.FullName</td><td>@e.StartDate.ToString("dd MMM yyyy")</td><td>@status</td><td>@e.DropEffectiveDate?.ToString("dd MMM yyyy")</td>
     @if (Model.CanWithdraw) {
-    <td><a asp-controller="EnrollmentExits" asp-action="Index" asp-route-studentProfileId="@e.StudentProfileId">Withdrawal history</a></td> }
+    <td><div class="d-flex gap-2 flex-wrap"><a asp-controller="EnrollmentExits" asp-action="Index" asp-route-studentProfileId="@e.StudentProfileId">Withdrawal history</a>
+    @if (User.IsInRole("Admin") && e.StudentProfile.IsActive) { <form asp-controller="Enrollment" asp-action="AddSubjects" method="post"><input type="hidden" name="studentId" value="@e.StudentProfileId" /><button type="submit" class="btn btn-sm btn-outline-primary">Add subjects</button></form> }
+    </div></td> }
     </tr>
 }
 @if (!Model.Members.Any()) { <tr><td colspan="7">No enrolled members yet.</td></tr> }

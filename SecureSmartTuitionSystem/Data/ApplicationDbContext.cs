@@ -194,6 +194,7 @@ namespace SecureSmartTuitionSystem.Data
             base.OnModelCreating(builder);
 
             builder.ConfigureAttendance();
+            builder.ConfigureMonthlyBilling();
 
             // AddDefaultIdentity uses 128-character provider/token keys at runtime.
             // Apply the same mapping when the design-time factory builds the model.

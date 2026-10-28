@@ -167,31 +167,51 @@ document.addEventListener("DOMContentLoaded", function () {
 (() => {
     const search = document.getElementById("contactSearch"), select = document.getElementById("parentUserId"), list = document.getElementById("contactSearchResults"), status = document.getElementById("contactSearchStatus"), role = document.getElementById("contactRole");
     if (!search || !select || !list || !status) return;
-    const contacts = Array.from(select.options).filter(x => x.value).map(x => ({ id: x.value, label: x.textContent, role: x.parentElement.label || "" }));
-    function matches(contact) {
-        const term = search.value.trim().toLocaleLowerCase();
-        return (!role?.value || contact.role === role.value) && (!term || `${contact.label} ${contact.role}`.toLocaleLowerCase().includes(term));
+    const form = select.form;
+    const contacts = Array.from(select.options).filter(x => x.value).map(x => ({ id: x.value, label: x.textContent.trim(), role: x.parentElement.label || "" }));
+    let found = [], active = -1, selected = null;
+    // Retain the original select for its server-side field name and no-JS fallback.
+    select.hidden = true; select.required = false; search.hidden = false; search.required = true;
+    function close() { list.hidden = true; search.setAttribute("aria-expanded", "false"); search.removeAttribute("aria-activedescendant"); active = -1; }
+    function choose(contact) {
+        selected = contact; select.value = contact.id; search.value = contact.label;
+        search.setCustomValidity(""); close(); status.textContent = `Selected ${contact.label}. Press + to open.`;
     }
     function refresh() {
-        const previous = select.value; const found = contacts.filter(matches);
-        select.replaceChildren();
-        const placeholder = document.createElement("option"); placeholder.value = ""; placeholder.textContent = "Select contact"; select.append(placeholder);
-        for (const roleName of [...new Set(found.map(x => x.role))]) {
-            const group = document.createElement("optgroup"); group.label = roleName;
-            found.filter(x => x.role === roleName).forEach(contact => { const option = document.createElement("option"); option.value = contact.id; option.textContent = contact.label; group.append(option); }); select.append(group);
-        }
-        select.value = found.some(x => x.id === previous) ? previous : "";
-        list.replaceChildren(); list.hidden = !search.value.trim();
-        status.textContent = found.length ? `${found.length} matching contact(s). Choose a result or use the dropdown.` : "No matching contacts.";
-        found.slice(0, 50).forEach(contact => {
-            const item = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = `${contact.label} · ${contact.role}`;
-            button.addEventListener("click", () => { select.value = contact.id; list.hidden = true; status.textContent = `Selected ${contact.label}. Press + to open.`; }); item.append(button); list.append(item);
+        const term = selected && search.value === selected.label ? "" : search.value.trim().toLocaleLowerCase();
+        found = contacts.filter(x => (!role?.value || x.role === role.value) && (!term || x.label.toLocaleLowerCase().includes(term)));
+        list.replaceChildren(); active = -1; search.removeAttribute("aria-activedescendant");
+        found.forEach((contact, index) => {
+            const item = document.createElement("li"); item.id = `contact-option-${index}`;
+            item.setAttribute("role", "option"); item.setAttribute("aria-selected", String(selected?.id === contact.id));
+            item.textContent = `${contact.label} · ${contact.role}`;
+            item.addEventListener("mousedown", event => event.preventDefault());
+            item.addEventListener("click", () => choose(contact)); list.append(item);
         });
-        if (found.length > 50) status.textContent += " Showing the first 50; type more to narrow the results.";
+        list.hidden = false; list.scrollTop = 0; search.setAttribute("aria-expanded", "true");
+        status.textContent = found.length ? `${found.length} ${term ? "matching" : "available"} contact(s). Scroll for more.` : "No matching contacts.";
+        if (!found.length) { const item = document.createElement("li"); item.textContent = "No matching contacts"; item.className = "contact-no-results"; list.append(item); }
     }
-    search.addEventListener("input", () => { select.value = ""; refresh(); });
-    role?.addEventListener("change", () => { select.value = ""; refresh(); });
-    search.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); list.querySelector("button")?.focus(); } if (event.key === "Escape") list.hidden = true; });
-    select.addEventListener("change", () => { list.hidden = true; status.textContent = select.value ? `Selected ${select.selectedOptions[0].textContent}. Press + to open.` : "Choose a contact."; });
-    refresh();
+    search.addEventListener("focus", () => { search.placeholder = "Type a name or ID…"; refresh(); });
+    search.addEventListener("click", () => { if (list.hidden) refresh(); });
+    search.addEventListener("blur", () => { search.placeholder = "Select contact"; close(); });
+    search.addEventListener("input", () => { selected = null; select.value = ""; search.setCustomValidity(""); refresh(); });
+    role?.addEventListener("change", () => { selected = null; select.value = ""; search.value = ""; search.setCustomValidity(""); refresh(); });
+    search.addEventListener("keydown", event => {
+        if (event.key === "Escape") { event.preventDefault(); close(); return; }
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault(); if (list.hidden) refresh(); if (!found.length) return;
+            active = event.key === "ArrowDown" ? Math.min(active + 1, found.length - 1) : (active < 0 ? found.length - 1 : Math.max(active - 1, 0));
+            Array.from(list.children).forEach((item, index) => item.classList.toggle("contact-active", index === active));
+            const item = list.children[active]; search.setAttribute("aria-activedescendant", item.id); item.scrollIntoView({ block: "nearest" });
+        }
+        if (event.key === "Enter" && !list.hidden) { event.preventDefault(); if (active >= 0) choose(found[active]); }
+    });
+    document.addEventListener("click", event => { if (!form.contains(event.target)) close(); });
+    form.addEventListener("submit", event => {
+        if (!selected || select.value !== selected.id || search.value !== selected.label) {
+            event.preventDefault(); search.setCustomValidity("Choose a contact from the results first."); search.reportValidity();
+        }
+    });
+    status.textContent = "Choose a contact to start a conversation.";
 })();

@@ -14,19 +14,46 @@ public sealed class EnrollmentExitsController(ApplicationDbContext db, Enrollmen
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private IQueryable<EnrollmentExitRequest> Allowed => db.EnrollmentExitRequests.Where(x => exits.Accessible(User).Select(e => e.StudentEnrollmentId).Contains(x.StudentEnrollmentId));
-    [HttpGet] public async Task<IActionResult> Index(int? studentProfileId = null)
+    [HttpGet] public async Task<IActionResult> Index(int? studentProfileId = null,
+        EducationStage? stage = null, string? level = null, string? subject = null, ExitRefundStatus? refundStatus = null)
     {
+        var admin = User.IsInRole("Admin");
         var enrollments = exits.Accessible(User);
         if (studentProfileId.HasValue && !await enrollments.AnyAsync(x => x.StudentProfileId == studentProfileId)) return NotFound();
         var history = studentProfileId.HasValue ? Allowed.Where(x => x.StudentEnrollment.StudentProfileId == studentProfileId) : Allowed;
-        ViewBag.Enrollments = await enrollments.AsNoTracking().Include(x => x.StudentProfile).Include(x => x.ClassSession)
+        ViewBag.Enrollments = admin ? new List<StudentEnrollment>() : await enrollments.AsNoTracking()
+            .Include(x => x.StudentProfile).Include(x => x.ClassSession)
             .Where(x => x.Status == StudentEnrollmentStatus.Active).OrderBy(x => x.StudentProfile.StudentNumber).ThenBy(x => x.StartDate).ToListAsync();
+        if (admin)
+        {
+            if (stage.HasValue && !Enum.IsDefined(stage.Value)) stage = null;
+            level = level?.Trim().ToUpperInvariant();
+            var levels = new List<string>();
+            if (!stage.HasValue || stage == EducationStage.Primary) levels.AddRange(Enumerable.Range(1, 6).Select(n => $"YEAR {n}"));
+            if (!stage.HasValue || stage == EducationStage.Secondary) levels.AddRange(Enumerable.Range(1, 5).Select(n => $"FORM {n}"));
+            if (!levels.Contains(level ?? "")) level = null;
+            if (stage.HasValue) history = history.Where(x => x.StudentEnrollment.ClassSession.Subject.EducationStage == stage.Value);
+            if (level != null) history = history.Where(x => x.StudentEnrollment.ClassSession.Subject.AcademicLevel == level);
+            var subjects = await history.Select(x => x.StudentEnrollment.ClassSession.Subject.SubjectName).Distinct().OrderBy(x => x).ToListAsync();
+            if (!subjects.Contains(subject ?? "")) subject = null;
+            if (subject != null) history = history.Where(x => x.StudentEnrollment.ClassSession.Subject.SubjectName == subject);
+            if (refundStatus.HasValue && !Enum.IsDefined(refundStatus.Value)) refundStatus = null;
+            if (refundStatus.HasValue) history = history.Where(x => x.RefundStatus == refundStatus.Value);
+            ViewBag.Stage = stage?.ToString() ?? "";
+            ViewBag.Level = level ?? "";
+            ViewBag.SubjectFilter = subject ?? "";
+            ViewBag.RefundStatusFilter = refundStatus?.ToString() ?? "";
+            ViewBag.LevelOptions = levels;
+            ViewBag.SubjectOptions = subjects;
+        }
+        ViewBag.StudentProfileId = studentProfileId;
         return View(await history.AsNoTracking().Include(x => x.StudentEnrollment).ThenInclude(x => x.StudentProfile)
             .Include(x => x.StudentEnrollment).ThenInclude(x => x.ClassSession)
-            .OrderByDescending(x => x.RequestedAtUtc).ToListAsync());
+            .OrderByDescending(x => x.RequestedAtUtc).ThenByDescending(x => x.EnrollmentExitRequestId).ToListAsync());
     }
     [Authorize(Roles = "Admin,Parent,Student"), HttpPost, ValidateAntiForgeryToken] public async Task<IActionResult> Stop(int enrollmentId, string reason, bool confirmed)
     {
+        if (User.IsInRole("Admin")) return Forbid();
         if (!confirmed) return BadRequest();
         try { var request = await exits.StopAsync(User, enrollmentId, reason); TempData["SuccessMessage"] = $"Withdrawal recorded for {request.EffectiveDate:dd MMM yyyy}. Estimated eligible tuition refund: RM {request.EstimatedRefund:F2}; this is not a completed refund."; }
         catch (InvalidOperationException ex) { TempData["ErrorMessage"] = ex.Message; }

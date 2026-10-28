@@ -16,19 +16,27 @@ public sealed class BillingCoverageController(ApplicationDbContext db) : Control
     [HttpGet]
     public async Task<IActionResult> Index(string? month, int page = 1, CancellationToken cancellationToken = default)
     {
-        var today = SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today;
-        DateTime selected;
-        if (string.IsNullOrWhiteSpace(month)) selected = new DateTime(today.Year, today.Month, 1);
-        else if (!DateTime.TryParseExact(month, "yyyy-MM", CultureInfo.InvariantCulture,
-            DateTimeStyles.None, out selected) || selected.Year < 2000 || selected.Year > 2100)
-            return BadRequest("Choose a month between 2000-01 and 2100-12.");
-
-        int selectedIndex = selected.Year * 12 + selected.Month;
+        if (!ModelState.IsValid) return BadRequest("Choose a valid month and page.");
+        DateTime? selected = null;
+        if (!string.IsNullOrWhiteSpace(month))
+        {
+            if (!DateTime.TryParseExact(month, "yyyy-MM", CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var parsed) || parsed.Year < 2000 || parsed.Year > 2100)
+                return BadRequest("Choose a month between 2000-01 and 2100-12.");
+            selected = parsed;
+        }
+        // Default to all linked plans, including paid plans starting next month.
+        // Payment date does not decide which tuition months a plan covers.
         var query = db.StudentEnrollments.AsNoTracking()
             .Where(e => e.EnrollmentApplicationId != null && e.EnrollmentApplication != null &&
-                e.EnrollmentApplication.EnrollmentDurationMonths > 0 && e.EnrollmentApplication.EnrollmentDurationMonths <= 12 &&
-                selectedIndex >= e.EnrollmentApplication.RequestedStartDate.Year * 12 + e.EnrollmentApplication.RequestedStartDate.Month &&
+                e.EnrollmentApplication.EnrollmentDurationMonths > 0 && e.EnrollmentApplication.EnrollmentDurationMonths <= 12);
+        if (selected.HasValue)
+        {
+            int selectedIndex = selected.Value.Year * 12 + selected.Value.Month;
+            query = query.Where(e =>
+                selectedIndex >= e.EnrollmentApplication!.RequestedStartDate.Year * 12 + e.EnrollmentApplication.RequestedStartDate.Month &&
                 selectedIndex < e.EnrollmentApplication.RequestedStartDate.Year * 12 + e.EnrollmentApplication.RequestedStartDate.Month + e.EnrollmentApplication.EnrollmentDurationMonths);
+        }
         int count = await query.CountAsync(cancellationToken);
         int pages = Math.Max(1, (int)Math.Ceiling(count / 25d));
         page = Math.Clamp(page, 1, pages);
@@ -61,6 +69,6 @@ public sealed class BillingCoverageController(ApplicationDbContext db) : Control
                 NeedsReview = initial.Count != 1 || initial.Any(b => b.HasRefundedPayment || b.HasExit || b.Status == BillStatus.Refunded || b.Status == BillStatus.Cancelled)
             };
         }).ToList();
-        return View(new BillingCoverageViewModel { Month = selected.ToString("yyyy-MM"), Page = page, TotalPages = pages, TotalRecords = count, Rows = rows });
+        return View(new BillingCoverageViewModel { Month = selected?.ToString("yyyy-MM", CultureInfo.InvariantCulture) ?? "", Page = page, TotalPages = pages, TotalRecords = count, Rows = rows });
     }
 }

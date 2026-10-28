@@ -46,6 +46,10 @@ public sealed class IncomeReportService(ApplicationDbContext db)
             .GroupBy(p => new { Year = p.CompletedAt!.Value.AddHours(8).Year, Month = p.CompletedAt!.Value.AddHours(8).Month })
             .Select(g => new { g.Key.Year, g.Key.Month, Gross = g.Sum(x => x.Amount), Count = g.Count() })
             .ToListAsync(ct);
+        var recurring = await db.Set<MonthlyInvoice>().AsNoTracking()
+            .Where(p => p.Status == MonthlyInvoiceStatus.Paid && p.Total > 0 && p.PaidAtUtc >= startUtc && p.PaidAtUtc < endUtc)
+            .GroupBy(p => new { Year = p.PaidAtUtc!.Value.AddHours(8).Year, Month = p.PaidAtUtc!.Value.AddHours(8).Month })
+            .Select(g => new { g.Key.Year, g.Key.Month, Gross = g.Sum(x => x.Total), Count = g.Count() }).ToListAsync(ct);
         var refunds = await db.EnrollmentExitRequests.AsNoTracking()
             .Where(r => r.RefundStatus == ExitRefundStatus.Completed && r.PaymentId != null &&
                 r.Payment!.Currency == "MYR" && r.RefundCompletedAtUtc >= startUtc && r.RefundCompletedAtUtc < endUtc)
@@ -58,7 +62,8 @@ public sealed class IncomeReportService(ApplicationDbContext db)
             var month = start.AddMonths(i);
             var payment = payments.FirstOrDefault(x => x.Year == month.Year && x.Month == month.Month);
             var refund = refunds.FirstOrDefault(x => x.Year == month.Year && x.Month == month.Month);
-            return new IncomeMonth(month, payment?.Gross ?? 0m, refund?.Amount ?? 0m, payment?.Count ?? 0);
+            var monthly = recurring.FirstOrDefault(x => x.Year == month.Year && x.Month == month.Month);
+            return new IncomeMonth(month, (payment?.Gross ?? 0m) + (monthly?.Gross ?? 0m), refund?.Amount ?? 0m, (payment?.Count ?? 0) + (monthly?.Count ?? 0));
         }).ToArray();
         return new IncomeReport(endMonth, rows);
     }

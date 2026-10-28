@@ -32,6 +32,17 @@ public sealed class GuardianAccountLinkPolicy(ApplicationDbContext db)
 
         if (parent.ApplicationUserId == application.SubmittedByUserId) return null;
 
+        // Staff-assisted additions must refer to an existing linked student.
+        // Prove the recorded submitter's active Admin role from the database,
+        // not from a form field, email, or the later payment request's identity.
+        if (application.ExistingStudentProfileId.HasValue &&
+            await db.UserRoles.AsNoTracking().AnyAsync(r => r.UserId == application.SubmittedByUserId &&
+                db.Roles.Any(role => role.Id == r.RoleId && role.Name == "Admin") &&
+                db.Users.Any(user => user.Id == r.UserId && user.IsActive), cancellationToken) &&
+            await db.ParentStudents.AsNoTracking().AnyAsync(link => link.IsActive && link.StudentProfile.IsActive &&
+                link.ParentProfileId == parent.ParentProfileId && link.StudentProfileId == application.ExistingStudentProfileId.Value, cancellationToken))
+            return null;
+
         // A student may request another subject only for their own existing
         // profile and only through a currently active guardian relationship.
         if (application.ExistingStudentProfileId.HasValue &&

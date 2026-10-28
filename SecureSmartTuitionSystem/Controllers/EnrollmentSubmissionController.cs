@@ -279,8 +279,8 @@ namespace SecureSmartTuitionSystem.Controllers
             if (addStudentId.HasValue)
             {
                 string? userId = _userManager.GetUserId(User);
-                var lockedStudent = await _context.StudentProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.StudentProfileId == addStudentId &&
-                    ((User.IsInRole("Student") && x.ApplicationUserId == userId) || (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))));
+                var lockedStudent = await _context.StudentProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.StudentProfileId == addStudentId && x.IsActive &&
+                    (User.IsInRole("Admin") || (User.IsInRole("Student") && x.ApplicationUserId == userId) || (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))));
                 if (lockedStudent == null || GetStudentDetailsFromSession()?.StudentIdentificationNumber != lockedStudent.IdentificationNumber) return Forbid();
                 string? guardianId = HttpContext.Session.GetString(ExistingParentUserIdSessionKey);
                 if ((User.IsInRole("Parent") && guardianId != userId) || !await _context.ParentStudents.AnyAsync(x => x.IsActive && x.StudentProfileId == addStudentId && x.ParentProfile.ApplicationUserId == guardianId)) return Forbid();
@@ -1133,7 +1133,7 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 string? userId = _userManager.GetUserId(User);
                 bool ownsStudent = userId != null && await _context.StudentProfiles.AnyAsync(x => x.StudentProfileId == addStudentId.Value && x.IsActive &&
-                    ((User.IsInRole("Student") && x.ApplicationUserId == userId) ||
+                    (User.IsInRole("Admin") || (User.IsInRole("Student") && x.ApplicationUserId == userId) ||
                      (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))));
                 if (!ownsStudent) classSessions.Clear();
                 else
@@ -1377,7 +1377,27 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
-        private DateTime GetRequestedStartDate() => DateTime.TryParseExact(HttpContext.Session.GetString("Enrollment.RequestedStartDate"), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var date) ? date.Date : ClassScheduleService.Today.AddDays(7);
+        private DateTime GetRequestedStartDate()
+        {
+            var today = ClassScheduleService.Today;
+
+            var savedDate = HttpContext.Session.GetString(
+                "Enrollment.RequestedStartDate");
+
+            if (DateTime.TryParseExact(
+                    savedDate,
+                    "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None,
+                    out var date)
+                && date.Date >= today
+                && date.Date <= today.AddYears(1))
+            {
+                return date.Date;
+            }
+
+            return today;
+        }
 
         private static string GetGuardianDisplayName(
             GuardianDetailsViewModel guardianDetails)

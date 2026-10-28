@@ -37,10 +37,20 @@
 
         @if (TempData["SuccessMessage"] is string successMessage)
         {
-            <div class="alert alert-success"
-                 role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i>
-                @successMessage
+            const string passwordCreated = "Your password has been created successfully.";
+            <div class="login-success" role="status">
+                <i class="bi bi-check-circle-fill login-success-icon" aria-hidden="true"></i>
+                <div class="login-success-copy">
+                    @if (successMessage.StartsWith(passwordCreated, StringComparison.Ordinal))
+                    {
+                        <p class="login-success-title">@passwordCreated</p>
+                        <p>@successMessage.Substring(passwordCreated.Length).Trim()</p>
+                    }
+                    else
+                    {
+                        <p>@successMessage</p>
+                    }
+                </div>
             </div>
         }
 
