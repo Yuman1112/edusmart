@@ -48,6 +48,11 @@ public sealed class EditTutorViewModel
     [StringLength(200)]
     public string Qualification { get; set; } = "";
 
+    [EnumDataType(typeof(SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType), ErrorMessage = "Please select a valid employment type.")]
+    [Display(Name = "Employment Type")]
+    public SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType EmploymentType { get; set; }
+        = SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.PartTime;
+
     [StringLength(200)]
     [Display(Name = "Area of Expertise")]
     public string? AreaOfExpertise { get; set; }

@@ -28,6 +28,11 @@ public sealed class CreateTutorViewModel
     [StringLength(200)]
     public string Qualification { get; set; } = "";
 
+    [EnumDataType(typeof(SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType), ErrorMessage = "Please select a valid employment type.")]
+    [Display(Name = "Employment Type")]
+    public SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType EmploymentType { get; set; }
+        = SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.PartTime;
+
     [StringLength(500)]
     [Display(Name = "Teaching Experience")]
     public string? TeachingExperience { get; set; }

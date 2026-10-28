@@ -502,6 +502,7 @@
         document.getElementById("saveTutorChanges");
 
     const trackedFields = [
+        "EmploymentType",
         "Email",
         "FullName",
         "PhoneNumber",

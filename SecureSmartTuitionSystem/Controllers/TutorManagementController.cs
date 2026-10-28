@@ -224,6 +224,7 @@ public sealed class TutorManagementController(
 
                 PhoneNumber = x.ApplicationUser.PhoneNumber ?? "",
                 Qualification = x.Qualification,
+                EmploymentType = x.EmploymentType,
                 TeachingExperience = x.TeachingExperience,
                 AreaOfExpertise = x.AreaOfExpertise ?? "",
 
@@ -364,6 +365,7 @@ public sealed class TutorManagementController(
             FullName = profile.FullName,
             PhoneNumber = profile.ApplicationUser.PhoneNumber ?? "",
             Qualification = profile.Qualification,
+            EmploymentType = profile.EmploymentType,
             AreaOfExpertise = profile.AreaOfExpertise,
             TeachingExperience = profile.TeachingExperience,
 
@@ -446,6 +448,19 @@ public sealed class TutorManagementController(
                     "Please enter a valid email address.");
             }
 
+            if (!TutorAvailabilityPolicy.IsTypeValid(model.EmploymentType))
+                ModelState.AddModelError(nameof(model.EmploymentType), "Please select a valid employment type.");
+            bool employmentChanged = profile.EmploymentType != model.EmploymentType;
+            if (employmentChanged && model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime)
+            {
+                var outside = await new TutorAvailabilityService(db).FindExistingClassesOutsideAsync(
+                    model.UserId, TutorAvailabilityPolicy.FullTimeSlots());
+                if (outside.Count > 0)
+                    ModelState.AddModelError(nameof(model.EmploymentType),
+                        "Cannot switch to Full-time while scheduled lessons fall outside its fixed hours or within lunch/dinner breaks: "
+                        + string.Join("; ", outside.Take(5)) + ". Review the timetable first.");
+            }
+
             if (!ModelState.IsValid)
                 return View(model);
 
@@ -502,7 +517,8 @@ public sealed class TutorManagementController(
             profileChanged =
                 personalChanged
                 || professionalChanged
-                || subjectsChanged;
+                || subjectsChanged
+                || employmentChanged;
 
             emailChanged = !string.Equals(
                 users.NormalizeEmail(tutor.Email?.Trim()),
@@ -533,6 +549,9 @@ public sealed class TutorManagementController(
 
             if (profileChanged)
             {
+                profile.EmploymentType = model.EmploymentType;
+                if (employmentChanged && model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime)
+                    await new TutorAvailabilityService(db).SyncFullTimeSlotsAsync(model.UserId);
                 profile.FullName = model.FullName.Trim();
                 profile.Qualification = model.Qualification.Trim();
                 profile.AreaOfExpertise =
@@ -716,6 +735,9 @@ public sealed class TutorManagementController(
                     "This email is already registered. Please use a different email for the Tutor account.");
         }
 
+        if (!TutorAvailabilityPolicy.IsTypeValid(model.EmploymentType))
+            ModelState.AddModelError(nameof(model.EmploymentType), "Please select a valid employment type.");
+
         // Validate the selected teaching levels and subjects.
         ValidateTeachingLevels(model);
 
@@ -773,6 +795,7 @@ public sealed class TutorManagementController(
                     ApplicationUserId = tutor.Id,
                     FullName = model.FullName,
                     Qualification = model.Qualification,
+                    EmploymentType = model.EmploymentType,
                     TeachingExperience = model.TeachingExperience?.Trim(),
                     AreaOfExpertise = model.AreaOfExpertise,
                     IsActive = true,
@@ -798,6 +821,8 @@ public sealed class TutorManagementController(
                 }
 
                 db.TutorProfiles.Add(tutorProfile);
+                if (model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime)
+                    await new TutorAvailabilityService(db).SyncFullTimeSlotsAsync(tutor.Id);
 
                 await db.SaveChangesAsync();
                 await transaction.CommitAsync();

@@ -2,12 +2,14 @@
 
 @{
     ViewData["Title"] = "Create Class Session";
+    ViewData["GuidedTutorAssignment"] = true;
 }
 
 @section Styles {
     <link rel="stylesheet"
           href="~/css/class-sessions.css"
           asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-scheduling.css" asp-append-version="true" />
 }
 
 <div class="page-header">
@@ -33,7 +35,7 @@
 
     <form asp-controller="ClassSessions"
           asp-action="Create"
-          method="post">
+          method="post" id="class-create-form" data-scheduling-url="@Url.Action("TutorSchedulingOptions", "ClassSessions")">
 
         <partial name="_ClassSessionForm"
                  model="Model" />
@@ -46,7 +48,7 @@
             </a>
 
             <button type="submit"
-                    class="primary-button">
+                    class="primary-button" id="class-create-submit" disabled>
 
                 <i class="bi bi-check-lg"></i>
                 Create Class Session
@@ -58,4 +60,5 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <partial name="_ClassSessionScripts" />
+    <script src="~/js/tutor-scheduling.js" asp-append-version="true"></script>
 }

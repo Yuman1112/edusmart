@@ -1,99 +1,73 @@
 ﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorAvailabilityOverviewViewModel
+@using SecureSmartTuitionSystem.Models.Tutor
 @using SecureSmartTuitionSystem.Services.Tutor
-
 @{
     ViewData["Title"] = "Tutor Availability";
-
-    int[] days = { 1, 2, 3, 4, 5, 6, 0 };
+    int[] days = { 1, 2, 3, 4, 5, 6 };
+    bool fullTime = Model.EmploymentType == TutorEmploymentType.FullTime;
 }
-
 @section Styles {
-    <link rel="stylesheet"
-          href="~/css/class-sessions.css"
-          asp-append-version="true" />
-
-    <link rel="stylesheet"
-          href="~/css/tutor-form.css"
-          asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-availability.css" asp-append-version="true" />
 }
-
 <div class="page-header">
-    <div>
-        <h1>Tutor Availability</h1>
-        <p>@Model.TutorId · @Model.FullName</p>
-    </div>
-
-    <a asp-controller="TutorManagement"
-       asp-action="Details"
-       asp-route-userId="@Model.UserId"
-       class="outline-button">
-        <i class="bi bi-arrow-left"
-           aria-hidden="true"></i>
-        Back
-    </a>
+    <div><h1>Tutor Availability</h1><p>@Model.TutorId · @Model.FullName</p></div>
+    <a asp-controller="TutorManagement" asp-action="Details" asp-route-userId="@Model.UserId" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
 </div>
-
-<div class="class-form-card tutor-create-card">
+<div class="class-form-card tutor-create-card tutor-availability">
     <section class="class-form-section">
-        <h2>
-            <i class="bi bi-calendar-week"
-               aria-hidden="true"></i>
-            Weekly Teaching Availability
-        </h2>
-
-        <div class="tutor-info-note mb-4">
-            <i class="bi bi-info-circle"
-               aria-hidden="true"></i>
-
-            <span>
-                All times are Malaysia time (UTC+8).
-                These times are maintained by the tutor.
-                Existing classes and replacements are checked
-                separately when scheduling.
-            </span>
-        </div>
-
-        @if (Model.SelectedSlots.Count == 0)
+        <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Weekly Teaching Availability <span class="availability-type-label">@(fullTime ? "Full-time" : "Part-time")</span></h2>
+        @if (fullTime)
         {
-            <div class="alert alert-warning" role="status">
-                No available teaching slots.
-                Ask this tutor to save My Availability
-                before assigning a new class.
+            <p class="text-muted">Monday–Saturday · MYT (UTC+8)</p>
+            <h3 class="h6">Teaching Windows</h3>
+            <div class="availability-window-list">
+                <span>08:00–12:00</span><span>13:00–18:00</span><span>19:00–22:00</span>
             </div>
+            <dl class="availability-break-list">
+                <div><dt>Lunch Break</dt><dd>12:00–13:00</dd></div>
+                <div><dt>Dinner Break</dt><dd>18:00–19:00</dd></div>
+                <div><dt>Sunday</dt><dd>Closed</dd></div>
+            </dl>
         }
-
-        <div class="table-responsive">
-            <table class="table align-middle">
-                <caption>
-                    Weekly availability ·
-                    @((Model.SelectedSlots.Count / 2m).ToString("0.#"))
-                    hours
-                </caption>
-
-                <thead>
-                    <tr>
-                        <th scope="col">Day</th>
-                        <th scope="col">Available Times</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach (int day in days)
-                    {
-                        <tr>
-                            <th scope="row">
-                                @((DayOfWeek)day)
-                            </th>
-
-                            <td>
-                                @TutorAvailabilityService.DescribeDay(
-                                Model.SelectedSlots,
-                                                        day)
-                        </td>
-                    </tr>
-                                        }
-                </tbody>
-            </table>
-        </div>
+        else
+        {
+            <p class="text-muted">Monday–Saturday · MYT (UTC+8). Maintained by the tutor.</p>
+            <div class="availability-day-list" aria-label="Weekly teaching windows">
+                @foreach (var day in days)
+                {
+                    var description = TutorAvailabilityService.DescribeDay(Model.SelectedSlots, day);
+                    <div class="availability-day-row">
+                        <strong>@((DayOfWeek)day)</strong>
+                        <div>
+                            @if (description == "Not available")
+                            {
+                                <span class="text-muted">Not available</span>
+                            }
+                            else
+                            {
+                                foreach (var range in description.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                {
+                                    <span class="availability-time-chip">@range</span>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <p class="form-text mt-3">Sunday is closed. Times shown are regular teaching windows, not remaining free time.</p>
+            @if (Model.SelectedSlots.Count == 0)
+            {
+                <div class="alert alert-info" role="status">No teaching times saved. Ask this tutor to update My Availability before assigning a class.</div>
+            }
+        }
+        @if (Model.LegacySlots.Count > 0)
+        {
+            <div class="alert alert-warning" role="alert">Older availability outside centre hours is retained for review and cannot be used for new assignments. Existing classes are not automatically cancelled.</div>
+        }
+        <p class="text-muted">These are regular teaching windows. Existing lessons and replacements are checked separately when scheduling.</p>
+        <a asp-controller="ClassSchedules" asp-action="Index" class="outline-button"><i class="bi bi-calendar-week" aria-hidden="true"></i> View Class Calendar</a>
+        <p class="form-text mt-2">Opens the centre calendar. Select a class there to narrow the view.</p>
     </section>
 </div>

@@ -1,0 +1,87 @@
+﻿.tutor-scheduling {
+    padding-top: 0;
+}
+
+.tutor-slot-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 10px;
+    margin: 14px 0;
+}
+
+.tutor-slot-day {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f8fdfd;
+}
+
+    .tutor-slot-day summary {
+        padding: 12px 16px;
+        color: var(--navy);
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+.tutor-slot-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0 16px 16px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.tutor-slot-button {
+    min-width: 130px;
+    min-height: 40px;
+}
+
+    .tutor-slot-button.selected {
+        background: var(--teal);
+        border-color: var(--teal);
+        color: #fff;
+    }
+
+    .tutor-slot-button:disabled {
+        opacity: 1;
+        cursor: wait;
+    }
+
+#class-create-form input[readonly] {
+    background-color: #f4f8fa;
+}
+
+@media (max-width: 575.98px) {
+    .tutor-slot-button {
+        flex: 1 1 130px;
+    }
+}
+
+#class-create-form #Capacity {
+    width: 100%;
+    max-width: none;
+}
+
+.tutor-slot-heading {
+    margin: 18px 0 8px;
+    color: var(--navy);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+    .tutor-slot-heading small {
+        margin-left: 8px;
+        font-size: .8rem;
+        font-weight: 400;
+    }
+
+#tutor-scheduling-status[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 767.98px) {
+    .tutor-slot-list {
+        grid-template-columns: 1fr;
+    }
+}

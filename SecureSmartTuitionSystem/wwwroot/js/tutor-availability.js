@@ -18,9 +18,8 @@
             .map(box => Number(box.value));
 
     const signature = () =>
-        selected()
-            .sort((a, b) => a - b)
-            .join(",");
+        selected().sort((a, b) => a - b).join(",")
+        + "|legacy:" + Boolean(form.querySelector('input[name="RemoveLegacySlots"]:checked'));
 
     const original = signature();
 
@@ -133,7 +132,7 @@
 
     form.addEventListener("change", event => {
         if (
-            event.target.matches('input[name="SelectedSlots"]')
+            event.target.matches('input[name="SelectedSlots"], input[name="RemoveLegacySlots"]')
         ) {
             update();
         }

@@ -2,6 +2,9 @@
 
 public sealed class TutorDetailsViewModel
 {
+    public SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType EmploymentType { get; set; }
+    public List<int> LegacySlots { get; set; } = new();
+
     public string UserId { get; set; } = "";
     public string UserName { get; set; } = "";
     public string FullName { get; set; } = "";

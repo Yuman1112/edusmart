@@ -25,6 +25,10 @@ namespace SecureSmartTuitionSystem.Models
         [StringLength(200)]
         public string? AreaOfExpertise { get; set; }
 
+        [EnumDataType(typeof(SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType))]
+        public SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType EmploymentType { get; set; }
+            = SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.PartTime;
+
         public bool IsActive { get; set; } = true;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

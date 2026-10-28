@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Services.Tutor;
+using SecureSmartTuitionSystem.Services;
+using SecureSmartTuitionSystem.ViewModels.Tutor;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.ViewModels.Enrollment;
@@ -18,6 +20,34 @@ namespace SecureSmartTuitionSystem.Controllers
     [Authorize(Roles = "Admin")]
     public class ClassSessionsController : Controller
     {
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> TutorSchedulingOptions(TutorSchedulingRequest request)
+        {
+            if (!ModelState.IsValid || !request.EducationStage.HasValue || !Enum.IsDefined(request.EducationStage.Value)
+                || !TeachingSubjectCatalog.IsValidStageAndLevel(request.EducationStage.Value.ToString(), request.AcademicLevel)
+                || string.IsNullOrWhiteSpace(request.SubjectName) || !request.StartDate.HasValue
+                || request.DurationMinutes < 30 || request.DurationMinutes > 240)
+                return BadRequest(new { message = "Complete the subject, level, term dates and lesson duration (30–240 minutes)." });
+            var termError = TutorSchedulingService.ValidateTerm(request.StartDate.Value, request.EndDate, ClassScheduleService.Now);
+            if (termError != null) return BadRequest(new { message = termError });
+            var service = new TutorSchedulingService(_context);
+            var tutors = await service.EligibleAsync(request.EducationStage.Value, request.AcademicLevel, request.SubjectName);
+            var selected = tutors.Any(x => x.Id == request.TutorUserId);
+            var slots = selected ? await service.OptionsAsync(request.TutorUserId!, request.StartDate.Value, request.EndDate, request.DurationMinutes) : new();
+            return Json(new
+            {
+                tutors,
+                slots,
+                selectedEligible = selected,
+                checkedAt = ClassScheduleService.Now.ToString("HH:mm:ss") + " MYT",
+                message = tutors.Count == 0 ? "No active, setup-complete tutors are qualified for this subject and level."
+                    : !selected ? "Select a qualified tutor to see available weekly times."
+                    : slots.Count == 0 ? "No weekly time fits this tutor, duration and entire class term. Choose another tutor, duration or term."
+                    : "Select an available weekly time below. All lesson dates in this term were checked."
+            });
+        }
+
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
 
@@ -356,6 +386,13 @@ namespace SecureSmartTuitionSystem.Controllers
                     $"Class {classCode} was created successfully.";
 
                 return RedirectToAction(nameof(Index));
+            }
+            catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 1205)
+            {
+                await transaction.RollbackAsync();
+                ModelState.AddModelError(string.Empty, "Scheduling changed while saving. Refresh the suggested slots and try again.");
+                await PopulateSelectionsAsync(model);
+                return View(model);
             }
             catch (DbUpdateException)
             {
@@ -898,27 +935,40 @@ namespace SecureSmartTuitionSystem.Controllers
                 model.StartTime.Value <
                     model.EndTime.Value)
             {
-                var candidates = await _context.ClassSessions.AsNoTracking().Where(session =>
-                    session.TutorUserId == model.TutorUserId && session.DayOfWeek == model.DayOfWeek.Value &&
-                    session.Status == ClassSessionStatus.Active && (!existingClassSessionId.HasValue || session.ClassSessionId != existingClassSessionId.Value) &&
-                    model.StartTime.Value < session.EndTime && model.EndTime.Value > session.StartTime).ToListAsync();
-                bool conflict = model.StartDate.HasValue && candidates.Any(session => ClassScheduleService.WeeklyOverlap(
-                    model.StartDate.Value, model.EndDate, model.DayOfWeek.Value, model.StartTime.Value, model.EndTime.Value,
-                    ClassScheduleService.FirstDate(session), AcademicYearPolicy.ClassEnd(session), session.DayOfWeek, session.StartTime, session.EndTime));
-                if (!conflict && model.StartDate.HasValue)
+                if (!existingClassSessionId.HasValue)
                 {
-                    var replacements = await _context.ClassLessonChanges.AsNoTracking().Where(x => x.ReplacementDate != null &&
-                        x.ClassSession.TutorUserId == model.TutorUserId && x.ReplacementDate >= model.StartDate.Value.Date &&
-                        (!model.EndDate.HasValue || x.ReplacementDate <= model.EndDate.Value.Date) &&
-                        x.ReplacementStartTime < model.EndTime.Value && x.ReplacementEndTime > model.StartTime.Value).ToListAsync();
-                    conflict = replacements.Any(x => x.ReplacementDate!.Value.DayOfWeek == model.DayOfWeek.Value);
+                    if (model.StartDate.HasValue)
+                    {
+                        var schedulingError = await new TutorSchedulingService(_context).ValidateSelectionAsync(
+                            model.TutorUserId, model.StartDate.Value, model.EndDate,
+                            model.DayOfWeek.Value, model.StartTime.Value, model.EndTime.Value);
+                        if (schedulingError != null) ModelState.AddModelError(nameof(model.StartTime), schedulingError);
+                    }
                 }
-                if (conflict)
+                else
                 {
-                    ModelState.AddModelError(
-                        nameof(model.StartTime),
-                        "The Tutor already has another class " +
-                        "during this time.");
+                    var candidates = await _context.ClassSessions.AsNoTracking().Where(session =>
+                        session.TutorUserId == model.TutorUserId && session.DayOfWeek == model.DayOfWeek.Value &&
+                        session.Status == ClassSessionStatus.Active && (!existingClassSessionId.HasValue || session.ClassSessionId != existingClassSessionId.Value) &&
+                        model.StartTime.Value < session.EndTime && model.EndTime.Value > session.StartTime).ToListAsync();
+                    bool conflict = model.StartDate.HasValue && candidates.Any(session => ClassScheduleService.WeeklyOverlap(
+                        model.StartDate.Value, model.EndDate, model.DayOfWeek.Value, model.StartTime.Value, model.EndTime.Value,
+                        ClassScheduleService.FirstDate(session), AcademicYearPolicy.ClassEnd(session), session.DayOfWeek, session.StartTime, session.EndTime));
+                    if (!conflict && model.StartDate.HasValue)
+                    {
+                        var replacements = await _context.ClassLessonChanges.AsNoTracking().Where(x => x.ReplacementDate != null &&
+                            x.ClassSession.TutorUserId == model.TutorUserId && x.ReplacementDate >= model.StartDate.Value.Date &&
+                            (!model.EndDate.HasValue || x.ReplacementDate <= model.EndDate.Value.Date) &&
+                            x.ReplacementStartTime < model.EndTime.Value && x.ReplacementEndTime > model.StartTime.Value).ToListAsync();
+                        conflict = replacements.Any(x => x.ReplacementDate!.Value.DayOfWeek == model.DayOfWeek.Value);
+                    }
+                    if (conflict)
+                    {
+                        ModelState.AddModelError(
+                            nameof(model.StartTime),
+                            "The Tutor already has another class " +
+                            "during this time.");
+                    }
                 }
             }
         }

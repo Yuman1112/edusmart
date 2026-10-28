@@ -6,10 +6,35 @@ namespace SecureSmartTuitionSystem.Services.Tutor;
 
 public sealed class TutorAvailabilityService(ApplicationDbContext db)
 {
-    public async Task<List<int>> GetSlotsAsync(string userId) =>
+    public async Task<List<int>> GetStoredSlotsAsync(string userId) =>
         await db.TutorAvailabilitySlots.AsNoTracking()
             .Where(s => s.ApplicationUserId == userId)
             .Select(s => s.Day * 48 + s.Slot).ToListAsync();
+
+    public async Task<List<int>> GetSlotsAsync(string userId)
+    {
+        var type = await db.TutorProfiles.AsNoTracking().Where(p => p.ApplicationUserId == userId)
+            .Select(p => (Models.Tutor.TutorEmploymentType?)p.EmploymentType).SingleOrDefaultAsync();
+        if (type == Models.Tutor.TutorEmploymentType.FullTime) return TutorAvailabilityPolicy.FullTimeSlots();
+        if (type != Models.Tutor.TutorEmploymentType.PartTime) return new();
+        return (await GetStoredSlotsAsync(userId)).Where(TutorAvailabilityPolicy.IsOpen).ToList();
+    }
+
+    // Caller owns the transaction and SaveChanges.
+    public async Task SyncFullTimeSlotsAsync(string userId)
+    {
+        var expected = TutorAvailabilityPolicy.FullTimeSlots().ToHashSet();
+        var stored = await db.TutorAvailabilitySlots.Where(x => x.ApplicationUserId == userId).ToListAsync();
+        var original = stored.Select(x => x.Day * 48 + x.Slot).ToHashSet();
+        db.TutorAvailabilitySlots.RemoveRange(stored.Where(x => !expected.Contains(x.Day * 48 + x.Slot)));
+        foreach (var value in expected.Except(original))
+            db.TutorAvailabilitySlots.Add(new Models.Tutor.TutorAvailabilitySlot
+            {
+                ApplicationUserId = userId,
+                Day = value / 48,
+                Slot = value % 48
+            });
+    }
 
     // End is exclusive. Partial half-hours must also be covered.
     public static bool Covers(IEnumerable<int> values, int day, TimeOnly start, TimeOnly end)
@@ -26,6 +51,9 @@ public sealed class TutorAvailabilityService(ApplicationDbContext db)
     {
         if ((int)day < 0 || (int)day > 6 || start >= end)
             return "Choose a valid weekday and time range.";
+
+        if ((int)day == 0 || start < new TimeOnly(8, 0) || end > new TimeOnly(22, 0))
+            return "Lessons must be within Monday–Saturday, 08:00–22:00 MYT.";
 
         bool active = await db.TutorProfiles.AsNoTracking().AnyAsync(p =>
             p.ApplicationUserId == userId && p.IsActive && p.ApplicationUser.IsActive
@@ -59,28 +87,20 @@ public sealed class TutorAvailabilityService(ApplicationDbContext db)
     {
         var selected = values.ToHashSet();
         var today = ClassScheduleService.Today;
-        var classes = await db.ClassSessions.AsNoTracking().Where(c =>
-            c.TutorUserId == userId && c.Status == Models.Enrollment.ClassSessionStatus.Active).ToListAsync();
-        var warnings = new List<string>();
-        foreach (var c in classes)
-        {
-            var from = ClassScheduleService.FirstDate(c) > today ? ClassScheduleService.FirstDate(c) : today;
-            var next = from.AddDays(((int)c.DayOfWeek - (int)from.DayOfWeek + 7) % 7);
-            if (next.Add(c.EndTime.ToTimeSpan()) <= ClassScheduleService.Now) next = next.AddDays(7);
-            if (next <= AcademicYearPolicy.ClassEnd(c)
-                && !Covers(selected, (int)c.DayOfWeek, c.StartTime, c.EndTime))
-                warnings.Add($"{c.ClassCode} ({c.DayOfWeek} {c.StartTime:HH:mm}–{c.EndTime:HH:mm})");
-        }
-        var replacements = await db.ClassLessonChanges.AsNoTracking()
-            .Where(c => c.ClassSession.TutorUserId == userId && c.ReplacementDate >= today)
-            .Select(c => new { c.ClassSession.ClassCode, c.ReplacementDate, c.ReplacementStartTime, c.ReplacementEndTime }).ToListAsync();
-        foreach (var c in replacements)
-        {
-            if (c.ReplacementDate.HasValue && c.ReplacementStartTime.HasValue && c.ReplacementEndTime.HasValue
-                && c.ReplacementDate.Value.Add(c.ReplacementEndTime.Value.ToTimeSpan()) > ClassScheduleService.Now
-                && !Covers(selected, (int)c.ReplacementDate.Value.DayOfWeek, c.ReplacementStartTime.Value, c.ReplacementEndTime.Value))
-                warnings.Add($"{c.ClassCode} (replacement {c.ReplacementDate:dd MMM yyyy} {c.ReplacementStartTime:HH:mm}–{c.ReplacementEndTime:HH:mm})");
-        }
-        return warnings.Distinct().ToList();
+        var classes = await db.ClassSessions.AsNoTracking().Where(c => c.TutorUserId == userId).ToListAsync();
+        if (classes.Count == 0) return new();
+        var latestReplacement = await db.ClassLessonChanges.AsNoTracking()
+            .Where(x => x.ClassSession.TutorUserId == userId && x.ReplacementDate >= today)
+            .MaxAsync(x => x.ReplacementDate);
+        var end = classes.Where(c => c.Status == Models.Enrollment.ClassSessionStatus.Active)
+            .Select(AcademicYearPolicy.ClassEnd).Append(today).Max();
+        if (latestReplacement.HasValue && latestReplacement.Value.Date > end) end = latestReplacement.Value.Date;
+        var lessons = await new ClassScheduleService(db).GetLessonsAsync(today, end, userId);
+        return lessons.Where(x => !x.Cancelled && x.Date.Add(x.End.ToTimeSpan()) > ClassScheduleService.Now
+                && !Covers(selected, (int)x.Date.DayOfWeek, x.Start, x.End))
+            .Select(x => x.Replacement
+                ? $"{x.Class.ClassCode} (replacement {x.Date:dd MMM yyyy} {x.Start:HH:mm}–{x.End:HH:mm})"
+                : $"{x.Class.ClassCode} ({x.Date.DayOfWeek} {x.Start:HH:mm}–{x.End:HH:mm})")
+            .Distinct().ToList();
     }
 }

@@ -59,6 +59,16 @@
             </h2>
 
             <div class="row g-4">
+                <div class="col-12 col-md-6">
+                    <label asp-for="EmploymentType" class="form-label">Employment Type</label>
+                    <select asp-for="EmploymentType" class="form-select">
+                        <option value="0">Part-time</option>
+                        <option value="1">Full-time</option>
+                    </select>
+                    <span asp-validation-for="EmploymentType" class="text-danger"></span>
+                    <div class="form-text">Full-time: Mon–Sat, 08:00–22:00; lunch 12:00–13:00 and dinner 18:00–19:00 excluded. Part-time: tutor selects slots within Mon–Sat, 08:00–22:00. Switching to Part-time keeps current slots until the tutor edits them.</div>
+                </div>
+
 
                 <!-- FULL NAME -->
                 <div class="col-12 col-md-6">
@@ -304,9 +314,9 @@
                     type="application/json">
                 @Html.Raw(
                     System.Text.Json.JsonSerializer.Serialize(
-                                    Model.TeachingLevels
+                                                    Model.TeachingLevels
                     )
-                                                                )
+                                                                                                                                )
             </script>
 
         </section>

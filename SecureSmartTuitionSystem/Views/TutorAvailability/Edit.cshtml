@@ -1,0 +1,86 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorAvailabilityViewModel
+@using SecureSmartTuitionSystem.Services.Tutor
+@{
+    ViewData["Title"] = "Edit Availability";
+    int[] days = { 1, 2, 3, 4, 5, 6 };
+    var selected = Model.SelectedSlots.ToHashSet();
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-availability.css" asp-append-version="true" />
+}
+<div class="page-header">
+    <div><h1>Edit Availability</h1><p>Part-time · update your regular weekly teaching windows.</p></div>
+    <a asp-controller="TutorAvailability" asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
+</div>
+<div class="class-form-card tutor-create-card tutor-availability">
+    <form id="tutor-availability-form" asp-action="Index" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly"
+             class="alert alert-danger availability-validation-summary"
+             role="alert">
+        </div>
+        <section class="class-form-section">
+            <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Weekly Teaching Availability</h2>
+            <div class="tutor-info-note mb-4">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                <span>Part-time: select any half-hour slots within Monday–Saturday, 08:00–22:00 MYT (UTC+8). Full-time lunch/dinner breaks do not restrict part-time tutors. Sunday is closed. Saving does not automatically change existing classes.</span>
+            </div>
+            @if (Model.LegacySlots.Count > 0)
+            {
+                <div class="alert alert-warning">
+                    <p>Older availability outside the current centre hours is still stored. Review it before removing:</p>
+                    <ul>
+                        @foreach (var day in Enumerable.Range(0, 7))
+                        {
+                            var text = TutorAvailabilityService.DescribeDay(Model.LegacySlots, day);
+                            if (text != "Not available")
+                            {
+                                <li>@((DayOfWeek)day): @text</li>
+                            }
+                        }
+                    </ul>
+                    <label><input asp-for="RemoveLegacySlots" class="form-check-input me-2" /> Remove these legacy slots when saving. Existing classes will not be cancelled automatically.</label>
+                    <span asp-validation-for="RemoveLegacySlots" class="text-danger"></span>
+                </div>
+            }
+            <p id="availability-help">Tick available slots; untick to remove. This pattern repeats every week.</p>
+            <div class="availability-scroll" tabindex="0" role="region" aria-label="Weekly availability timetable">
+                <table data-pagination="off" class="availability-table" aria-describedby="availability-help">
+                    <caption class="visually-hidden">Weekly teaching availability in 30-minute intervals</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Time</th>@foreach (var day in days) {
+                            <th scope="col">@((DayOfWeek)day)</th>
+                                                        }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int slot = TutorAvailabilityPolicy.FirstSlot; slot < TutorAvailabilityPolicy.EndSlot; slot++)
+                        {
+                            var start = new TimeOnly(slot / 2, slot % 2 * 30).ToString("HH:mm");
+                            var end = new TimeOnly((slot + 1) / 2, (slot + 1) % 2 * 30).ToString("HH:mm");
+                            <tr data-slot="@slot">
+                                <th scope="row">@start–@end</th>
+                                @foreach (var day in days)
+                                {
+                                    var value = day * 48 + slot;
+                                    <td><label class="availability-cell"><input type="checkbox" name="SelectedSlots" value="@value" checked="@selected.Contains(value)" aria-label="@($"{(DayOfWeek)day} {start} to {end}")" /></label></td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <div class="class-form-actions">
+            <a asp-controller="TutorAvailability" asp-action="Index" class="outline-button">Cancel</a>
+            <button id="saveTutorAvailability" type="submit" class="primary-button" disabled><i class="bi bi-check-lg" aria-hidden="true"></i> Save Availability</button>
+        </div>
+    </form>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/tutor-availability.js" asp-append-version="true"></script>
+}

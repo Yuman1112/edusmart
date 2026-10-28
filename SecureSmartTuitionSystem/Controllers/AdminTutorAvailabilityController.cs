@@ -21,10 +21,13 @@ public sealed class AdminTutorAvailabilityController(ApplicationDbContext db) : 
             {
                 UserId = p.ApplicationUserId,
                 TutorId = p.ApplicationUser.UserName ?? "",
-                FullName = p.FullName
+                FullName = p.FullName,
+                EmploymentType = p.EmploymentType
             }).FirstOrDefaultAsync();
         if (model == null) return NotFound();
-        model.SelectedSlots = await new TutorAvailabilityService(db).GetSlotsAsync(userId);
+        var availability = new TutorAvailabilityService(db);
+        model.SelectedSlots = await availability.GetSlotsAsync(userId);
+        model.LegacySlots = (await availability.GetStoredSlotsAsync(userId)).Where(x => !TutorAvailabilityPolicy.IsOpen(x)).ToList();
         return View(model);
     }
 }

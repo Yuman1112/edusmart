@@ -1,7 +1,10 @@
-﻿namespace SecureSmartTuitionSystem.ViewModels.Tutor;
-
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using SecureSmartTuitionSystem.Models.Tutor;
+namespace SecureSmartTuitionSystem.ViewModels.Tutor;
 public sealed class TutorAvailabilityViewModel
 {
-    // Value = day number * 48 + half-hour slot number.
     public List<int> SelectedSlots { get; set; } = new();
+    public bool RemoveLegacySlots { get; set; }
+    [BindNever] public TutorEmploymentType EmploymentType { get; set; }
+    [BindNever] public List<int> LegacySlots { get; set; } = new();
 }
