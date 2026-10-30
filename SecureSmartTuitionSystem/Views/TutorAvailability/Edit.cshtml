@@ -15,7 +15,11 @@
     <a asp-controller="TutorAvailability" asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
 </div>
 <div class="class-form-card tutor-create-card tutor-availability">
-    <form id="tutor-availability-form" asp-action="Index" method="post">
+    <form id="tutor-availability-form"
+          asp-action="Index"
+          method="post"
+          data-save-failed="@(ViewData["AvailabilitySaveFailed"] is true ? "true" : "false")"
+    >
         @Html.AntiForgeryToken()
         <div asp-validation-summary="ModelOnly"
              class="alert alert-danger availability-validation-summary"

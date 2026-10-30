@@ -23,7 +23,10 @@
 
     const original = signature();
 
-    const hasChanges = () => signature() !== original;
+    const saveFailed = form.dataset.saveFailed === "true";
+
+    const hasChanges = () =>
+        saveFailed || signature() !== original;
 
     let submitting = false;
 

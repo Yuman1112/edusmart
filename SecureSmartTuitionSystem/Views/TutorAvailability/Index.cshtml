@@ -33,15 +33,35 @@
         <section class="class-form-section">
             <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Weekly Teaching Availability <span class="availability-type-label">@(fullTime ? "Full-time" : "Part-time")</span></h2>
             <p class="text-muted">Monday–Saturday · MYT (UTC+8)</p>
-            <h3 class="h6">Teaching Windows</h3>
-            <div class="availability-window-list">
-                <span>08:00–12:00</span><span>13:00–18:00</span><span>19:00–22:00</span>
+            <h3 class="availability-timeline-title">Daily Teaching Windows</h3>
+            <div class="availability-timeline" role="list" aria-label="Fixed daily teaching windows and breaks">
+                <div class="availability-timeline-segment" role="listitem">
+                    <div class="availability-timeline-bar">Teaching</div>
+                    <div class="availability-timeline-label"><strong>08:00–12:00</strong><span>Morning</span></div>
+                </div>
+                <div class="availability-timeline-segment is-break" role="listitem">
+                    <div class="availability-timeline-bar"><i class="bi bi-cup-hot" aria-hidden="true"></i></div>
+                    <div class="availability-timeline-label"><strong>Lunch</strong><span>12:00–13:00</span></div>
+                </div>
+                <div class="availability-timeline-segment" role="listitem">
+                    <div class="availability-timeline-bar">Teaching</div>
+                    <div class="availability-timeline-label"><strong>13:00–18:00</strong><span>Afternoon</span></div>
+                </div>
+                <div class="availability-timeline-segment is-break" role="listitem">
+                    <div class="availability-timeline-bar"><i class="bi bi-cup-hot" aria-hidden="true"></i></div>
+                    <div class="availability-timeline-label"><strong>Dinner</strong><span>18:00–19:00</span></div>
+                </div>
+                <div class="availability-timeline-segment" role="listitem">
+                    <div class="availability-timeline-bar">Teaching</div>
+                    <div class="availability-timeline-label"><strong>19:00–22:00</strong><span>Evening</span></div>
+                </div>
             </div>
-            <dl class="availability-break-list">
-                <div><dt>Lunch Break</dt><dd>12:00–13:00</dd></div>
-                <div><dt>Dinner Break</dt><dd>18:00–19:00</dd></div>
-                <div><dt>Sunday</dt><dd>Closed</dd></div>
-            </dl>
+            <div class="availability-timeline-legend">
+                <span><i class="availability-timeline-dot" aria-hidden="true"></i> Teaching window</span>
+                <span><i class="availability-timeline-dot is-break" aria-hidden="true"></i> Break</span>
+                <span class="availability-timeline-closed">Sunday · Closed</span>
+            </div>
+            <hr class="availability-timeline-divider" />
             <p class="text-muted">Fixed teaching windows. Assigned lessons are shown in Class Calendar.</p>
             <a asp-controller="ClassSchedules" asp-action="Index" class="outline-button"><i class="bi bi-calendar-week" aria-hidden="true"></i> View Class Calendar</a>
         </section>

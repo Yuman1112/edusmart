@@ -225,3 +225,128 @@
     .tutor-availability .availability-break-list + p {
         margin-bottom: 20px;
     }
+
+/* Full-time summary timeline. Outer card and part-time editor are unchanged. */
+.tutor-availability .availability-timeline-title {
+    margin: 28px 0 16px;
+    font-size: .95rem;
+    font-weight: 600;
+}
+
+.tutor-availability .availability-timeline {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(76px, 1fr) minmax(0, 5fr) minmax(76px, 1fr) minmax(0, 3fr);
+    gap: 4px;
+}
+
+.tutor-availability .availability-timeline-segment {
+    min-width: 0;
+}
+
+.tutor-availability .availability-timeline-bar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e6f6f7;
+    color: #007b89;
+    font-weight: 600;
+}
+
+.tutor-availability .availability-timeline-segment:first-child .availability-timeline-bar {
+    border-radius: 10px 0 0 10px;
+}
+
+.tutor-availability .availability-timeline-segment:last-child .availability-timeline-bar {
+    border-radius: 0 10px 10px 0;
+}
+
+.tutor-availability .availability-timeline-segment.is-break .availability-timeline-bar {
+    background: #f0f3f6;
+    color: #627588;
+}
+
+.tutor-availability .availability-timeline-label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 12px;
+    text-align: center;
+    font-size: .8rem;
+    color: #58718a;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+    .tutor-availability .availability-timeline-label strong {
+        color: #063667;
+        font-weight: 600;
+    }
+
+.tutor-availability .availability-timeline-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px;
+    margin-top: 28px;
+    font-size: .8rem;
+    color: #58718a;
+}
+
+    .tutor-availability .availability-timeline-legend > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+.tutor-availability .availability-timeline-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #008e9e;
+}
+
+    .tutor-availability .availability-timeline-dot.is-break {
+        background: #627588;
+    }
+
+.tutor-availability .availability-timeline-closed {
+    margin-left: auto;
+}
+
+.tutor-availability .availability-timeline-divider {
+    margin: 26px 0 22px;
+    border: 0;
+    border-top: 1px solid #d4e7ed;
+    opacity: 1;
+}
+
+@media (max-width: 767.98px) {
+    .tutor-availability .availability-timeline {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .tutor-availability .availability-timeline-segment {
+        display: grid;
+        grid-template-columns: 100px minmax(0, 1fr);
+        gap: 16px;
+        align-items: center;
+    }
+
+    .tutor-availability .availability-timeline .availability-timeline-bar {
+        height: 50px;
+        border-radius: 8px;
+    }
+
+    .tutor-availability .availability-timeline-label {
+        margin: 0;
+        text-align: left;
+        overflow-wrap: normal;
+    }
+
+    .tutor-availability .availability-timeline-closed {
+        margin-left: 0;
+    }
+}

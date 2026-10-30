@@ -86,10 +86,20 @@ public sealed class TutorAvailabilityController(ApplicationDbContext db, UserMan
             await db.SaveChangesAsync();
             await tx.CommitAsync();
         }
-        catch (Exception ex) when (ex is DbUpdateException || ex is System.Data.Common.DbException)
+        catch (Exception ex) when (
+            ex is DbUpdateException ||
+            ex is System.Data.Common.DbException)
         {
-            await tx.RollbackAsync(); db.ChangeTracker.Clear();
-            ModelState.AddModelError("", "Availability could not be saved. Reload and try again; your changes have not been confirmed.");
+            await tx.RollbackAsync();
+            db.ChangeTracker.Clear();
+
+            ModelState.AddModelError(
+                "",
+                "Availability could not be saved. " +
+                "Your changes have not been confirmed. Please try saving again.");
+
+            ViewData["AvailabilitySaveFailed"] = true;
+
             return View("Edit", model);
         }
         if (warnings.Count > 0)
