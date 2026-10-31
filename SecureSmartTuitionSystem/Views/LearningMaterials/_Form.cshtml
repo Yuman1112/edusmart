@@ -1,0 +1,39 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Learning.MaterialForm
+<div asp-validation-summary="ModelOnly" class="alert alert-danger material-validation" role="alert"></div>
+<input asp-for="Id" type="hidden" />
+<input asp-for="RowVersion" type="hidden" />
+<div id="material-no-classes" class="alert alert-info" role="status" hidden="@(Model.Classes.Count > 0)">No active assigned classes are available for managing materials. Contact your administrator.</div>
+<div id="material-class-update" class="alert alert-warning" role="status" hidden></div>
+<div class="row g-4">
+    <div class="col-12">
+        <label asp-for="ClassSessionId" class="form-label"></label>
+        @if (Model.Id == 0)
+        {
+            <select asp-for="ClassSessionId" asp-items="Model.Classes" class="form-select"><option value="">Select assigned class</option></select>
+        }
+        else
+        {
+
+            <input asp-for="ClassSessionId" type="hidden" />
+            <select class="form-select" disabled aria-label="Class (read only)">
+                @* Selection below uses the model's immutable class. *@
+                @foreach (var item in Model.Classes)
+                {
+                    <option value="@item.Value" selected="@(item.Value == Model.ClassSessionId?.ToString())">@item.Text</option>
+                }
+            </select>
+        }
+        <span asp-validation-for="ClassSessionId" class="material-field-error"></span>
+    </div>
+    <div class="col-12"><label asp-for="Title" class="form-label"></label><input asp-for="Title" class="form-control" maxlength="150" placeholder="For example: Chapter 1 revision notes" /><span asp-validation-for="Title" class="material-field-error"></span></div>
+    <div class="col-12"><label asp-for="Description" class="form-label">Description <span class="text-muted fw-normal">(Optional)</span></label><textarea asp-for="Description" class="form-control" maxlength="2000" rows="4"></textarea><span asp-validation-for="Description" class="material-field-error"></span></div>
+    <div class="col-12">
+        <label asp-for="File" class="form-label">@(Model.Id == 0 ? "Material File" : "Replace File (Optional)")</label>
+        @if (Model.Id != 0)
+        {
+            <p class="form-text">Current file: @Model.CurrentFileName. Leave blank to keep it. A replacement overwrites the current file.</p>
+        }
+        <input asp-for="File" type="file" class="form-control" accept=".pdf,.docx,.pptx,.xlsx,.png,.jpg,.jpeg" /><span asp-validation-for="File" class="material-field-error"></span><p class="form-text">PDF, DOCX, PPTX, XLSX, PNG or JPG · Maximum 10 MB. After a failed submission, re-select any file you were uploading.</p>
+    </div>
+</div>
+<div class="class-form-actions"><a asp-action="Index" class="outline-button">Cancel</a><button type="submit" class="primary-button" disabled="@(Model.Classes.Count == 0)">@(Model.Id == 0 ? "Upload Material" : "Save Changes")</button></div>

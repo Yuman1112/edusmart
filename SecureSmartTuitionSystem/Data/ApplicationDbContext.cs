@@ -34,6 +34,8 @@ namespace SecureSmartTuitionSystem.Data
             _auditChanges = auditChanges;
         }
 
+        public DbSet<SecureSmartTuitionSystem.Models.Learning.LearningMaterial> LearningMaterials => Set<SecureSmartTuitionSystem.Models.Learning.LearningMaterial>();
+
         public DbSet<EnrollmentExitRequest> EnrollmentExitRequests => Set<EnrollmentExitRequest>();
         public DbSet<ClassLessonChange> ClassLessonChanges => Set<ClassLessonChange>();
         public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
@@ -80,7 +82,8 @@ namespace SecureSmartTuitionSystem.Data
                         .Select(x => $"{x.Metadata.Name}={x.CurrentValue}"));
                 string fields = string.Join(", ", change.Properties.Where(x =>
                     change.State != EntityState.Modified || x.IsModified).Select(x => x.Metadata.Name));
-                var entry = new AuditLogEntry {
+                var entry = new AuditLogEntry
+                {
                     ActorUserId = context?.User.FindFirstValue(ClaimTypes.NameIdentifier),
                     ActorName = SecurityEventService.Limit(context?.User.Identity?.Name ?? "System", 256),
                     EventName = SecurityEventService.Limit(entity + "." + change.State, 100),
@@ -194,6 +197,7 @@ namespace SecureSmartTuitionSystem.Data
             base.OnModelCreating(builder);
 
             builder.ConfigureAttendance();
+            builder.ConfigureLearningMaterials();
             builder.ConfigureMonthlyBilling();
 
             // AddDefaultIdentity uses 128-character provider/token keys at runtime.

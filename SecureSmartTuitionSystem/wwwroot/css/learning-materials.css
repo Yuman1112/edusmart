@@ -1,0 +1,136 @@
+﻿.learning-materials-page {
+    color: var(--navy, #073563);
+}
+
+    .learning-materials-page .material-list-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .learning-materials-page h2 {
+        font-size: 1.2rem;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .learning-materials-page .material-count {
+        display: inline-block;
+        margin-left: 8px;
+        color: #007d8b;
+        background: #e8f7f8;
+        padding: 4px 10px;
+        border-radius: 16px;
+        font-size: .8rem;
+        vertical-align: middle;
+    }
+
+    .learning-materials-page .material-title {
+        font-weight: 600;
+        color: #007d8b;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+    }
+
+        .learning-materials-page .material-title:hover {
+            text-decoration: underline;
+        }
+
+    .learning-materials-page .material-file-name {
+        display: block;
+        color: #58718a;
+        margin-top: 6px;
+        overflow-wrap: anywhere;
+    }
+
+    .learning-materials-page .material-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+        .learning-materials-page .material-actions form {
+            margin: 0;
+        }
+
+    .learning-materials-page .material-badge {
+        display: inline-block;
+        padding: 5px 11px;
+        border-radius: 20px;
+        font-size: .8rem;
+        font-weight: 600;
+    }
+
+        .learning-materials-page .material-badge.is-active {
+            background: #d8f7e9;
+            color: #08774f;
+        }
+
+        .learning-materials-page .material-badge.is-inactive {
+            background: #edf1f5;
+            color: #56677a;
+        }
+
+    .learning-materials-page .material-pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-top: 22px;
+        color: #58718a;
+    }
+
+    .learning-materials-page .material-details {
+        margin: 24px 0;
+    }
+
+        .learning-materials-page .material-details > div {
+            display: grid;
+            grid-template-columns: 170px minmax(0, 1fr);
+            gap: 20px;
+            padding: 12px 0;
+            border-bottom: 1px solid #d4e7ed;
+        }
+
+        .learning-materials-page .material-details dd {
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+
+    .learning-materials-page .material-description {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin: 12px 0 28px;
+    }
+
+    .learning-materials-page .material-field-error {
+        display: block;
+        color: #dc3545;
+        font-size: .875rem;
+        margin-top: 6px;
+    }
+
+    .learning-materials-page .input-validation-error {
+        border-color: #dc3545;
+    }
+
+    .learning-materials-page .material-validation.validation-summary-valid {
+        display: none;
+    }
+
+    .learning-materials-page .material-validation ul {
+        margin: 0;
+        padding-left: 1.25rem;
+    }
+
+@media (max-width: 575.98px) {
+    .learning-materials-page .material-details > div {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+}

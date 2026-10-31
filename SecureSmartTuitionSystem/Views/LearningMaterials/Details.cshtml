@@ -1,0 +1,41 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Learning.MaterialRow
+@{
+    ViewData["Title"] = "Material Details";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
+}
+<div class="learning-materials-page">
+    <div class="page-header"><div><h1>Material Details</h1><p>@Model.ClassCode · @Model.ClassName</p></div><a asp-action="Index" asp-route-ClassId="@Model.ClassId" asp-route-Status="all" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
+    @if (TempData["MaterialSuccess"] is string success)
+    {
+        <div class="alert alert-success" role="status" data-success-timeout="5000">@success</div>
+    }
+    <div class="class-form-card">
+        <div class="material-list-heading"><h2>@Model.Title</h2><span class="material-badge @(Model.IsActive ? "is-active" : "is-inactive")">@(Model.IsActive ? "Active" : "Inactive")</span></div>
+        @if (!Model.IsActive)
+        {
+            <div class="alert alert-info">This material is inactive and unavailable to students.</div>
+        }
+        <dl class="material-details">
+            <div><dt>Subject &amp; Level</dt><dd>@Model.Level · @Model.Subject</dd></div>
+            <div><dt>Assigned Tutor</dt><dd>@Model.Tutor</dd></div>
+            <div><dt>File</dt><dd>@Model.FileName · @Model.SizeLabel</dd></div>
+            <div><dt>Uploaded (MYT)</dt><dd>@Model.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm")</dd></div>
+            <div><dt>Updated (MYT)</dt><dd>@Model.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm")</dd></div>
+        </dl>
+        <h3 class="h6">Description</h3><p class="material-description">@(string.IsNullOrWhiteSpace(Model.Description) ? "No description provided." : Model.Description)</p>
+        <div class="class-form-actions material-actions">
+            <a asp-action="Download" asp-route-id="@Model.Id" class="primary-button"><i class="bi bi-download" aria-hidden="true"></i> Download Material</a>
+            @if (Model.CanManage)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="outline-button">Edit</a>
+                <form asp-action="ChangeStatus" method="post" data-confirm="@(Model.IsActive ? "Set this material to inactive? Students will no longer be able to access it." : "Reactivate this material for enrolled students?")">
+                    @Html.AntiForgeryToken()<input name="id" type="hidden" value="@Model.Id" /><input name="rowVersion" type="hidden" value="@Model.RowVersion" /><input name="active" type="hidden" value="@(!Model.IsActive ? "true" : "false")" />
+                    <button type="submit" class="outline-button">@(Model.IsActive ? "Set Inactive" : "Reactivate")</button>
+                </form>
+            }
+        </div>
+    </div>
+</div>

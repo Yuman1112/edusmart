@@ -1831,6 +1831,73 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("StudentProfiles");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.LearningMaterial", b =>
+                {
+                    b.Property<int>("LearningMaterialId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LearningMaterialId"));
+
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<byte[]>("FileContent")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("FileSize")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UploadedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("LearningMaterialId");
+
+                    b.HasIndex("ClassSessionId", "IsActive", "CreatedAtUtc");
+
+                    b.ToTable("LearningMaterials", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LearningMaterials_FileSize", "[FileSize] > 0 AND [FileSize] <= 10485760 AND DATALENGTH([FileContent]) = [FileSize]");
+                        });
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Security.AuditLogEntry", b =>
                 {
                     b.Property<long>("AuditLogEntryId")
@@ -2514,6 +2581,17 @@ namespace SecureSmartTuitionSystem.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ApplicationUser");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.LearningMaterial", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", "ClassSession")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassSession");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Security.SecurityEmailDelivery", b =>

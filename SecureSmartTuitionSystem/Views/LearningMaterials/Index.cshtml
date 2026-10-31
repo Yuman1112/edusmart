@@ -1,0 +1,45 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Learning.MaterialIndexModel
+@{
+    ViewData["Title"] = "Learning Materials";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
+}
+<div class="learning-materials-page">
+    <div class="page-header">
+        <div><h1>Learning Materials</h1><p>@(Model.IsTutor ? "Share and manage materials for your assigned classes." : Model.IsStaff ? "Monitor learning materials across classes." : "Access materials for classes you are currently enrolled in.")</p></div>
+        @if (Model.IsTutor)
+        {
+            <a asp-action="Create" class="primary-button"><i class="bi bi-upload" aria-hidden="true"></i> Upload Material</a>
+        }
+    </div>
+    @if (TempData["MaterialSuccess"] is string success)
+    {
+        <div class="alert alert-success" role="status" data-success-timeout="5000">@success</div>
+    }
+    @if (TempData["MaterialError"] is string error)
+    {
+        <div class="alert alert-danger" role="alert">@error</div>
+    }
+    <div class="class-form-card mb-4">
+        <form asp-action="Index" method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-lg-4"><label for="material-search" class="form-label">Search title</label><input id="material-search" name="Search" value="@Model.Filter.Search" maxlength="100" class="form-control" placeholder="Search learning materials" /></div>
+            <div class="col-12 col-lg-4"><label for="material-class" class="form-label">Class</label><select id="material-class" name="ClassId" class="form-select"><option value="">All Available Classes</option>@foreach (var item in Model.Classes) {
+            <option value="@item.Value" selected="@(Model.Filter.ClassId?.ToString() == item.Value)">@item.Text</option>
+                        }
+</select></div>
+            @if (Model.IsStaff)
+            {
+                <div class="col-12 col-lg-2"><label for="material-status" class="form-label">Status</label><select id="material-status" name="Status" class="form-select"><option value="active" selected="@(Model.Filter.Status == "active")">Active</option><option value="inactive" selected="@(Model.Filter.Status == "inactive")">Inactive</option><option value="all" selected="@(Model.Filter.Status == "all")">All Statuses</option></select></div>
+            }
+            <div class="col-12 col-lg-2"><button class="primary-button" type="submit">View Materials</button></div>
+        </form>
+    </div>
+    <p id="material-refresh-status" class="text-muted" role="status" data-material-refresh-url="@Url.Action("Index", "LearningMaterials", new { Model.Filter.Search, Model.Filter.ClassId, Model.Filter.Status, Model.Filter.Page, fragment = true })">Materials update automatically while this page is visible.</p>
+    <partial name="_MaterialResults" model="Model" />
+</div>
+
+@section Scripts {
+    <script src="~/js/learning-materials-list.js" asp-append-version="true"></script>
+}

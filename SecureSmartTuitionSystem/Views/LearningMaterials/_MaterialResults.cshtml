@@ -1,0 +1,50 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Learning.MaterialIndexModel
+<div id="material-results" class="class-form-card" data-material-results>
+    <div class="material-list-heading"><h2>Materials <span class="material-count">@Model.Total</span></h2><span class="text-muted">@(Model.IsStaff ? "Active and inactive records follow your filters." : "Active materials only.")</span></div>
+    @if (Model.Total == 0)
+    {
+        <div class="alert alert-info">@(Model.IsTutor ? "No materials match. Choose Upload Material to share a file with an assigned class." : Model.IsStaff ? "No learning materials match these filters." : "No active materials match. Materials become available after your enrollment starts and your tutor uploads them.")</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle" data-pagination="off">
+                <thead><tr><th scope="col">Material</th><th scope="col">Class / Subject</th><th scope="col">Updated (MYT)</th>@if (Model.IsStaff) {
+                <th scope="col">Status</th>
+            }
+<th scope="col">Actions</th></tr></thead>
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@row.Id" class="material-title">@row.Title</a><small class="material-file-name">@row.FileName · @row.SizeLabel</small></td>
+                        <td><strong>@row.ClassCode</strong><small class="d-block">@row.Level · @row.Subject</small></td>
+                        <td>@row.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy")<small class="d-block">@row.UpdatedAtUtc.AddHours(8).ToString("HH:mm")</small></td>
+                        @if (Model.IsStaff)
+                        {
+                            <td><span class="material-badge @(row.IsActive ? "is-active" : "is-inactive")">@(row.IsActive ? "Active" : "Inactive")</span></td>
+                        }
+                        <td><div class="material-actions"><a asp-action="Details" asp-route-id="@row.Id" class="outline-button">View</a><a asp-action="Download" asp-route-id="@row.Id" class="outline-button">Download</a>@if (row.CanManage) {
+                        <a asp-action="Edit" asp-route-id="@row.Id" class="outline-button">Edit</a>
+                    }
+</div></td>
+                </tr>
+                                }
+            </tbody>
+        </table>
+    </div>
+    <nav class="material-pagination" aria-label="Learning materials pages">
+        <span>Page @Model.Filter.Page of @Model.PageCount · 25 per page</span>
+        <div class="material-actions">
+            @if (Model.Filter.Page > 1)
+            {
+                <a class="outline-button" asp-action="Index" asp-route-Page="@(Model.Filter.Page - 1)" asp-route-ClassId="@Model.Filter.ClassId" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status">Previous</a>
+            }
+            @if (Model.Filter.Page < Model.PageCount)
+            {
+                <a class="outline-button" asp-action="Index" asp-route-Page="@(Model.Filter.Page + 1)" asp-route-ClassId="@Model.Filter.ClassId" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status">Next</a>
+            }
+        </div>
+    </nav>
+        }
+</div>

@@ -144,7 +144,7 @@
         <!-- Login and Register pages -->
         <main class="auth-layout">
             @await Component.InvokeAsync("BillingAccessBanner")
-                    @RenderBody()
+            @RenderBody()
         </main>
     }
     else if (useStaffLayout)
@@ -276,12 +276,7 @@
                         </div>
 
                         <!-- Admin: Planned Modules -->
-                        <span class="sidebar-link disabled-link"
-                              aria-disabled="true"
-                              title="This module will be developed later">
-                            <i class="bi bi-journal-bookmark" aria-hidden="true"></i>
-                            <span>Learning &amp; Assessment</span>
-                        </span>
+                        <a class="sidebar-link @(currentController == "LearningMaterials" ? "active" : "")" asp-controller="LearningMaterials" asp-action="Index"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><span>Learning Materials</span></a>
 
                         <!-- Admin: Attendance -->
                         <div class="sidebar-module">
@@ -430,6 +425,8 @@
 
                             <span>Students</span>
                         </span>
+
+                        <a class="sidebar-link @(currentController == "LearningMaterials" ? "active" : "")" asp-controller="LearningMaterials" asp-action="Index"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><span>Learning Materials</span></a>
 
                         <span class="sidebar-link disabled-link"
                               aria-disabled="true"
@@ -671,6 +668,11 @@
                                 </div>
                             </div>
 
+                            @if (User.IsInRole("Student"))
+                            {
+                                <a asp-controller="LearningMaterials" asp-action="Index" class="public-nav-link @(currentController == "LearningMaterials" ? "active" : "")"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> Learning Materials</a>
+                            }
+
                             <a asp-controller="Attendance"
                                asp-action="Report"
                                class="public-nav-link @((currentController == "Attendance" || currentController == "AttendanceCorrections") ? "active" : "")">
@@ -742,7 +744,7 @@
             <!-- Public Page Content -->
             <main class="public-content">
                 @await Component.InvokeAsync("BillingAccessBanner")
-                    @RenderBody()
+                @RenderBody()
             </main>
 
 
