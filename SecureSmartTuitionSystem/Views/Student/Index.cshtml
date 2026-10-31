@@ -1,99 +1,44 @@
 @model SecureSmartTuitionSystem.ViewModels.Student.StudentDashboardViewModel
-
 @{
     ViewData["Title"] = "Student Dashboard";
     Layout = "/Views/Shared/_Layout.cshtml";
 }
-
-<div class="container py-5">
-
-    <div class="mb-4">
-
-        <h1 class="fw-bold">
-            Welcome, @Model.StudentName
-        </h1>
-
-        <p class="text-muted mb-1">
-            Student User ID:
-            <strong>@Model.StudentUserName</strong>
-        </p>
-
-        <p class="text-muted">
-            @Model.AcademicLevel · @Model.School
-        </p>
-
-    </div>
-
-    <div class="row g-4 mb-4">
-
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body p-4">
-
-                    <div class="text-muted">
-                        Active Classes
-                    </div>
-
-                    <div class="display-6 fw-bold">
-                        @Model.ActiveClassCount
-                    </div>
-
-                </div>
-            </div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/learner-dashboard.css" asp-append-version="true" />
+}
+<div class="learner-dashboard">
+    <header class="learner-welcome">
+        <div>
+            <span class="learner-eyebrow">MY LEARNING SPACE</span>
+            <h1>Hello, @Model.StudentName</h1>
+            <p>Your classes and learning essentials, in one place.</p>
+            <div class="learner-identity"><span>@Model.StudentUserName</span><span>@Model.AcademicLevel</span>@if (!string.IsNullOrWhiteSpace(Model.School)) {
+            <span>@Model.School</span>
+                        }
+</div>
         </div>
-
-    </div>
-
-    <div class="card shadow-sm border-0">
-
-        <div class="card-body p-4">
-
-            <h2 class="h4 fw-bold mb-4">
-                My Classes
-            </h2>
-
+        <a asp-controller="LearningClasses" asp-action="Index" class="learner-button"><i class="bi bi-calendar-week" aria-hidden="true"></i> My Class Schedule <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </header>
+    <div class="learner-content-grid">
+        <section class="learner-panel">
+            <div class="learner-section-heading"><div><h2>My Classes</h2><p>Your currently accessible classes.</p></div><span class="learner-count">@Model.ActiveClassCount active</span></div>
             @if (Model.Classes.Count == 0)
             {
-                <p class="text-muted mb-0">
-                    No classes are currently open. Class access starts on your enrollment start date.
-                </p>
+                <div class="learner-empty"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><h3>Your classes will appear here</h3><p>No classes are currently open. Class access starts on your enrollment start date.</p><a asp-controller="LearningClasses" asp-action="Index" class="learner-text-link">View enrollment &amp; schedules <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
             }
             else
             {
-                @foreach (var item in Model.Classes)
-                {
-                    <div class="border rounded-3 p-3 mb-3">
-
-                        <h3 class="h5 fw-bold mb-1">
-                            @item.SubjectName
-                        </h3>
-
-                        <div class="text-muted">
-                            
-                            @if (!string.IsNullOrWhiteSpace(
-                                                item.ClassName))
-                            {
-                                <span>
-                                    @item.ClassName
-                                </span>
-                            }
-                        </div>
-
-                        <div class="text-muted">
-                            @item.Day
-                            ·
-                            @item.StartTime
-                            -
-                            @item.EndTime
-                        </div>
-
-                    </div>
-                }
+                <div class="learner-class-list">
+                    @foreach (var item in Model.Classes)
+                    {
+                        <article class="learner-class-row"><div class="learner-row-icon"><i class="bi bi-book" aria-hidden="true"></i></div><div class="learner-row-content"><h3>@item.SubjectName</h3><p>@item.ClassName</p><span class="learner-schedule"><i class="bi bi-clock" aria-hidden="true"></i> @item.Day · @item.StartTime–@item.EndTime</span></div><span class="learner-code">@item.ClassCode</span></article>
+                    }
+                </div>
             }
-
-        </div>
-
+        </section>
+        <aside class="learner-shortcuts" aria-label="Student shortcuts">
+            <a asp-controller="Attendance" asp-action="Report" class="learner-shortcut"><span class="learner-shortcut-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></span><h2>My Attendance</h2><p>View your records and request a correction when needed.</p><span class="learner-text-link">View attendance <i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
+            <a asp-controller="Announcements" asp-action="Index" class="learner-shortcut"><span class="learner-shortcut-icon"><i class="bi bi-megaphone" aria-hidden="true"></i></span><h2>Announcements</h2><p>Read the latest updates from your tuition centre.</p><span class="learner-text-link">Read updates <i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
+        </aside>
     </div>
-
 </div>
-<a class="btn btn-primary mt-3" asp-controller="LearningClasses" asp-action="Index">My class schedule</a>

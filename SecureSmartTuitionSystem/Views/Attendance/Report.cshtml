@@ -1,7 +1,11 @@
 @model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReportViewModel
 
 @{
-    ViewData["Title"] = "Attendance Records";
+    bool staff = User.IsInRole("Admin") || User.IsInRole("Tutor");
+    bool studentView = !staff && User.IsInRole("Student");
+    bool parentView = !staff && !studentView && User.IsInRole("Parent");
+    var heading = studentView ? "My Attendance" : parentView ? "Children's Attendance" : "Attendance Records";
+    ViewData["Title"] = heading;
 }
 
 @section Styles {
@@ -13,9 +17,11 @@
 <div class="attendance-page">
     <div class="page-header">
         <div>
-            <h1>Attendance Records</h1>
+            <h1>@heading</h1>
             <p>
-                View attendance for the classes and students available to your account.
+                @(studentView ? "Review your published attendance records and request a correction if needed."
+                    : parentView ? "View published attendance records for children linked to your account."
+                    : "View attendance for the classes and students available to your account.")
             </p>
         </div>
 
@@ -80,15 +86,17 @@
                     </select>
                 </div>
 
+                @if (!studentView)
+                {
                 <div class="col-12 col-md-3">
                     <label for="attendance-student" class="form-label">
-                        Student
+                        @(parentView ? "Child" : "Student")
                     </label>
 
                     <select id="attendance-student"
                             name="StudentId"
                             class="form-select">
-                        <option value="">All Available Students</option>
+                        <option value="">@(parentView ? "All My Children" : "All Available Students")</option>
 
                         @foreach (var choice in Model.Students)
                         {
@@ -100,7 +108,9 @@
                     </select>
                 </div>
 
-                <div class="col-12 col-md-4">
+                }
+
+                <div class="@(studentView ? "col-12 col-md-3" : "col-12 col-md-4")">
                     <label for="attendance-status" class="form-label">
                         Attendance
                     </label>
@@ -132,7 +142,7 @@
                     </select>
                 </div>
 
-                <div class="col-12 col-md-8">
+                <div class="@(studentView ? "col-12" : "col-12 col-md-8")">
                     <button type="submit" class="primary-button">
                         View Records
                     </button>

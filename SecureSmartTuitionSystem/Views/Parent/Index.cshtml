@@ -1,82 +1,43 @@
 @model SecureSmartTuitionSystem.ViewModels.Parent.ParentDashboardViewModel
-
 @{
     ViewData["Title"] = "Parent Dashboard";
     Layout = "/Views/Shared/_Layout.cshtml";
 }
-
-<div class="container py-5">
-
-    <div class="mb-4">
-
-        <h1 class="fw-bold">
-            Welcome, @Model.ParentName
-        </h1>
-
-        <p class="text-muted">
-            Parent User ID:
-            <strong>@Model.ParentUserName</strong>
-        </p>
-
-    </div>
-
-    <div class="card shadow-sm border-0">
-
-        <div class="card-body p-4">
-
-            <h2 class="h4 fw-bold mb-4">
-                My Children
-            </h2>
-
+@section Styles {
+    <link rel="stylesheet" href="~/css/learner-dashboard.css" asp-append-version="true" />
+}
+<div class="learner-dashboard">
+    <header class="learner-welcome">
+        <div><span class="learner-eyebrow">PARENT SPACE</span><h1>Welcome, @Model.ParentName</h1><p>Stay connected with your children's learning.</p><div class="learner-identity"><span>@Model.ParentUserName</span><span>Parent account</span></div></div>
+        <a asp-controller="LearningClasses" asp-action="Index" class="learner-button"><i class="bi bi-calendar-week" aria-hidden="true"></i> Children's Schedules <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </header>
+    <div class="learner-content-grid">
+        <section class="learner-panel">
+            <div class="learner-section-heading"><div><h2>My Children</h2><p>Students currently linked to your account.</p></div><span class="learner-count">@Model.Students.Count linked</span></div>
             @if (Model.Students.Count == 0)
             {
-                <p class="text-muted mb-0">
-                    No students are currently linked
-                    to your account.
-                </p>
+                <div class="learner-empty"><i class="bi bi-people" aria-hidden="true"></i><h3>No children linked yet</h3><p>Contact the tuition centre if your child's account should be linked here.</p></div>
             }
             else
             {
-                @foreach (var student in Model.Students)
-                {
-                    <div class="border rounded-3 p-3 mb-3">
-
-                        <div class="d-flex
-                                            justify-content-between
-                                            align-items-start">
-
-                            <div>
-
-                                <h3 class="h5 fw-bold mb-1">
-                                    @student.StudentName
-                                </h3>
-
-                                <div class="text-muted">
-                                    Student ID:
-                                    @student.StudentUserName
-                                </div>
-
-                                <div class="text-muted">
-                                    @student.AcademicLevel
-                                    ·
-                                    @student.School
-                                </div>
-
-                            </div>
-
-                            <span class="badge bg-success">
-                                @student.Relationship
-                            </span>
-
-                        </div>
-
-                    </div>
+                <div class="learner-children-list">
+                    @foreach (var student in Model.Students)
+                    {
+                        <article class="learner-child">
+                            <div class="learner-child-heading"><span class="learner-row-icon"><i class="bi bi-person" aria-hidden="true"></i></span><div class="learner-row-content"><h3>@student.StudentName</h3><p>@student.StudentUserName</p></div><span class="learner-count">@student.Relationship</span></div>
+                            <p class="learner-child-school">@student.AcademicLevel @if (!string.IsNullOrWhiteSpace(student.School)) {
+                            <span>· @student.School</span>
+                        }
+    </p>
+                        <a asp-controller="Attendance" asp-action="Report" asp-route-StudentId="@student.StudentProfileId" class="learner-text-link">View attendance <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                    </article>
                 }
+                </div>
             }
-
-        </div>
-
+        </section>
+        <aside class="learner-shortcuts" aria-label="Parent shortcuts">
+            <a asp-controller="Attendance" asp-action="Report" class="learner-shortcut"><span class="learner-shortcut-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></span><h2>Children's Attendance</h2><p>Review published attendance records for your linked children.</p><span class="learner-text-link">View records <i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
+            <a asp-controller="Announcements" asp-action="Index" class="learner-shortcut"><span class="learner-shortcut-icon"><i class="bi bi-megaphone" aria-hidden="true"></i></span><h2>Centre Updates</h2><p>Keep up with announcements from the tuition centre.</p><span class="learner-text-link">Read updates <i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
+        </aside>
     </div>
-
 </div>
-<a class="btn btn-primary mt-3" asp-controller="LearningClasses" asp-action="Index">My children’s class schedules</a>
