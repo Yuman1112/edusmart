@@ -1898,6 +1898,44 @@ namespace SecureSmartTuitionSystem.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.LearningMaterialAttachment", b =>
+                {
+                    b.Property<int>("LearningMaterialAttachmentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LearningMaterialAttachmentId"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("FileContent")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("FileSize")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LearningMaterialId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.HasKey("LearningMaterialAttachmentId");
+
+                    b.HasIndex("LearningMaterialId");
+
+                    b.ToTable("LearningMaterialAttachments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LearningMaterialAttachments_FileSize", "[FileSize] > 0 AND [FileSize] <= 10485760 AND DATALENGTH([FileContent]) = [FileSize]");
+                        });
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Security.AuditLogEntry", b =>
                 {
                     b.Property<long>("AuditLogEntryId")
@@ -2592,6 +2630,17 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsRequired();
 
                     b.Navigation("ClassSession");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.LearningMaterialAttachment", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Learning.LearningMaterial", "LearningMaterial")
+                        .WithMany()
+                        .HasForeignKey("LearningMaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LearningMaterial");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Security.SecurityEmailDelivery", b =>

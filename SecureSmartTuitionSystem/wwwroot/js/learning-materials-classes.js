@@ -10,7 +10,7 @@
         let known = false, busy = false, submitting = false, invalidated = false;
         let choicesKey = '', sequence = 0, controller, interval;
         const allowed = () => Boolean(select.value) && Array.from(select.options).some(o => o.value === select.value && o.value !== '');
-        function updateButton() { submit.disabled = submitting || !known || !allowed(); }
+        function updateButton() { submit.disabled = submitting; }
         function warn(text) {
             if (message.textContent !== text) message.textContent = text;
             message.hidden = false;
@@ -68,6 +68,7 @@
             invalidated = false; message.hidden = true; updateButton();
         });
         form.addEventListener('submit', event => {
+            if (event.defaultPrevented) return;
             if (!known || !allowed()) {
                 event.preventDefault(); warn('Select a currently assigned class before uploading.'); refresh(true); return;
             }

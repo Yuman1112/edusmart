@@ -45,9 +45,10 @@ public sealed class LearningMaterialService(ApplicationDbContext db)
         await Classes(user, manage).OrderBy(x => x.ClassCode).Select(x => new SelectListItem
         { Value = x.ClassSessionId.ToString(), Text = x.ClassCode + " · " + (x.ClassName ?? "") }).ToListAsync();
 
-    private static IQueryable<MaterialRow> Rows(IQueryable<LearningMaterial> query) => query.Select(x => new MaterialRow
+    private IQueryable<MaterialRow> Rows(IQueryable<LearningMaterial> query) => query.Select(x => new MaterialRow
     {
         Id = x.LearningMaterialId,
+        FileCount = 1 + db.Set<LearningMaterialAttachment>().Count(a => a.LearningMaterialId == x.LearningMaterialId),
         ClassId = x.ClassSessionId,
         Title = x.Title,
         Description = x.Description,
@@ -84,12 +85,18 @@ public sealed class LearningMaterialService(ApplicationDbContext db)
     {
         var row = await Rows(Visible(user).Where(x => x.LearningMaterialId == id)).SingleOrDefaultAsync();
         if (row != null) row.CanManage = await Classes(user, true).AnyAsync(x => x.ClassSessionId == row.ClassId);
+        if (row != null)
+        {
+            row.Attachments.Add(new MaterialAttachmentRow { Id = 0, Name = row.FileName, Size = row.Size });
+            row.Attachments.AddRange(await db.Set<LearningMaterialAttachment>().AsNoTracking().Where(a => a.LearningMaterialId == id).OrderBy(a => a.LearningMaterialAttachmentId)
+                .Select(a => new MaterialAttachmentRow { Id = a.LearningMaterialAttachmentId, Name = a.OriginalFileName, Size = a.FileSize }).ToListAsync());
+        }
         return row;
     }
     public async Task<MaterialForm?> EditAsync(ClaimsPrincipal user, int id)
     {
         var ids = Classes(user, true).Select(c => c.ClassSessionId);
-        return await db.Set<LearningMaterial>().AsNoTracking().Where(x => x.LearningMaterialId == id && ids.Contains(x.ClassSessionId))
+        var model = await db.Set<LearningMaterial>().AsNoTracking().Where(x => x.LearningMaterialId == id && ids.Contains(x.ClassSessionId))
             .Select(x => new MaterialForm
             {
                 Id = x.LearningMaterialId,
@@ -99,9 +106,19 @@ public sealed class LearningMaterialService(ApplicationDbContext db)
                 CurrentFileName = x.OriginalFileName,
                 RowVersion = Convert.ToBase64String(x.RowVersion)
             }).SingleOrDefaultAsync();
+        if (model != null)
+        {
+            var details = await DetailsAsync(user, id);
+            model.CurrentFiles = details?.Attachments ?? [];
+        }
+        return model;
     }
-    public async Task<string?> SaveAsync(ClaimsPrincipal user, MaterialForm form, MaterialFile? file)
+    public Task<string?> SaveAsync(ClaimsPrincipal user, MaterialForm form, MaterialFile? file) => SaveFilesAsync(user, form, file == null ? [] : [file]);
+    public async Task<string?> SaveFilesAsync(ClaimsPrincipal user, MaterialForm form, IReadOnlyList<MaterialFile> files)
     {
+        if (files.Count > 10 || files.Sum(f => (long)f.Content.Length) > 31457280 || files.Any(f => f.Content.Length == 0 || f.Content.Length > MaterialFileService.MaxBytes))
+            return "Choose up to 10 files, each at most 10 MB and 30 MB in total.";
+        var file = files.FirstOrDefault();
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
@@ -121,9 +138,38 @@ public sealed class LearningMaterialService(ApplicationDbContext db)
                     return "This material changed or is unavailable. Reload before editing again.";
                 material = found;
             }
+            var removed = form.RemovedAttachmentIds.ToHashSet();
+            var extras = form.Id == 0 ? [] : await db.Set<LearningMaterialAttachment>().AsNoTracking()
+                .Where(a => a.LearningMaterialId == form.Id)
+                .Select(a => new { a.LearningMaterialAttachmentId, a.FileSize }).ToListAsync();
+            if (removed.Any(id => form.Id == 0 || (id != 0 && !extras.Any(a => a.LearningMaterialAttachmentId == id))))
+                return "An attachment is unavailable or belongs to another material. Reload before editing.";
+            var retained = extras.Where(a => !removed.Contains(a.LearningMaterialAttachmentId)).ToList();
+            var count = (form.Id != 0 && !removed.Contains(0) ? 1 : 0) + retained.Count + files.Count;
+            var size = (form.Id != 0 && !removed.Contains(0) ? (long)material.FileSize : 0) + retained.Sum(a => (long)a.FileSize) + files.Sum(f => (long)f.Content.Length);
+            if (count < 1 || count > 10 || size > 31457280)
+                return "Keep at least one attachment, at most 10 files and 30 MB in total.";
+            var additions = files.ToList();
+            if (form.Id == 0 || removed.Contains(0))
+            {
+                MaterialFile primary;
+                if (retained.Count > 0)
+                {
+                    var promoteId = retained[0].LearningMaterialAttachmentId;
+                    var promoted = await db.Set<LearningMaterialAttachment>().SingleAsync(a => a.LearningMaterialAttachmentId == promoteId && a.LearningMaterialId == form.Id);
+                    primary = new MaterialFile(promoted.OriginalFileName, promoted.ContentType, promoted.FileContent);
+                    db.Remove(promoted);
+                }
+                else { primary = additions[0]; additions.RemoveAt(0); }
+                material.OriginalFileName = primary.Name; material.ContentType = primary.ContentType;
+                material.FileContent = primary.Content; material.FileSize = primary.Content.Length;
+            }
+            if (form.Id != 0 && removed.Any(id => id != 0))
+                db.RemoveRange(await db.Set<LearningMaterialAttachment>().Where(a => a.LearningMaterialId == form.Id && removed.Contains(a.LearningMaterialAttachmentId)).ToListAsync());
+            foreach (var attachment in additions)
+                db.Add(new LearningMaterialAttachment { LearningMaterial = material, OriginalFileName = attachment.Name, ContentType = attachment.ContentType, FileSize = attachment.Content.Length, FileContent = attachment.Content });
             material.Title = form.Title.Trim(); material.Description = form.Description?.Trim();
             material.UpdatedAtUtc = DateTime.UtcNow;
-            if (file != null) { material.OriginalFileName = file.Name; material.ContentType = file.ContentType; material.FileContent = file.Content; material.FileSize = file.Content.Length; }
             await db.SaveChangesAsync(); await tx.CommitAsync(); form.Id = material.LearningMaterialId; return null;
         }
         catch (DbUpdateConcurrencyException) { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return "This material changed. Reload before saving again."; }

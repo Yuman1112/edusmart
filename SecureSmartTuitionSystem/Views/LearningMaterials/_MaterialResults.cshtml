@@ -17,14 +17,14 @@
                 @foreach (var row in Model.Rows)
                 {
                     <tr>
-                        <td><a asp-action="Details" asp-route-id="@row.Id" class="material-title">@row.Title</a><small class="material-file-name">@row.FileName · @row.SizeLabel</small></td>
+                        <td><a asp-action="Details" asp-route-id="@row.Id" class="material-title">@row.Title</a><small class="material-file-name">@row.FileCount file(s) · @row.FileName</small></td>
                         <td><strong>@row.ClassCode</strong><small class="d-block">@row.Level · @row.Subject</small></td>
                         <td>@row.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy")<small class="d-block">@row.UpdatedAtUtc.AddHours(8).ToString("HH:mm")</small></td>
                         @if (Model.IsStaff)
                         {
                             <td><span class="material-badge @(row.IsActive ? "is-active" : "is-inactive")">@(row.IsActive ? "Active" : "Inactive")</span></td>
                         }
-                        <td><div class="material-actions"><a asp-action="Details" asp-route-id="@row.Id" class="outline-button">View</a><a asp-action="Download" asp-route-id="@row.Id" class="outline-button">Download</a>@if (row.CanManage) {
+                        <td><div class="material-actions"><a asp-action="Details" asp-route-id="@row.Id" class="outline-button">View</a><a asp-action="Details" asp-route-id="@row.Id" class="outline-button">Files (@row.FileCount)</a>@if (row.CanManage) {
                         <a asp-action="Edit" asp-route-id="@row.Id" class="outline-button">Edit</a>
                     }
 </div></td>

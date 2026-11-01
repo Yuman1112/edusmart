@@ -6,6 +6,13 @@ public static class LearningModelConfiguration
 {
     public static void ConfigureLearningMaterials(this ModelBuilder builder)
     {
+        builder.Entity<LearningMaterialAttachment>(e =>
+        {
+            e.ToTable("LearningMaterialAttachments", t => t.HasCheckConstraint("CK_LearningMaterialAttachments_FileSize", "[FileSize] > 0 AND [FileSize] <= 10485760 AND DATALENGTH([FileContent]) = [FileSize]"));
+            e.HasKey(x => x.LearningMaterialAttachmentId);
+            e.HasOne(x => x.LearningMaterial).WithMany().HasForeignKey(x => x.LearningMaterialId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(x => x.FileContent).HasColumnType("varbinary(max)");
+        });
         builder.Entity<LearningMaterial>(e =>
         {
             e.ToTable("LearningMaterials", table =>

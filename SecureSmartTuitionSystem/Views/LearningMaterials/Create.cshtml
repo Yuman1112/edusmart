@@ -8,10 +8,11 @@
     <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
 }
 <div class="learning-materials-page">
-    <div class="page-header"><div><h1>Upload Learning Material</h1><p>Share a file with an assigned class. Its subject and level follow the class.</p></div><a asp-action="Index" class="outline-button">Back</a></div>
+    <div class="page-header"><div><h1>Upload Learning Material</h1><p>Share files with an assigned class. Its subject and level follow the class.</p></div><a asp-action="Index" class="outline-button">Back</a></div>
     <div class="class-form-card tutor-create-card"><form asp-action="Create" method="post" enctype="multipart/form-data" id="material-create-form" data-class-choices-url="@Url.Action("ClassChoices", "LearningMaterials")">@Html.AntiForgeryToken()<partial name="_Form" model="Model" /></form></div>
 </div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/learning-materials-files.js" asp-append-version="true"></script>
     <script src="~/js/learning-materials-classes.js" asp-append-version="true"></script>
 }

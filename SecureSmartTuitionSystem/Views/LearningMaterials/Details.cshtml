@@ -21,13 +21,23 @@
         <dl class="material-details">
             <div><dt>Subject &amp; Level</dt><dd>@Model.Level · @Model.Subject</dd></div>
             <div><dt>Assigned Tutor</dt><dd>@Model.Tutor</dd></div>
-            <div><dt>File</dt><dd>@Model.FileName · @Model.SizeLabel</dd></div>
+            <div><dt>Attachments</dt><dd>@Model.FileCount files</dd></div>
             <div><dt>Uploaded (MYT)</dt><dd>@Model.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm")</dd></div>
             <div><dt>Updated (MYT)</dt><dd>@Model.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm")</dd></div>
         </dl>
         <h3 class="h6">Description</h3><p class="material-description">@(string.IsNullOrWhiteSpace(Model.Description) ? "No description provided." : Model.Description)</p>
+        <h3 class="h6">Attachments (@Model.FileCount)</h3>
+        <ul class="list-unstyled">
+            @foreach (var file in Model.Attachments)
+            {
+                <li class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom py-3">
+                    <span>@file.Name <small class="text-muted">· @file.SizeLabel</small></span>
+                    <a asp-action="Download" asp-route-id="@Model.Id" asp-route-attachmentId="@(file.Id == 0 ? (int?)null : file.Id)" class="outline-button"><i class="bi bi-download" aria-hidden="true"></i> Download</a>
+                </li>
+            }
+        </ul>
         <div class="class-form-actions material-actions">
-            <a asp-action="Download" asp-route-id="@Model.Id" class="primary-button"><i class="bi bi-download" aria-hidden="true"></i> Download Material</a>
+
             @if (Model.CanManage)
             {
                 <a asp-action="Edit" asp-route-id="@Model.Id" class="outline-button">Edit</a>

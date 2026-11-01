@@ -35,13 +35,22 @@ public sealed class LearningMaterialsController(ApplicationDbContext db) : Contr
         return model == null ? NotFound() : View(model);
     }
     [HttpGet]
-    public async Task<IActionResult> Download(int id)
+    public async Task<IActionResult> Download(int id, int? attachmentId = null)
     {
         var file = await Materials.Visible(User).Where(x => x.LearningMaterialId == id)
             .Select(x => new { x.ClassSessionId, x.FileContent, x.ContentType, x.OriginalFileName }).SingleOrDefaultAsync();
         if (file == null) return NotFound();
         if (User.IsInRole("Student") && !User.IsInRole("Admin") && !User.IsInRole("Tutor")
             && !await new LearningAccessService(db).CanAccessAsync(User, file.ClassSessionId)) return NotFound();
+        if (attachmentId.HasValue)
+        {
+            var attachment = await db.Set<LearningMaterialAttachment>().AsNoTracking()
+                .Where(a => a.LearningMaterialId == id && a.LearningMaterialAttachmentId == attachmentId)
+                .Select(a => new { a.FileContent, a.ContentType, a.OriginalFileName }).SingleOrDefaultAsync();
+            if (attachment == null) return NotFound();
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            return File(attachment.FileContent, attachment.ContentType, MaterialFileService.SafeName(attachment.OriginalFileName));
+        }
         Response.Headers["X-Content-Type-Options"] = "nosniff";
         return File(file.FileContent, file.ContentType, MaterialFileService.SafeName(file.OriginalFileName));
     }
@@ -51,11 +60,12 @@ public sealed class LearningMaterialsController(ApplicationDbContext db) : Contr
         if (!LearningMaterialService.IsTutor(User)) return Forbid();
         return View(new MaterialForm { Classes = await Materials.ChoicesAsync(User, true) });
     }
-    [HttpPost, Authorize(Roles = "Tutor"), RequestSizeLimit(12582912), RequestFormLimits(MultipartBodyLengthLimit = 12582912)]
+    [HttpPost, Authorize(Roles = "Tutor"), RequestSizeLimit(33554432), RequestFormLimits(MultipartBodyLengthLimit = 33554432)]
     public async Task<IActionResult> Create(MaterialForm model, CancellationToken token)
     {
         if (!LearningMaterialService.IsTutor(User)) return Forbid();
-        model.Id = 0; model.RowVersion = "";
+        model.Id = 0; model.RowVersion = null;
+        ModelState.Remove(nameof(model.RowVersion));
         return await SaveForm(model, "Create", token);
     }
     [HttpGet, Authorize(Roles = "Tutor")]
@@ -66,7 +76,7 @@ public sealed class LearningMaterialsController(ApplicationDbContext db) : Contr
         model.Classes = await Materials.ChoicesAsync(User, true);
         return View(model);
     }
-    [HttpPost, Authorize(Roles = "Tutor"), RequestSizeLimit(12582912), RequestFormLimits(MultipartBodyLengthLimit = 12582912)]
+    [HttpPost, Authorize(Roles = "Tutor"), RequestSizeLimit(33554432), RequestFormLimits(MultipartBodyLengthLimit = 33554432)]
     public async Task<IActionResult> Edit(int id, MaterialForm model, CancellationToken token)
     {
         if (id <= 0 || model.Id != id) return BadRequest();
@@ -74,26 +84,36 @@ public sealed class LearningMaterialsController(ApplicationDbContext db) : Contr
         if (existing == null) return NotFound();
         if (model.ClassSessionId != existing.ClassSessionId) return BadRequest("A material cannot be moved to another class. Upload a separate copy there.");
         model.CurrentFileName = existing.CurrentFileName;
+        model.CurrentFiles = existing.CurrentFiles;
+        if (string.IsNullOrWhiteSpace(model.RowVersion)) ModelState.AddModelError(nameof(model.RowVersion), "Reload this material before saving.");
         return await SaveForm(model, "Edit", token);
     }
     private async Task<IActionResult> SaveForm(MaterialForm model, string view, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(model.Title)) ModelState.AddModelError(nameof(model.Title), "Please enter a material title.");
-        MaterialFile? file = null;
-        if (model.File != null)
-        {
-            try
-            {
-                var result = await MaterialFileService.ReadAsync(model.File, token);
-                file = result.File;
-                if (result.Error != null) ModelState.AddModelError(nameof(model.File), result.Error);
-            }
-            catch (IOException) { ModelState.AddModelError(nameof(model.File), "The file could not be read. Re-select it and try again."); }
-        }
-        else if (model.Id == 0) ModelState.AddModelError(nameof(model.File), "Choose a material file.");
+        var uploads = model.Files.ToList();
+        if (model.File != null) uploads.Add(model.File);
+        var files = new List<MaterialFile>();
+        if (uploads.Count > 10 || uploads.Sum(f => f.Length) > 31457280)
+            ModelState.AddModelError(nameof(model.Files), "Choose up to 10 files, each at most 10 MB and 30 MB in total.");
+        if (model.Id == 0 && uploads.Count == 0)
+            ModelState.AddModelError(nameof(model.Files), "Choose at least one material file.");
         if (ModelState.IsValid)
         {
-            var error = await Materials.SaveAsync(User, model, file);
+            foreach (var upload in uploads)
+            {
+                try
+                {
+                    var result = await MaterialFileService.ReadAsync(upload, token);
+                    if (result.Error != null) ModelState.AddModelError(nameof(model.Files), $"{MaterialFileService.SafeName(upload.FileName)}: {result.Error}");
+                    else if (result.File != null) files.Add(result.File);
+                }
+                catch (IOException) { ModelState.AddModelError(nameof(model.Files), "A file could not be read. Re-select the files and try again."); }
+            }
+        }
+        if (ModelState.IsValid)
+        {
+            var error = await Materials.SaveFilesAsync(User, model, files);
             if (error == null)
             {
                 TempData["MaterialSuccess"] = view == "Create" ? "Learning material uploaded successfully." : "Learning material updated successfully.";
