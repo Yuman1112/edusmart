@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Messages";
+    string? supportDraft = TempData["ChatbotSupportDraft"] as string;
 
     string Initial(string name) =>
         string.IsNullOrWhiteSpace(name) ? "U" : name[..1].ToUpperInvariant();
@@ -280,6 +281,7 @@
                     }
                 </div>
 
+                @if (!string.IsNullOrWhiteSpace(supportDraft)) { <div class="alert alert-info mx-3 mt-3">Your support request is ready below. Review it and press Send to share it with staff.</div> }
                 <form asp-action="Send"
                       method="post"
                       enctype="multipart/form-data"
@@ -302,7 +304,7 @@
                                   id="messageContent"
                                   maxlength="2000"
                                   rows="1"
-                                  placeholder="Type a message..."></textarea>
+                                  placeholder="Type a message...">@supportDraft</textarea>
                         <span id="selectedFileName" hidden></span>
                     </div>
 

@@ -1,0 +1,16 @@
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.AdminWithdrawalViewModel
+@{ ViewData["Title"] = "Record Withdrawal"; }
+<div class="page-header"><div><h1>Record Withdrawal</h1><p>Record a guardian's request without deleting enrollment or payment history.</p></div><a asp-action="Index" class="outline-button">Withdrawal history</a></div>
+@if (TempData["ErrorMessage"] is string error) { <div class="alert alert-warning">@error</div> }
+<section class="dashboard-card"><header class="dashboard-card-header"><h2>@Model.Student</h2></header><div class="p-4">
+<p><strong>Class:</strong> @Model.Class</p><p><strong>Stops from:</strong> @Model.EffectiveDate.ToString("dd MMM yyyy")</p>
+<p><strong>Estimated eligible tuition refund:</strong> RM @Model.EstimatedRefund.ToString("F2")</p>
+<div class="alert alert-info">Current-month tuition is retained. Hardcopy and delivery fees are excluded from this automatic refund estimate. Recording withdrawal does not issue a refund; review and process it separately.</div>
+<form method="post" asp-action="AdminWithdraw">
+<input type="hidden" asp-for="EnrollmentId" /><input type="hidden" asp-for="ConfirmationToken" />
+<div asp-validation-summary="All" class="text-danger"></div>
+<label asp-for="Reason" class="form-label">Reason / guardian instruction</label><textarea asp-for="Reason" class="form-control mb-3" rows="3" minlength="10" maxlength="500" required></textarea>
+<label class="d-block mb-3"><input asp-for="GuardianRequestConfirmed" /> I have confirmed the guardian's request and recorded the reason.</label>
+<label class="d-block mb-3"><input asp-for="BillingEffectConfirmed" /> I confirm the effective date and understand that refund processing is separate.</label>
+<button type="submit" class="btn btn-outline-danger">Confirm withdrawal</button>
+</form></div></section>

@@ -9,7 +9,7 @@
 <div class="p-3"><p>Student: @Model.StudentProfile.StudentNumber<br />Issued: @Model.IssuedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm")<br />Due: @Model.DueAtUtc.AddHours(8).AddSeconds(-1).ToString("dd MMM yyyy HH:mm") (MYT)</p>
 @if(Model.PaidAtUtc.HasValue) { <p>Paid: @Model.PaidAtUtc.Value.AddHours(8).ToString("dd MMM yyyy HH:mm") (MYT)<br />Receipt: MR@Model.MonthlyInvoiceId.ToString("D7")</p> }</div>
 <div class="table-responsive"><table class="table align-middle" data-pagination="when-needed"><thead><tr><th>Class</th><th>Tuition</th></tr></thead><tbody>@foreach(var line in Model.Lines.OrderBy(x=>x.MonthlyInvoiceLineId)) { <tr><td>@line.Description</td><td>RM @line.Amount.ToString("F2")</td></tr> }</tbody></table></div>
-<div class="p-3"><strong>Total: RM @Model.Total.ToString("F2")</strong><p class="text-muted mb-0">One-month tuition at the enrollment fee snapshot. Initial prepaid-plan discounts and one-time materials/delivery charges are not charged again.</p></div></section>
+<div class="p-3"><strong>Total: RM @Model.Total.ToString("F2")</strong><p class="text-muted mb-0">Monthly renewal currently includes tuition at the enrollment fee snapshot. Initial prepaid-plan discounts, hardcopy materials and delivery fees are not included.</p></div></section>
 @if(Model.Status==MonthlyInvoiceStatus.Pending) {
 <div class="d-flex gap-2 flex-wrap mt-3">
 @if(User.IsInRole("Parent")) { <form method="post" asp-action="Pay"><input type="hidden" name="id" value="@Model.MonthlyInvoiceId" /><button type="submit" class="btn btn-primary">Pay with Stripe (test)</button></form> }
@@ -18,10 +18,10 @@
 
 @if (User.IsInRole("Admin") && ViewBag.EmailStatus is List<SecureSmartTuitionSystem.ViewModels.Billing.MonthlyEmailStatus> delivery)
 {
-<section class="dashboard-card shared-table-card mt-4"><header class="dashboard-card-header"><h2>Overdue email status</h2><span>Latest 25 entries</span></header>
-<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Guardian</th><th>Date</th><th>Status</th><th>Details</th></tr></thead><tbody>
-@foreach (var email in delivery) { <tr><td>@email.Recipient</td><td>@email.Day.ToString("dd MMM yyyy")</td><td>@email.Status</td><td>@email.Note</td></tr> }
-@if (delivery.Count == 0) { <tr><td colspan="4">No overdue email records yet. Email warnings start after seven overdue days.</td></tr> }
+<section class="dashboard-card shared-table-card mt-4"><header class="dashboard-card-header"><h2>Billing email status</h2><span>Latest 25 entries</span></header>
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Guardian</th><th>Type</th><th>Date</th><th>Status</th><th>Details</th></tr></thead><tbody>
+@foreach (var email in delivery) { <tr><td>@email.Recipient</td><td>@email.Kind</td><td>@email.Day.ToString("dd MMM yyyy")</td><td>@email.Status</td><td>@email.Note</td></tr> }
+@if (delivery.Count == 0) { <tr><td colspan="5">No billing email records yet. The background worker queues new-bill emails for active guardians.</td></tr> }
 </tbody></table></div></section>
 }
 

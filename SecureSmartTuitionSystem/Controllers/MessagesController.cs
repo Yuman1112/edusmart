@@ -36,18 +36,20 @@ namespace SecureSmartTuitionSystem.Controllers
 
         private readonly ApplicationDbContext _context;
         private readonly SecurityEventService _events;
+        private readonly ChatbotSessionService _chatbotSessions;
         private readonly IMessageProtectionService _protection;
         private readonly IWebHostEnvironment _environment;
 
         public MessagesController(
             ApplicationDbContext context,
             IMessageProtectionService protection,
-            IWebHostEnvironment environment, SecurityEventService events)
+            IWebHostEnvironment environment, SecurityEventService events, ChatbotSessionService chatbotSessions)
         {
             _context = context;
             _protection = protection;
             _environment = environment;
             _events = events;
+            _chatbotSessions = chatbotSessions;
         }
 
         [HttpGet]
@@ -260,6 +262,18 @@ namespace SecureSmartTuitionSystem.Controllers
                 .ToListAsync();
 
             return Json(new { readMessageIds });
+        }
+
+        [Authorize(Roles = "Parent,Student,Tutor"), HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> OpenSupportFromChatbot(string? handoffToken, bool confirmed)
+        {
+            if (!confirmed) return BadRequest("Confirm that the question may be shared with staff.");
+            var draft = _chatbotSessions.ReadHandoff(handoffToken, CurrentUserId());
+            if (draft == null) return BadRequest("The support draft expired. Open FAQ & Support and try again.");
+            var conversation = await GetOrCreateParentConversation(CurrentUserId());
+            // This opens a draft only. The user reviews and presses Send in Messages.
+            TempData["ChatbotSupportDraft"] = $"Support request from FAQ & Support\n\nQuestion: {draft.Question}\n\nAssistant response (not staff approval): {draft.Answer}";
+            return RedirectToAction(nameof(Index), new { id = conversation.ConversationId });
         }
 
         [Authorize(Roles = "Parent,Student,Tutor")]

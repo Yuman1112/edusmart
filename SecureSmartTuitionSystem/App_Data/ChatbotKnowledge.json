@@ -1,0 +1,26 @@
+[
+  {
+    "id": "withdrawal",
+    "title": "Withdrawal and refunds",
+    "text": "Withdrawal stops regular enrollment from the first day of the next month. Current-month tuition is retained. Unused future prepaid tuition is reviewed separately by Admin using the original payment. Hardcopy and delivery fees are excluded from the automatic refund quote. A refund amount or approval must be confirmed by staff; the chatbot cannot approve a refund.",
+    "Published": true
+  },
+  {
+    "id": "monthly-renewal",
+    "title": "Monthly tuition after the prepaid plan",
+    "text": "The initial enrollment plan covers its stated calendar months. While the app is running it generates eligible current-month tuition bills after prepaid coverage ends, within the same academic year. It does not automatically renew old-year enrollment into the next year or create all historical missing bills. Renewal tuition uses the enrollment fee snapshot. Hardcopy and delivery are not currently included in monthly renewal.",
+    "Published": true
+  },
+  {
+    "id": "late-payment",
+    "title": "Overdue monthly bills",
+    "text": "Monthly bills show their own due date. The system warns guardians after 4 to 7 overdue calendar days and applies enrollment/academic-change restrictions beyond 7 days. Payment, viewing records, support, messaging and withdrawal remain available. A payment is confirmed by server verification, not only by the browser return page.",
+    "Published": true
+  },
+  {
+    "id": "account-access",
+    "title": "Existing family accounts",
+    "text": "Existing guardians should sign in before adding subjects or verifying an existing account. A guardian may view only records available to their linked family. Staff-assisted additions still require the proper enrollment and payment flow. Never share account passwords, identification numbers or API keys in support chat.",
+    "Published": true
+  }
+]

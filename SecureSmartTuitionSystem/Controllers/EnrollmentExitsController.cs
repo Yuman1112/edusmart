@@ -10,7 +10,7 @@ using Stripe;
 namespace SecureSmartTuitionSystem.Controllers;
 [Authorize(Roles = "Admin,Parent,Student")]
 public sealed class EnrollmentExitsController(ApplicationDbContext db, EnrollmentExitService exits, StripeClient stripe,
-    ILogger<EnrollmentExitsController> logger) : Controller
+    ILogger<EnrollmentExitsController> logger, AdminWithdrawalConfirmation confirmations) : Controller
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private IQueryable<EnrollmentExitRequest> Allowed => db.EnrollmentExitRequests.Where(x => exits.Accessible(User).Select(e => e.StudentEnrollmentId).Contains(x.StudentEnrollmentId));
@@ -58,6 +58,54 @@ public sealed class EnrollmentExitsController(ApplicationDbContext db, Enrollmen
         try { var request = await exits.StopAsync(User, enrollmentId, reason); TempData["SuccessMessage"] = $"Withdrawal recorded for {request.EffectiveDate:dd MMM yyyy}. Estimated eligible tuition refund: RM {request.EstimatedRefund:F2}; this is not a completed refund."; }
         catch (InvalidOperationException ex) { TempData["ErrorMessage"] = ex.Message; }
         return RedirectToAction(nameof(Index));
+    }
+    [Authorize(Roles = "Admin"), HttpGet]
+    public async Task<IActionResult> AdminWithdraw(int enrollmentId)
+    {
+        var existing = await db.EnrollmentExitRequests.AsNoTracking().FirstOrDefaultAsync(x => x.StudentEnrollmentId == enrollmentId);
+        if (existing != null) return RedirectToAction(nameof(Details), new { id = existing.EnrollmentExitRequestId });
+        var model = await WithdrawalPreviewAsync(enrollmentId);
+        return model == null ? NotFound() : View(model);
+    }
+    [Authorize(Roles = "Admin"), HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AdminWithdraw(SecureSmartTuitionSystem.ViewModels.Enrollment.AdminWithdrawalViewModel model)
+    {
+        var preview = confirmations.Read(model.ConfirmationToken, UserId);
+        if (preview == null || preview.EnrollmentId != model.EnrollmentId) return BadRequest("The confirmation expired. Open the enrollment and try again.");
+        var existingRequest = await db.EnrollmentExitRequests.AsNoTracking().FirstOrDefaultAsync(x => x.StudentEnrollmentId == model.EnrollmentId);
+        if (existingRequest != null) return RedirectToAction(nameof(Details), new { id = existingRequest.EnrollmentExitRequestId });
+        if (!model.GuardianRequestConfirmed || !model.BillingEffectConfirmed)
+            ModelState.AddModelError(string.Empty, "Confirm the guardian request and the billing effect before recording withdrawal.");
+        var current = await WithdrawalPreviewAsync(model.EnrollmentId);
+        if (current == null) return NotFound();
+        if (!ModelState.IsValid)
+        {
+            current.Reason = model.Reason; current.GuardianRequestConfirmed = model.GuardianRequestConfirmed; current.BillingEffectConfirmed = model.BillingEffectConfirmed;
+            ModelState.Remove(nameof(model.ConfirmationToken));
+            return View(current);
+        }
+        try
+        {
+            var result = await exits.StopAsync(User, model.EnrollmentId, model.Reason, preview.EffectiveDate, preview.Refund);
+            TempData["SuccessMessage"] = "Admin-assisted withdrawal recorded. Refund processing is a separate step.";
+            return RedirectToAction(nameof(Details), new { id = result.EnrollmentExitRequestId });
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+            return RedirectToAction(nameof(AdminWithdraw), new { enrollmentId = model.EnrollmentId });
+        }
+    }
+    private async Task<SecureSmartTuitionSystem.ViewModels.Enrollment.AdminWithdrawalViewModel?> WithdrawalPreviewAsync(int enrollmentId)
+    {
+        var enrollment = await exits.Accessible(User).AsNoTracking().Include(x => x.StudentProfile).Include(x => x.ClassSession)
+            .FirstOrDefaultAsync(x => x.StudentEnrollmentId == enrollmentId && x.Status == StudentEnrollmentStatus.Active);
+        if (enrollment == null) return null;
+        var effective = new DateTime(ClassScheduleService.Today.Year, ClassScheduleService.Today.Month, 1).AddMonths(1);
+        var quote = await exits.QuoteAsync(enrollment, effective);
+        return new() { EnrollmentId = enrollmentId, Student = enrollment.StudentProfile.FullName + " (" + enrollment.StudentProfile.StudentNumber + ")",
+            Class = enrollment.ClassSession.ClassName ?? enrollment.ClassSession.ClassCode, EffectiveDate = effective, EstimatedRefund = quote.Amount,
+            ConfirmationToken = confirmations.Issue(UserId, enrollmentId, effective, quote.Amount) };
     }
     [HttpGet] public async Task<IActionResult> Details(int id)
     {

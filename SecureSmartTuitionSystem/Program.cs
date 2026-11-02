@@ -49,7 +49,15 @@ builder.Services.AddSingleton<AuditLogIntegrity>();
 builder.Services.AddSingleton<FinancialFieldProtection>();
 builder.Services.AddSingleton<PaymentCallbackTokenService>();
 builder.Services.AddSingleton<SecurityEventService>();
+builder.Services.Configure<ChatbotSettings>(builder.Configuration.GetSection(ChatbotSettings.SectionName));
+builder.Services.AddHttpClient<SecureSmartTuitionSystem.Services.Communication.ChatbotAIService>(client => client.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotKnowledgeStore>();
+builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotContextService>();
+builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotAssistantService>();
+builder.Services.AddSingleton<SecureSmartTuitionSystem.Services.Communication.ChatbotSessionService>();
 builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection(SecuritySettings.SectionName));
+builder.Services.Configure<SecurityExplanationAISettings>(builder.Configuration.GetSection(SecurityExplanationAISettings.SectionName));
+builder.Services.AddHttpClient<SecurityExplanationAI>(client => client.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddHostedService<SecurityAlertWorker>();
 builder.Services.AddHostedService<BillExpiryWorker>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Billing.MonthlyBillingService>();
@@ -59,6 +67,7 @@ builder.Services.AddHostedService<SecureSmartTuitionSystem.Services.Billing.Mont
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Enrollment.LearningAccessService>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Enrollment.EnrollmentExitService>();
+builder.Services.AddSingleton<SecureSmartTuitionSystem.Services.Enrollment.AdminWithdrawalConfirmation>();
 builder.Services.AddHostedService<SecureSmartTuitionSystem.Services.Enrollment.EnrollmentLifecycleWorker>();
 
 var protection = builder.Services.AddDataProtection().UseCryptographicAlgorithms(
@@ -184,10 +193,17 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddRateLimiter(options =>
 {
+    options.AddPolicy("security-explanation", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions {
+                PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+            }));
+
     options.RejectionStatusCode =
         StatusCodes.Status429TooManyRequests;
 
-    foreach (var policy in new[] { ("LoginPolicy", 5), ("PublicFormPolicy", 20), ("PaymentPolicy", 10) })
+    foreach (var policy in new[] { ("LoginPolicy", 5), ("PublicFormPolicy", 20), ("ChatbotPolicy", 6), ("PaymentPolicy", 10) })
     {
         int permits = policy.Item2;
         options.AddPolicy(policy.Item1, context => RateLimitPartition.GetFixedWindowLimiter(

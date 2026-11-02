@@ -14,6 +14,7 @@ public sealed class MonthlyBillingIndexViewModel
 public sealed class MonthlyEmailStatus
 {
     public string Recipient { get; set; } = "";
+    public string Kind { get; set; } = "";
     public DateTime Day { get; set; }
     public string Status { get; set; } = "";
     public string? Note { get; set; }

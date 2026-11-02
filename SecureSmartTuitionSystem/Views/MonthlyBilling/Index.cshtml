@@ -10,7 +10,7 @@
     <div><label for="status" class="form-label">Status</label><select id="status" name="status" class="form-select"><option value="">All statuses</option><option value="pending" selected="@(Model.Status=="pending")">Unpaid</option><option value="overdue" selected="@(Model.Status=="overdue")">Overdue</option><option value="paid" selected="@(Model.Status=="paid")">Paid</option></select></div>
     <button type="submit" class="btn btn-primary">Filter</button><a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
 </form>
-@if (User.IsInRole("Admin")) { <form asp-action="Generate" method="post" class="mb-3"><button type="submit" class="btn btn-outline-primary">Generate missing current-month bills</button></form><p class="text-muted">The hourly worker also generates the current month. Prepaid months are excluded. Historical months are not charged automatically.</p> }
+@if (User.IsInRole("Admin")) { <form asp-action="Generate" method="post" class="mb-3"><button type="submit" class="btn btn-outline-primary">Generate missing current-month bills</button></form><p class="text-muted">Bills are generated automatically at the start of each month while the app is running; the worker also checks hourly and after a restart. Prepaid months are excluded. Historical months are not charged automatically.</p> }
 <section class="dashboard-card shared-table-card"><header class="dashboard-card-header"><h2>Monthly bills</h2><span>@Model.TotalRows bill(s)</span></header>
 <div class="table-responsive"><table class="table align-middle" data-server-paged="true"><thead><tr><th>No</th><th>Bill</th><th>Student</th><th>Month</th><th>Amount</th><th>Due date</th><th>Status</th><th>Action</th></tr></thead><tbody>
 @{ int row=(Model.Page-1)*25; }

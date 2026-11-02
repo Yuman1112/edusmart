@@ -17,14 +17,39 @@ public sealed class MonthlyBillingWorker(IServiceScopeFactory scopes, ILogger<Mo
             try
             {
                 using var scope = scopes.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<MonthlyBillingService>().GenerateCurrentAsync(stoppingToken);
+                try { await scope.ServiceProvider.GetRequiredService<MonthlyBillingService>().GenerateCurrentAsync(stoppingToken); }
+                catch (Exception e) when (e is not OperationCanceledException) { logger.LogError(e, "Monthly bill generation requires review; existing bill notifications will still run."); }
                 await NotifyAsync(scope.ServiceProvider, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception e) { logger.LogError(e, "Monthly billing/notifications failed; next run will retry safely."); }
-            try { await Task.Delay(TimeSpan.FromHours(1), stoppingToken); }
+            try { await Task.Delay(NextDelay(DateTime.UtcNow), stoppingToken); }
             catch (OperationCanceledException) { break; }
         }
+    }
+    // Wake at the Malaysia month boundary even when the last hourly run was at :30.
+    // A running host is still required; after downtime only the current month is generated.
+    public static TimeSpan NextDelay(DateTime utcNow)
+    {
+        var nextMonthUtc = MonthlyBillingService.MonthOf(utcNow.AddHours(8)).AddMonths(1).AddHours(-8);
+        return TimeSpan.FromSeconds(Math.Clamp((nextMonthUtc - utcNow).TotalSeconds, 1, 3600));
+    }
+    public static bool EmailKind(string kind) => kind is "bill-issued" or "overdue-restricted";
+    public static string EmailSubject(BillingReminder record) => record.Kind == "bill-issued"
+        ? $"EduSmart - Monthly Tuition Bill - {record.MonthlyInvoice.Month.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)} - {record.MonthlyInvoice.Number}"
+        : $"EduSmart - Overdue Monthly Bill - {record.MonthlyInvoice.Number}";
+    public static string EmailBody(BillingReminder record, string? publicBaseUrl)
+    {
+        var bill = record.MonthlyInvoice;
+        var month = bill.Month.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        var amount = bill.Total.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+        string intro = record.Kind == "bill-issued" ? "Your monthly tuition bill is ready." : "Your monthly tuition bill remains unpaid.";
+        string body = $"{intro}\n\nBill: {bill.Number}\nTuition month: {month}\nAmount: RM {amount}\nDue: {bill.DueAtUtc.AddHours(8).AddSeconds(-1):dd MMM yyyy HH:mm} (Malaysia time)\n\nSign in to EduSmart and open Monthly Tuition Bills to review and pay.";
+        // Use the configured site origin, never a request Host header or payment/session token.
+        if (Uri.TryCreate(publicBaseUrl, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps &&
+            string.IsNullOrEmpty(url.UserInfo) && string.IsNullOrEmpty(url.Query) && string.IsNullOrEmpty(url.Fragment))
+            body += $"\n{url.GetLeftPart(UriPartial.Authority)}/MonthlyBilling/Details/{bill.MonthlyInvoiceId}";
+        return body + "\n\nIf you have already paid, check the latest status on the website. Contact the centre if you need help.";
     }
     public static string ReminderKind(MonthlyInvoice bill, DateTime nowUtc)
     {
@@ -65,12 +90,15 @@ public sealed class MonthlyBillingWorker(IServiceScopeFactory scopes, ILogger<Mo
                 await tx.CommitAsync(ct);
             }
         }
-        // Only guardians receive the >7-day email. The attempt is durably claimed
-        // before SMTP; ambiguous sends are not automatically retried the same day.
+        // Verified active guardians receive a new-bill email once and restricted-overdue
+        // emails at most once per day. Claim before SMTP to avoid duplicate uncertain sends.
+        // No automatic retry of an attempted send: Sent means SMTP accepted, not inbox delivery.
         var settings = services.GetRequiredService<IOptions<EmailSettings>>().Value;
         if (string.IsNullOrWhiteSpace(settings.Host) || string.IsNullOrWhiteSpace(settings.FromAddress))
         { logger.LogWarning("Billing reminder emails are not configured; in-app alerts remain available."); return; }
-        var pending = await db.Set<BillingReminder>().AsNoTracking().Where(x => x.Kind == "overdue-restricted" && x.Day == day &&
+        var now = DateTime.UtcNow;
+        var pending = await db.Set<BillingReminder>().AsNoTracking().Where(x =>
+            ((x.Kind == "bill-issued" && x.MonthlyInvoice.DueAtUtc >= now) || (x.Kind == "overdue-restricted" && x.Day == day)) &&
             x.EmailAttemptedAtUtc == null && x.MonthlyInvoice.Status == MonthlyInvoiceStatus.Pending &&
             db.ParentStudents.Any(p => p.StudentProfileId == x.MonthlyInvoice.StudentProfileId && p.IsActive && p.ParentProfile.ApplicationUserId == x.UserId))
             .Select(x => x.BillingReminderId).ToListAsync(ct);
@@ -81,18 +109,26 @@ public sealed class MonthlyBillingWorker(IServiceScopeFactory scopes, ILogger<Mo
             if (claimed != 1) continue;
             db.ChangeTracker.Clear();
             var record = await db.Set<BillingReminder>().Include(x => x.MonthlyInvoice).SingleAsync(x => x.BillingReminderId == id, ct);
+            if (record.MonthlyInvoice.Status != MonthlyInvoiceStatus.Pending ||
+                !await db.ParentStudents.AnyAsync(p => p.StudentProfileId == record.MonthlyInvoice.StudentProfileId && p.IsActive && p.ParentProfile.ApplicationUserId == record.UserId, ct))
+            { record.EmailError = "Not sent: bill is no longer unpaid or guardian link is inactive."; await db.SaveChangesAsync(ct); continue; }
             var account = await db.Users.AsNoTracking().SingleAsync(x => x.Id == record.UserId, ct);
-            if (!account.EmailConfirmed || string.IsNullOrWhiteSpace(account.Email)) { record.EmailError = "No verified guardian email."; await db.SaveChangesAsync(ct); continue; }
+            if (!account.IsActive || !account.EmailConfirmed || string.IsNullOrWhiteSpace(account.Email)) { record.EmailError = "No verified guardian email."; await db.SaveChangesAsync(ct); continue; }
             try
             {
-                using var smtp = new SmtpClient(settings.Host, settings.Port) { EnableSsl = settings.UseSsl };
+                using var smtp = new SmtpClient(settings.Host, settings.Port) { EnableSsl = settings.UseSsl, UseDefaultCredentials = false, Timeout = 15000 };
                 if (!string.IsNullOrEmpty(settings.UserName)) smtp.Credentials = new NetworkCredential(settings.UserName, settings.Password);
-                using var message = new MailMessage(settings.FromAddress, account.Email) {
-                    Subject = $"EduSmart overdue monthly bill {record.MonthlyInvoice.Number}",
-                    Body = $"Monthly tuition for {record.MonthlyInvoice.Month:yyyy-MM} remains unpaid. Please sign in to EduSmart and open Monthly Tuition Bills to review and pay. Contact the centre if you need help." };
-                await smtp.SendMailAsync(message, ct); record.EmailSentAtUtc = DateTime.UtcNow;
+                using var message = new MailMessage {
+                    From = new MailAddress(settings.FromAddress, settings.FromName),
+                    Subject = EmailSubject(record),
+                    Body = EmailBody(record, services.GetRequiredService<IConfiguration>()["App:PublicBaseUrl"]),
+                    IsBodyHtml = false };
+                message.To.Add(new MailAddress(account.Email));
+                using var sendTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                sendTimeout.CancelAfter(TimeSpan.FromSeconds(30));
+                await smtp.SendMailAsync(message, sendTimeout.Token); record.EmailSentAtUtc = DateTime.UtcNow;
             }
-            catch (Exception e) when (e is not OperationCanceledException)
+            catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
             { record.EmailError = "Email delivery was not confirmed. Check SMTP before retrying."; logger.LogError(e, "Billing email delivery unconfirmed for reminder {Id}", id); }
             await db.SaveChangesAsync(ct);
         }

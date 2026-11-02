@@ -680,8 +680,13 @@
                                 Attendance
                             </a>
 
-                            <a asp-controller="Billing" asp-action="Index" class="public-nav-link @(currentController == "Billing" || currentController == "Payments" ? "active" : "")"><i class="bi bi-credit-card" aria-hidden="true"></i>Payment &amp; Billing</a>
-                            <a asp-controller="MonthlyBilling" asp-action="Index" class="public-nav-link @(currentController == "MonthlyBilling" ? "active" : "")">Monthly Tuition Bills</a>
+                            <div class="dropdown">
+                                <button type="button" class="public-nav-link dropdown-toggle @(currentController == "Billing" || currentController == "Payments" || currentController == "MonthlyBilling" ? "active" : "")" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-credit-card" aria-hidden="true"></i>Payment &amp; Billing</button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item @(currentController == "Billing" || currentController == "Payments" ? "active" : "")" asp-controller="Billing" asp-action="Index">Bills &amp; Receipts</a>
+                                    <a class="dropdown-item @(currentController == "MonthlyBilling" ? "active" : "")" asp-controller="MonthlyBilling" asp-action="Index">Monthly Tuition Bills</a>
+                                </div>
+                            </div>
                             <div class="learner-nav-group dropdown">
                                 <button type="button" class="public-nav-link dropdown-toggle @(communicationActive ? "active" : "")" data-bs-toggle="dropdown" aria-expanded="false">Communication <span class="message-unread-badge" data-communication-unread-total hidden></span></button>
                                 <div class="dropdown-menu learner-nav-menu">
@@ -696,6 +701,7 @@
                         {
                             <a asp-controller="Home" asp-action="Index" class="public-nav-link @(currentController == "Home" ? "active" : "")">Home</a>
                             <a asp-controller="Classes" asp-action="Index" class="public-nav-link @(currentController == "Classes" ? "active" : "")">Classes</a>
+                            <a asp-controller="Faq" asp-action="Index" class="public-nav-link @(currentController == "Faq" ? "active" : "")">FAQ &amp; Support</a>
                         }
                     </div>
 

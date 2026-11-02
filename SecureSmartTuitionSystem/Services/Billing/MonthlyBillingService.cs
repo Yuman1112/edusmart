@@ -36,12 +36,12 @@ public sealed class MonthlyBillingService(ApplicationDbContext db)
         return await Accessible(user).AnyAsync(x => x.Status == MonthlyInvoiceStatus.Pending && x.Total > 0 && x.DueAtUtc <= cutoff, ct);
     }
     public Task<List<SecureSmartTuitionSystem.ViewModels.Billing.MonthlyEmailStatus>> EmailStatusAsync(int invoiceId, CancellationToken ct) =>
-        db.Set<BillingReminder>().AsNoTracking().Where(r => r.MonthlyInvoiceId == invoiceId && r.Kind == "overdue-restricted" &&
+        db.Set<BillingReminder>().AsNoTracking().Where(r => r.MonthlyInvoiceId == invoiceId && (r.Kind == "bill-issued" || r.Kind == "overdue-restricted") &&
             db.ParentStudents.Any(p => p.StudentProfileId == r.MonthlyInvoice.StudentProfileId && p.IsActive && p.ParentProfile.ApplicationUserId == r.UserId))
             .OrderByDescending(r => r.Day).ThenByDescending(r => r.BillingReminderId).Take(25)
             .Select(r => new SecureSmartTuitionSystem.ViewModels.Billing.MonthlyEmailStatus {
                 Recipient = db.Users.Where(u => u.Id == r.UserId).Select(u => u.FullName ?? u.UserName ?? "Guardian").FirstOrDefault() ?? "Guardian",
-                Day = r.Day, Status = r.EmailSentAtUtc != null ? "Sent" : r.EmailError != null ? "Unconfirmed" : r.EmailAttemptedAtUtc != null ? "Attempted" : "Queued",
+                Kind = r.Kind == "bill-issued" ? "New bill" : "Overdue reminder", Day = r.Day, Status = r.EmailSentAtUtc != null ? "Sent" : r.EmailError != null ? "Unconfirmed" : r.EmailAttemptedAtUtc != null ? "Attempted" : "Queued",
                 Note = r.EmailError }).ToListAsync(ct);
     public static bool Eligible(StudentEnrollment e, DateTime month)
     {

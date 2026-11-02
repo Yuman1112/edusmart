@@ -1,7 +1,6 @@
 @model SecureSmartTuitionSystem.ViewModels.Billing.BillingCoverageViewModel
 @{ ViewData["Title"] = "Enrollment Plan Periods"; var rowNumber = (Model.Page - 1) * 25; }
 <div class="page-header"><div><h1>Enrollment Plan Periods</h1><p>Review the months stated in existing enrollment plans and their initial bill status.</p></div></div>
-<div class="alert alert-info">This is a read-only review of initial enrollment plans. It does not generate charges or prove that a particular month may be billed or refunded. Review withdrawals, refunds, adjustments and other bills before making any billing decision.</div>
 <form method="get" data-live-filter class="d-flex flex-wrap align-items-end gap-2 mb-3">
     <div><label for="month" class="form-label">Plan covers month (optional)</label><input id="month" name="month" type="month" min="2000-01" max="2100-12" class="form-control" value="@Model.Month" /></div>
     <button type="submit" class="btn btn-primary">View plans</button>

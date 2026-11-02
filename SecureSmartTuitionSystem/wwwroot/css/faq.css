@@ -10,3 +10,13 @@
 .faq-search .primary-button { margin-top: 14px; }
 .faq-hint { color: var(--muted); font-size: .9rem; }
 @media (max-width: 767px) { .faq-layout { grid-template-columns: 1fr; } .faq-card { padding: 18px; } }
+
+.faq-conversation { max-height: 68vh; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+.faq-turn { margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+.faq-user-question { padding: 12px 14px; border-radius: 10px; background: var(--surface-tint); color: var(--navy); white-space: pre-wrap; overflow-wrap: anywhere; }
+.faq-assistant-answer { padding: 4px 2px; }
+.faq-assistant-answer > p { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.faq-sources summary { cursor: pointer; color: var(--teal-dark); font-weight: 600; }
+.faq-source-list { max-height: 260px; overflow-y: auto; margin-top: 10px; }
+.faq-source { padding: 12px 0; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+.faq-source p { margin: 6px 0; font-size: .9rem; }

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -19,34 +18,42 @@ public sealed class SecurityController : Controller
     private readonly AuditLogIntegrity _integrity;
     private readonly SecuritySettings _settings;
     private readonly EmailSettings _email;
+    private readonly SecurityExplanationAI _explanations;
     public SecurityController(ApplicationDbContext db, AuditLogIntegrity integrity,
-        IOptions<SecuritySettings> settings, IOptions<EmailSettings> email)
-    { _db = db; _integrity = integrity; _settings = settings.Value; _email = email.Value; }
+        IOptions<SecuritySettings> settings, IOptions<EmailSettings> email, SecurityExplanationAI explanations)
+    { _db = db; _integrity = integrity; _settings = settings.Value; _email = email.Value; _explanations = explanations; }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EncryptLegacyFinancialNotes()
+    [HttpGet]
+    public async Task<IActionResult> Details(long id, string? returnUrl, CancellationToken ct)
     {
-        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-        var paymentIds = await _db.Database.SqlQueryRaw<int>(
-            "SELECT TOP (100) [PaymentId] AS [Value] FROM [Payments] WHERE [FailureReason] IS NOT NULL AND [FailureReason] NOT LIKE @prefix ORDER BY [PaymentId]",
-            new SqlParameter("@prefix", "edusmart:v1:%")).ToListAsync();
-        var billIds = await _db.Database.SqlQueryRaw<int>(
-            "SELECT TOP (100) [BillId] AS [Value] FROM [Bills] WHERE [CancellationReason] IS NOT NULL AND [CancellationReason] NOT LIKE @prefix ORDER BY [BillId]",
-            new SqlParameter("@prefix", "edusmart:v1:%")).ToListAsync();
-        var payments = await _db.Payments.Where(x => paymentIds.Contains(x.PaymentId)).ToListAsync();
-        var bills = await _db.Bills.Where(x => billIds.Contains(x.BillId)).ToListAsync();
-        foreach (var payment in payments) _db.Entry(payment).Property(x => x.FailureReason).IsModified = true;
-        foreach (var bill in bills) _db.Entry(bill).Property(x => x.CancellationReason).IsModified = true;
-        if (payments.Count + bills.Count > 0) await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-        TempData["SecurityNotice"] = $"Encrypted {payments.Count + bills.Count} existing financial note(s). Repeat until the count is zero.";
-        return RedirectToAction(nameof(Index));
+        var model = await LoadDetailsAsync(id, returnUrl, ct);
+        return model == null ? NotFound() : View(model);
+    }
+    [HttpPost, ValidateAntiForgeryToken]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("security-explanation")]
+    public async Task<IActionResult> Explain(long id, string? returnUrl, CancellationToken ct)
+    {
+        var model = await LoadDetailsAsync(id, returnUrl, ct);
+        if (model == null) return NotFound();
+        // An integrity failure must not be hidden behind a generated explanation.
+        if (!model.IntegrityValid) { model.AIExplanation = "Integrity verification failed. Review the original record."; return View("Details", model); }
+        var result = await _explanations.ExplainAsync(model.Entry, ct);
+        model.AIExplanation = result.Text; model.GeneratedByAI = result.GeneratedByAI;
+        return View("Details", model);
+    }
+    private async Task<SecurityDetailsViewModel?> LoadDetailsAsync(long id, string? returnUrl, CancellationToken ct)
+    {
+        var entry = await _db.AuditLogEntries.AsNoTracking().SingleOrDefaultAsync(x => x.AuditLogEntryId == id, ct);
+        if (entry == null) return null;
+        return new SecurityDetailsViewModel {
+            Entry = entry, IntegrityValid = _integrity.Verify(entry), Summary = SecurityActivityText.Summary(entry),
+            AIConfigured = _explanations.IsConfigured, ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null
+        };
     }
 
     [HttpGet]
     public async Task<IActionResult> Index(DateTime? from, DateTime? to, string? userId,
-        string? eventName, SecuritySeverity? severity, int pageNumber = 1)
+        SecuritySeverity? severity, int pageNumber = 1)
     {
         var query = _db.AuditLogEntries.AsNoTracking();
         if (from.HasValue)
@@ -54,9 +61,7 @@ public sealed class SecurityController : Controller
         if (to.HasValue && to.Value.Date < DateTime.MaxValue.Date)
         { var end = to.Value.Date.AddDays(1).AddHours(-8); query = query.Where(x => x.OccurredAtUtc < end); }
         userId = SecurityEventService.Limit((userId ?? string.Empty).Trim(), 450);
-        eventName = SecurityEventService.Limit((eventName ?? string.Empty).Trim(), 100);
         if (userId.Length > 0) query = query.Where(x => (x.ActorUserId != null && x.ActorUserId.Contains(userId)) || (x.ActorName != null && x.ActorName.Contains(userId)));
-        if (eventName.Length > 0) query = query.Where(x => x.EventName.Contains(eventName));
         if (severity.HasValue) query = query.Where(x => x.Severity == severity.Value);
         int total = await query.CountAsync();
         int pages = Math.Max(1, (int)Math.Ceiling(total / 25d));
@@ -65,7 +70,7 @@ public sealed class SecurityController : Controller
             .Skip((pageNumber - 1) * 25).Take(25).ToListAsync();
         var since = DateTime.UtcNow.AddDays(-1);
         return View(new SecurityIndexViewModel {
-            From = from, To = to, UserId = userId, EventName = eventName, Severity = severity,
+            From = from, To = to, UserId = userId, Severity = severity,
             PageNumber = pageNumber, TotalPages = pages, TotalRecords = total,
             RecentAlerts = await _db.AuditLogEntries.CountAsync(x =>
                 x.OccurredAtUtc >= since && (int)x.Severity >= (int)SecuritySeverity.High),

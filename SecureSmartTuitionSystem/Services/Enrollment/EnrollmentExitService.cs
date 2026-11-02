@@ -54,7 +54,7 @@ public sealed class EnrollmentExitService(ApplicationDbContext db, ClassSchedule
             .SumAsync(x => (decimal?)x.ApprovedRefund) ?? 0m;
         return (payment, Math.Max(0m, Math.Min(quote, Math.Min(payment.Amount, payment.Bill.DiscountedTuitionAmount) - committed)));
     }
-    public async Task<EnrollmentExitRequest> StopAsync(ClaimsPrincipal user, int enrollmentId, string reason)
+    public async Task<EnrollmentExitRequest> StopAsync(ClaimsPrincipal user, int enrollmentId, string reason, DateTime? expectedEffectiveDate = null, decimal? expectedRefund = null)
     {
         if (!user.IsInRole("Admin") && !user.IsInRole("Parent") && !user.IsInRole("Student"))
             throw new InvalidOperationException("Only Admin, the enrolled student, or their linked parent can submit a withdrawal.");
@@ -67,13 +67,20 @@ public sealed class EnrollmentExitService(ApplicationDbContext db, ClassSchedule
         if (e.Status != StudentEnrollmentStatus.Active) throw new InvalidOperationException("Only active enrollments can be withdrawn.");
         var effective = new DateTime(ClassScheduleService.Today.Year, ClassScheduleService.Today.Month, 1).AddMonths(1);
         var quote = await QuoteAsync(e, effective);
+        if ((expectedEffectiveDate.HasValue && expectedEffectiveDate.Value != effective) ||
+            (expectedRefund.HasValue && expectedRefund.Value != quote.Amount))
+            throw new InvalidOperationException("The withdrawal date or refund estimate changed. Open the confirmation page again.");
         e.Status = StudentEnrollmentStatus.PendingDrop; e.DropRequestedAt = DateTime.UtcNow; e.DropEffectiveDate = effective; e.WithdrawalReason = reason.Trim();
         var request = new EnrollmentExitRequest { StudentEnrollmentId = enrollmentId, RequestedByUserId = user.FindFirstValue(ClaimTypes.NameIdentifier)!,
             Reason = reason.Trim(), EffectiveDate = effective, PaymentId = quote.Payment?.PaymentId, EstimatedRefund = quote.Amount,
             RefundStatus = quote.Amount > 0m ? ExitRefundStatus.PendingReview : ExitRefundStatus.NoRefundDue };
         db.EnrollmentExitRequests.Add(request);
         var recipients = await schedules.RecipientsAsync(new() { e.StudentProfileId }, e.ClassSession.TutorUserId);
-        await schedules.NotifyAsync(recipients, "Withdrawal recorded", $"{e.ClassSession.ClassName}: regular enrollment stops from {effective:dd MMM yyyy}. Current-month bills and enrollment history are retained. Refunds, if applicable, require a separate Admin review.", e.ClassSessionId);
+        // A withdrawal must be visible immediately, including for a future-start enrollment.
+        foreach (var recipient in recipients.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())
+            db.UserNotifications.Add(new SecureSmartTuitionSystem.Models.Communication.UserNotification {
+                UserId = recipient, Title = "Withdrawal recorded", AvailableFromDate = ClassScheduleService.Today,
+                Text = $"{e.ClassSession.ClassName}: regular enrollment stops from {effective:dd MMM yyyy}. Current-month bills and enrollment history are retained. Refunds, if applicable, require a separate Admin review." });
         await db.SaveChangesAsync(); await tx.CommitAsync(); return request;
     }
 }

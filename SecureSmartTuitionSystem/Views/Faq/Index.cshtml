@@ -1,56 +1,47 @@
 @model SecureSmartTuitionSystem.ViewModels.Communication.FaqViewModel
 @using SecureSmartTuitionSystem.Services.Communication
-@{
-    ViewData["Title"] = "FAQ & Support";
-}
-@section Styles {
-    <link rel="stylesheet" href="~/css/faq.css" asp-append-version="true" />
-}
-<div class="page-header"><div><h1>FAQ &amp; Support</h1><p>Find answers to common questions or contact the centre.</p></div></div>
+@{ ViewData["Title"] = "FAQ & Support"; bool family = User.IsInRole("Parent") || User.IsInRole("Student"); }
+@section Styles { <link rel="stylesheet" href="~/css/faq.css" asp-append-version="true" /> }
+<div class="page-header"><div><h1>FAQ &amp; Support</h1><p>Ask about EduSmart or contact the centre.</p></div></div>
 <div class="faq-layout">
-    <section class="faq-card" aria-labelledby="faqQuestionsTitle">
-        <h2 id="faqQuestionsTitle">Choose a question</h2>
-        <div class="faq-questions">
-            @foreach (var item in FaqService.Entries)
-            {
-                <form asp-controller="Faq" asp-action="Index" method="post">
-                    <button type="submit" name="Topic" value="@item.Id" class="faq-question">@item.Question <span aria-hidden="true">›</span></button>
-                </form>
-            }
-        </div>
-        <form asp-controller="Faq" asp-action="Index" method="post" class="faq-search">
-            <label asp-for="Question" class="form-label">Or type a short question</label>
-            <p class="faq-hint" id="faqPrivacy">Please do not include IC numbers, passwords, payment details or other sensitive information.</p>
-            <textarea asp-for="Question" class="form-control" maxlength="300" rows="3" aria-describedby="faqPrivacy" placeholder="For example: Where can I see my receipt?"></textarea>
-            <span asp-validation-for="Question" class="text-danger" role="alert"></span>
-            <button type="submit" class="primary-button">Find an answer</button>
-        </form>
-    </section>
-    <section class="faq-card" aria-live="polite" aria-labelledby="faqAnswerTitle">
-        <h2 id="faqAnswerTitle">Answer</h2>
-        @if (Model.Answer != null)
-        {
-            <h3>@Model.Answer.Question</h3>
-            <p>@Model.Answer.Answer</p>
-        }
-        else if (Model.Searched && ViewData.ModelState.IsValid)
-        {
-            <p>We couldn't find a matching answer. Try a different question or contact the centre.</p>
-        }
-        else { <p class="faq-hint">Choose a question or type one to get started.</p> }
-        <div class="faq-support">
-            <h3>Need more help?</h3>
-            <p>Send a message to a staff member through EduSmart.</p>
-            @if (User.IsInRole("Admin"))
-            {
-                <a asp-controller="Messages" asp-action="Index" class="outline-button">Open messages</a>
-            }
-            else
-            {
-                <form asp-controller="Messages" asp-action="StartParent" method="post">
-                    <button type="submit" class="outline-button">Talk to a staff member</button>
-                </form>
-            }
-        </div>
-    </section>
+<section class="faq-card"><h2>Quick questions</h2><div class="faq-questions">
+@foreach (var item in FaqService.Entries) { <form asp-action="Index" method="post" data-faq-ask><button class="faq-question" name="Topic" value="@item.Id" type="submit">@item.Question <span aria-hidden="true">›</span></button></form> }
 </div>
+<form asp-action="Index" method="post" class="faq-search" data-faq-ask>
+<div asp-validation-summary="All" class="text-danger"></div>
+<label asp-for="Question" class="form-label">Your question</label>
+<textarea asp-for="Question" class="form-control" maxlength="300" rows="3" required placeholder="Ask about enrollment, available classes or your bills"></textarea>
+@if (Model.AIConfigured) { <p class="faq-hint mt-3">General questions and approved public FAQs may be sent to an external AI service. Your permitted account records are retrieved automatically when needed after sign-in. Account records, live class records and previous questions are not sent to AI. Personal record previews are not retained in this conversation. Do not enter names, phone numbers, passwords, IC numbers, card details or other confidential information.</p> }
+else { <p class="faq-hint mt-3">Quick answers and website lookups are available. Questions that need more help can be sent to staff.</p> }
+<button type="submit" class="primary-button">Ask assistant</button>
+</form></section>
+<section class="faq-card"><div class="d-flex justify-content-between align-items-center gap-2 mb-3"><h2 class="mb-0">Conversation</h2>
+<form asp-action="Clear" method="post" data-faq-clear hidden="@(Model.Turns.Count == 0)"><button type="submit" class="outline-button">Clear</button></form>
+</div><p class="faq-hint" data-faq-status role="status" aria-live="polite"></p><div class="faq-conversation" role="log" aria-label="Assistant conversation">
+@if (Model.Turns.Count == 0) { <p class="faq-hint">Choose a question or ask one to get started.</p> }
+@foreach (var turn in Model.Turns) {
+<article class="faq-turn"><p class="faq-user-question"><strong>You</strong><br />@turn.Question</p>
+<div class="faq-assistant-answer"><strong>@(turn.IsAI ? "AI assistant" : "EduSmart support")</strong><p>@turn.Answer</p>
+@if (turn.NeedsHuman) { <p class="faq-hint">A staff member can help with this question.</p> }
+@if (turn.Sources.Any(source => !string.Equals(source.Text.Trim(), turn.Answer.Trim(), StringComparison.Ordinal))) { <details class="faq-sources"><summary>Website sources / records (@(turn.Sources.Count(source => !string.Equals(source.Text.Trim(), turn.Answer.Trim(), StringComparison.Ordinal))))</summary><div class="faq-source-list">
+@foreach (var source in turn.Sources.Where(source => !string.Equals(source.Text.Trim(), turn.Answer.Trim(), StringComparison.Ordinal))) { <div class="faq-source"><strong>@source.Title</strong><p>@source.Text</p>@if (source.Url != null) { <a href="@source.Url">View on website</a> }</div> }
+</div></details> }
+</div></article>
+}
+</div>
+<div class="faq-support"><h3>Talk to staff</h3><p>You can contact staff at any time. A reply may take time.</p>
+@if (User.Identity?.IsAuthenticated != true) {
+<p class="faq-hint">Sign in to access your account records or message staff.</p>
+<a asp-area="Identity" asp-page="/Account/Login" asp-route-returnUrl="/Faq" class="outline-button">Sign in for account support</a>
+}
+else if (User.IsInRole("Admin")) { <a asp-controller="Messages" asp-action="Index" class="outline-button">Open messages</a> }
+else {
+<form asp-controller="Messages" asp-action="OpenSupportFromChatbot" method="post" data-faq-handoff hidden="@(Model.HandoffToken == null)">
+<input type="hidden" name="handoffToken" value="@Model.HandoffToken" />
+<label class="d-block mb-3"><input type="checkbox" name="confirmed" value="true" required /> Include my latest question and the assistant's response in a staff-message draft.</label>
+<button type="submit" class="outline-button">Review message to staff</button></form>
+<form asp-controller="Messages" asp-action="StartParent" method="post" data-faq-contact hidden="@(Model.HandoffToken != null)"><button type="submit" class="outline-button">Open staff conversation</button></form>
+}
+</div></section></div>
+
+@section Scripts { <script src="~/js/faq.js" asp-append-version="true" defer></script> }
