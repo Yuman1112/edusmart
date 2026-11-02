@@ -12,7 +12,14 @@
     <link rel="stylesheet" href="~/css/tutor-availability.css" asp-append-version="true" />
 }
 <div class="page-header">
-    <div><h1>My Availability</h1><p>@(fullTime ? "Full-time · fixed weekly teaching availability" : "Part-time · select your weekly teaching availability")</p></div>
+    <div>
+        <h1>My Availability</h1>
+        <p>
+            @(fullTime
+                        ? "Full-time · fixed regular teaching hours"
+                        : "Part-time · manage your regular teaching hours")
+        </p>
+    </div>
     <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
 </div>
 @if (TempData["TutorAvailabilitySuccess"] is string success)
@@ -31,8 +38,11 @@
     @if (fullTime)
     {
         <section class="class-form-section">
-            <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Weekly Teaching Availability <span class="availability-type-label">@(fullTime ? "Full-time" : "Part-time")</span></h2>
-            <p class="text-muted">Monday–Saturday · MYT (UTC+8)</p>
+            <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Regular Teaching Hours <span class="availability-type-label">@(fullTime ? "Full-time" : "Part-time")</span></h2>
+            <p class="text-muted mb-2">Monday–Saturday · MYT (UTC+8)</p>
+            <p class="form-text mb-4">
+                Your regular teaching hours. Scheduled lessons are shown in Class Calendar.
+            </p>
             <h3 class="availability-timeline-title">Daily Teaching Windows</h3>
             <div class="availability-timeline" role="list" aria-label="Fixed daily teaching windows and breaks">
                 <div class="availability-timeline-segment" role="listitem">
@@ -62,15 +72,20 @@
                 <span class="availability-timeline-closed">Sunday · Closed</span>
             </div>
             <hr class="availability-timeline-divider" />
-            <p class="text-muted">Fixed teaching windows. Assigned lessons are shown in Class Calendar.</p>
+            <p class="form-text">
+                Full-time teaching hours are fixed. Contact your administrator if changes are needed.
+            </p>
             <a asp-controller="ClassSchedules" asp-action="Index" class="outline-button"><i class="bi bi-calendar-week" aria-hidden="true"></i> View Class Calendar</a>
         </section>
     }
     else
     {
         <section class="class-form-section">
-            <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Weekly Teaching Availability <span class="availability-type-label">Part-time</span></h2>
-            <p class="text-muted">Monday–Saturday · MYT (UTC+8)</p>
+            <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Regular Teaching Hours <span class="availability-type-label">Part-time</span></h2>
+            <p class="text-muted mb-2">Monday–Saturday · MYT (UTC+8)</p>
+            <p class="form-text mb-4">
+                Your regular teaching hours. Scheduled lessons are shown in Class Calendar.
+            </p>
             <div class="availability-day-list" aria-label="Weekly teaching windows">
                 @foreach (var day in days)
                 {
@@ -93,7 +108,9 @@
                     </div>
                 }
             </div>
-            <p class="form-text mt-3">Sunday is closed. Times shown are regular teaching windows, not remaining free time.</p>
+            <p class="form-text mt-3">
+                Sunday is closed. Updating these hours does not change existing classes.
+            </p>
             <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
                 <a asp-controller="TutorAvailability" asp-action="Edit" class="outline-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Availability</a>
                 <a asp-controller="ClassSchedules" asp-action="Index" class="outline-button"><i class="bi bi-calendar-week" aria-hidden="true"></i> View Class Calendar</a>
