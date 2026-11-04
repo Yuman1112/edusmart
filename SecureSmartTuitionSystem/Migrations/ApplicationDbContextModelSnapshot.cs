@@ -1831,6 +1831,189 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("StudentProfiles");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.Assessment", b =>
+                {
+                    b.Property<int>("AssessmentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AssessmentId"));
+
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("DueAtMyt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("MaxMarks")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("decimal(7,2)");
+
+                    b.Property<DateTime>("OpensAtMyt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PublishedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ResultsPublishedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("AssessmentId");
+
+                    b.HasIndex("ClassSessionId", "IsActive", "DueAtMyt");
+
+                    b.ToTable("Assessments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Assessment_Dates", "[DueAtMyt] > [OpensAtMyt]");
+
+                            t.HasCheckConstraint("CK_Assessment_Kind", "[Kind] IN (1,2,3)");
+
+                            t.HasCheckConstraint("CK_Assessment_Marks", "[MaxMarks] > 0 AND [MaxMarks] <= 10000");
+                        });
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.AssessmentFile", b =>
+                {
+                    b.Property<int>("AssessmentFileId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AssessmentFileId"));
+
+                    b.Property<int>("AssessmentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("AssessmentParticipantId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("FileSize")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.HasKey("AssessmentFileId");
+
+                    b.HasIndex("AssessmentParticipantId");
+
+                    b.HasIndex("AssessmentId", "AssessmentParticipantId");
+
+                    b.ToTable("AssessmentFiles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AssessmentFile_Size", "[FileSize] > 0 AND [FileSize] <= 10485760 AND DATALENGTH([Content]) = [FileSize]");
+                        });
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.AssessmentParticipant", b =>
+                {
+                    b.Property<int>("AssessmentParticipantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AssessmentParticipantId"));
+
+                    b.Property<int>("AssessmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Feedback")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("GradedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GradedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal?>("Marks")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("decimal(7,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("StudentName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("StudentNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("StudentProfileId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SubmissionNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("SubmittedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("AssessmentParticipantId");
+
+                    b.HasIndex("StudentProfileId");
+
+                    b.HasIndex("AssessmentId", "StudentProfileId")
+                        .IsUnique();
+
+                    b.ToTable("AssessmentParticipants", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AssessmentParticipant_Grade", "([Marks] IS NULL AND [GradedAtUtc] IS NULL) OR ([SubmittedAtUtc] IS NOT NULL AND [Marks] IS NOT NULL AND [GradedAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_AssessmentParticipant_Marks", "[Marks] IS NULL OR ([Marks] >= 0 AND [Marks] <= 10000)");
+                        });
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.LearningMaterial", b =>
                 {
                     b.Property<int>("LearningMaterialId")
@@ -2621,6 +2804,54 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("ApplicationUser");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.Assessment", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", "ClassSession")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassSession");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.AssessmentFile", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Learning.Assessment", "Assessment")
+                        .WithMany()
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Learning.AssessmentParticipant", "Participant")
+                        .WithMany()
+                        .HasForeignKey("AssessmentParticipantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Assessment");
+
+                    b.Navigation("Participant");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.AssessmentParticipant", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Learning.Assessment", "Assessment")
+                        .WithMany("Participants")
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.StudentProfile", "StudentProfile")
+                        .WithMany()
+                        .HasForeignKey("StudentProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Assessment");
+
+                    b.Navigation("StudentProfile");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.LearningMaterial", b =>
                 {
                     b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", "ClassSession")
@@ -2741,6 +2972,11 @@ namespace SecureSmartTuitionSystem.Migrations
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Identity.StudentProfile", b =>
                 {
                     b.Navigation("ParentStudents");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.Assessment", b =>
+                {
+                    b.Navigation("Participants");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorProfile", b =>

@@ -5,6 +5,40 @@ namespace SecureSmartTuitionSystem.Services.Learning;
 public sealed record MaterialFile(string Name, string ContentType, byte[] Content);
 public static class MaterialFileService
 {
+    public static byte[] BuildArchive(IReadOnlyList<MaterialFile> files)
+    {
+        if (files.Count < 1 || files.Count > 10 || files.Sum(f => (long)f.Content.Length) > 30L * 1024 * 1024
+            || files.Any(f => f.Content.Length < 1 || f.Content.Length > MaxBytes))
+            throw new ArgumentException("Choose between 1 and 10 valid attachments, at most 30 MB in total.", nameof(files));
+        using var output = new MemoryStream();
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var archive = new ZipArchive(output, ZipArchiveMode.Create, true, Encoding.UTF8))
+        {
+            foreach (var file in files)
+            {
+                var name = SafeName(file.Name).TrimEnd(' ', '.');
+                if (string.IsNullOrWhiteSpace(name)) name = "Attachment";
+                var first = name.Split('.')[0].ToUpperInvariant();
+                if (first is "CON" or "PRN" or "AUX" or "NUL" ||
+                    (first.Length == 4 && (first.StartsWith("COM") || first.StartsWith("LPT")) && first[3] is >= '1' and <= '9'))
+                    name = "_" + name;
+                var extension = Path.GetExtension(name);
+                var stem = Path.GetFileNameWithoutExtension(name);
+                var unique = name;
+                for (int suffix = 2; !names.Add(unique); suffix++) unique = $"{stem} ({suffix}){extension}";
+                var entry = archive.CreateEntry(unique, CompressionLevel.Fastest);
+                using var stream = entry.Open(); stream.Write(file.Content);
+            }
+        }
+        return output.ToArray();
+    }
+    public static string? PreviewContentType(string name) => Path.GetExtension(name).ToLowerInvariant() switch
+    {
+        ".pdf" => "application/pdf",
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        _ => null
+    };
     public const int MaxBytes = 10 * 1024 * 1024;
     private static readonly Dictionary<string, string> Types = new(StringComparer.OrdinalIgnoreCase)
     {

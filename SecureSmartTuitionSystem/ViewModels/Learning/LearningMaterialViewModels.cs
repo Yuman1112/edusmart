@@ -8,6 +8,8 @@ public sealed class MaterialFilter
     public int? ClassId { get; set; }
     [StringLength(100)] public string? Search { get; set; }
     public string Status { get; set; } = "active";
+    [Required, RegularExpression("^(updated|title|class|subject|status)_(asc|desc)$")]
+    public string Sort { get; set; } = "updated_desc";
     [Range(1, 100000)] public int Page { get; set; } = 1;
 }
 public sealed class MaterialAttachmentRow

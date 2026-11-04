@@ -1,0 +1,501 @@
+﻿/* Reuse the centre's staff list, forms and learner navigation. */
+.assessment-page {
+    color: var(--navy);
+}
+
+    .assessment-page .assessment-results {
+        padding: 0;
+    }
+
+    .assessment-page .compact-class-table {
+        min-width: 850px;
+        table-layout: auto;
+    }
+
+        .assessment-page .compact-class-table td {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+    .assessment-page small {
+        display: block;
+        color: var(--muted);
+        font-size: .8rem;
+        margin-top: 5px;
+    }
+
+.assessment-filter {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(140px,1fr));
+    gap: 14px;
+    align-items: end;
+}
+
+.assessment-page .form-control, .assessment-page .form-select {
+    border-color: var(--border);
+    border-radius: 9px;
+    min-height: 42px;
+}
+
+.assessment-page .form-label {
+    font-weight: 700;
+    margin-bottom: 7px;
+}
+
+.assessment-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 20px;
+}
+
+.assessment-full {
+    grid-column: 1/-1;
+}
+
+.assessment-field-error {
+    display: block;
+    color: #dc3545;
+    font-size: .85rem;
+    margin-top: 6px;
+}
+
+.assessment-page .input-validation-error {
+    border-color: #dc3545;
+}
+
+.assessment-page .validation-summary-valid {
+    display: none;
+}
+
+.assessment-note, .assessment-refresh {
+    color: var(--muted);
+    font-size: .85rem;
+    margin-top: 12px;
+}
+
+.assessment-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: .8rem;
+}
+
+.assessment-page-number {
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 9px;
+    color: var(--teal-dark);
+    text-decoration: none;
+}
+
+    .assessment-page-number[aria-disabled] {
+        opacity: .55;
+    }
+
+.assessment-badge {
+    display: inline-block;
+    border-radius: 18px;
+    padding: 5px 10px;
+    background: #e8f7f8;
+    color: var(--teal-dark);
+    font-size: .8rem;
+}
+
+.assessment-empty {
+    padding: 26px 20px;
+    color: var(--muted);
+}
+
+.assessment-summary {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(0,1fr));
+    gap: 20px;
+}
+
+    .assessment-summary small {
+        margin: 0 0 6px;
+    }
+
+.assessment-file-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.assessment-file-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+    .assessment-file-row > div:first-child {
+        min-width: 0;
+        flex: 1;
+        overflow-wrap: anywhere;
+    }
+
+    .assessment-file-row > .material-actions {
+        flex: none;
+    }
+
+    .assessment-file-row i {
+        color: var(--teal);
+        margin-right: 6px;
+    }
+
+.assessment-instructions {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    margin-top: 12px;
+}
+
+.assessment-release {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding-top: 20px;
+}
+
+    .assessment-release p {
+        flex: 1;
+        min-width: 240px;
+    }
+
+.assessment-result {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.assessment-learner-list {
+    padding: 0 22px;
+}
+
+.assessment-learner-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: center;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+    .assessment-learner-row:last-child {
+        border-bottom: 0;
+    }
+
+.assessment-stats {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+    .assessment-stats > div {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px;
+    }
+
+    .assessment-stats strong {
+        font-size: 1.6rem;
+        display: block;
+        margin-top: 12px;
+    }
+
+.assessment-subjects {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 22px;
+}
+
+    .assessment-subjects span {
+        display: block;
+        color: var(--muted);
+        font-size: .85rem;
+        margin: 8px 0;
+    }
+
+    .assessment-subjects progress {
+        width: 100%;
+        accent-color: var(--teal);
+        height: 9px;
+    }
+
+.assessment-add-files {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.assessment-file-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+}
+
+.assessment-drop {
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 22px;
+    color: var(--muted);
+    background: #f7fcfd;
+    text-align: center;
+}
+
+    .assessment-drop.is-dragging {
+        border-color: var(--teal);
+        background: #e8f7f8;
+    }
+
+@media(max-width:1100px) {
+    .assessment-filter {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+    }
+}
+
+@media(max-width:600px) {
+    .assessment-filter, .assessment-form-grid, .assessment-summary, .assessment-subjects, .assessment-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .assessment-full {
+        grid-column: auto;
+    }
+
+    .assessment-file-row > .material-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+.assessment-sort-link {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    gap: 7px;
+    align-items: center;
+}
+
+/* Create / Edit: align with the existing centre forms. */
+.assessment-editor .class-form-section > h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 24px;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+    .assessment-editor .class-form-section > h2 i {
+        color: var(--teal);
+    }
+
+.assessment-editor .assessment-form-grid {
+    column-gap: 24px;
+    row-gap: 22px;
+}
+
+.assessment-editor .assessment-question-section {
+    position: relative;
+    margin-top: 28px;
+    padding-top: 26px;
+    border-top: 1px solid var(--border);
+}
+
+    .assessment-editor .assessment-question-section > h2 {
+        min-height: 42px;
+        padding-right: 145px;
+        margin-bottom: 16px;
+    }
+
+    .assessment-editor .assessment-question-section .assessment-add-files {
+        position: absolute;
+        top: 26px;
+        right: 0;
+        margin: 0;
+    }
+
+.assessment-editor .assessment-drop {
+    padding: 24px 18px;
+}
+
+.assessment-editor .assessment-file-list:empty {
+    display: none;
+}
+
+.assessment-editor .assessment-note {
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+.assessment-editor .assessment-upload > .assessment-note {
+    margin-top: 16px;
+}
+
+.assessment-editor .class-form-actions {
+    margin-top: 24px;
+}
+
+@media (max-width: 600px) {
+    .assessment-editor .assessment-form-grid {
+        row-gap: 18px;
+    }
+
+    .assessment-editor .assessment-question-section > h2 {
+        font-size: .95rem;
+        padding-right: 120px;
+    }
+}
+
+/* Shared question / answer picker: match Material Files cards. */
+.assessment-upload-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+    .assessment-upload-heading strong {
+        display: block;
+        font-size: .9rem;
+    }
+
+.assessment-upload-total {
+    display: block;
+    color: var(--muted);
+    font-size: .8rem;
+    margin-top: 4px;
+}
+
+.assessment-upload-heading .assessment-add-files {
+    margin: 0;
+    flex-shrink: 0;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.assessment-editor .assessment-question-section .assessment-upload-heading .assessment-add-files {
+    position: relative;
+    top: auto;
+    right: auto;
+}
+
+.assessment-upload-area {
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    background: #fbfefe;
+}
+
+.assessment-upload .assessment-drop {
+    border: 0;
+    padding: 22px 10px;
+    background: transparent;
+}
+
+    .assessment-upload .assessment-drop[hidden] {
+        display: none;
+    }
+
+.assessment-upload .assessment-file-list {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    margin: 0;
+    gap: 10px;
+}
+
+    .assessment-upload .assessment-file-list:empty {
+        display: none;
+    }
+
+.assessment-upload .assessment-upload-card {
+    display: grid;
+    grid-template-columns: 28px minmax(0,1fr) auto;
+    gap: 12px;
+    padding: 14px;
+    background: white;
+}
+
+.assessment-upload-card > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: .88rem;
+}
+
+.assessment-upload-card .assessment-upload-icon {
+    font-size: 1.3rem;
+    color: var(--teal);
+    margin: 0;
+}
+
+.assessment-upload-thumb {
+    width: 28px;
+    height: 34px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+
+.assessment-upload-card .material-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+.assessment-upload-card .outline-button {
+    padding: 6px 10px;
+    min-height: 32px;
+    font-size: .8rem;
+}
+
+.assessment-upload-card button {
+    border-color: transparent;
+    background: transparent;
+}
+
+.assessment-upload .assessment-upload-help {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 12px;
+    row-gap: 4px;
+    font-size: .8rem;
+    margin: 14px 0 0;
+}
+
+.assessment-upload > .assessment-field-error:empty {
+    display: none;
+}
+
+@media(max-width:1100px) {
+    .assessment-upload .assessment-file-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media(max-width:600px) {
+    .assessment-upload .assessment-upload-card > .material-actions {
+        width: auto;
+    }
+}
+
+.assessment-page .assessment-detail-heading {
+    padding-bottom: 18px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}

@@ -1,0 +1,55 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Learning.AssessmentIndexModel
+@{
+    ViewData["Title"] = "Assessments";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/assessments.css" asp-append-version="true" />
+}
+<div class="assessment-page learning-materials-page @(!Model.IsStaff ? "student-material-page" : "")">
+    <div class="page-header">
+        <div><h1>Assessments</h1><p>@(Model.IsStaff ? "Manage class assessments, submissions and results." : "View your assignments and submit work before the deadline.")</p></div>
+        <div class="material-actions"><a asp-action="Progress" class="outline-button">@(Model.IsStaff ? "Results Overview" : "My Learning Progress")</a>@if(Model.IsTutor){
+        <a asp-action="Create" class="primary-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create Assessment</a>
+                }
+</div>
+    </div>
+    <partial name="_Messages" />
+    <div class="class-filter-card">
+        <div class="class-filter-heading"><div><h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Assessments</h2><p>The list updates automatically while this page is visible.</p></div></div>
+        <form asp-action="Index" method="get" class="assessment-filter" data-assessment-filter>
+            <div><label for="assessment-search" class="form-label">Search title</label><input id="assessment-search" name="Search" value="@Model.Filter.Search" maxlength="100" class="form-control" /></div>
+            <div><label for="assessment-class" class="form-label">Class</label><select id="assessment-class" name="ClassId" class="form-select"><option value="">All Available Classes</option>@foreach(var c in Model.Classes){
+            <option value="@c.Value" selected="@(Model.Filter.ClassId?.ToString() == c.Value)">@c.Text</option>
+                        }
+</select></div>
+            @if (Model.IsStaff)
+            {
+                <div><label for="assessment-status" class="form-label">Status</label><select id="assessment-status" name="Status" class="form-select">@foreach(var status in new[]{"active","draft","inactive","all"}){
+                <option value="@status" selected="@(Model.Filter.Status == status)">@status</option>
+            }
+</select></div>
+                        }
+            <div><label for="assessment-sort" class="form-label">Sort by</label><select id="assessment-sort" name="Sort" class="form-select">@foreach(var item in new Dictionary<string,string>{{"due_asc","Due: earliest first"},{"due_desc","Due: latest first"},{"title_asc","Title: A–Z"},{"title_desc","Title: Z–A"},{"updated_desc","Updated: newest first"}}){
+            <option value="@item.Key" selected="@(Model.Filter.Sort == item.Key)">@item.Value</option>
+                        }
+</select></div>
+            <div><label for="assessment-subject" class="form-label">Subject</label><select id="assessment-subject" name="SubjectId" class="form-select"><option value="">All Subjects</option>@foreach(var c in Model.Subjects){
+            <option value="@c.Value" selected="@(Model.Filter.SubjectId?.ToString() == c.Value)">@c.Text</option>
+                        }
+</select></div>
+            <div><label for="assessment-kind" class="form-label">Type</label><select id="assessment-kind" name="Kind" class="form-select"><option value="">All Types</option>@foreach(var kind in Enum.GetValues<SecureSmartTuitionSystem.Models.Learning.AssessmentKind>()){
+            <option value="@((int)kind)" selected="@(Model.Filter.Kind == kind)">@kind</option>
+                        }
+</select></div>
+            <div><label for="assessment-month" class="form-label">Due Month</label><input id="assessment-month" name="Month" type="month" value="@Model.Filter.Month" class="form-control" min="2000-01" max="2100-12" /></div><button type="submit" class="primary-button">View Assessments</button>
+        </form>
+    </div>
+    <p data-assessment-feedback role="status" hidden></p>
+    <partial name="_Results" model="Model" />
+    <p class="assessment-refresh" role="status" data-assessment-refresh>Updates automatically while visible.</p>
+</div>
+@section Scripts {
+    <script src="~/js/assessments.js" asp-append-version="true"></script>
+}

@@ -64,16 +64,30 @@ public sealed class LearningMaterialService(ApplicationDbContext db)
         UpdatedAtUtc = x.UpdatedAtUtc,
         RowVersion = Convert.ToBase64String(x.RowVersion)
     });
+    public static IOrderedQueryable<LearningMaterial> Ordered(IQueryable<LearningMaterial> query, string sort) => sort switch
+    {
+        "title_asc" => query.OrderBy(x => x.Title).ThenBy(x => x.LearningMaterialId),
+        "title_desc" => query.OrderByDescending(x => x.Title).ThenBy(x => x.LearningMaterialId),
+        "class_asc" => query.OrderBy(x => x.ClassSession.ClassCode).ThenBy(x => x.Title).ThenBy(x => x.LearningMaterialId),
+        "class_desc" => query.OrderByDescending(x => x.ClassSession.ClassCode).ThenBy(x => x.Title).ThenBy(x => x.LearningMaterialId),
+        "subject_asc" => query.OrderBy(x => x.ClassSession.Subject.SubjectName).ThenBy(x => x.Title).ThenBy(x => x.LearningMaterialId),
+        "subject_desc" => query.OrderByDescending(x => x.ClassSession.Subject.SubjectName).ThenBy(x => x.Title).ThenBy(x => x.LearningMaterialId),
+        "status_asc" => query.OrderByDescending(x => x.IsActive).ThenByDescending(x => x.UpdatedAtUtc).ThenBy(x => x.LearningMaterialId),
+        "status_desc" => query.OrderBy(x => x.IsActive).ThenByDescending(x => x.UpdatedAtUtc).ThenBy(x => x.LearningMaterialId),
+        "updated_asc" => query.OrderBy(x => x.UpdatedAtUtc).ThenBy(x => x.LearningMaterialId),
+        _ => query.OrderByDescending(x => x.UpdatedAtUtc).ThenByDescending(x => x.LearningMaterialId)
+    };
     public async Task<MaterialIndexModel> IndexAsync(ClaimsPrincipal user, MaterialFilter filter)
     {
         var model = new MaterialIndexModel { Filter = filter, IsTutor = IsTutor(user), IsStaff = user.IsInRole("Admin") || IsTutor(user), Classes = await ChoicesAsync(user, false) };
+        if (!model.IsStaff && filter.Sort.StartsWith("status_", StringComparison.Ordinal)) filter.Sort = "updated_desc";
         var query = Visible(user);
         if (filter.ClassId.HasValue) query = query.Where(x => x.ClassSessionId == filter.ClassId);
         if (!string.IsNullOrWhiteSpace(filter.Search)) query = query.Where(x => x.Title.Contains(filter.Search.Trim()));
         if (model.IsStaff && filter.Status != "all") query = query.Where(x => x.IsActive == (filter.Status == "active"));
         model.Total = await query.CountAsync();
         filter.Page = Math.Min(filter.Page, model.PageCount);
-        model.Rows = await Rows(query.OrderByDescending(x => x.CreatedAtUtc).ThenByDescending(x => x.LearningMaterialId).Skip((filter.Page - 1) * 25).Take(25)).ToListAsync();
+        model.Rows = await Rows(Ordered(query, filter.Sort).Skip((filter.Page - 1) * 25).Take(25)).ToListAsync();
         if (model.IsTutor)
         {
             var manageable = (await Classes(user, true).Select(c => c.ClassSessionId).ToListAsync()).ToHashSet();
@@ -182,11 +196,22 @@ public sealed class LearningMaterialService(ApplicationDbContext db)
         try
         {
             var ids = Classes(user, true).Select(c => c.ClassSessionId);
-            var material = await db.Set<LearningMaterial>().SingleOrDefaultAsync(x => x.LearningMaterialId == id && ids.Contains(x.ClassSessionId));
+            // Classes is read-only; explicitly track the outer entity after composing its permission subquery.
+            var material = await db.Set<LearningMaterial>()
+                .Where(x => x.LearningMaterialId == id && ids.Contains(x.ClassSessionId))
+                .AsTracking().SingleOrDefaultAsync();
             if (material == null) return "This material is not available for updating.";
             if (!string.Equals(Convert.ToBase64String(material.RowVersion), version, StringComparison.Ordinal)) return "This material changed. Reload before changing its status.";
             material.IsActive = active; material.UpdatedAtUtc = DateTime.UtcNow;
-            await db.SaveChangesAsync(); await tx.CommitAsync(); return null;
+            var written = await db.SaveChangesAsync();
+            if (written == 0)
+            {
+                await tx.RollbackAsync();
+                db.ChangeTracker.Clear();
+                return "The status was not saved. Reload and try again.";
+            }
+            await tx.CommitAsync();
+            return null;
         }
         catch (DbUpdateConcurrencyException) { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return "This material changed. Reload and try again."; }
         catch (Exception ex) when (ex is DbUpdateException || ex is SqlException)

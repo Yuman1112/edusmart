@@ -1,0 +1,43 @@
+﻿@model string
+@using SecureSmartTuitionSystem.ViewModels.Learning
+@using SecureSmartTuitionSystem.Services.Learning
+@{
+    var saved = Model.StartsWith("Submission.")
+        ? ViewData["AssessmentSavedFiles"] as List<AssessmentFileRow> ?? new List<AssessmentFileRow>()
+        : new List<AssessmentFileRow>();
+}
+<div class="assessment-upload" data-assessment-upload>
+    <div class="assessment-upload-heading">
+        <div>
+            @if (Model.StartsWith("Submission."))
+            {
+                <strong>Answer Files</strong>
+            }
+            <span class="assessment-upload-total" data-assessment-upload-total aria-live="polite">0 files · 0.00 MB</span>
+        </div>
+        <label class="outline-button assessment-add-files"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Files<input name="@Model" type="file" multiple accept=".pdf,.docx,.pptx,.xlsx,.png,.jpg,.jpeg" class="assessment-file-input" aria-label="Choose assessment files" /></label>
+    </div>
+    <div class="assessment-upload-area">
+        <div class="assessment-drop" data-assessment-drop>Drop files here, or choose Add Files.</div>
+        <div class="assessment-file-list" data-assessment-file-list>
+            @foreach (var file in saved)
+            {
+                var type = MaterialFileService.PreviewContentType(file.Name);
+                <div class="assessment-file-row assessment-upload-card" data-saved-answer data-file-name="@file.Name" data-file-size="@file.Size">
+                    <input type="hidden" name="Submission.KeptFileIds" value="@file.Id" />
+                    <i class="bi bi-file-earmark-text assessment-upload-icon" aria-hidden="true"></i>
+                    <span>@file.Name<small>@file.SizeLabel · Saved</small></span>
+                    <div class="material-actions">
+                        @if (type != null)
+                        {
+                            <a asp-action="Download" asp-route-id="@file.Id" asp-route-preview="true" class="outline-button" data-material-preview data-preview-name="@file.Name" data-preview-type="@type">Preview</a>
+                        }
+                        <button type="button" class="outline-button" data-remove-saved-answer aria-label="Remove @file.Name">×</button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+    <p class="assessment-field-error" data-assessment-upload-error role="alert"></p>
+    <p class="assessment-note assessment-upload-help"><span>PDF, DOCX, PPTX, XLSX, PNG, JPG, JPEG</span><span aria-hidden="true">|</span><span>Max. 10 files · 10 MB/file · 30 MB total</span></p>
+</div>

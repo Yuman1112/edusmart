@@ -128,10 +128,10 @@
         max-width: 360px;
     }
 
-    .attendance-page .attendance-review-form .primary-button,
-    .attendance-page .attendance-review-form .outline-button {
-        min-width: 100px;
-    }
+        .attendance-page .attendance-review-form .primary-button,
+        .attendance-page .attendance-review-form .outline-button {
+            min-width: 100px;
+        }
 
     /* Long reasons and remarks */
     .attendance-page .table td {
@@ -176,23 +176,23 @@
     gap: 12px 20px;
 }
 
-.attendance-page .attendance-correction-details dt {
-    font-weight: 700;
-}
+    .attendance-page .attendance-correction-details dt {
+        font-weight: 700;
+    }
 
-.attendance-page .attendance-correction-details dd {
-    margin: 0;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-}
+    .attendance-page .attendance-correction-details dd {
+        margin: 0;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
 
 .attendance-page #correction-modal .modal-footer {
     gap: 8px;
 }
 
-.attendance-page #correction-modal .modal-footer button {
-    min-width: 100px;
-}
+    .attendance-page #correction-modal .modal-footer button {
+        min-width: 100px;
+    }
 
 .attendance-page #correction-modal [hidden] {
     display: none !important;
@@ -207,4 +207,79 @@
         .attendance-page .attendance-correction-details dd {
             margin-bottom: 10px;
         }
+}
+/* Only the Attendance lesson list adopts Class Sessions card geometry. */
+.attendance-list-page .attendance-lessons-card {
+    padding: 0;
+}
+
+.attendance-list-page .attendance-week-summary {
+    padding: 18px 20px 12px;
+}
+
+    .attendance-list-page .attendance-week-summary p {
+        margin-bottom: 0;
+        font-size: .86rem;
+    }
+
+.attendance-list-page .compact-class-table {
+    min-width: 850px;
+    table-layout: auto;
+}
+
+    .attendance-list-page .compact-class-table td {
+        white-space: normal;
+    }
+
+.attendance-list-page .attendance-lessons-card > .alert {
+    margin: 20px;
+}
+
+.attendance-list-page .class-filter-card .form-control {
+    min-height: 42px;
+}
+
+/* Staff attendance reports and correction lists match Class Sessions. */
+.attendance-unified-list .attendance-unified-results {
+    padding: 0;
+}
+
+.attendance-unified-list .attendance-result-summary {
+    padding: 16px 20px;
+    margin: 0;
+    color: var(--muted);
+    font-size: .84rem;
+}
+
+    .attendance-unified-list .attendance-result-summary p {
+        margin: 0 0 8px;
+    }
+
+        .attendance-unified-list .attendance-result-summary p:last-child {
+            margin-bottom: 0;
+        }
+
+.attendance-unified-list .attendance-unified-results .compact-class-table {
+    min-width: 850px;
+    table-layout: auto;
+}
+
+    .attendance-unified-list .attendance-unified-results .compact-class-table td {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+.attendance-unified-list .attendance-unified-results > .alert {
+    margin: 20px;
+}
+
+.attendance-unified-list .class-filter-card .form-control,
+.attendance-unified-list .class-filter-card .form-select {
+    min-height: 42px;
+}
+
+.attendance-page .attendance-export-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
 }

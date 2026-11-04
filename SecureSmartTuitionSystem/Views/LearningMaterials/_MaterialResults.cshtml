@@ -1,50 +1,169 @@
 ﻿@model SecureSmartTuitionSystem.ViewModels.Learning.MaterialIndexModel
-<div id="material-results" class="class-form-card" data-material-results>
-    <div class="material-list-heading"><h2>Materials <span class="material-count">@Model.Total</span></h2><span class="text-muted">@(Model.IsStaff ? "Active and inactive records follow your filters." : "Active materials only.")</span></div>
+@{
+    string NextSort(string key) => Model.Filter.Sort == key + "_asc" ? key + "_desc" : key + "_asc";
+    string AriaSort(string key) => Model.Filter.Sort == key + "_asc" ? "ascending" : Model.Filter.Sort == key + "_desc" ? "descending" : "none";
+    string SortIcon(string key) => Model.Filter.Sort == key + "_asc" ? "bi-arrow-up" : Model.Filter.Sort == key + "_desc" ? "bi-arrow-down" : "bi-arrow-down-up";
+    var choices = new Dictionary<string, string>
+    {
+        ["updated_desc"] = "Updated: newest first",
+        ["updated_asc"] = "Updated: oldest first",
+        ["title_asc"] = "Title: A–Z",
+        ["title_desc"] = "Title: Z–A",
+        ["class_asc"] = "Class code: A–Z",
+        ["class_desc"] = "Class code: Z–A",
+        ["subject_asc"] = "Subject: A–Z",
+        ["subject_desc"] = "Subject: Z–A"
+    };
+    if (Model.IsStaff) { choices["status_asc"] = "Status: Active first"; choices["status_desc"] = "Status: Inactive first"; }
+}
+<div id="material-results" class="@(Model.IsStaff ? "dashboard-card compact-class-card staff-material-results" : "class-form-card")" data-material-results
+     data-material-sort="@Model.Filter.Sort"
+     data-material-url="@Url.Action("Index", "LearningMaterials", new { Model.Filter.Search, Model.Filter.ClassId, Model.Filter.Status, Model.Filter.Page, Model.Filter.Sort })">
+    <div class="@(Model.IsStaff ? "dashboard-card-header material-list-heading" : "material-list-heading")">
+        <h2>
+            @if (Model.IsStaff)
+            {
+                <i class="bi bi-journal-text me-2" aria-hidden="true"></i>
+            }
+            @(Model.IsStaff ? "All Learning Materials" : "Materials") @if (!Model.IsStaff) {
+            <span class="material-count">@Model.Total</span>
+                        }
+        </h2>
+        @if (Model.IsStaff)
+        {
+            <span class="text-muted">@Model.Total material(s)</span>
+        }
+        @if (!Model.IsStaff)
+        {
+            <form asp-action="Index" method="get" class="material-sort-form @(Model.IsStaff ? "staff-material-sort" : "")" data-material-sort-form>
+                <input type="hidden" name="Search" value="@Model.Filter.Search" />
+                <input type="hidden" name="ClassId" value="@Model.Filter.ClassId" />
+                <input type="hidden" name="Status" value="@Model.Filter.Status" />
+                <label for="material-sort" class="form-label">Sort by</label>
+                <select id="material-sort" name="Sort" class="form-select" aria-label="Sort learning materials">
+                    @foreach (var choice in choices)
+                    {
+                        <option value="@choice.Key" selected="@(Model.Filter.Sort == choice.Key)">@choice.Value</option>
+                    }
+                </select>
+                <noscript><button type="submit" class="outline-button">Apply</button></noscript>
+            </form>
+        }
+    </div>
     @if (Model.Total == 0)
     {
-        <div class="alert alert-info">@(Model.IsTutor ? "No materials match. Choose Upload Material to share a file with an assigned class." : Model.IsStaff ? "No learning materials match these filters." : "No active materials match. Materials become available after your enrollment starts and your tutor uploads them.")</div>
+        <div class="alert alert-info">@(Model.IsTutor ? "No materials match. Choose Upload Material to share files with an assigned class." : Model.IsStaff ? "No learning materials match these filters." : "No active materials match. Materials become available after your enrollment starts and your tutor uploads them.")</div>
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table align-middle" data-pagination="off">
-                <thead><tr><th scope="col">Material</th><th scope="col">Class / Subject</th><th scope="col">Updated (MYT)</th>@if (Model.IsStaff) {
-                <th scope="col">Status</th>
-            }
-<th scope="col">Actions</th></tr></thead>
-            <tbody>
+        @if (!Model.IsStaff)
+        {
+            <ul class="student-material-list">
                 @foreach (var row in Model.Rows)
                 {
-                    <tr>
-                        <td><a asp-action="Details" asp-route-id="@row.Id" class="material-title">@row.Title</a><small class="material-file-name">@row.FileCount file(s) · @row.FileName</small></td>
-                        <td><strong>@row.ClassCode</strong><small class="d-block">@row.Level · @row.Subject</small></td>
-                        <td>@row.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy")<small class="d-block">@row.UpdatedAtUtc.AddHours(8).ToString("HH:mm")</small></td>
-                        @if (Model.IsStaff)
-                        {
-                            <td><span class="material-badge @(row.IsActive ? "is-active" : "is-inactive")">@(row.IsActive ? "Active" : "Inactive")</span></td>
-                        }
-                        <td><div class="material-actions"><a asp-action="Details" asp-route-id="@row.Id" class="outline-button">View</a><a asp-action="Details" asp-route-id="@row.Id" class="outline-button">Files (@row.FileCount)</a>@if (row.CanManage) {
-                        <a asp-action="Edit" asp-route-id="@row.Id" class="outline-button">Edit</a>
-                    }
-</div></td>
-                </tr>
-                                }
-            </tbody>
-        </table>
-    </div>
-    <nav class="material-pagination" aria-label="Learning materials pages">
-        <span>Page @Model.Filter.Page of @Model.PageCount · 25 per page</span>
-        <div class="material-actions">
-            @if (Model.Filter.Page > 1)
-            {
-                <a class="outline-button" asp-action="Index" asp-route-Page="@(Model.Filter.Page - 1)" asp-route-ClassId="@Model.Filter.ClassId" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status">Previous</a>
-            }
-            @if (Model.Filter.Page < Model.PageCount)
-            {
-                <a class="outline-button" asp-action="Index" asp-route-Page="@(Model.Filter.Page + 1)" asp-route-ClassId="@Model.Filter.ClassId" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status">Next</a>
-            }
-        </div>
-    </nav>
+                    <li class="student-material-list-row">
+                        <div class="student-material-list-icon"><i class="bi bi-journal-text" aria-hidden="true"></i></div>
+                        <div class="student-material-list-content">
+                            <a asp-action="Details" asp-route-id="@row.Id" class="student-material-list-title">@row.Title</a>
+                            <p class="student-material-list-context">@row.Level · @row.Subject · @(string.IsNullOrWhiteSpace(row.ClassName) ? row.ClassCode : row.ClassName)</p>
+                            <p class="student-material-list-meta">@row.FileCount @(row.FileCount == 1 ? "attachment" : "attachments") · Updated @row.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy")</p>
+                        </div>
+                        <a asp-action="Details" asp-route-id="@row.Id" class="outline-button">Open <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                    </li>
+                }
+            </ul>
         }
+        else
+        {
+            <div class="table-responsive material-table-scroll">
+                <table class="table align-middle compact-class-table" data-pagination="off">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="number-column column-number">No.</th>
+                            @foreach (var column in new[] { (Key: "title", Label: "Material"), (Key: "class", Label: "Class / Subject"), (Key: "updated", Label: "Updated (MYT)"), (Key: "status", Label: "Status") })
+                            {
+                                <th scope="col" aria-sort="@AriaSort(column.Key)">
+                                    <a asp-action="Index" asp-route-Search="@Model.Filter.Search" asp-route-ClassId="@Model.Filter.ClassId" asp-route-Status="@Model.Filter.Status" asp-route-Sort="@NextSort(column.Key)" asp-route-Page="1" class="material-sort-link" data-material-nav>
+                                        @column.Label <i class="bi @SortIcon(column.Key)" aria-hidden="true"></i>
+                                    </a>
+                                </th>
+                            }
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int materialNumber = (Model.Filter.Page - 1) * 25;
+                        }
+                        @foreach (var row in Model.Rows)
+                        {
+                            materialNumber++;
+                            <tr>
+                                <td class="number-column">@materialNumber</td>
+                                <td><a asp-action="Details" asp-route-id="@row.Id" class="material-title">@row.Title</a><small class="material-file-name">@row.FileCount @(row.FileCount == 1 ? "attachment" : "attachments")</small></td>
+                                <td><strong>@row.ClassCode</strong><small class="d-block">@row.Level · @row.Subject</small></td>
+                                <td>@row.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy")<small class="d-block">@row.UpdatedAtUtc.AddHours(8).ToString("HH:mm")</small></td>
+                                <td><span class="material-badge @(row.IsActive ? "is-active" : "is-inactive")">@(row.IsActive ? "Active" : "Inactive")</span></td>
+                                <td>
+                                    <div class="class-action-group">
+                                        <a asp-action="Details" asp-route-id="@row.Id" class="btn btn-sm btn-outline-secondary class-details-button"><i class="bi bi-eye" aria-hidden="true"></i> Details</a>
+                                        @if (row.CanManage || row.FileCount > 1)
+                                        {
+                                            <div class="dropdown class-action-dropdown">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary class-more-button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="@($"More actions for {row.Title}")"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></button>
+                                                <ul class="dropdown-menu dropdown-menu-end class-action-menu">
+                                                    @if (row.CanManage)
+                                                    {
+                                                        <li><a asp-action="Edit" asp-route-id="@row.Id" class="dropdown-item"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Material</a></li>
+                                                        <li><hr class="dropdown-divider" /></li>
+                                                        <li>
+                                                            <form asp-action="ChangeStatus" method="post" class="dropdown-action-form" data-material-status-form data-confirm="@(row.IsActive ? "Set this material to inactive? Students will no longer be able to access it." : "Reactivate this material for enrolled students?")">
+                                                                @Html.AntiForgeryToken()
+                                                                <input name="id" type="hidden" value="@row.Id" />
+                                                                <input name="rowVersion" type="hidden" value="@row.RowVersion" />
+                                                                <input name="active" type="hidden" value="@(row.IsActive ? "false" : "true")" />
+                                                                <button type="submit" class="dropdown-item"><i class="bi @(row.IsActive ? "bi-pause-circle" : "bi-check-circle")" aria-hidden="true"></i> @(row.IsActive ? "Set Inactive" : "Reactivate")</button>
+                                                            </form>
+                                                        </li>
+                                                    }
+                                                    @if (row.FileCount > 1)
+                                                    {
+                                                        @if (row.CanManage)
+                                                        {
+                                                            <li><hr class="dropdown-divider" /></li>
+                                                        }
+                                                        <li><a asp-action="DownloadAll" asp-route-id="@row.Id" class="dropdown-item"><i class="bi bi-download" aria-hidden="true"></i> Download All</a></li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        @if (Model.IsStaff || Model.PageCount > 1)
+        {
+            <nav class="material-pagination @(Model.IsStaff ? "staff-material-pagination" : "")" aria-label="Learning materials pages">
+                <span>@(Model.Total == 0 ? 0 : (Model.Filter.Page - 1) * 25 + 1)–@Math.Min(Model.Filter.Page * 25, Model.Total) of @Model.Total rows · 25 per page</span>
+                <div class="material-actions">
+                    @foreach (var pageLink in new[] { (Label: "First", Page: 1, Disabled: Model.Filter.Page <= 1), (Label: "Previous", Page: Model.Filter.Page - 1, Disabled: Model.Filter.Page <= 1), (Label: Model.Filter.Page.ToString(), Page: Model.Filter.Page, Disabled: true), (Label: "Next", Page: Model.Filter.Page + 1, Disabled: Model.Filter.Page >= Model.PageCount), (Label: "Last", Page: Model.PageCount, Disabled: Model.Filter.Page >= Model.PageCount) })
+                    {
+                        if (pageLink.Disabled)
+                        {
+                            <span class="material-page-item @(pageLink.Label == Model.Filter.Page.ToString() ? "is-current" : "is-disabled")" aria-disabled="true" aria-current="@(pageLink.Label == Model.Filter.Page.ToString() ? "page" : null)">@pageLink.Label</span>
+                        }
+                        else
+                        {
+
+                            <a class="material-page-item" asp-action="Index" asp-route-Page="@pageLink.Page" asp-route-ClassId="@Model.Filter.ClassId" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort="@Model.Filter.Sort" data-material-nav>@pageLink.Label</a>
+                        }
+                    }
+                </div>
+            </nav>
+        }
+    }
 </div>

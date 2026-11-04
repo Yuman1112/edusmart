@@ -1,0 +1,74 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Learning.AssessmentIndexModel
+@using SecureSmartTuitionSystem.Services.Learning
+<div class="dashboard-card compact-class-card assessment-results" data-assessment-results>
+    <div class="dashboard-card-header"><h2><i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i> @(Model.IsStaff ? "All Assessments" : "My Assessments")</h2><span class="text-muted">@Model.Total assessment(s)</span></div>
+    @if (Model.Total == 0)
+    {
+        <div class="assessment-empty">No assessments match. Student assessments appear after opening and only for the published class roster.</div>
+    }
+    else if (Model.IsStaff)
+    {
+
+        <div class="table-responsive">
+            <table class="table align-middle compact-class-table" data-pagination="off">
+                <thead><tr><th>No.</th><th><a class="assessment-sort-link" asp-action="Index" asp-route-Page="1" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort='@(Model.Filter.Sort == "title_asc" ? "title_desc" : "title_asc")' data-assessment-nav>Assessment <i class="bi bi-arrow-down-up" aria-hidden="true"></i></a></th><th>Class / Tutor</th><th><a class="assessment-sort-link" asp-action="Index" asp-route-Page="1" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort='@(Model.Filter.Sort == "due_asc" ? "due_desc" : "due_asc")' data-assessment-nav>Due (MYT) <i class="bi bi-arrow-down-up" aria-hidden="true"></i></a></th><th>Submissions</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                    @{
+                        int number = (Model.Filter.Page - 1) * 25;
+                    }
+                    @foreach (var row in Model.Rows)
+                    {
+                        number++;
+                        <tr>
+                            <td>@number</td>
+                            <td><strong>@row.Title</strong><small>@row.Kind · @row.MaxMarks.ToString("0.##") marks</small></td>
+                            <td>@row.ClassCode<small>@row.Subject · @row.Tutor</small></td>
+                            <td>@row.DueAtMyt.ToString("dd MMM yyyy")<small>@row.DueAtMyt.ToString("HH:mm")</small></td>
+                            <td>@row.Submitted / @row.Participants<small>@row.Graded graded</small></td>
+                            <td><span class="assessment-badge">@row.State</span></td>
+                            <td>
+                                <div class="class-action-group">
+                                    <a asp-action="Details" asp-route-id="@row.Id" class="btn btn-sm btn-outline-secondary class-details-button"><i class="bi bi-eye" aria-hidden="true"></i> Details</a>
+                                    @if (Model.IsTutor)
+                                    {
+                                        <div class="dropdown"><button class="btn btn-sm btn-outline-secondary class-more-button" type="button" data-bs-toggle="dropdown" aria-label="More actions" aria-expanded="false">⋮</button><ul class="dropdown-menu dropdown-menu-end class-action-menu"><li><a asp-action="Details" asp-route-id="@row.Id" class="dropdown-item">View submissions</a></li>@if(!row.ResultsPublishedAtUtc.HasValue&&(!row.PublishedAtUtc.HasValue||AssessmentRules.NowMyt<row.OpensAtMyt)){
+                                        <li><a asp-action="Edit" asp-route-id="@row.Id" class="dropdown-item">Edit assessment</a></li>
+                                    }
+        <li><hr class="dropdown-divider" /></li><li><form asp-action="ChangeState" method="post" data-assessment-state data-confirm="Change this assessment's availability?"><input type="hidden" name="id" value="@row.Id" /><input type="hidden" name="rowVersion" value="@row.RowVersion" /><button class="dropdown-item" name="command" value="@(row.IsActive ? "deactivate" : "reactivate")">@(row.IsActive ? "Set Inactive" : "Reactivate")</button></form></li></ul></div>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+        }
+        else
+    {
+
+        <div class="assessment-learner-list">@foreach(var row in Model.Rows){
+        <div class="assessment-learner-row"><div><strong>@row.Title</strong><small>@row.Kind · @row.ClassName · @row.Subject</small><small>Due @row.DueAtMyt.ToString("dd MMM yyyy · HH:mm") MYT · @row.MaxMarks.ToString("0.##") marks</small></div><a asp-action="Details" asp-route-id="@row.Id" class="outline-button">Open →</a></div>
+    }
+</div>
+        }
+    @if (Model.Total > 0)
+    {
+        <nav class="assessment-pagination" aria-label="Assessment pages">
+            <span>@((Model.Filter.Page - 1) * 25 + 1)–@Math.Min(Model.Filter.Page * 25, Model.Total) of @Model.Total · 25 per page</span><div class="material-actions">
+                @foreach (var link in new[] { (Text: "First", Page: 1, Off: Model.Filter.Page == 1), (Text: "Previous", Page: Model.Filter.Page - 1, Off: Model.Filter.Page == 1), (Text: Model.Filter.Page.ToString(), Page: Model.Filter.Page, Off: true), (Text: "Next", Page: Model.Filter.Page + 1, Off: Model.Filter.Page == Model.PageCount), (Text: "Last", Page: Model.PageCount, Off: Model.Filter.Page == Model.PageCount) })
+                {
+                    if (link.Off)
+                    {
+                        <span class="assessment-page-number" aria-disabled="true">@link.Text</span>
+                    }
+                    else
+                    {
+
+                        <a class="assessment-page-number" asp-action="Index" asp-route-Page="@link.Page" asp-route-ClassId="@Model.Filter.ClassId" asp-route-Status="@Model.Filter.Status" asp-route-Search="@Model.Filter.Search" asp-route-Sort="@Model.Filter.Sort" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" data-assessment-nav>@link.Text</a>
+                    }
+                }
+            </div>
+        </nav>
+    }
+</div>

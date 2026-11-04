@@ -1,0 +1,8 @@
+﻿@if (TempData["AssessmentSuccess"] is string success)
+{
+    <div class="alert alert-success" role="status" data-success-timeout="5000">@success</div>
+}
+@if (TempData["AssessmentError"] is string error)
+{
+    <div class="alert alert-danger" role="alert">@error</div>
+}

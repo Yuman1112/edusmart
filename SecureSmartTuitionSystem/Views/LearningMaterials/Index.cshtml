@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
 }
-<div class="learning-materials-page">
+<div class="learning-materials-page @(Model.IsStaff ? "staff-material-page" : "student-material-page")">
     <div class="page-header">
         <div><h1>Learning Materials</h1><p>@(Model.IsTutor ? "Share and manage materials for your assigned classes." : Model.IsStaff ? "Monitor learning materials across classes." : "Access materials for classes you are currently enrolled in.")</p></div>
         @if (Model.IsTutor)
@@ -22,21 +22,48 @@
     {
         <div class="alert alert-danger" role="alert">@error</div>
     }
-    <div class="class-form-card mb-4">
-        <form asp-action="Index" method="get" class="row g-3 align-items-end">
-            <div class="col-12 col-lg-4"><label for="material-search" class="form-label">Search title</label><input id="material-search" name="Search" value="@Model.Filter.Search" maxlength="100" class="form-control" placeholder="Search learning materials" /></div>
-            <div class="col-12 col-lg-4"><label for="material-class" class="form-label">Class</label><select id="material-class" name="ClassId" class="form-select"><option value="">All Available Classes</option>@foreach (var item in Model.Classes) {
-            <option value="@item.Value" selected="@(Model.Filter.ClassId?.ToString() == item.Value)">@item.Text</option>
+    <div class="@(Model.IsStaff ? "class-filter-card" : "class-form-card mb-4 student-material-filter-card")">
+        @if (Model.IsStaff)
+        {
+            <div class="class-filter-heading"><div><h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Materials</h2><p>The material list updates automatically.</p></div></div>
+        }
+        <form asp-action="Index" method="get" data-material-filters class="@(Model.IsStaff ? "row g-3 align-items-end" : "student-material-filters")">
+            @if (Model.IsStaff)
+            {
+                <div class="col-12 col-lg-3">
+                    <label for="material-filter-sort" class="form-label">Sort by</label><select id="material-filter-sort" name="Sort" class="form-select">
+                        @foreach (var choice in new Dictionary<string, string> { ["updated_desc"] = "Updated: newest first", ["updated_asc"] = "Updated: oldest first", ["title_asc"] = "Title: A–Z", ["title_desc"] = "Title: Z–A", ["class_asc"] = "Class code: A–Z", ["class_desc"] = "Class code: Z–A", ["subject_asc"] = "Subject: A–Z", ["subject_desc"] = "Subject: Z–A", ["status_asc"] = "Status: Active first", ["status_desc"] = "Status: Inactive first" })
+                        {
+                            <option value="@choice.Key" selected="@(Model.Filter.Sort == choice.Key)">@choice.Value</option>
                         }
-</select></div>
+                    </select>
+                </div>
+            }
+            else
+            {
+
+                <input name="Sort" value="@Model.Filter.Sort" type="hidden" />
+            }
+            <div class="col-12 col-lg-4"><label for="material-search" class="form-label">@(Model.IsStaff ? "Search title" : "Search materials")</label><input id="material-search" name="Search" value="@Model.Filter.Search" maxlength="100" class="form-control" placeholder="Search learning materials" /></div>
+            <div class="col-12 col-lg-4">
+                <label for="material-class" class="form-label">Class</label><select id="material-class" name="ClassId" class="form-select">
+                    <option value="">@(Model.IsStaff ? "All Available Classes" : "All My Classes")</option>@foreach (var item in Model.Classes) {
+                    var label = item.Text;
+                    int separator = label.IndexOf(" · ", StringComparison.Ordinal);
+                    if (!Model.IsStaff && separator >= 0) label = label[(separator + 3)..];
+                    <option value="@item.Value" selected="@(Model.Filter.ClassId?.ToString() == item.Value)">@label</option>
+                                        }
+                </select>
+            </div>
             @if (Model.IsStaff)
             {
                 <div class="col-12 col-lg-2"><label for="material-status" class="form-label">Status</label><select id="material-status" name="Status" class="form-select"><option value="active" selected="@(Model.Filter.Status == "active")">Active</option><option value="inactive" selected="@(Model.Filter.Status == "inactive")">Inactive</option><option value="all" selected="@(Model.Filter.Status == "all")">All Statuses</option></select></div>
             }
-            <div class="col-12 col-lg-2"><button class="primary-button" type="submit">View Materials</button></div>
+            <div class="col-12 col-lg-2"><button class="primary-button" type="submit">@(Model.IsStaff ? "View Materials" : "Search")</button></div>
         </form>
     </div>
-    <p id="material-refresh-status" class="text-muted" role="status" data-material-refresh-url="@Url.Action("Index", "LearningMaterials", new { Model.Filter.Search, Model.Filter.ClassId, Model.Filter.Status, Model.Filter.Page, fragment = true })">Materials update automatically while this page is visible.</p>
+    <p id="material-refresh-status" class="text-muted" role="status" hidden="@(!Model.IsStaff)" data-quiet="@((!Model.IsStaff).ToString().ToLowerInvariant())" data-material-refresh-url="@Url.Action("Index", "LearningMaterials", new { Model.Filter.Search, Model.Filter.ClassId, Model.Filter.Status, Model.Filter.Page, Model.Filter.Sort, fragment = true })">Materials update automatically while this page is visible.</p>
+    <p id="material-action-status" role="status" hidden></p>
     <partial name="_MaterialResults" model="Model" />
 </div>
 

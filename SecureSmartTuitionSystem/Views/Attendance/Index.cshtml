@@ -5,12 +5,13 @@
 }
 
 @section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet"
           href="~/css/attendance.css"
           asp-append-version="true" />
 }
 
-<div class="attendance-page">
+<div class="attendance-page attendance-list-page">
     <div class="page-header">
         <div>
             <h1>Attendance Management</h1>
@@ -22,7 +23,8 @@
         </div>
     </div>
 
-    <div class="class-form-card mb-4">
+    <div class="class-filter-card">
+        <div class="class-filter-heading"><div><h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Attendance</h2><p>Select a week to view scheduled lessons.</p></div></div>
         <form asp-action="Index"
               method="get" data-live-filter
               class="row g-3 align-items-end">
@@ -68,17 +70,20 @@
         </div>
     </div>
 
-    <div class="class-form-card">
-        <h2 class="h5">
-            @Model.WeekStart.ToString("dd MMM yyyy") –
-            @Model.WeekEnd.ToString("dd MMM yyyy") · MYT (UTC+8)
-        </h2>
+    <div class="dashboard-card compact-class-card attendance-lessons-card">
+        <div class="dashboard-card-header"><h2><i class="bi bi-calendar-check me-2" aria-hidden="true"></i> Class Attendance</h2><span class="text-muted">@Model.Lessons.Count lesson(s)</span></div>
+        <div class="attendance-week-summary">
+            <h3 class="h6">
+                @Model.WeekStart.ToString("dd MMM yyyy") –
+                @Model.WeekEnd.ToString("dd MMM yyyy") · MYT (UTC+8)
+            </h3>
 
-        <p class="text-muted">
-            Attendance can be edited during the lesson.
-            Final submission or the lesson end time locks the records.
-            Unrecorded attendance is not counted as absence.
-        </p>
+            <p class="text-muted">
+                Attendance can be edited during the lesson.
+                Final submission or the lesson end time locks the records.
+                Unrecorded attendance is not counted as absence.
+            </p>
+        </div>
 
         @if (Model.Lessons.Count == 0)
         {
@@ -89,9 +94,10 @@
         else
         {
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle compact-class-table">
                     <thead>
                         <tr>
+                            <th scope="col" class="number-column column-number">No.</th>
                             <th scope="col">Date / Time</th>
                             <th scope="col">Class</th>
                             <th scope="col">Tutor</th>
@@ -102,9 +108,14 @@
                     </thead>
 
                     <tbody>
+                        @{
+                            int lessonNumber = 0;
+                        }
                         @foreach (var row in Model.Lessons)
                         {
+                            lessonNumber++;
                             <tr>
+                                <td class="number-column">@lessonNumber</td>
                                 <td>
                                     @row.Date.ToString("ddd, dd MMM yyyy")
                                     <br />
@@ -138,8 +149,8 @@
                                        asp-route-changeId="@row.ChangeId"
                                        asp-route-replacement="@row.Replacement"
                                        asp-route-savedId="@row.SavedId"
-                                       class="outline-button">
-                                        Open Attendance
+                                       class="btn btn-sm btn-outline-secondary class-details-button">
+                                        <i class="bi bi-eye" aria-hidden="true"></i> Open Attendance
                                     </a>
                                 </td>
                             </tr>

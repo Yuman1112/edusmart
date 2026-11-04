@@ -3,15 +3,18 @@
 
 @{
     ViewData["Title"] = "Attendance Corrections";
+    bool staff = User.IsInRole("Admin") || User.IsInRole("Tutor");
+    int requestNumber = 0;
 }
 
 @section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet"
           href="~/css/attendance.css"
           asp-append-version="true" />
 }
 
-<div class="attendance-page">
+<div class="attendance-page @(staff ? "attendance-unified-list" : "")">
     <div class="page-header">
         <div>
             <h1>Attendance Corrections</h1>
@@ -46,7 +49,11 @@
         </div>
     }
 
-    <div class="class-form-card mb-4">
+    <div class="@(staff ? "class-filter-card" : "class-form-card mb-4")">
+        @if (staff)
+        {
+            <div class="class-filter-heading"><div><h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Correction Requests</h2><p>Filter requests by their review status.</p></div></div>
+        }
         <form asp-action="Index"
               method="get" data-live-filter
               class="d-flex flex-wrap align-items-end gap-3">
@@ -88,8 +95,12 @@
         </form>
     </div>
 
-    <div class="class-form-card">
-        <p class="text-muted">
+    <div class="@(staff ? "dashboard-card compact-class-card attendance-unified-results" : "class-form-card")">
+        @if (staff)
+        {
+            <div class="dashboard-card-header"><h2><i class="bi bi-pencil-square me-2" aria-hidden="true"></i> Correction Requests</h2><span class="text-muted">@Model.Rows.Count request(s)</span></div>
+        }
+        <p class="text-muted @(staff ? "attendance-result-summary" : "")">
             Showing the latest 500 matching requests.
             Times shown are MYT (UTC+8).
         </p>
@@ -103,9 +114,13 @@
         else
         {
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle @(staff ? "compact-class-table" : "")">
                     <thead>
                         <tr>
+                            @if (staff)
+                            {
+                                <th scope="col" class="number-column column-number">No.</th>
+                            }
                             <th scope="col">Student</th>
                             <th scope="col">Lesson</th>
                             <th scope="col">Requested Change</th>
@@ -121,7 +136,12 @@
                             Model.IsAdmin
                             && row.Decision == CorrectionDecision.Pending;
 
+                            requestNumber++;
                             <tr>
+                                @if (staff)
+                                {
+                                    <td class="number-column">@requestNumber</td>
+                                }
                                 <td>
                                     <strong>@row.Student</strong>
                                 </td>
@@ -147,7 +167,7 @@
 
                                 <td>
                                     <button type="button"
-                                            class="outline-button"
+                                            class="btn btn-sm btn-outline-secondary class-details-button"
                                             data-bs-toggle="modal"
                                             data-bs-target="#correction-modal"
                                             data-can-review="@(canReview ? "true" : "false")"

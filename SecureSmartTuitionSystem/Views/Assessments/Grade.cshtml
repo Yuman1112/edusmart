@@ -1,0 +1,81 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Learning.AssessmentGradeModel
+@{
+    ViewData["Title"] = "Evaluate Submission";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/assessments.css" asp-append-version="true" />
+}
+<div class="assessment-page learning-materials-page">
+    <div class="page-header"><div><h1>Evaluate Submission</h1><p>@Model.Assessment.Title · @Model.Participant.StudentNumber · @Model.Participant.StudentName</p></div><a asp-action="Details" asp-route-id="@Model.Assessment.Id" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
+    <div class="class-form-card">
+        <h2 class="h5">Student Answer</h2>@if(!string.IsNullOrWhiteSpace(Model.Participant.SubmissionNote)){
+        <p class="assessment-instructions">@Model.Participant.SubmissionNote</p>
+                }
+        <partial name="_Files" model="Model.Participant.Files" />
+        <form asp-action="Grade"
+              method="post"
+              class="mt-4"
+              data-grade-form
+              data-original-marks="@Model.Participant.Marks?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+              data-original-feedback="@Model.Participant.Feedback">
+
+            <input asp-for="Form.ParticipantId" type="hidden" />
+            <input asp-for="Form.RowVersion" type="hidden" />
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger"
+                 role="alert"></div>
+
+            <label asp-for="Form.Marks" class="form-label">
+                Marks (0–@Model.Assessment.MaxMarks.ToString("0.##"))
+            </label>
+
+            <input asp-for="Form.Marks"
+                   asp-format="{0:0.##}"
+                   type="number"
+                   min="0"
+                   max="@Model.Assessment.MaxMarks"
+                   step="0.01"
+                   class="form-control" />
+
+            <span asp-validation-for="Form.Marks"
+                  class="assessment-field-error"></span>
+
+            <label asp-for="Form.Feedback" class="form-label mt-3">
+                Feedback (Optional)
+            </label>
+
+            <textarea asp-for="Form.Feedback"
+                      class="form-control"
+                      rows="4"
+                      maxlength="2000"
+                      placeholder="Add comments or suggestions for the student."></textarea>
+
+            <span asp-validation-for="Form.Feedback"
+                  class="assessment-field-error"></span>
+
+            <p class="assessment-note mt-3">
+                Save first. Students and parents see grades only after Release Results.
+            </p>
+
+            <div class="class-form-actions mt-3">
+                <a asp-action="Details"
+                   asp-route-id="@Model.Assessment.Id"
+                   class="outline-button">
+                    Cancel
+                </a>
+
+                <button type="submit"
+                        class="primary-button"
+                        data-grade-save>
+                    Save Grade
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" /><script src="~/js/learning-materials-preview.js" asp-append-version="true"></script><script src="~/js/assessments.js" asp-append-version="true"></script>
+}

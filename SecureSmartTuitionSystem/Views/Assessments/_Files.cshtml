@@ -1,0 +1,9 @@
+﻿@model List<SecureSmartTuitionSystem.ViewModels.Learning.AssessmentFileRow>
+@using SecureSmartTuitionSystem.Services.Learning
+<div class="assessment-file-list">@foreach(var f in Model){var type=MaterialFileService.PreviewContentType(f.Name);
+<div class="assessment-file-row"><div><i class="bi bi-file-earmark-text" aria-hidden="true"></i> @f.Name<small>@f.SizeLabel</small></div><div class="material-actions">@if(type!=null){
+<a asp-action="Download" asp-route-id="@f.Id" asp-route-preview="true" target="_blank" rel="noopener" class="outline-button" data-material-preview data-preview-name="@f.Name" data-preview-type="@type">Preview</a>
+}
+<a asp-action="Download" asp-route-id="@f.Id" class="outline-button"><i class="bi bi-download" aria-hidden="true"></i> Download</a></div></div>
+}
+</div>

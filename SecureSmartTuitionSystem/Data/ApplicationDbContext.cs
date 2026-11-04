@@ -34,6 +34,10 @@ namespace SecureSmartTuitionSystem.Data
             _auditChanges = auditChanges;
         }
 
+        public DbSet<SecureSmartTuitionSystem.Models.Learning.Assessment> Assessments => Set<SecureSmartTuitionSystem.Models.Learning.Assessment>();
+        public DbSet<SecureSmartTuitionSystem.Models.Learning.AssessmentParticipant> AssessmentParticipants => Set<SecureSmartTuitionSystem.Models.Learning.AssessmentParticipant>();
+        public DbSet<SecureSmartTuitionSystem.Models.Learning.AssessmentFile> AssessmentFiles => Set<SecureSmartTuitionSystem.Models.Learning.AssessmentFile>();
+
         public DbSet<SecureSmartTuitionSystem.Models.Learning.LearningMaterial> LearningMaterials => Set<SecureSmartTuitionSystem.Models.Learning.LearningMaterial>();
 
         public DbSet<EnrollmentExitRequest> EnrollmentExitRequests => Set<EnrollmentExitRequest>();
@@ -198,6 +202,7 @@ namespace SecureSmartTuitionSystem.Data
 
             builder.ConfigureAttendance();
             builder.ConfigureLearningMaterials();
+            builder.ConfigureAssessments();
             builder.ConfigureMonthlyBilling();
 
             // AddDefaultIdentity uses 128-character provider/token keys at runtime.

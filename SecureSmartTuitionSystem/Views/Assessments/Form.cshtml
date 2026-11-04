@@ -1,0 +1,62 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Learning.AssessmentForm
+@using SecureSmartTuitionSystem.Models.Learning
+@{
+    ViewData["Title"] = Model.Id == 0 ? "Create Assessment" : "Edit Assessment";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/assessments.css" asp-append-version="true" />
+}
+<div class="assessment-page learning-materials-page assessment-editor">
+    <div class="page-header"><div><h1>@ViewData["Title"]</h1><p>All assessment dates and deadlines use Malaysia time (UTC+8).</p></div><a asp-action="@(Model.Id == 0 ? "Index" : "Details")" asp-route-id="@(Model.Id == 0 ? (int?)null : Model.Id)" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
+    <div class="class-form-card">
+        <form asp-action="Save" method="post" enctype="multipart/form-data" data-assessment-upload-form data-class-choices-url="@Url.Action("ClassChoices", "LearningMaterials")">
+            <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+            <section class="class-form-section">
+                <h2><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Assessment Information</h2>
+                <div class="assessment-form-grid">
+                    <div class="assessment-full">
+                        <label asp-for="ClassSessionId" class="form-label">Class</label>@if(Model.Id>0){
+                        <input asp-for="ClassSessionId" type="hidden" />
+                        <input class="form-control" readonly value="@Model.Classes.FirstOrDefault(x => x.Value == Model.ClassSessionId.ToString())?.Text" />
+                                                }else
+                        {
+                            <select asp-for="ClassSessionId" asp-items="Model.Classes" class="form-select"><option value="">Select assigned class</option></select>
+                        }
+                        <span asp-validation-for="ClassSessionId" class="assessment-field-error"></span>
+                    </div>
+                    <div><label asp-for="Kind" class="form-label">Assessment Type</label><select asp-for="Kind" asp-items="Html.GetEnumSelectList<AssessmentKind>()" class="form-select"></select><span asp-validation-for="Kind" class="assessment-field-error"></span></div>
+                    <div><label asp-for="MaxMarks" class="form-label">Total Marks</label><input asp-for="MaxMarks" type="number" min="0.01" max="10000" step="0.01" class="form-control" /><span asp-validation-for="MaxMarks" class="assessment-field-error"></span></div>
+                    <div class="assessment-full"><label asp-for="Title" class="form-label">Title</label><input asp-for="Title" class="form-control" maxlength="150" placeholder="For example: Chapter 1 Practice" /><span asp-validation-for="Title" class="assessment-field-error"></span></div>
+                    <div><label asp-for="OpensAtMyt" class="form-label">Open From (MYT)</label><input asp-for="OpensAtMyt" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" /><span asp-validation-for="OpensAtMyt" class="assessment-field-error"></span></div>
+                    <div><label asp-for="DueAtMyt" class="form-label">Due Date (MYT)</label><input asp-for="DueAtMyt" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" /><span asp-validation-for="DueAtMyt" class="assessment-field-error"></span></div>
+                    <div class="assessment-full"><label asp-for="Instructions" class="form-label">Instructions (Optional)</label><textarea asp-for="Instructions" class="form-control" rows="4" maxlength="4000"></textarea><span asp-validation-for="Instructions" class="assessment-field-error"></span></div>
+                </div>
+            </section>
+            <section class="class-form-section assessment-question-section">
+                <h2><i class="bi bi-paperclip" aria-hidden="true"></i> Question Files (Optional)</h2>
+                @if (Model.ExistingFiles.Any())
+                {
+                    <div class="assessment-file-list">
+                        @foreach (var file in Model.ExistingFiles)
+                        {
+                            <div class="assessment-file-row"><span>@file.Name<small>@file.SizeLabel · Saved</small></span><label><input type="checkbox" name="RemovedFileIds" value="@file.Id" checked="@Model.RemovedFileIds.Contains(file.Id)" /> Remove when saving</label></div>
+                        }
+                    </div>
+                }
+                <partial name="_Upload" model='@("Files")' /><span asp-validation-for="Files" class="assessment-field-error"></span>
+            </section>
+            <p class="assessment-note">Publishing fixes the current eligible student roster. Published tasks can be edited only before opening. Students may withdraw ungraded answers before the deadline and submit replacement files.</p>
+            <div class="class-form-actions">
+                <a asp-action="@(Model.Id == 0 ? "Index" : "Details")" asp-route-id="@(Model.Id == 0 ? (int?)null : Model.Id)" class="outline-button">Cancel</a><button class="outline-button" name="command" value="draft">@(Model.Id == 0 ? "Save Draft" : "Save Changes")</button>@if(Model.Id==0){
+                <button class="primary-button" name="command" value="publish">Save &amp; Publish</button>
+                                }
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" /><script src="~/js/learning-materials-preview.js" asp-append-version="true"></script><script src="~/js/assessments.js" asp-append-version="true"></script>
+}

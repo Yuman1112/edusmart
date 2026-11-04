@@ -32,6 +32,11 @@
         ViewContext.RouteData.Values["action"]?
             .ToString() ?? "";
 
+    bool learningModuleActive = currentController == "LearningMaterials" || currentController == "Assessments";
+    bool learningMaterialsActive = currentController == "LearningMaterials";
+    bool learningProgressActive = currentController == "Assessments" && currentAction == "Progress";
+    bool learningAssessmentsActive = currentController == "Assessments" && !learningProgressActive;
+
     // Attendance menu
     bool attendanceModuleActive =
         currentController == "Attendance"
@@ -276,7 +281,25 @@
                         </div>
 
                         <!-- Admin: Planned Modules -->
-                        <a class="sidebar-link @(currentController == "LearningMaterials" ? "active" : "")" asp-controller="LearningMaterials" asp-action="Index"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><span>Learning Materials</span></a>
+                        <div class="sidebar-module">
+                            <button type="button" class="sidebar-link sidebar-module-button @(learningModuleActive ? "module-current" : "")"
+                                    data-bs-toggle="collapse" data-bs-target="#adminLearningMenu"
+                                    aria-expanded="@(learningModuleActive ? "true" : "false")" aria-controls="adminLearningMenu">
+                                <span class="sidebar-link-content"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><span>Learning &amp; Assessment</span></span>
+                                <i class="bi bi-chevron-down sidebar-module-arrow" aria-hidden="true"></i>
+                            </button>
+                            <div id="adminLearningMenu" class="collapse sidebar-submenu @(learningModuleActive ? "show" : "")">
+                                <a class="sidebar-submenu-link @(learningMaterialsActive ? "active" : "")" asp-controller="LearningMaterials" asp-action="Index" aria-current="@(learningMaterialsActive ? "page" : null)">
+                                    <i class="bi bi-journal-bookmark" aria-hidden="true"></i><span>Learning Materials</span>
+                                </a>
+                                <a class="sidebar-submenu-link @(learningAssessmentsActive ? "active" : "")" asp-controller="Assessments" asp-action="Index" aria-current="@(learningAssessmentsActive ? "page" : null)">
+                                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>Assessments</span>
+                                </a>
+                                <a class="sidebar-submenu-link @(learningProgressActive ? "active" : "")" asp-controller="Assessments" asp-action="Progress" aria-current="@(learningProgressActive ? "page" : null)">
+                                    <i class="bi bi-bar-chart" aria-hidden="true"></i><span>Results Overview</span>
+                                </a>
+                            </div>
+                        </div>
 
                         <!-- Admin: Attendance -->
                         <div class="sidebar-module">
@@ -426,17 +449,25 @@
                             <span>Students</span>
                         </span>
 
-                        <a class="sidebar-link @(currentController == "LearningMaterials" ? "active" : "")" asp-controller="LearningMaterials" asp-action="Index"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><span>Learning Materials</span></a>
-
-                        <span class="sidebar-link disabled-link"
-                              aria-disabled="true"
-                              title="This module will be developed later">
-
-                            <i class="bi bi-file-earmark-text"
-                               aria-hidden="true"></i>
-
-                            <span>Assignments</span>
-                        </span>
+                        <div class="sidebar-module">
+                            <button type="button" class="sidebar-link sidebar-module-button @(learningModuleActive ? "module-current" : "")"
+                                    data-bs-toggle="collapse" data-bs-target="#tutorLearningMenu"
+                                    aria-expanded="@(learningModuleActive ? "true" : "false")" aria-controls="tutorLearningMenu">
+                                <span class="sidebar-link-content"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><span>Learning &amp; Assessment</span></span>
+                                <i class="bi bi-chevron-down sidebar-module-arrow" aria-hidden="true"></i>
+                            </button>
+                            <div id="tutorLearningMenu" class="collapse sidebar-submenu @(learningModuleActive ? "show" : "")">
+                                <a class="sidebar-submenu-link @(learningMaterialsActive ? "active" : "")" asp-controller="LearningMaterials" asp-action="Index" aria-current="@(learningMaterialsActive ? "page" : null)">
+                                    <i class="bi bi-journal-bookmark" aria-hidden="true"></i><span>Learning Materials</span>
+                                </a>
+                                <a class="sidebar-submenu-link @(learningAssessmentsActive ? "active" : "")" asp-controller="Assessments" asp-action="Index" aria-current="@(learningAssessmentsActive ? "page" : null)">
+                                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>Assessments</span>
+                                </a>
+                                <a class="sidebar-submenu-link @(learningProgressActive ? "active" : "")" asp-controller="Assessments" asp-action="Progress" aria-current="@(learningProgressActive ? "page" : null)">
+                                    <i class="bi bi-bar-chart" aria-hidden="true"></i><span>Results Overview</span>
+                                </a>
+                            </div>
+                        </div>
                     }
 
                     <!-- Tutor: Attendance -->
@@ -668,9 +699,20 @@
                                 </div>
                             </div>
 
-                            @if (User.IsInRole("Student"))
+                            @if (User.IsInRole("Parent"))
                             {
-                                <a asp-controller="LearningMaterials" asp-action="Index" class="public-nav-link @(currentController == "LearningMaterials" ? "active" : "")"><i class="bi bi-journal-bookmark" aria-hidden="true"></i> Learning Materials</a>
+                                <a asp-controller="Assessments" asp-action="Progress" class="public-nav-link @(learningModuleActive ? "active" : "")"><i class="bi bi-bar-chart" aria-hidden="true"></i>Learning Progress</a>
+                            }
+                            else if (User.IsInRole("Student"))
+                            {
+                                <div class="learner-nav-group dropdown">
+                                    <button type="button" class="public-nav-link dropdown-toggle @(learningModuleActive ? "active" : "")" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-journal-bookmark" aria-hidden="true"></i>Learning</button>
+                                    <div class="dropdown-menu learner-nav-menu">
+                                        <a class="dropdown-item @(learningMaterialsActive ? "active" : "")" asp-controller="LearningMaterials" asp-action="Index" aria-current="@(learningMaterialsActive ? "page" : null)"><i class="bi bi-journal-bookmark" aria-hidden="true"></i>Learning Materials</a>
+                                        <a class="dropdown-item @(learningAssessmentsActive ? "active" : "")" asp-controller="Assessments" asp-action="Index" aria-current="@(learningAssessmentsActive ? "page" : null)"><i class="bi bi-file-earmark-text" aria-hidden="true"></i>Assessments</a>
+                                        <a class="dropdown-item @(learningProgressActive ? "active" : "")" asp-controller="Assessments" asp-action="Progress" aria-current="@(learningProgressActive ? "page" : null)"><i class="bi bi-bar-chart" aria-hidden="true"></i>My Learning Progress</a>
+                                    </div>
+                                </div>
                             }
 
                             <a asp-controller="Attendance"

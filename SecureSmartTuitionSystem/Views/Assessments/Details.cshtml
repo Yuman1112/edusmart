@@ -1,0 +1,121 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Learning.AssessmentDetailsModel
+@using SecureSmartTuitionSystem.Services.Learning
+@{
+    var a = Model.Assessment; ViewData["Title"] = a.Title;
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/assessments.css" asp-append-version="true" />
+}
+<div class="assessment-page learning-materials-page @(!Model.IsStaff ? "student-material-page" : "")">
+    <div class="page-header">
+        <div><h1>@a.Title</h1><p>@a.ClassCode · @a.ClassName</p></div><div class="material-actions">
+            @if (Model.CanEdit)
+            {
+                <a asp-action="Edit" asp-route-id="@a.Id" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit</a>
+            }
+            @if (Model.CanManage)
+            {
+                <form asp-action="ChangeState" method="post" data-confirm="Change this assessment's availability?"><input type="hidden" name="id" value="@a.Id" /><input type="hidden" name="rowVersion" value="@a.RowVersion" /><button name="command" value="@(a.IsActive ? "deactivate" : "reactivate")" class="outline-button">@(a.IsActive ? "Set Inactive" : "Reactivate")</button></form>
+            }
+            @if (Model.CanUnsubmit)
+            {
+                <form asp-action="Unsubmit"
+                      method="post"
+                      class="m-0"
+                      data-confirm="Withdraw your answer? It will be marked Not submitted. Your files and note will be kept so you can review and resubmit before the deadline.">
+
+                    <input type="hidden" name="id" value="@a.Id" />
+
+                    <input type="hidden"
+                           name="rowVersion"
+                           value="@Model.Participants.Single().RowVersion" />
+
+                    <button type="submit" class="primary-button">
+                        <i class="bi bi-arrow-counterclockwise"
+                           aria-hidden="true"></i>
+                        Unsubmit
+                    </button>
+                </form>
+            }
+            <a asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
+        </div>
+    </div>
+    <partial name="_Messages" />
+    <div class="class-form-card mb-4">
+        <div class="material-list-heading assessment-detail-heading"><h2>@a.Kind · @a.Subject</h2><span class="assessment-badge">@a.State</span></div>
+        <div class="assessment-summary"><div><small>Open From (MYT)</small>@a.OpensAtMyt.ToString("dd MMM yyyy · HH:mm")</div><div><small>Due (MYT)</small>@a.DueAtMyt.ToString("dd MMM yyyy · HH:mm")</div><div><small>Total Marks</small>@a.MaxMarks.ToString("0.##")</div><div><small>Tutor</small>@a.Tutor</div></div>
+        @if (!a.IsActive)
+        {
+            <div class="alert alert-info mt-3">Inactive. Students cannot open this assessment or submit answers.</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(a.Instructions))
+        {
+            <h3 class="h6 mt-4">Instructions</h3>
+            <p class="assessment-instructions">@a.Instructions</p>
+        }
+        @if (Model.QuestionFiles.Any())
+        {
+            <h3 class="h6 mt-4">Question Files (@Model.QuestionFiles.Count)</h3>
+            <partial name="_Files" model="Model.QuestionFiles" />
+        }
+        @if (Model.CanManage && a.PublishedAtUtc == null)
+        {
+            <form asp-action="ChangeState" method="post" class="class-form-actions" data-confirm="Publish this assessment to the current eligible student roster?"><input type="hidden" name="id" value="@a.Id" /><input type="hidden" name="rowVersion" value="@a.RowVersion" /><button class="primary-button" name="command" value="publish">Publish Assessment</button></form>
+        }
+    </div>
+    @if (Model.IsStaff)
+    {
+        <partial name="_Submissions" model="Model" />
+    }
+    else
+    {
+        var p = Model.Participants.SingleOrDefault();
+        @if (p?.SubmittedAtUtc != null)
+        {
+            <div class="class-form-card">
+                <h2 class="h5">Your Submission</h2><p class="assessment-note">Submitted @p.SubmittedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy · HH:mm") MYT · Submitted answer.</p>@if(!string.IsNullOrWhiteSpace(p.SubmissionNote)){
+                <p class="assessment-instructions">@p.SubmissionNote</p>
+            }
+            <partial name="_Files" model="p.Files" />
+
+            @if (a.ResultsPublishedAtUtc.HasValue && p.Marks.HasValue)
+            {
+                <div class="assessment-result"><h3 class="h6">Result: @p.Marks.Value.ToString("0.##") / @a.MaxMarks.ToString("0.##")</h3>@if (!string.IsNullOrWhiteSpace(p.Feedback)) {
+                <p class="assessment-instructions">@p.Feedback</p>
+            }
+    </div>
+        }
+                else
+        {
+
+            <p class="assessment-note mt-3">Your result has not been released yet.</p>
+        }
+    </div>
+        }
+        else if (Model.CanSubmit)
+    {
+
+        <div class="class-form-card">
+            <h2 class="h5 mb-3">Submit Your Assignment</h2><form asp-action="Submit" method="post" enctype="multipart/form-data" data-assessment-upload-form data-assessment-requires-file="true" data-confirm="Submit this answer? You can withdraw it before the deadline only while it remains ungraded.">
+                <input asp-for="Submission.AssessmentId" type="hidden" /><input asp-for="Submission.RowVersion" type="hidden" /><div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>@{
+                ViewData["AssessmentSavedFiles"] = p?.Files.Where(f => Model.Submission.KeptFileIds.Contains(f.Id)).ToList()
+                ?? new List<SecureSmartTuitionSystem.ViewModels.Learning.AssessmentFileRow>();
+            }
+            <input asp-for="Submission.ParticipantRowVersion" type="hidden" />
+            <partial name="_Upload" model='@("Submission.Files")' /><span asp-validation-for="Submission.Files" class="assessment-field-error"></span><label asp-for="Submission.Note" class="form-label mt-3">Note (Optional)</label><textarea asp-for="Submission.Note" class="form-control" rows="3" maxlength="2000"></textarea><span asp-validation-for="Submission.Note" class="assessment-field-error"></span><div class="class-form-actions mt-3"><button class="primary-button">@(p?.Files.Count > 0 ? "Resubmit Assignment" : "Submit Assignment")</button></div>
+        </form>
+    </div>
+        }
+        else
+    {
+
+        <div class="alert alert-info">Submissions are closed. No confirmed answer has been recorded for you.</div>
+    }
+        }
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" /><script src="~/js/learning-materials-preview.js" asp-append-version="true"></script><script src="~/js/assessments.js" asp-append-version="true"></script>
+}
+

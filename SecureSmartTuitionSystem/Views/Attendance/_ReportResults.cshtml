@@ -1,16 +1,29 @@
 @model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReportViewModel
 @using SecureSmartTuitionSystem.Models.Attendance
-<div id="attendance-report-results" class="class-form-card" data-report-results data-report-total="@Model.Total">
-    <h2 class="h5">Attendance Records (@Model.Total)</h2>
-    <p class="text-muted">@Model.Filter.From.ToString("dd MMM yyyy") – @Model.Filter.To.ToString("dd MMM yyyy") · MYT (UTC+8). Submitted and ended lessons only; unrecorded attendance is not absence.</p>
-    @if (!Model.IsPrint && Model.Total > Model.Rows.Count)
+@{
+    bool staffList = !Model.IsPrint && (User.IsInRole("Admin") || User.IsInRole("Tutor")); int recordNumber = 0;
+}
+<div id="attendance-report-results" class="@(staffList ? "dashboard-card compact-class-card attendance-unified-results" : "class-form-card")" data-report-results data-report-total="@Model.Total">
+    @if (staffList)
     {
-        <p class="text-muted">Previewing @Model.Rows.Count records. Excel and the print view include all matching records, up to 5,000. Narrow the filters for larger reports.</p>
+        <div class="dashboard-card-header"><h2><i class="bi bi-list-check me-2" aria-hidden="true"></i> Attendance Records</h2><span class="text-muted">@Model.Total record(s)</span></div>
     }
-    @if (Model.ExportLimitExceeded)
+    else
     {
-        <div class="alert alert-warning">More than 5,000 records match. Narrow the date range or class before exporting or printing.</div>
+
+        <h2 class="h5">Attendance Records (@Model.Total)</h2>
     }
+    <div class="@(staffList ? "attendance-result-summary" : "")">
+        <p class="text-muted">@Model.Filter.From.ToString("dd MMM yyyy") – @Model.Filter.To.ToString("dd MMM yyyy") · MYT (UTC+8). Submitted and ended lessons only; unrecorded attendance is not absence.</p>
+        @if (!Model.IsPrint && Model.Total > Model.Rows.Count)
+        {
+            <p class="text-muted">Previewing @Model.Rows.Count records. Excel and the print view include all matching records, up to 5,000. Narrow the filters for larger reports.</p>
+        }
+        @if (Model.ExportLimitExceeded)
+        {
+            <div class="alert alert-warning">More than 5,000 records match. Narrow the date range or class before exporting or printing.</div>
+        }
+    </div>
     @if (Model.Total == 0)
     {
         <div class="alert alert-info">No published attendance records match these filters.</div>
@@ -18,30 +31,49 @@
     else
     {
         <div class="table-responsive">
-            <table class="table align-middle">
-                <thead><tr><th scope="col">Date / Time</th><th scope="col">Class / Tutor</th><th scope="col">Student</th><th scope="col">Status</th><th scope="col">Remark</th>@if (Model.CanCorrect && !Model.IsPrint) {
-                <th scope="col">Actions</th>
-            }
-</tr></thead>
+            <table class="table align-middle @(staffList ? "compact-class-table" : "")" data-server-paged="@(Model.IsPrint ? "true" : "false")">
+                <thead>
+                    <tr>
+                        @if (staffList)
+                        {
+                            <th scope="col" class="number-column column-number">No.</th>
+                        }
+                        <th scope="col">Date / Time</th>
+                        <th scope="col">Class / Tutor</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Remark</th>@if (Model.CanCorrect && !Model.IsPrint) {
+                        <th scope="col">Actions</th>
+                    }
+                </tr>
+            </thead>
             <tbody>
                 @foreach (var row in Model.Rows)
                 {
+                    recordNumber++;
                     <tr>
+                        @if (staffList)
+                        {
+                            <td class="number-column">@recordNumber</td>
+                        }
                         <td>@row.Date.ToString("dd MMM yyyy")<br /><small>@row.Start.ToString("HH:mm")–@row.End.ToString("HH:mm")<br />@(row.Replacement ? "Replacement" : "Regular")</small></td>
-                        <td><strong>@row.ClassCode</strong><br />@row.Tutor<br />@if (row.ScheduleChanged) {
-                        <small class="text-danger">Schedule changed · check before reporting totals</small>
-                    }
-</td>
+                        <td>
+                            <strong>@row.ClassCode</strong><br />@row.Tutor<br />@if (row.ScheduleChanged) {
+                            <small class="text-danger">Schedule changed · check before reporting totals</small>
+                        }
+                    </td>
                     <td><strong>@row.StudentName</strong><br /><small>@row.StudentNumber</small></td>
                     <td><span class="tutor-management-badge @(row.Status == AttendanceStatus.Present ? "tutor-badge-success" : row.Status == AttendanceStatus.Absent ? "tutor-badge-inactive" : "tutor-badge-pending")">@(row.Status?.ToString() ?? "Unrecorded")</span></td>
                     <td>@(row.Remark ?? "—")</td>
                     @if (Model.CanCorrect && !Model.IsPrint)
                     {
-                        <td>@if (row.CanRequest) {
-                        <a asp-controller="AttendanceCorrections" asp-action="Create" asp-route-recordId="@row.RecordId" class="outline-button">Request Correction</a>
+                        <td>
+                            @if (row.CanRequest)
+                            {
+                                <a asp-controller="AttendanceCorrections" asp-action="Create" asp-route-recordId="@row.RecordId" class="btn btn-sm btn-outline-secondary class-details-button">Request Correction</a>
+                            }
+                        </td>
                     }
-</td>
-                                        }
                 </tr>
                                 }
             </tbody>

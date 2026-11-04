@@ -1,51 +1,131 @@
 ﻿@model SecureSmartTuitionSystem.ViewModels.Learning.MaterialRow
+@using SecureSmartTuitionSystem.Services.Learning
 @{
-    ViewData["Title"] = "Material Details";
+    bool studentView = User.IsInRole("Student") && !User.IsInRole("Admin") && !User.IsInRole("Tutor");
+    ViewData["Title"] = studentView ? Model.Title : "Material Details";
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
 }
-<div class="learning-materials-page">
-    <div class="page-header"><div><h1>Material Details</h1><p>@Model.ClassCode · @Model.ClassName</p></div><a asp-action="Index" asp-route-ClassId="@Model.ClassId" asp-route-Status="all" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
+<div class="learning-materials-page @(studentView ? "student-material-page" : "")">
+    <div class="page-header">
+        <div>
+            <h1>@(studentView? Model.Title: "Material Details")</h1>
+            <p>@Model.ClassCode · @Model.ClassName</p>
+        </div>
+        <div class="material-actions d-flex flex-wrap align-items-center gap-2">
+            @if (Model.CanManage)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit</a>
+                <form asp-action="ChangeStatus" method="post" data-confirm="@(Model.IsActive ? "Set this material to inactive? Students will no longer be able to access it." : "Reactivate this material for enrolled students?")">
+                    @Html.AntiForgeryToken()
+                    <input name="id" type="hidden" value="@Model.Id" />
+                    <input name="rowVersion" type="hidden" value="@Model.RowVersion" />
+                    <input name="active" type="hidden" value="@(!Model.IsActive ? "true" : "false")" />
+                    <button type="submit" class="outline-button">@(Model.IsActive ? "Set Inactive" : "Reactivate")</button>
+                </form>
+            }
+            <a asp-action="Index" asp-route-ClassId="@Model.ClassId" asp-route-Status="all" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
+        </div>
+    </div>
     @if (TempData["MaterialSuccess"] is string success)
     {
         <div class="alert alert-success" role="status" data-success-timeout="5000">@success</div>
     }
-    <div class="class-form-card">
-        <div class="material-list-heading"><h2>@Model.Title</h2><span class="material-badge @(Model.IsActive ? "is-active" : "is-inactive")">@(Model.IsActive ? "Active" : "Inactive")</span></div>
-        @if (!Model.IsActive)
+    <div class="class-form-card @(studentView ? "student-material-card" : "staff-material-detail-card")">
+        @if (studentView)
         {
-            <div class="alert alert-info">This material is inactive and unavailable to students.</div>
+            <div class="student-material-summary">
+                <div class="student-material-context"><span class="student-material-subject">@Model.Level · @Model.Subject</span><span><i class="bi bi-person" aria-hidden="true"></i> @Model.Tutor</span></div>
+                <p>Updated @Model.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy · HH:mm") MYT</p>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <p class="material-description student-material-notes">@Model.Description</p>
+            }
         }
-        <dl class="material-details">
-            <div><dt>Subject &amp; Level</dt><dd>@Model.Level · @Model.Subject</dd></div>
-            <div><dt>Assigned Tutor</dt><dd>@Model.Tutor</dd></div>
-            <div><dt>Attachments</dt><dd>@Model.FileCount files</dd></div>
-            <div><dt>Uploaded (MYT)</dt><dd>@Model.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm")</dd></div>
-            <div><dt>Updated (MYT)</dt><dd>@Model.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm")</dd></div>
-        </dl>
-        <h3 class="h6">Description</h3><p class="material-description">@(string.IsNullOrWhiteSpace(Model.Description) ? "No description provided." : Model.Description)</p>
-        <h3 class="h6">Attachments (@Model.FileCount)</h3>
-        <ul class="list-unstyled">
+        else
+        {
+            <div class="material-list-heading"><h2>@Model.Title</h2><span class="material-badge @(Model.IsActive ? "is-active" : "is-inactive")">@(Model.IsActive ? "Active" : "Inactive")</span></div>
+            @if (!Model.IsActive)
+            {
+                <div class="alert alert-info">This material is inactive and unavailable to students.</div>
+            }
+            <dl class="material-detail-overview">
+                <div><dt>Subject &amp; Level</dt><dd>@Model.Level · @Model.Subject</dd></div>
+                <div><dt>Assigned Tutor</dt><dd>@Model.Tutor</dd></div>
+            </dl>
+            <div class="material-detail-dates">
+                <span>Uploaded @Model.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy · HH:mm") MYT</span>
+                <span>Updated @Model.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy · HH:mm") MYT</span>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <section class="material-detail-description" aria-label="Description">
+                    <h3 class="h6">Description</h3>
+                    <p class="material-description">@Model.Description</p>
+                </section>
+            }
+        }
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 @(studentView ? "student-files-heading" : "")">
+            <h3 class="h6 mb-0">Files <span class="student-files-count">@Model.FileCount</span></h3>
+            @if (Model.FileCount > 1)
+            {
+                <a asp-action="DownloadAll" asp-route-id="@Model.Id" class="outline-button"><i class="bi bi-download" aria-hidden="true"></i> Download All</a>
+            }
+        </div>
+        @if (studentView)
+        {
+            <p class="student-files-hint">Select a PDF or image to preview it. Office files download directly.</p>
+        }
+        <ul class="@(studentView ? "student-material-files" : "staff-material-detail-files")">
             @foreach (var file in Model.Attachments)
             {
-                <li class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom py-3">
-                    <span>@file.Name <small class="text-muted">· @file.SizeLabel</small></span>
-                    <a asp-action="Download" asp-route-id="@Model.Id" asp-route-attachmentId="@(file.Id == 0 ? (int?)null : file.Id)" class="outline-button"><i class="bi bi-download" aria-hidden="true"></i> Download</a>
+                var previewType = MaterialFileService.PreviewContentType(file.Name);
+                var previewUrl = Url.Action("Preview", "LearningMaterials", new { id = Model.Id, attachmentId = file.Id == 0 ? (int?)null : file.Id });
+                <li class="@(studentView ? "student-file-card" : "staff-material-detail-file")">
+                    <div class="material-file-caption">
+                        @if (previewType?.StartsWith("image/") == true)
+                        {
+                            <a href="@previewUrl" target="_blank" rel="noopener" class="material-thumbnail" data-material-preview data-preview-name="@file.Name" data-preview-type="@previewType" aria-label="@($"Preview {file.Name} in a new tab")"><img src="@previewUrl" alt="@file.Name" loading="lazy" /></a>
+                        }
+                        else
+                        {
+
+                            <i class="bi bi-file-earmark-text material-attachment-icon" aria-hidden="true"></i>
+                        }
+                        <div class="student-file-text">
+                            @if (studentView && previewType != null)
+                            {
+                                <a href="@previewUrl" target="_blank" rel="noopener" class="student-file-name" data-material-preview data-preview-name="@file.Name" data-preview-type="@previewType">@file.Name</a>
+                            }
+                            else if (studentView)
+                            {
+                                <a asp-action="Download" asp-route-id="@Model.Id" asp-route-attachmentId="@(file.Id == 0 ? (int?)null : file.Id)" class="student-file-name">@file.Name</a>
+                            }
+                            else
+                            {
+
+                                <span>@file.Name</span>
+                            }
+                            <small class="text-muted d-block">@file.SizeLabel</small>
+                        </div>
+                    </div>
+                    <div class="material-actions">
+                        @if (!studentView && previewType != null)
+                        {
+                            <a href="@previewUrl" target="_blank" rel="noopener" class="outline-button" data-material-preview data-preview-name="@file.Name" data-preview-type="@previewType">Preview</a>
+                        }
+                        <a asp-action="Download" asp-route-id="@Model.Id" asp-route-attachmentId="@(file.Id == 0 ? (int?)null : file.Id)" class="outline-button"><i class="bi bi-download" aria-hidden="true"></i> Download</a>
+                    </div>
                 </li>
             }
         </ul>
-        <div class="class-form-actions material-actions">
 
-            @if (Model.CanManage)
-            {
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="outline-button">Edit</a>
-                <form asp-action="ChangeStatus" method="post" data-confirm="@(Model.IsActive ? "Set this material to inactive? Students will no longer be able to access it." : "Reactivate this material for enrolled students?")">
-                    @Html.AntiForgeryToken()<input name="id" type="hidden" value="@Model.Id" /><input name="rowVersion" type="hidden" value="@Model.RowVersion" /><input name="active" type="hidden" value="@(!Model.IsActive ? "true" : "false")" />
-                    <button type="submit" class="outline-button">@(Model.IsActive ? "Set Inactive" : "Reactivate")</button>
-                </form>
-            }
-        </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/learning-materials-preview.js" asp-append-version="true"></script>
+}

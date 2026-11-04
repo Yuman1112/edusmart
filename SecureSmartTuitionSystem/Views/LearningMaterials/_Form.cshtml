@@ -1,4 +1,5 @@
 ﻿@model SecureSmartTuitionSystem.ViewModels.Learning.MaterialForm
+@using SecureSmartTuitionSystem.Services.Learning
 <div asp-validation-summary="All" class="alert alert-danger material-validation" role="alert"></div>
 <input asp-for="Id" type="hidden" />
 <input asp-for="RowVersion" type="hidden" />
@@ -34,22 +35,47 @@
                 <button type="button" class="outline-button" data-add-files hidden><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Files</button>
             </div>
             <input asp-for="Files" type="file" multiple class="form-control" accept=".pdf,.docx,.pptx,.xlsx,.png,.jpg,.jpeg" />
-            <p class="material-attachment-empty" data-file-empty hidden>No files added yet. Choose Add Files to attach your materials.</p>
-            <div data-file-list>
-                @foreach (var file in Model.CurrentFiles)
-                {
-                    bool removed = Model.RemovedAttachmentIds.Contains(file.Id);
-                    <div class="material-attachment-row" data-saved-file data-size="@file.Size" data-removed="@(removed ? "true" : "false")">
-                        <div><i class="bi bi-file-earmark-text material-attachment-icon" aria-hidden="true"></i><span>@file.Name</span><small class="text-muted d-block">@file.SizeLabel · <span data-file-state>@(removed ? "Pending removal" : "Saved")</span></small></div>
-                        <input type="hidden" name="RemovedAttachmentIds" value="@file.Id" disabled="@(!removed)" />
-                        <button type="button" class="outline-button" data-toggle-remove aria-label="@(removed ? $"Undo removal of {file.Name}" : $"Remove {file.Name}")">@(removed ? "Undo" : "×")</button>
-                    </div>
-                }
+            <div class="material-drop-zone" data-file-drop hidden role="region" aria-label="Add material files by dropping or choosing files">
+                <div class="material-drop-prompt" data-file-empty hidden>
+                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                    <div><strong>Drag and drop files here</strong><span>or choose Add Files above.</span></div>
+                </div>
+                <div data-file-list>
+                    @foreach (var file in Model.CurrentFiles)
+                    {
+                        bool removed = Model.RemovedAttachmentIds.Contains(file.Id);
+                        string? previewType = MaterialFileService.PreviewContentType(file.Name);
+                        string? previewUrl = Url.Action("Preview", "LearningMaterials", new { id = Model.Id, attachmentId = file.Id == 0 ? (int?)null : file.Id });
+                        <div class="material-attachment-row" data-saved-file data-size="@file.Size" data-removed="@(removed ? "true" : "false")">
+                            <div>
+                                @if (previewType?.StartsWith("image/") == true)
+                                {
+                                    <a href="@previewUrl" target="_blank" rel="noopener" class="material-thumbnail" data-material-preview data-preview-name="@file.Name" data-preview-type="@previewType" aria-label="@($"Preview {file.Name} in a new tab")"><img src="@previewUrl" alt="@file.Name" loading="lazy" /></a>
+                                }
+                                else
+                                {
+
+                                    <i class="bi bi-file-earmark-text material-attachment-icon" aria-hidden="true"></i>
+                                }
+                                <span>@file.Name</span><small class="text-muted d-block">@file.SizeLabel · <span data-file-state>@(removed ? "Pending removal" : "Saved")</span></small>
+                            </div>
+                            <input type="hidden" name="RemovedAttachmentIds" value="@file.Id" disabled="@(!removed)" />
+                            @if (previewType != null)
+                            {
+                                <a href="@previewUrl" target="_blank" rel="noopener" class="outline-button material-file-preview" data-material-preview data-preview-name="@file.Name" data-preview-type="@previewType">Preview</a>
+                            }
+                            <button type="button" class="outline-button" data-toggle-remove aria-label="@(removed ? $"Undo removal of {file.Name}" : $"Remove {file.Name}")">@(removed ? "Undo" : "×")</button>
+                        </div>
+                    }
+                </div>
             </div>
             <p class="material-field-error" data-file-error role="alert" hidden></p>
             <span asp-validation-for="Files" class="material-field-error"></span>
-            <p class="form-text material-attachment-save-note">@(Model.Id == 0 ? "Files will be uploaded when you select Upload Material." : "Add or remove attachments, then select Save Changes to apply.")</p>
-            <p class="form-text">PDF, Word, PowerPoint, Excel or images · Up to 10 files · 10 MB each · 30 MB total.</p>
+            <div class="form-text mt-3 mb-0 d-flex flex-wrap align-items-center gap-2">
+                <span>PDF, DOCX, PPTX, XLSX, PNG, JPG, JPEG</span>
+                <span aria-hidden="true" class="mx-1">|</span>
+                <span>Max. 10 files · 10 MB/file · 30 MB total</span>
+            </div>
         </div>
     </div>
 </div>
