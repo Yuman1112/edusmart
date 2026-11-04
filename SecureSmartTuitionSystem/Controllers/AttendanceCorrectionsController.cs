@@ -14,10 +14,10 @@ public sealed class AttendanceCorrectionsController(ApplicationDbContext db, Use
     private string OwnId => users.GetUserId(User)!;
     private string Role => User.IsInRole("Admin") ? "Admin" : User.IsInRole("Tutor") ? "Tutor" : "Student";
     [HttpGet]
-    public async Task<IActionResult> Index(string status = "pending")
+    public async Task<IActionResult> Index(string status = "pending", string sort = "requested_asc")
     {
-        if (!ModelState.IsValid || status is not ("pending" or "approved" or "rejected" or "all")) return BadRequest();
-        return View(await new AttendanceCorrectionService(db).ListAsync(OwnId, Role == "Admin", status));
+        if (!ModelState.IsValid || status is not ("pending" or "approved" or "rejected" or "all") || !AttendanceCorrectionService.ValidSort(sort)) return BadRequest();
+        return View(await new AttendanceCorrectionService(db).ListAsync(OwnId, Role == "Admin", status, sort));
     }
     [HttpGet]
     [Authorize(Roles = "Tutor,Student")]

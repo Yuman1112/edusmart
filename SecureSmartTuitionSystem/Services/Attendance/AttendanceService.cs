@@ -11,6 +11,24 @@ using SecureSmartTuitionSystem.ViewModels.Enrollment;
 namespace SecureSmartTuitionSystem.Services.Attendance;
 public sealed class AttendanceService(ApplicationDbContext db)
 {
+    public static bool ValidSort(string? sort) => sort is "date_asc" or "date_desc" or "class_asc" or "class_desc" or "tutor_asc" or "tutor_desc" or "state_asc" or "state_desc";
+    private static int StateOrder(string state) => state switch { "Upcoming" => 0, "Unrecorded" => 1, "Draft" => 2, "Submitted" => 3, "Locked" => 4, _ => 5 };
+    public static List<AttendanceLessonRow> SortLessons(IEnumerable<AttendanceLessonRow> rows, string sort)
+    {
+        var ordered = sort switch
+        {
+            "date_desc" => rows.OrderByDescending(x => x.Date).ThenByDescending(x => x.Start),
+            "class_asc" => rows.OrderBy(x => x.ClassCode, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Date),
+            "class_desc" => rows.OrderByDescending(x => x.ClassCode, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Date),
+            "tutor_asc" => rows.OrderBy(x => x.TutorName, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Date),
+            "tutor_desc" => rows.OrderByDescending(x => x.TutorName, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Date),
+            "state_asc" => rows.OrderBy(x => StateOrder(x.State)).ThenBy(x => x.Date),
+            "state_desc" => rows.OrderByDescending(x => StateOrder(x.State)).ThenBy(x => x.Date),
+            _ => rows.OrderBy(x => x.Date).ThenBy(x => x.Start)
+        };
+        return ordered.ThenBy(x => x.Start).ThenBy(x => x.ClassCode).ThenBy(x => x.ClassSessionId).ThenBy(x => x.SavedId).ThenBy(x => x.ChangeId).ToList();
+    }
+
     public static bool Editable(DateTime date, TimeOnly start, TimeOnly end, DateTime? submitted, DateTime now) =>
         submitted == null && start < end && now >= date.Date.Add(start.ToTimeSpan()) && now < date.Date.Add(end.ToTimeSpan());
     public static string State(DateTime date, TimeOnly start, TimeOnly end, DateTime? submitted, bool saved, DateTime now) =>
@@ -36,10 +54,10 @@ public sealed class AttendanceService(ApplicationDbContext db)
             .Select(x => x.StudentIdsJson).SingleAsync();
         return (JsonSerializer.Deserialize<List<int>>(json) ?? []).Distinct().ToList();
     }
-    public async Task<AttendanceIndexViewModel> IndexAsync(DateTime date, string userId, bool admin)
+    public async Task<AttendanceIndexViewModel> IndexAsync(DateTime date, string userId, bool admin, string sort = "date_asc")
     {
         var monday = date.Date.AddDays(-(((int)date.DayOfWeek + 6) % 7));
-        var model = new AttendanceIndexViewModel { WeekStart = monday, IsAdmin = admin };
+        var model = new AttendanceIndexViewModel { WeekStart = monday, IsAdmin = admin, Sort = sort };
         var saved = await Saved(userId, admin).Where(x => x.LessonDate >= monday && x.LessonDate <= model.WeekEnd).ToListAsync();
         var lessons = await new ClassScheduleService(db).GetLessonsAsync(monday, model.WeekEnd, admin ? null : userId);
         var now = ClassScheduleService.Now;
@@ -75,7 +93,7 @@ public sealed class AttendanceService(ApplicationDbContext db)
                 End = record.EndTime,
                 State = State(record.LessonDate, record.StartTime, record.EndTime, record.SubmittedAtUtc, true, now)
             });
-        model.Lessons = model.Lessons.OrderBy(x => x.Date).ThenBy(x => x.Start).ThenBy(x => x.ClassCode).ToList();
+        model.Lessons = SortLessons(model.Lessons, sort);
         return model;
     }
     public async Task<AttendanceSheetViewModel?> SheetAsync(int classId, DateTime date, int? changeId, bool replacement, int? savedId, string userId, bool admin)

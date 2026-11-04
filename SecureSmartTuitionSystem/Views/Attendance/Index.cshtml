@@ -1,7 +1,7 @@
 @model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceIndexViewModel
 
 @{
-    ViewData["Title"] = "Attendance Management";
+    ViewData["Title"] = "Class Attendance";
 }
 
 @section Styles {
@@ -14,7 +14,7 @@
 <div class="attendance-page attendance-list-page">
     <div class="page-header">
         <div>
-            <h1>Attendance Management</h1>
+            <h1>Class Attendance</h1>
             <p>
                 @(Model.IsAdmin
                                 ? "Review attendance for scheduled classes."
@@ -24,12 +24,23 @@
     </div>
 
     <div class="class-filter-card">
-        <div class="class-filter-heading"><div><h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Attendance</h2><p>Select a week to view scheduled lessons.</p></div></div>
-        <form asp-action="Index"
-              method="get" data-live-filter
-              class="row g-3 align-items-end">
+        <div class="class-filter-heading">
+            <div>
+                <h2>
+                    <i class="bi bi-funnel" aria-hidden="true"></i>
+                    Filter Attendance
+                </h2>
+                <p>Select a week to view scheduled lessons.</p>
+            </div>
+        </div>
 
-            <div class="col-12 col-md-6">
+        <div class="attendance-week-toolbar">
+            <form asp-action="Index" asp-route-sort="@Model.Sort"
+                  method="get"
+                  data-live-filter
+                  class="attendance-week-filter">
+                <input type="hidden" name="sort" value="@Model.Sort" />
+
                 <label for="attendance-week" class="form-label">
                     Date Within Week
                 </label>
@@ -42,31 +53,36 @@
                        max="2100-12-31"
                        required
                        class="form-control" />
+
+                <noscript>
+                    <button type="submit" class="primary-button mt-2">
+                        View Lessons
+                    </button>
+                </noscript>
+            </form>
+
+            <div class="attendance-week-navigation"
+                 role="group"
+                 aria-label="Choose attendance week">
+
+                <a asp-action="Index" asp-route-sort="@Model.Sort"
+                   asp-route-week="@Model.WeekStart.AddDays(-7).ToString("yyyy-MM-dd")"
+                   class="outline-button">
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                    Previous Week
+                </a>
+
+                <a asp-action="Index" asp-route-sort="@Model.Sort" class="outline-button">
+                    This Week
+                </a>
+
+                <a asp-action="Index" asp-route-sort="@Model.Sort"
+                   asp-route-week="@Model.WeekStart.AddDays(7).ToString("yyyy-MM-dd")"
+                   class="outline-button">
+                    Next Week
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </a>
             </div>
-
-            <div class="col-12 col-md-6">
-                <button type="submit" class="primary-button">
-                    View Lessons
-                </button>
-            </div>
-        </form>
-
-        <div class="d-flex flex-wrap gap-2 mt-3">
-            <a asp-action="Index"
-               asp-route-week="@Model.WeekStart.AddDays(-7).ToString("yyyy-MM-dd")"
-               class="outline-button">
-                Previous Week
-            </a>
-
-            <a asp-action="Index" class="outline-button">
-                This Week
-            </a>
-
-            <a asp-action="Index"
-               asp-route-week="@Model.WeekStart.AddDays(7).ToString("yyyy-MM-dd")"
-               class="outline-button">
-                Next Week
-            </a>
         </div>
     </div>
 
@@ -98,66 +114,73 @@
                     <thead>
                         <tr>
                             <th scope="col" class="number-column column-number">No.</th>
-                            <th scope="col">Date / Time</th>
-                            <th scope="col">Class</th>
-                            <th scope="col">Tutor</th>
-                            <th scope="col">Type</th>
-                            <th scope="col">Attendance</th>
-                            <th scope="col">Actions</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @{
-                            int lessonNumber = 0;
-                        }
-                        @foreach (var row in Model.Lessons)
+                            <th scope="col" aria-sort='@(Model.Sort == "date_asc" ? "ascending" : Model.Sort == "date_desc" ? "descending" : "none")'><a class="attendance-sort-link" asp-action="Index" asp-route-week="@Model.WeekStart.ToString("yyyy-MM-dd")" asp-route-sort='@(Model.Sort == "date_asc" ? "date_desc" : "date_asc")'>Date / Time <i class='bi @(Model.Sort == "date_asc" ? "bi-arrow-up" : Model.Sort == "date_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a></th>
+                            <th scope="col" aria-sort='@(Model.Sort == "class_asc" ? "ascending" : Model.Sort == "class_desc" ? "descending" : "none")'><a class="attendance-sort-link" asp-action="Index" asp-route-week="@Model.WeekStart.ToString("yyyy-MM-dd")" asp-route-sort='@(Model.Sort == "class_asc" ? "class_desc" : "class_asc")'>Class <i class='bi @(Model.Sort == "class_asc" ? "bi-arrow-up" : Model.Sort == "class_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a></th>
+                            <th scope="col" aria-sort='@(Model.Sort == "tutor_asc" ? "ascending" : Model.Sort == "tutor_desc" ? "descending" : "none")'>@if (Model.IsAdmin) {
+                            <a class="attendance-sort-link" asp-action="Index" asp-route-week="@Model.WeekStart.ToString("yyyy-MM-dd")" asp-route-sort='@(Model.Sort == "tutor_asc" ? "tutor_desc" : "tutor_asc")'>Tutor <i class='bi @(Model.Sort == "tutor_asc" ? "bi-arrow-up" : Model.Sort == "tutor_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a>
+                        } else
                         {
-                            lessonNumber++;
-                            <tr>
-                                <td class="number-column">@lessonNumber</td>
-                                <td>
-                                    @row.Date.ToString("ddd, dd MMM yyyy")
-                                    <br />
-                                    <small>
-                                        @row.Start.ToString("HH:mm")–@row.End.ToString("HH:mm")
-                                    </small>
-                                </td>
 
-                                <td>
-                                    <strong>@row.ClassCode</strong>
-                                    <br />
-                                    <small>@row.ClassName</small>
-                                </td>
-
-                                <td>@row.TutorName</td>
-
-                                <td>
-                                    @(row.Replacement ? "Replacement" : "Regular")
-                                </td>
-
-                                <td>
-                                    <span class="tutor-management-badge @(row.State == "Submitted" ? "tutor-badge-success" : "tutor-badge-pending")">
-                                        @row.State
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <a asp-action="Sheet"
-                                       asp-route-classId="@row.ClassSessionId"
-                                       asp-route-date="@row.Date.ToString("yyyy-MM-dd")"
-                                       asp-route-changeId="@row.ChangeId"
-                                       asp-route-replacement="@row.Replacement"
-                                       asp-route-savedId="@row.SavedId"
-                                       class="btn btn-sm btn-outline-secondary class-details-button">
-                                        <i class="bi bi-eye" aria-hidden="true"></i> Open Attendance
-                                    </a>
-                                </td>
-                            </tr>
+                            <span>Tutor</span>
                         }
-                    </tbody>
-                </table>
-            </div>
-        }
+</th>
+                        <th scope="col">Type</th>
+                        <th scope="col" aria-sort='@(Model.Sort == "state_asc" ? "ascending" : Model.Sort == "state_desc" ? "descending" : "none")'><a class="attendance-sort-link" asp-action="Index" asp-route-week="@Model.WeekStart.ToString("yyyy-MM-dd")" asp-route-sort='@(Model.Sort == "state_asc" ? "state_desc" : "state_asc")'>Attendance <i class='bi @(Model.Sort == "state_asc" ? "bi-arrow-up" : Model.Sort == "state_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a></th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @{
+                        int lessonNumber = 0;
+                    }
+                    @foreach (var row in Model.Lessons)
+                    {
+                        lessonNumber++;
+                        <tr>
+                            <td class="number-column">@lessonNumber</td>
+                            <td>
+                                @row.Date.ToString("ddd, dd MMM yyyy")
+                                <br />
+                                <small>
+                                    @row.Start.ToString("HH:mm")–@row.End.ToString("HH:mm")
+                                </small>
+                            </td>
+
+                            <td>
+                                <strong>@row.ClassCode</strong>
+                                <br />
+                                <small>@row.ClassName</small>
+                            </td>
+
+                            <td>@row.TutorName</td>
+
+                            <td>
+                                @(row.Replacement ? "Replacement" : "Regular")
+                            </td>
+
+                            <td>
+                                <span class="tutor-management-badge @(row.State == "Submitted" ? "tutor-badge-success" : "tutor-badge-pending")">
+                                    @row.State
+                                </span>
+                            </td>
+
+                            <td>
+                                <a asp-action="Sheet"
+                                   asp-route-classId="@row.ClassSessionId"
+                                   asp-route-date="@row.Date.ToString("yyyy-MM-dd")"
+                                   asp-route-changeId="@row.ChangeId"
+                                   asp-route-replacement="@row.Replacement"
+                                   asp-route-savedId="@row.SavedId"
+                                   class="btn btn-sm btn-outline-secondary class-details-button">
+                                    <i class="bi bi-eye" aria-hidden="true"></i> Open Attendance
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+                }
     </div>
 </div>

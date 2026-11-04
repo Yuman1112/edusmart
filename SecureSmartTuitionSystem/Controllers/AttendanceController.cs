@@ -20,11 +20,11 @@ public sealed class AttendanceController(ApplicationDbContext db, UserManager<Ap
     private static bool ValidDate(DateTime date) => date.Year is >= 2000 and <= 2100;
     [HttpGet]
     [Authorize(Roles = "Admin,Tutor")]
-    public async Task<IActionResult> Index(DateTime? week)
+    public async Task<IActionResult> Index(DateTime? week, string sort = "date_asc")
     {
         var date = week?.Date ?? ClassScheduleService.Today;
-        if (!ModelState.IsValid || !ValidDate(date)) return BadRequest();
-        return View(await new AttendanceService(db).IndexAsync(date, OwnId, Admin));
+        if (!ModelState.IsValid || !ValidDate(date) || !AttendanceService.ValidSort(sort) || (!Admin && sort.StartsWith("tutor_", StringComparison.Ordinal))) return BadRequest();
+        return View(await new AttendanceService(db).IndexAsync(date, OwnId, Admin, sort));
     }
     [HttpGet]
     [Authorize(Roles = "Admin,Tutor")]

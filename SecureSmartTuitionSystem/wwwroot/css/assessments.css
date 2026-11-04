@@ -499,3 +499,236 @@
     margin-bottom: 20px;
     border-bottom: 1px solid var(--border);
 }
+/* Results Overview: scoped so assessment editors and lists keep their existing layout. */
+.assessment-progress-page .progress-main-filters {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.assessment-progress-page .progress-more-filters {
+    margin-top: 16px;
+}
+
+    .assessment-progress-page .progress-more-filters > summary {
+        color: var(--teal-dark);
+        font-size: .88rem;
+        cursor: pointer;
+    }
+
+.assessment-progress-page .progress-statistics > div {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 22px;
+}
+
+    .assessment-progress-page .progress-statistics > div > i {
+        width: 46px;
+        height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 13px;
+        background: #e8f7f8;
+        color: var(--teal-dark);
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+
+.assessment-progress-page .progress-statistics small {
+    margin: 0;
+}
+
+.assessment-progress-page .progress-statistics strong {
+    margin-top: 5px;
+}
+
+.assessment-progress-page .progress-results-heading {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.assessment-progress-page .progress-sort-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    font-size: .8rem;
+}
+
+    .assessment-progress-page .progress-sort-tools label {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .assessment-progress-page .progress-sort-tools .form-select {
+        width: 205px;
+        min-height: 36px;
+        font-size: .8rem;
+    }
+
+.assessment-progress-page .progress-status {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 18px;
+    font-size: .78rem;
+    white-space: nowrap;
+}
+
+    .assessment-progress-page .progress-status.is-graded {
+        background: #d5f8e8;
+        color: #087354;
+    }
+
+    .assessment-progress-page .progress-status.is-waiting {
+        background: #fff0d2;
+        color: #926000;
+    }
+
+    .assessment-progress-page .progress-status.is-pending {
+        background: #edf3f7;
+        color: #50677b;
+    }
+
+.assessment-progress-page .progress-subject-row {
+    display: grid;
+    grid-template-columns: minmax(100px,180px) minmax(80px,1fr) 65px;
+    align-items: center;
+    gap: 24px;
+    padding: 18px 0;
+}
+
+    .assessment-progress-page .progress-subject-row > strong {
+        text-align: right;
+    }
+
+.assessment-progress-page .progress-subject-track {
+    height: 8px;
+    background: #edf5f7;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+    .assessment-progress-page .progress-subject-track > span {
+        display: block;
+        height: 100%;
+        background: var(--teal);
+        border-radius: 20px;
+    }
+
+.assessment-progress-page .progress-subject-summary .assessment-note {
+    margin-bottom: 0;
+}
+
+@media(max-width:900px) {
+    .assessment-progress-page .progress-main-filters {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+    }
+
+    .assessment-progress-page .progress-sort-tools {
+        width: 100%;
+    }
+
+    .assessment-progress-page .progress-statistics > div {
+        padding: 16px;
+        gap: 10px;
+    }
+
+        .assessment-progress-page .progress-statistics > div > i {
+            display: none;
+        }
+}
+
+@media(max-width:600px) {
+    .assessment-progress-page .progress-main-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .assessment-progress-page .progress-subject-row {
+        grid-template-columns: minmax(90px,120px) minmax(40px,1fr) 50px;
+        gap: 12px;
+    }
+
+    .assessment-progress-page .progress-sort-tools .form-select {
+        flex: 1;
+        min-width: 170px;
+    }
+}
+
+/* Feedback dialog is outside the table so opening it never changes table geometry. */
+.assessment-progress-page .progress-feedback-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: var(--teal-dark);
+    font: inherit;
+    font-size: .8rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.assessment-feedback-dialog {
+    width: min(520px,calc(100% - 32px));
+    max-height: calc(100dvh - 48px);
+    margin: auto;
+    padding: 0;
+    overflow: auto;
+    border: 1px solid var(--border,#cfe4eb);
+    border-radius: 16px;
+    color: var(--navy,#073767);
+    background: #fff;
+    box-shadow: 0 20px 60px rgba(7,55,103,.18);
+}
+
+    .assessment-feedback-dialog::backdrop {
+        background: rgba(7,35,55,.35);
+    }
+
+    .assessment-feedback-dialog .progress-feedback-heading {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border,#cfe4eb);
+    }
+
+        .assessment-feedback-dialog .progress-feedback-heading h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+    .assessment-feedback-dialog .progress-feedback-body {
+        padding: 22px 24px;
+    }
+
+    .assessment-feedback-dialog .progress-feedback-context {
+        color: var(--muted,#627c96);
+        font-size: .88rem;
+        margin: 0 0 18px;
+        overflow-wrap: anywhere;
+    }
+
+        .assessment-feedback-dialog .progress-feedback-context strong {
+            color: var(--navy,#073767);
+        }
+
+    .assessment-feedback-dialog .progress-feedback-text {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin: 0;
+        line-height: 1.7;
+    }
+
+    .assessment-feedback-dialog .progress-feedback-date {
+        color: var(--muted,#627c96);
+        font-size: .8rem;
+        margin: 20px 0 0;
+    }

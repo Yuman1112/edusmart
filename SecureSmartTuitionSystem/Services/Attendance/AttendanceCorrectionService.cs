@@ -7,6 +7,23 @@ using SecureSmartTuitionSystem.ViewModels.Attendance;
 namespace SecureSmartTuitionSystem.Services.Attendance;
 public sealed class AttendanceCorrectionService(ApplicationDbContext db)
 {
+    public static bool ValidSort(string? sort) => sort is "requested_asc" or "requested_desc" or "lesson_asc" or "lesson_desc" or "student_asc" or "student_desc" or "status_asc" or "status_desc";
+    public static IOrderedQueryable<AttendanceCorrectionRequest> Order(IQueryable<AttendanceCorrectionRequest> query, string sort)
+    {
+        var ordered = sort switch
+        {
+            "requested_desc" => query.OrderByDescending(x => x.RequestedAtUtc),
+            "lesson_asc" => query.OrderBy(x => x.AttendanceRecord.AttendanceLesson.LessonDate).ThenBy(x => x.AttendanceRecord.AttendanceLesson.StartTime),
+            "lesson_desc" => query.OrderByDescending(x => x.AttendanceRecord.AttendanceLesson.LessonDate).ThenByDescending(x => x.AttendanceRecord.AttendanceLesson.StartTime),
+            "student_asc" => query.OrderBy(x => x.AttendanceRecord.StudentName).ThenBy(x => x.AttendanceRecord.StudentNumber),
+            "student_desc" => query.OrderByDescending(x => x.AttendanceRecord.StudentName).ThenByDescending(x => x.AttendanceRecord.StudentNumber),
+            "status_asc" => query.OrderBy(x => x.Decision),
+            "status_desc" => query.OrderByDescending(x => x.Decision),
+            _ => query.OrderBy(x => x.RequestedAtUtc)
+        };
+        return ordered.ThenBy(x => x.RequestedAtUtc).ThenBy(x => x.AttendanceCorrectionRequestId);
+    }
+
     private IQueryable<AttendanceRecord> Requestable(string userId, string role) => role is "Tutor" or "Student"
         ? new AttendanceReportService(db).Visible(userId, role) : db.Set<AttendanceRecord>().Where(x => false);
     public async Task<AttendanceCorrectionViewModel?> CreateModelAsync(int recordId, string userId, string role)
@@ -51,7 +68,7 @@ public sealed class AttendanceCorrectionService(ApplicationDbContext db)
         catch (SqlException ex) when (ex.Number == 1205)
         { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return "Another request changed this record. Reload and try again."; }
     }
-    public async Task<AttendanceCorrectionListViewModel> ListAsync(string userId, bool admin, string status)
+    public async Task<AttendanceCorrectionListViewModel> ListAsync(string userId, bool admin, string status, string sort = "requested_asc")
     {
         var query = db.Set<AttendanceCorrectionRequest>().AsNoTracking().Where(x => admin || x.RequestedByUserId == userId);
         if (status != "all")
@@ -59,12 +76,13 @@ public sealed class AttendanceCorrectionService(ApplicationDbContext db)
             var state = status == "approved" ? CorrectionDecision.Approved : status == "rejected" ? CorrectionDecision.Rejected : CorrectionDecision.Pending;
             query = query.Where(x => x.Decision == state);
         }
-        var data = await query.Include(x => x.AttendanceRecord).ThenInclude(x => x.AttendanceLesson)
-            .OrderByDescending(x => x.RequestedAtUtc).Take(500).ToListAsync();
+        var data = await Order(query, sort).Include(x => x.AttendanceRecord).ThenInclude(x => x.AttendanceLesson)
+            .Take(500).ToListAsync();
         return new AttendanceCorrectionListViewModel
         {
             IsAdmin = admin,
             Status = status,
+            Sort = sort,
             Rows = data.Select(x => new AttendanceCorrectionListRow
             {
                 Id = x.AttendanceCorrectionRequestId,

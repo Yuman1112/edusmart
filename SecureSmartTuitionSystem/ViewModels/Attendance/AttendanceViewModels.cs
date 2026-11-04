@@ -4,6 +4,7 @@ using SecureSmartTuitionSystem.Models.Attendance;
 namespace SecureSmartTuitionSystem.ViewModels.Attendance;
 public sealed class AttendanceIndexViewModel
 {
+    public string Sort { get; set; } = "date_asc";
     public DateTime WeekStart { get; set; }
     public DateTime WeekEnd => WeekStart.AddDays(6);
     public bool IsAdmin { get; set; }

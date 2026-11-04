@@ -283,3 +283,135 @@
     flex-wrap: wrap;
     align-items: center;
 }
+
+/* Shared Attendance list spacing and tools. */
+.attendance-page.attendance-list-page > .class-filter-card,
+.attendance-page.attendance-unified-list > .class-filter-card {
+    margin-bottom: 20px;
+}
+
+.attendance-page .attendance-correction-filter {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    align-items: end;
+}
+
+    .attendance-page .attendance-correction-filter > div {
+        min-width: 0;
+    }
+
+    .attendance-page .attendance-correction-filter .form-select {
+        width: 100%;
+    }
+
+.attendance-page .attendance-record-header,
+.attendance-page .attendance-header-actions,
+.attendance-page .attendance-export-toolbar form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.attendance-page .attendance-record-header {
+    justify-content: space-between;
+}
+
+.attendance-page .attendance-header-actions {
+    justify-content: flex-end;
+}
+
+.attendance-page .attendance-export-toolbar form {
+    margin: 0;
+    gap: 8px;
+}
+
+.attendance-page .attendance-export-toolbar [hidden] {
+    display: none !important;
+}
+
+.attendance-page .attendance-list-note {
+    margin: 14px 0 0;
+    font-size: .84rem;
+}
+
+.attendance-page .attendance-unified-results > .table-responsive .table,
+.attendance-page .attendance-lessons-card > .table-responsive .table {
+    margin-bottom: 0;
+}
+
+@media (max-width: 991.98px) {
+    .attendance-page .attendance-correction-filter {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .attendance-page .attendance-correction-filter {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .attendance-page .attendance-header-actions {
+        justify-content: flex-start;
+        width: 100%;
+    }
+}
+
+/* Class Attendance: date and week navigation on one row. */
+.attendance-list-page .attendance-week-toolbar {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) auto;
+    align-items: end;
+    gap: 24px;
+}
+
+.attendance-list-page .attendance-week-filter {
+    min-width: 0;
+    margin: 0;
+}
+
+    .attendance-list-page .attendance-week-filter .form-control {
+        width: 100%;
+        min-height: 42px;
+    }
+
+.attendance-list-page .attendance-week-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+    .attendance-list-page .attendance-week-navigation .outline-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 42px;
+        white-space: nowrap;
+    }
+
+@media (max-width: 1199.98px) {
+    .attendance-list-page .attendance-week-toolbar {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+}
+
+/* Sort headers use the same visual language as Class Sessions. */
+.attendance-page .attendance-sort-link {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+    .attendance-page .attendance-sort-link:hover {
+        color: var(--teal);
+    }
+
+    .attendance-page .attendance-sort-link .bi {
+        font-size: .8em;
+    }

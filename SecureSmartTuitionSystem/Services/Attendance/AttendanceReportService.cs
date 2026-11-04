@@ -7,7 +7,24 @@ using SecureSmartTuitionSystem.ViewModels.Attendance;
 namespace SecureSmartTuitionSystem.Services.Attendance;
 public sealed class AttendanceReportService(ApplicationDbContext db)
 {
-    public static bool Valid(AttendanceReportFilter filter) => filter.From.Year >= 2000 && filter.To.Year <= 2100
+    public static bool ValidSort(string? sort) => sort is "date_asc" or "date_desc" or "class_asc" or "class_desc" or "student_asc" or "student_desc" or "status_asc" or "status_desc";
+    public static IOrderedQueryable<AttendanceRecord> Order(IQueryable<AttendanceRecord> query, string sort)
+    {
+        var ordered = sort switch
+        {
+            "date_asc" => query.OrderBy(x => x.AttendanceLesson.LessonDate).ThenBy(x => x.AttendanceLesson.StartTime),
+            "class_asc" => query.OrderBy(x => x.AttendanceLesson.ClassCode).ThenBy(x => x.AttendanceLesson.TutorName),
+            "class_desc" => query.OrderByDescending(x => x.AttendanceLesson.ClassCode).ThenByDescending(x => x.AttendanceLesson.TutorName),
+            "student_asc" => query.OrderBy(x => x.StudentName).ThenBy(x => x.StudentNumber),
+            "student_desc" => query.OrderByDescending(x => x.StudentName).ThenByDescending(x => x.StudentNumber),
+            "status_asc" => query.OrderBy(x => x.Status == null ? 4 : (int)x.Status.Value),
+            "status_desc" => query.OrderByDescending(x => x.Status == null ? 4 : (int)x.Status.Value),
+            _ => query.OrderByDescending(x => x.AttendanceLesson.LessonDate).ThenByDescending(x => x.AttendanceLesson.StartTime)
+        };
+        return ordered.ThenByDescending(x => x.AttendanceLesson.LessonDate).ThenBy(x => x.AttendanceLesson.StartTime).ThenBy(x => x.AttendanceLesson.ClassCode).ThenBy(x => x.StudentNumber).ThenBy(x => x.AttendanceRecordId);
+    }
+
+    public static bool Valid(AttendanceReportFilter filter) => ValidSort(filter.Sort) && filter.From.Year >= 2000 && filter.To.Year <= 2100
         && filter.From.Date <= filter.To.Date && (filter.To.Date - filter.From.Date).TotalDays <= 366
         && (string.IsNullOrEmpty(filter.Status) || filter.Status is "1" or "2" or "3" or "unrecorded")
         && (!filter.ClassId.HasValue || filter.ClassId > 0) && (!filter.StudentId.HasValue || filter.StudentId > 0);
@@ -42,8 +59,7 @@ public sealed class AttendanceReportService(ApplicationDbContext db)
         else if (!string.IsNullOrEmpty(filter.Status)) { var status = (AttendanceStatus)int.Parse(filter.Status); query = query.Where(x => x.Status == status); }
         model.Total = await query.CountAsync();
         if (full && model.ExportLimitExceeded) return model;
-        model.Rows = await query.OrderBy(x => x.AttendanceLesson.LessonDate).ThenBy(x => x.AttendanceLesson.StartTime)
-            .ThenBy(x => x.AttendanceLesson.ClassCode).ThenBy(x => x.StudentNumber).Take(full ? 5000 : 500)
+        model.Rows = await Order(query, filter.Sort).Take(full ? 5000 : 500)
             .Select(x => new AttendanceReportRow
             {
                 RecordId = x.AttendanceRecordId,

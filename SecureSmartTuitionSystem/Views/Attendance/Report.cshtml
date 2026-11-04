@@ -26,6 +26,62 @@
             </p>
         </div>
 
+        @if (Model.CanExport && !Model.IsPrint)
+                {
+                    <div class="attendance-export-toolbar">
+                        <form asp-action="Download"
+                              method="post"
+                              class="d-flex flex-wrap gap-2">
+
+                            @Html.AntiForgeryToken()
+                            <input name="Sort" type="hidden" value="@Model.Filter.Sort" />
+
+                            <input name="From"
+                                   type="hidden"
+                                   value="@Model.Filter.From.ToString("yyyy-MM-dd")" />
+
+                            <input name="To"
+                                   type="hidden"
+                                   value="@Model.Filter.To.ToString("yyyy-MM-dd")" />
+
+                            <input name="ClassId"
+                                   type="hidden"
+                                   value="@Model.Filter.ClassId" />
+
+                            <input name="StudentId"
+                                   type="hidden"
+                                   value="@Model.Filter.StudentId" />
+
+                            <input name="Status"
+                                   type="hidden"
+                                   value="@Model.Filter.Status" />
+
+                            <button type="submit"
+                                    id="attendance-export"
+                                    class="primary-button"
+                                    disabled="@(Model.Total == 0 || Model.ExportLimitExceeded)">
+                                <i class="bi bi-download" aria-hidden="true"></i>
+                                Download Excel
+                            </button>
+
+                            <a id="attendance-print-link"
+                               hidden="@(Model.Total == 0 || Model.ExportLimitExceeded)"
+                               asp-action="Print"
+                               asp-route-Sort="@Model.Filter.Sort"
+                               asp-route-From="@Model.Filter.From.ToString("yyyy-MM-dd")"
+                               asp-route-To="@Model.Filter.To.ToString("yyyy-MM-dd")"
+                               asp-route-ClassId="@Model.Filter.ClassId"
+                               asp-route-StudentId="@Model.Filter.StudentId"
+                               asp-route-Status="@Model.Filter.Status"
+                               target="_blank"
+                               rel="noopener"
+                               class="outline-button">
+                                <i class="bi bi-printer" aria-hidden="true"></i> Print / Save as PDF
+                            </a>
+                        </form>
+                    </div>
+                }
+
         @if (!User.IsInRole("Admin")
             && !User.IsInRole("Tutor")
             && Model.CanCorrect)
@@ -41,6 +97,7 @@
     <div class="@(staff ? "class-filter-card" : "class-form-card mb-4")">
         @if (staff) { <div class="class-filter-heading"><div><h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Attendance Records</h2><p>Choose dates, class, student and attendance status.</p></div></div> }
         <form asp-action="Report" method="get" data-live-filter>
+            <input type="hidden" name="Sort" value="@Model.Filter.Sort" />
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-md-3">
                     <label for="attendance-from" class="form-label">
@@ -112,7 +169,7 @@
 
                 }
 
-                <div class="@(studentView ? "col-12 col-md-3" : "col-12 col-md-4")">
+                <div class="col-12 col-md-3">
                     <label for="attendance-status" class="form-label">
                         Attendance
                     </label>
@@ -153,62 +210,10 @@
         </form>
     </div>
 
-    @if (Model.CanExport)
-    {
-        <div class="attendance-export-toolbar mb-4">
-            <form asp-action="Download"
-                  method="post"
-                  class="d-flex flex-wrap gap-2">
-
-                @Html.AntiForgeryToken()
-
-                <input name="From"
-                       type="hidden"
-                       value="@Model.Filter.From.ToString("yyyy-MM-dd")" />
-
-                <input name="To"
-                       type="hidden"
-                       value="@Model.Filter.To.ToString("yyyy-MM-dd")" />
-
-                <input name="ClassId"
-                       type="hidden"
-                       value="@Model.Filter.ClassId" />
-
-                <input name="StudentId"
-                       type="hidden"
-                       value="@Model.Filter.StudentId" />
-
-                <input name="Status"
-                       type="hidden"
-                       value="@Model.Filter.Status" />
-
-                <button type="submit"
-                        id="attendance-export"
-                        class="primary-button"
-                        disabled="@(Model.Total == 0 || Model.ExportLimitExceeded)">
-                    <i class="bi bi-download" aria-hidden="true"></i>
-                    Download Excel
-                </button>
-
-                <a id="attendance-print-link"
-                   hidden="@(Model.Total == 0 || Model.ExportLimitExceeded)"
-                   asp-action="Print"
-                   asp-route-From="@Model.Filter.From.ToString("yyyy-MM-dd")"
-                   asp-route-To="@Model.Filter.To.ToString("yyyy-MM-dd")"
-                   asp-route-ClassId="@Model.Filter.ClassId"
-                   asp-route-StudentId="@Model.Filter.StudentId"
-                   asp-route-Status="@Model.Filter.Status"
-                   target="_blank"
-                   rel="noopener"
-                   class="outline-button">
-                    Print / Save as PDF
-                </a>
-            </form>
-        </div>
-    }
+    <partial name="_ReportResults" model="Model" />
 
     <p id="attendance-refresh-status"
-       class="text-muted"
+       class="text-muted attendance-list-note"
        role="status"
        data-refresh-url="@Url.Action("Report", new {
            From = Model.Filter.From.ToString("yyyy-MM-dd"),
@@ -216,12 +221,13 @@
            ClassId = Model.Filter.ClassId,
            StudentId = Model.Filter.StudentId,
            Status = Model.Filter.Status,
+           Sort = Model.Filter.Sort,
            fragment = true
        })">
         Records refresh automatically while this page is visible.
     </p>
 
-    <partial name="_ReportResults" model="Model" />
+
 </div>
 
 @section Scripts {

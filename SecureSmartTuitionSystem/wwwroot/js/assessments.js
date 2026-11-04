@@ -115,6 +115,34 @@
             document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshSubmissions(); });
             window.addEventListener('pagehide', () => { stopped = true; clearInterval(rosterTimer); });
         }
+        // Feedback opens outside the table flow, keeping row heights and column widths stable.
+        let feedbackDialog, feedbackBody, feedbackTrigger;
+        document.addEventListener('click', event => {
+            const button = event.target.closest('[data-progress-feedback]');
+            if (!button) return;
+            const template = button.parentElement.querySelector('template[data-progress-feedback-content]');
+            if (!template) return;
+            if (!feedbackDialog) {
+                feedbackDialog = document.createElement('dialog');
+                feedbackDialog.className = 'assessment-feedback-dialog';
+                feedbackDialog.setAttribute('aria-labelledby', 'assessment-feedback-title');
+                const header = document.createElement('div'); header.className = 'progress-feedback-heading';
+                const title = document.createElement('h2'); title.id = 'assessment-feedback-title'; title.textContent = 'Tutor Feedback';
+                const close = document.createElement('button'); close.type = 'button'; close.className = 'outline-button'; close.textContent = 'Close';
+                close.addEventListener('click', () => feedbackDialog.close());
+                header.append(title, close);
+                feedbackBody = document.createElement('div'); feedbackBody.className = 'progress-feedback-body';
+                feedbackDialog.append(header, feedbackBody); document.body.append(feedbackDialog);
+                feedbackDialog.addEventListener('close', () => { if (feedbackTrigger?.isConnected) feedbackTrigger.focus(); });
+                feedbackDialog.addEventListener('click', e => {
+                    const bounds = feedbackDialog.getBoundingClientRect();
+                    if (e.target === feedbackDialog && (e.clientX < bounds.left || e.clientX > bounds.right || e.clientY < bounds.top || e.clientY > bounds.bottom)) feedbackDialog.close();
+                });
+            }
+            feedbackTrigger = button;
+            feedbackBody.replaceChildren(template.content.cloneNode(true));
+            if (!feedbackDialog.open) feedbackDialog.showModal();
+        });
         let results = document.querySelector('[data-assessment-results]'); const filters = document.querySelector('[data-assessment-filter]'), status = document.querySelector('[data-assessment-refresh]');
         if (!results || !filters) return;
         let current = new URL(location.href), sequence = 0, abort, busy = false, searchTimer, saving = false, feedbackTimer;
@@ -123,12 +151,13 @@
         function dropdowns(dispose = false) { results.querySelectorAll('[data-bs-toggle=dropdown]').forEach(button => { const Dropdown = window.bootstrap?.Dropdown; if (!Dropdown) return; if (dispose) Dropdown.getInstance(button)?.dispose(); else Dropdown.getOrCreateInstance(button, { popperConfig: c => ({ ...c, strategy: 'fixed' }) }); }); }
         async function update(url = current, navigate = false, push = true) {
             if (saving) return;
+            if (document.querySelector('.assessment-feedback-dialog[open]')) return;
             if (!navigate && (busy || document.hidden || results.querySelector('.dropdown-menu.show') || (results.contains(document.activeElement) && document.activeElement?.matches('input,textarea,select')) || results.querySelector('details[open]'))) return;
             const nextUrl = new URL(url, location.href); if (nextUrl.origin !== location.origin) return;
             abort?.abort(); abort = new AbortController(); const controller = abort; const request = ++sequence; busy = true; const timeout = setTimeout(() => controller.abort(), 12000); nextUrl.searchParams.set('fragment', 'true');
             try {
                 const response = await fetch(nextUrl, { credentials: 'same-origin', cache: 'no-store', signal: controller.signal, headers: { Accept: 'text/html' } }); if (!response.ok || response.redirected || !response.headers.get('content-type')?.includes('text/html')) throw new Error();
-                const parsed = new DOMParser().parseFromString(await response.text(), 'text/html'), next = parsed.querySelector('[data-assessment-results]'); if (!next || parsed.querySelector('script')) throw new Error(); if (request !== sequence) return;
+                const parsed = new DOMParser().parseFromString(await response.text(), 'text/html'), next = parsed.querySelector('[data-assessment-results]'); if (!next || parsed.querySelector('script')) throw new Error(); if (request !== sequence || document.querySelector('.assessment-feedback-dialog[open]')) return;
                 const signature = fingerprint(next); if (navigate || signature !== previous) { dropdowns(true); results.replaceWith(next); results = next; previous = signature; dropdowns(); }
                 nextUrl.searchParams.delete('fragment'); current = nextUrl;
                 if (navigate) {
@@ -160,6 +189,12 @@
             } catch { if (notice) { notice.hidden = false; notice.className = 'alert alert-warning'; notice.textContent = 'Could not confirm the change. Check the latest status before trying again.'; } }
             finally { clearTimeout(postTimeout); saving = false; if (button) button.disabled = false; await update(current, true, false); }
         }, true);
+        // The results toolbar's select belongs to the filter form via its form attribute.
+        document.addEventListener('change', event => {
+            if (event.target.matches('[data-progress-sort]') && event.target.form === filters) {
+                clearTimeout(searchTimer); update(filterUrl(), true);
+            }
+        });
         function filterUrl() { const url = new URL(filters.action, location.href); for (const [key, value] of new FormData(filters)) url.searchParams.set(key, value); url.searchParams.set('Page', '1'); return url; }
         filters.addEventListener('submit', e => { e.preventDefault(); clearTimeout(searchTimer); update(filterUrl(), true); });
         filters.addEventListener('change', () => { clearTimeout(searchTimer); update(filterUrl(), true); });

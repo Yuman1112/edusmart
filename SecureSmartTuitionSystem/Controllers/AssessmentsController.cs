@@ -73,8 +73,13 @@ public sealed class AssessmentsController(ApplicationDbContext db) : Controller
     public async Task<IActionResult> ChangeState(int id, string? rowVersion, string command, bool json = false)
     {
         if (!AssessmentService.Tutor(User)) return Forbid();
+        var previous = ModelState.IsValid ? await Service.DetailsAsync(User, id) : null;
         var error = ModelState.IsValid ? await Service.ActionAsync(User, id, rowVersion, command) : "Check the request and reload.";
-        var message = error ?? (command == "release" ? "Results released to students and their linked parents." : "Assessment updated.");
+        bool draft = previous != null && !previous.Assessment.PublishedAtUtc.HasValue;
+        var message = error ?? (command == "release" ? "Results released to students and their linked parents."
+            : command == "deactivate" ? (draft ? "Draft archived. It remains hidden from students." : "Assessment set to inactive.")
+            : command == "reactivate" ? (draft ? "Draft restored. Publish it when ready; students cannot see it yet." : "Assessment reactivated.")
+            : "Assessment published.");
         if (json) return StatusCode(error == null ? 200 : 409, new { ok = error == null, message });
         TempData[error == null ? "AssessmentSuccess" : "AssessmentError"] = message;
         return RedirectToAction(nameof(Details), new { id });

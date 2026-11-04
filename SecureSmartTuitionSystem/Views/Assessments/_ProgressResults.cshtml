@@ -1,98 +1,144 @@
 ﻿@model SecureSmartTuitionSystem.ViewModels.Learning.AssessmentProgressModel
 @using SecureSmartTuitionSystem.Services.Learning
+@{
+    string SortUrl(string key) => Url.Action("Progress", new { Page = 1, Model.Filter.ClassId, Model.Filter.StudentId, Model.Filter.SubjectId, Model.Filter.Kind, Model.Filter.Month, Model.Filter.Search, Model.Filter.Status, Sort = Model.Filter.Sort == key + "_asc" ? key + "_desc" : key + "_asc" })!;
+    string SortIcon(string key) => Model.Filter.Sort == key + "_asc" ? "bi-arrow-up" : Model.Filter.Sort == key + "_desc" ? "bi-arrow-down" : "bi-arrow-down-up";
+    string SortState(string key) => Model.Filter.Sort == key + "_asc" ? "ascending" : Model.Filter.Sort == key + "_desc" ? "descending" : "none";
+    var sorts = new Dictionary<string, string> {
+        { "due_asc", "Due: earliest first" }, { "due_desc", "Due: latest first" },
+        { "title_asc", "Assessment: A–Z" }, { "title_desc", "Assessment: Z–A" },
+        { "class_asc", "Class / Subject: A–Z" }, { "class_desc", "Class / Subject: Z–A" },
+        { "status_asc", "Status: graded first" }, { "status_desc", "Status: pending first" },
+        { "result_desc", "Result: highest first" }, { "result_asc", "Result: lowest first" },
+        { "updated_desc", "Updated: newest first" }
+    };
+    if (Model.IsStaff || Model.IsParent) { sorts.Add("student_asc", "Student: A–Z"); sorts.Add("student_desc", "Student: Z–A"); }
+}
 <div data-assessment-results>
-    <div class="assessment-stats"><div><small>Average · released grades</small><strong>@(Model.Average.HasValue? Model.Average.Value.ToString("0.##") + "%":"—")</strong></div><div><small>Released Grades</small><strong>@Model.Graded</strong></div><div><small>Not Submitted</small><strong>@(Model.Total - Model.Submitted)</strong></div></div>
+    <div class="assessment-stats progress-statistics">
+        <div><i class="bi bi-bar-chart" aria-hidden="true"></i><div><small>Average score</small><strong>@(Model.Average.HasValue? Model.Average.Value.ToString("0.##") + "%" : "—")</strong></div></div>
+        <div><i class="bi bi-check2-circle" aria-hidden="true"></i><div><small>Released Grades</small><strong>@Model.Graded</strong></div></div>
+        <div><i class="bi bi-clock-history" aria-hidden="true"></i><div><small>Not Submitted</small><strong>@(Model.Total - Model.Submitted)</strong></div></div>
+    </div>
     <div class="dashboard-card compact-class-card assessment-results">
-        <div class="dashboard-card-header"><h2><i class="bi bi-bar-chart me-2" aria-hidden="true"></i> Assessment Results</h2><span>@Model.Total record(s)</span></div>
+        <div class="dashboard-card-header progress-results-heading">
+            <h2><i class="bi bi-bar-chart me-2" aria-hidden="true"></i> Assessment Results</h2>
+            <div class="progress-sort-tools">
+                <span>@Model.Total record(s)</span>
+                <label for="progress-sort">Sort by</label>
+                <select id="progress-sort" name="Sort" form="assessment-progress-filter" class="form-select" data-progress-sort>
+                    @foreach (var item in sorts)
+                    {
+                        <option value="@item.Key" selected="@(Model.Filter.Sort == item.Key)">@item.Value</option>
+                    }
+                </select>
+            </div>
+        </div>
         @if (Model.Total == 0)
         {
-            <div class="assessment-empty">No assessment records match. Results are limited to your current authorised students and classes.</div>
+            <div class="assessment-empty">No assessment records match these filters.</div>
         }
         else
         {
-
             <div class="table-responsive">
                 <table class="table compact-class-table align-middle" data-pagination="off">
                     <thead>
                         <tr>
-                            <th>No.</th>
-                            <th><a class="assessment-sort-link" asp-action="Progress" asp-route-Page="1" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort='@(Model.Filter.Sort == "title_asc" ? "title_desc" : "title_asc")' data-assessment-nav>Assessment / Class <i class="bi bi-arrow-down-up" aria-hidden="true"></i></a></th>@if(Model.IsParent||Model.IsStaff){
-                            <th>Student</th>
+                            <th scope="col">No.</th>
+                            <th scope="col" aria-sort="@SortState("title")"><a class="assessment-sort-link" href="@SortUrl("title")" data-assessment-nav>Assessment <i class="bi @SortIcon("title")" aria-hidden="true"></i></a></th>
+                            <th scope="col" aria-sort="@SortState("class")"><a class="assessment-sort-link" href="@SortUrl("class")" data-assessment-nav>Class / Subject <i class="bi @SortIcon("class")" aria-hidden="true"></i></a></th>
+                            @if (Model.IsStaff || Model.IsParent)
+                            {
+                                <th scope="col" aria-sort="@SortState("student")"><a class="assessment-sort-link" href="@SortUrl("student")" data-assessment-nav>Student <i class="bi @SortIcon("student")" aria-hidden="true"></i></a></th>
+                            }
+                            <th scope="col" aria-sort="@SortState("due")"><a class="assessment-sort-link" href="@SortUrl("due")" data-assessment-nav>Due (MYT) <i class="bi @SortIcon("due")" aria-hidden="true"></i></a></th>
+                            <th scope="col" aria-sort="@SortState("status")"><a class="assessment-sort-link" href="@SortUrl("status")" data-assessment-nav>Status <i class="bi @SortIcon("status")" aria-hidden="true"></i></a></th>
+                            <th scope="col" aria-sort="@SortState("result")"><a class="assessment-sort-link" href="@SortUrl("result")" data-assessment-nav>Result <i class="bi @SortIcon("result")" aria-hidden="true"></i></a></th>
+                            <th scope="col">Feedback</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int number = (Model.Filter.Page - 1) * 25;
                         }
-                        <th><a class="assessment-sort-link" asp-action="Progress" asp-route-Page="1" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort='@(Model.Filter.Sort == "due_asc" ? "due_desc" : "due_asc")' data-assessment-nav>Due (MYT) <i class="bi bi-arrow-down-up" aria-hidden="true"></i></a></th>
-                        <th>Status</th>
-                        <th>Result</th>
-                        <th>Feedback</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @{
-                        int number = (Model.Filter.Page - 1) * 25;
-                    }
-                    @foreach (var row in Model.Rows)
-                    {
-                        number++;
-                        <tr>
-                            <td>@number</td>
-                            <td>@row.Title<small>@row.ClassCode · @row.Subject</small></td>@if(Model.IsParent||Model.IsStaff){
-                            <td>@row.StudentName<small>@row.StudentNumber</small></td>
+                        @foreach (var row in Model.Rows)
+                        {
+                            number++;
+                            var status = row.Marks.HasValue ? "Graded" : row.SubmittedAtUtc.HasValue ? "Awaiting results" : AssessmentRules.NowMyt >= row.DueAtMyt ? "Not submitted" : "Pending submission";
+                            <tr>
+                                <td>@number</td>
+                                <td><strong>@row.Title</strong></td>
+                                <td><strong>@row.ClassCode</strong><small>@row.Subject</small></td>
+                                @if (Model.IsStaff || Model.IsParent)
+                                {
+                                    <td>@row.StudentName<small>@row.StudentNumber</small></td>
+                                }
+                                <td>@row.DueAtMyt.ToString("dd MMM yyyy")<small>@row.DueAtMyt.ToString("HH:mm")</small></td>
+                                <td><span class="progress-status @(row.Marks.HasValue ? "is-graded" : row.SubmittedAtUtc.HasValue ? "is-waiting" : "is-pending")">@status</span></td>
+                                <td>
+                                    @if (row.Marks.HasValue)
+                                    {
+                                        <strong>@row.Marks.Value.ToString("0.##") / @row.MaxMarks.ToString("0.##")</strong>
+                                        <small>@row.Percentage?.ToString("0.##")% · @AssessmentRules.Grade(row.Percentage!.Value)</small>
+                                    }
+                                    else
+                                    {
+
+                                        <span>—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (row.Marks.HasValue && !string.IsNullOrWhiteSpace(row.Feedback))
+                                    {
+                                        <button type="button" class="progress-feedback-button" data-progress-feedback aria-haspopup="dialog"><i class="bi bi-chat-left-text" aria-hidden="true"></i> View feedback</button>
+                                        <template data-progress-feedback-content>
+                                            <p class="progress-feedback-context"><strong>@row.Title</strong><br />@row.StudentName · @row.StudentNumber</p>
+                                            <p class="progress-feedback-text">@row.Feedback</p>
+                                            <p class="progress-feedback-date">Graded @row.GradedAtUtc?.AddHours(8).ToString("dd MMM yyyy") MYT</p>
+                                        </template>
+                                    }
+                                    else
+                                    {
+
+                                        <span>—</span>
+                                    }
+                                </td>
+                            </tr>
                         }
-                        <td>@row.DueAtMyt.ToString("dd MMM yyyy HH:mm")</td>
-                        <td>@(row.Marks.HasValue ? "Graded" : row.SubmittedAtUtc.HasValue ? "Awaiting results" : AssessmentRules.NowMyt >= row.DueAtMyt ? "Not submitted" : "Pending submission")<small>@(row.SubmittedAtUtc.HasValue ? "Submitted " + row.SubmittedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy HH:mm") : "")</small></td>
-                        <td>
-                            @if (row.Marks.HasValue && !string.IsNullOrWhiteSpace(row.Feedback))
-                            {
-                                <strong>@row.Marks.Value.ToString("0.##") / @row.MaxMarks.ToString("0.##")</strong>
-                                <small>@row.Percentage?.ToString("0.##")% · @AssessmentRules.Grade(row.Percentage!.Value)</small>
-                            }
-                            else
-                            {
-                                <span>—</span>
-                            }
-                        </td>
-                        <td>
-                            @if (row.Marks.HasValue && !string.IsNullOrWhiteSpace(row.Feedback))
-                            {
-                                <details><summary>View feedback</summary><p class="assessment-instructions">@row.Feedback</p><small>Graded @row.GradedAtUtc?.AddHours(8).ToString("dd MMM yyyy")</small></details>
-                            }
-                            else
-                            {
-
-                                <span>—</span>
-                            }
-                        </td>
-                    </tr>
-                                        }
-                </tbody>
-            </table>
-        </div>
-        <nav class="assessment-pagination" aria-label="Result pages">
-            <span>@((Model.Filter.Page - 1) * 25 + 1)–@Math.Min(Model.Filter.Page * 25, Model.Total) of @Model.Total · 25 per page</span><div class="material-actions">
-                @foreach (var link in new[] { (Text: "First", Page: 1, Off: Model.Filter.Page == 1), (Text: "Previous", Page: Model.Filter.Page - 1, Off: Model.Filter.Page == 1), (Text: Model.Filter.Page.ToString(), Page: Model.Filter.Page, Off: true), (Text: "Next", Page: Model.Filter.Page + 1, Off: Model.Filter.Page == Model.PageCount), (Text: "Last", Page: Model.PageCount, Off: Model.Filter.Page == Model.PageCount) })
-                {
-                    if (link.Off)
-                    {
-                        <span class="assessment-page-number" aria-disabled="true">@link.Text</span>
-                    }
-                    else
-                    {
-
-                        <a class="assessment-page-number" asp-action="Progress" asp-route-Page="@link.Page" asp-route-StudentId="@Model.Filter.StudentId" asp-route-ClassId="@Model.Filter.ClassId" asp-route-Search="@Model.Filter.Search" asp-route-Sort="@Model.Filter.Sort" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" data-assessment-nav>@link.Text</a>
-                    }
-                }
+                    </tbody>
+                </table>
             </div>
-        </nav>
-                }
+            <nav class="assessment-pagination" aria-label="Result pages">
+                <span>@((Model.Filter.Page - 1) * 25 + 1)–@Math.Min(Model.Filter.Page * 25, Model.Total) of @Model.Total · 25 per page</span>
+                <div class="material-actions">
+                    @foreach (var link in new[] { (Text: "First", Page: 1, Off: Model.Filter.Page == 1), (Text: "Previous", Page: Model.Filter.Page - 1, Off: Model.Filter.Page == 1), (Text: Model.Filter.Page.ToString(), Page: Model.Filter.Page, Off: true), (Text: "Next", Page: Model.Filter.Page + 1, Off: Model.Filter.Page == Model.PageCount), (Text: "Last", Page: Model.PageCount, Off: Model.Filter.Page == Model.PageCount) })
+                    {
+                        if (link.Off)
+                        {
+                            <span class="assessment-page-number" aria-disabled="true">@link.Text</span>
+                        }
+                        else
+                        {
+                            <a class="assessment-page-number" asp-action="Progress" asp-route-Page="@link.Page" asp-route-StudentId="@Model.Filter.StudentId" asp-route-ClassId="@Model.Filter.ClassId" asp-route-Search="@Model.Filter.Search" asp-route-Sort="@Model.Filter.Sort" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" data-assessment-nav>@link.Text</a>
+                        }
+                    }
+                </div>
+            </nav>
+        }
     </div>
     @if (Model.Subjects.Count > 0)
     {
-        <section class="class-form-card mt-4">
-            <h2 class="h5 mb-3">Progress by Subject</h2><p class="assessment-note">Each assessment percentage has equal weight. Unsubmitted work and unreleased grades are excluded.</p><div class="assessment-subjects">
-                @foreach (var subject in Model.Subjects)
-                {
-                    <div><strong>@subject.Subject</strong><span>@subject.Average.ToString("0.##")% · @subject.Completed graded</span><progress value="@subject.Average.ToString(System.Globalization.CultureInfo.InvariantCulture)" max="100" aria-label="@($"{subject.Subject} average percentage")"></progress></div>
-                }
-            </div>
+        <section class="class-form-card progress-subject-summary mt-4">
+            <h2 class="h5">Average by Subject</h2>
+            @foreach (var subject in Model.Subjects)
+            {
+                <div class="progress-subject-row">
+                    <div><strong>@subject.Subject</strong><small>@subject.Completed released grade(s)</small></div>
+                    <div class="progress-subject-track" role="progressbar" aria-label="@($"{subject.Subject} average percentage")" aria-valuenow="@subject.Average.ToString(System.Globalization.CultureInfo.InvariantCulture)" aria-valuemin="0" aria-valuemax="100"><span style="width:@(subject.Average.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></span></div>
+                    <strong>@subject.Average.ToString("0.##")%</strong>
+                </div>
+            }
+            <p class="assessment-note">Released grades only · Equal weight per assessment. Unsubmitted work is excluded.</p>
         </section>
     }
 </div>

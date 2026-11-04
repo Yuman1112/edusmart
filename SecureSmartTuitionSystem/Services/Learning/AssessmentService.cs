@@ -14,7 +14,7 @@ public static class AssessmentRules
 {
     public static DateTime NowMyt => DateTime.UtcNow.AddHours(8);
     public static bool CanSubmit(Assessment a, DateTime now) => a.IsActive && a.PublishedAtUtc.HasValue && !a.ResultsPublishedAtUtc.HasValue && now >= a.OpensAtMyt && now < a.DueAtMyt;
-    public static bool CanEdit(Assessment a, DateTime now) => !a.ResultsPublishedAtUtc.HasValue && (!a.PublishedAtUtc.HasValue || now < a.OpensAtMyt);
+    public static bool CanEdit(Assessment a, DateTime now) => a.IsActive && !a.ResultsPublishedAtUtc.HasValue && (!a.PublishedAtUtc.HasValue || now < a.OpensAtMyt);
     public static bool ValidMarks(decimal marks, decimal maximum) => maximum > 0 && marks >= 0 && marks <= maximum && decimal.Round(marks, 2) == marks;
     public static string Grade(decimal percentage) => percentage >= 80 ? "A" : percentage >= 70 ? "B" : percentage >= 60 ? "C" : percentage >= 50 ? "D" : "F";
     public static bool Version(byte[] current, string? supplied) => !string.IsNullOrEmpty(supplied) && string.Equals(Convert.ToBase64String(current), supplied, StringComparison.Ordinal);
@@ -82,6 +82,10 @@ public sealed class AssessmentService(ApplicationDbContext db)
         "due_desc" => q.OrderByDescending(x => x.DueAtMyt).ThenByDescending(x => x.AssessmentId),
         "title_asc" => q.OrderBy(x => x.Title).ThenBy(x => x.AssessmentId),
         "title_desc" => q.OrderByDescending(x => x.Title).ThenBy(x => x.AssessmentId),
+        "class_asc" => q.OrderBy(x => x.ClassSession.ClassCode).ThenBy(x => x.ClassSession.TutorUser.FullName).ThenBy(x => x.AssessmentId),
+        "class_desc" => q.OrderByDescending(x => x.ClassSession.ClassCode).ThenByDescending(x => x.ClassSession.TutorUser.FullName).ThenBy(x => x.AssessmentId),
+        "status_asc" => q.OrderBy(x => !x.IsActive ? (x.PublishedAtUtc == null ? 4 : 3) : x.PublishedAtUtc == null ? 0 : x.ResultsPublishedAtUtc == null ? 1 : 2).ThenBy(x => x.DueAtMyt).ThenBy(x => x.AssessmentId),
+        "status_desc" => q.OrderByDescending(x => !x.IsActive ? (x.PublishedAtUtc == null ? 4 : 3) : x.PublishedAtUtc == null ? 0 : x.ResultsPublishedAtUtc == null ? 1 : 2).ThenBy(x => x.DueAtMyt).ThenBy(x => x.AssessmentId),
         "updated_desc" => q.OrderByDescending(x => x.UpdatedAtUtc).ThenByDescending(x => x.AssessmentId),
         _ => q.OrderBy(x => x.DueAtMyt).ThenBy(x => x.AssessmentId)
     };
@@ -95,7 +99,7 @@ public sealed class AssessmentService(ApplicationDbContext db)
         if (!string.IsNullOrEmpty(filter.Month) && DateTime.TryParseExact(filter.Month + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var month)) { var end = month.AddMonths(1); q = q.Where(x => x.DueAtMyt >= month && x.DueAtMyt < end); }
         if (filter.ClassId.HasValue) q = q.Where(x => x.ClassSessionId == filter.ClassId);
         if (!string.IsNullOrWhiteSpace(filter.Search)) { var term = filter.Search.Trim(); q = q.Where(x => x.Title.Contains(term)); }
-        if (model.IsStaff) q = filter.Status switch { "inactive" => q.Where(x => !x.IsActive), "draft" => q.Where(x => x.PublishedAtUtc == null), "active" => q.Where(x => x.IsActive), _ => q };
+        if (model.IsStaff) q = filter.Status switch { "inactive" => q.Where(x => !x.IsActive), "draft" => q.Where(x => x.IsActive && x.PublishedAtUtc == null), "active" => q.Where(x => x.IsActive), _ => q };
         model.Total = await q.CountAsync();
         filter.Page = Math.Min(filter.Page, model.PageCount);
         model.Rows = await Rows(Order(q, filter.Sort).Skip((filter.Page - 1) * 25).Take(25)).ToListAsync(); return model;
@@ -109,7 +113,7 @@ public sealed class AssessmentService(ApplicationDbContext db)
             Assessment = row,
             IsStaff = Staff(user),
             CanManage = manage,
-            CanEdit = manage && !row.ResultsPublishedAtUtc.HasValue && (!row.PublishedAtUtc.HasValue || now < row.OpensAtMyt),
+            CanEdit = manage && row.IsActive && !row.ResultsPublishedAtUtc.HasValue && (!row.PublishedAtUtc.HasValue || now < row.OpensAtMyt),
             CanGrade = manage && row.PublishedAtUtc.HasValue && !row.ResultsPublishedAtUtc.HasValue,
             Submission = new SubmissionForm { AssessmentId = id, RowVersion = row.RowVersion }
         };
@@ -193,7 +197,7 @@ public sealed class AssessmentService(ApplicationDbContext db)
             {
                 var found = await Manage(user).Where(x => x.AssessmentId == form.Id).AsTracking().SingleOrDefaultAsync();
                 if (found == null || !AssessmentRules.Version(found.RowVersion, form.RowVersion)) return "This assessment changed. Reload before saving.";
-                if (!AssessmentRules.CanEdit(found, AssessmentRules.NowMyt) || found.ClassSessionId != form.ClassSessionId) return "Published assessments cannot be edited after opening. The class cannot be changed.";
+                if (!AssessmentRules.CanEdit(found, AssessmentRules.NowMyt) || found.ClassSessionId != form.ClassSessionId) return "Restore or reactivate this assessment before editing. Published assessments can only be edited before opening and before results are released. The class cannot be changed.";
                 a = found;
             }
             var old = await db.Set<AssessmentFile>().Where(x => x.AssessmentId == form.Id && x.AssessmentParticipantId == null).AsTracking().ToListAsync();
@@ -323,14 +327,7 @@ public sealed class AssessmentService(ApplicationDbContext db)
         model.Graded = await graded.CountAsync(); model.Average = await graded.Select(p => (decimal?)(p.Marks!.Value / p.Assessment.MaxMarks * 100)).AverageAsync();
         model.Subjects = await graded.GroupBy(p => p.Assessment.ClassSession.Subject.SubjectName).Select(g => new AssessmentSubjectProgress { Subject = g.Key, Completed = g.Count(), Average = g.Average(p => p.Marks!.Value / p.Assessment.MaxMarks * 100) }).OrderBy(x => x.Subject).ToListAsync();
         filter.Page = Math.Min(filter.Page, model.PageCount);
-        var ordered = filter.Sort switch
-        {
-            "title_asc" => scope.OrderBy(p => p.Assessment.Title).ThenBy(p => p.AssessmentParticipantId),
-            "title_desc" => scope.OrderByDescending(p => p.Assessment.Title).ThenBy(p => p.AssessmentParticipantId),
-            "due_desc" => scope.OrderByDescending(p => p.Assessment.DueAtMyt).ThenBy(p => p.AssessmentParticipantId),
-            "updated_desc" => scope.OrderByDescending(p => p.Assessment.UpdatedAtUtc).ThenBy(p => p.AssessmentParticipantId),
-            _ => scope.OrderBy(p => p.Assessment.DueAtMyt).ThenBy(p => p.AssessmentParticipantId)
-        };
+        var ordered = OrderProgress(scope, filter.Sort, AssessmentRules.NowMyt);
         model.Rows = await ordered.Skip((filter.Page - 1) * 25).Take(25).Select(p => new AssessmentResultRow
         {
             AssessmentId = p.AssessmentId,
@@ -348,6 +345,29 @@ public sealed class AssessmentService(ApplicationDbContext db)
             Feedback = p.Assessment.ResultsPublishedAtUtc != null ? p.Feedback : null,
             GradedAtUtc = p.Assessment.ResultsPublishedAtUtc != null ? p.GradedAtUtc : null
         }).ToListAsync(); return model;
+    }
+    // Always order the authorised query before paging. Hidden grades never affect result ordering.
+    public static IOrderedQueryable<AssessmentParticipant> OrderProgress(IQueryable<AssessmentParticipant> scope, string sort, DateTime now)
+    {
+        var ordered = sort switch
+        {
+            "title_asc" => scope.OrderBy(p => p.Assessment.Title),
+            "title_desc" => scope.OrderByDescending(p => p.Assessment.Title),
+            "class_asc" => scope.OrderBy(p => p.Assessment.ClassSession.ClassCode).ThenBy(p => p.Assessment.ClassSession.Subject.SubjectName),
+            "class_desc" => scope.OrderByDescending(p => p.Assessment.ClassSession.ClassCode).ThenByDescending(p => p.Assessment.ClassSession.Subject.SubjectName),
+            "student_asc" => scope.OrderBy(p => p.StudentName).ThenBy(p => p.StudentNumber),
+            "student_desc" => scope.OrderByDescending(p => p.StudentName).ThenByDescending(p => p.StudentNumber),
+            "status_asc" => scope.OrderBy(p => p.Assessment.ResultsPublishedAtUtc != null && p.Marks != null ? 0 : p.SubmittedAtUtc != null ? 1 : now >= p.Assessment.DueAtMyt ? 2 : 3),
+            "status_desc" => scope.OrderByDescending(p => p.Assessment.ResultsPublishedAtUtc != null && p.Marks != null ? 0 : p.SubmittedAtUtc != null ? 1 : now >= p.Assessment.DueAtMyt ? 2 : 3),
+            "result_asc" => scope.OrderBy(p => p.Assessment.ResultsPublishedAtUtc != null && p.Marks != null ? 0 : 1)
+                .ThenBy(p => p.Assessment.ResultsPublishedAtUtc != null && p.Marks != null ? (decimal?)(p.Marks.Value / p.Assessment.MaxMarks * 100) : null),
+            "result_desc" => scope.OrderBy(p => p.Assessment.ResultsPublishedAtUtc != null && p.Marks != null ? 0 : 1)
+                .ThenByDescending(p => p.Assessment.ResultsPublishedAtUtc != null && p.Marks != null ? (decimal?)(p.Marks.Value / p.Assessment.MaxMarks * 100) : null),
+            "due_desc" => scope.OrderByDescending(p => p.Assessment.DueAtMyt),
+            "updated_desc" => scope.OrderByDescending(p => p.Assessment.UpdatedAtUtc),
+            _ => scope.OrderBy(p => p.Assessment.DueAtMyt)
+        };
+        return ordered.ThenBy(p => p.AssessmentParticipantId);
     }
     public static bool ValidFiles(IReadOnlyList<MaterialFile> files, int retained = 0, long retainedBytes = 0) => retained >= 0 && retainedBytes >= 0 && files.Count + retained <= 10 && files.Sum(f => (long)f.Content.Length) + retainedBytes <= 31457280
         && files.All(f => f.Content.Length > 0 && f.Content.Length <= MaterialFileService.MaxBytes && MaterialFileService.Matches(Path.GetExtension(f.Name), f.Content));

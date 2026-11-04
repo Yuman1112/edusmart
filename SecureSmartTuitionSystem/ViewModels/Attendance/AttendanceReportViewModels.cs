@@ -3,6 +3,8 @@ using SecureSmartTuitionSystem.Models.Attendance;
 namespace SecureSmartTuitionSystem.ViewModels.Attendance;
 public sealed class AttendanceReportFilter
 {
+    [Required, RegularExpression("^(date_asc|date_desc|class_asc|class_desc|student_asc|student_desc|status_asc|status_desc)$")]
+    public string Sort { get; set; } = "date_desc";
     [DataType(DataType.Date)] public DateTime From { get; set; } = DateTime.UtcNow.AddHours(8).Date.AddDays(-30);
     [DataType(DataType.Date)] public DateTime To { get; set; } = DateTime.UtcNow.AddHours(8).Date;
     public int? ClassId { get; set; }
@@ -56,6 +58,7 @@ public sealed class AttendanceCorrectionViewModel
 }
 public sealed class AttendanceCorrectionListViewModel
 {
+    public string Sort { get; set; } = "requested_asc";
     public bool IsAdmin { get; set; }
     public string Status { get; set; } = "pending";
     public List<AttendanceCorrectionListRow> Rows { get; set; } = [];

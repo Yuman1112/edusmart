@@ -12,7 +12,7 @@ public sealed class AssessmentFilter
     [EnumDataType(typeof(AssessmentKind))] public AssessmentKind? Kind { get; set; }
     [RegularExpression(@"^(20\d{2}|2100)-(0[1-9]|1[0-2])$")] public string? Month { get; set; }
     [Required, RegularExpression("^(active|inactive|draft|all)$")] public string Status { get; set; } = "active";
-    [Required, RegularExpression("^(due_asc|due_desc|title_asc|title_desc|updated_desc)$")] public string Sort { get; set; } = "due_asc";
+    [Required, RegularExpression("^(due_asc|due_desc|title_asc|title_desc|updated_desc|class_asc|class_desc|status_asc|status_desc|student_asc|student_desc|result_asc|result_desc)$")] public string Sort { get; set; } = "due_asc";
     [Range(1, 100000)] public int Page { get; set; } = 1;
 }
 public sealed class AssessmentForm : IValidatableObject
@@ -62,7 +62,13 @@ public sealed class AssessmentRow
     public int Participants { get; set; }
     public int Submitted { get; set; }
     public int Graded { get; set; }
-    public string State => !IsActive ? "Inactive" : !PublishedAtUtc.HasValue ? "Draft" : ResultsPublishedAtUtc.HasValue ? "Results released" : "Published";
+    public string AvailabilityActionLabel => !PublishedAtUtc.HasValue
+        ? (IsActive ? "Archive Draft" : "Restore Draft")
+        : (IsActive ? "Set Inactive" : "Reactivate");
+    public string AvailabilityConfirmation => !PublishedAtUtc.HasValue
+        ? (IsActive ? "Archive this draft? It will remain hidden from students." : "Restore this draft? It will remain unpublished until you select Publish Assessment.")
+        : (IsActive ? "Set this assessment inactive? Students will lose access." : "Reactivate this published assessment?");
+    public string State => !IsActive ? (!PublishedAtUtc.HasValue ? "Archived draft" : "Inactive") : !PublishedAtUtc.HasValue ? "Draft" : ResultsPublishedAtUtc.HasValue ? "Results released" : "Published";
 }
 public sealed class AssessmentIndexModel
 {

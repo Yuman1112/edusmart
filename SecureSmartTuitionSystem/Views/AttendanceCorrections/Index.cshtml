@@ -2,7 +2,7 @@
 @using SecureSmartTuitionSystem.Models.Attendance
 
 @{
-    ViewData["Title"] = "Attendance Corrections";
+    ViewData["Title"] = "Correction Requests";
     bool staff = User.IsInRole("Admin") || User.IsInRole("Tutor");
     int requestNumber = 0;
 }
@@ -17,7 +17,7 @@
 <div class="attendance-page @(staff ? "attendance-unified-list" : "")">
     <div class="page-header">
         <div>
-            <h1>Attendance Corrections</h1>
+            <h1>Correction Requests</h1>
             <p>
                 @(Model.IsAdmin
                                 ? "Review correction requests before applying changes."
@@ -56,7 +56,8 @@
         }
         <form asp-action="Index"
               method="get" data-live-filter
-              class="d-flex flex-wrap align-items-end gap-3">
+              class="attendance-correction-filter">
+            <input type="hidden" name="sort" value="@Model.Sort" />
 
             <div>
                 <label for="correction-status" class="form-label">
@@ -101,7 +102,7 @@
             <div class="dashboard-card-header"><h2><i class="bi bi-pencil-square me-2" aria-hidden="true"></i> Correction Requests</h2><span class="text-muted">@Model.Rows.Count request(s)</span></div>
         }
         <p class="text-muted @(staff ? "attendance-result-summary" : "")">
-            Showing the latest 500 matching requests.
+            Showing up to 500 matching requests in the selected order.
             Times shown are MYT (UTC+8).
         </p>
 
@@ -121,11 +122,12 @@
                             {
                                 <th scope="col" class="number-column column-number">No.</th>
                             }
-                            <th scope="col">Student</th>
-                            <th scope="col">Lesson</th>
+                            <th scope="col" aria-sort='@(Model.Sort == "student_asc" ? "ascending" : Model.Sort == "student_desc" ? "descending" : "none")'><a class="attendance-sort-link" asp-action="Index" asp-route-status="@Model.Status" asp-route-sort='@(Model.Sort == "student_asc" ? "student_desc" : "student_asc")'>Student <i class='bi @(Model.Sort == "student_asc" ? "bi-arrow-up" : Model.Sort == "student_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a></th>
+                            <th scope="col" aria-sort='@(Model.Sort == "lesson_asc" ? "ascending" : Model.Sort == "lesson_desc" ? "descending" : "none")'><a class="attendance-sort-link" asp-action="Index" asp-route-status="@Model.Status" asp-route-sort='@(Model.Sort == "lesson_asc" ? "lesson_desc" : "lesson_asc")'>Lesson <i class='bi @(Model.Sort == "lesson_asc" ? "bi-arrow-up" : Model.Sort == "lesson_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a></th>
+                            <th scope="col" aria-sort='@(Model.Sort == "requested_asc" ? "ascending" : Model.Sort == "requested_desc" ? "descending" : "none")'><a class="attendance-sort-link" asp-action="Index" asp-route-status="@Model.Status" asp-route-sort='@(Model.Sort == "requested_asc" ? "requested_desc" : "requested_asc")'>Requested At (MYT) <i class='bi @(Model.Sort == "requested_asc" ? "bi-arrow-up" : Model.Sort == "requested_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a></th>
                             <th scope="col">Requested Change</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Action</th>
+                            <th scope="col" aria-sort='@(Model.Sort == "status_asc" ? "ascending" : Model.Sort == "status_desc" ? "descending" : "none")'><a class="attendance-sort-link" asp-action="Index" asp-route-status="@Model.Status" asp-route-sort='@(Model.Sort == "status_asc" ? "status_desc" : "status_asc")'>Status <i class='bi @(Model.Sort == "status_asc" ? "bi-arrow-up" : Model.Sort == "status_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a></th>
+                            <th scope="col">Actions</th>
                         </tr>
                     </thead>
 
@@ -154,6 +156,10 @@
                                     </small>
                                 </td>
 
+                                <td>
+                                    @row.RequestedAtUtc.AddHours(8).ToString("dd MMM yyyy")
+                                    <br /><small>@row.RequestedAtUtc.AddHours(8).ToString("HH:mm")</small>
+                                </td>
                                 <td>
                                     @(row.PreviousStatus?.ToString() ?? "Unrecorded")
                                     → @row.RequestedStatus
@@ -186,7 +192,7 @@
                                             data-review-remark="@row.ReviewRemark"
                                             data-reviewer="@row.ReviewedBy"
                                             data-reviewed-at="@row.ReviewedAtUtc?.AddHours(8).ToString("dd MMM yyyy HH:mm")">
-                                        @(canReview ? "Review" : "View Details")
+                                        <i class="bi @(canReview ? "bi-pencil-square" : "bi-eye")" aria-hidden="true"></i> @(canReview ? "Review" : "Details")
                                     </button>
                                 </td>
                             </tr>

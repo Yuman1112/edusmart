@@ -6,7 +6,13 @@
 <div id="attendance-report-results" class="@(staffList ? "dashboard-card compact-class-card attendance-unified-results" : "class-form-card")" data-report-results data-report-total="@Model.Total">
     @if (staffList)
     {
-        <div class="dashboard-card-header"><h2><i class="bi bi-list-check me-2" aria-hidden="true"></i> Attendance Records</h2><span class="text-muted">@Model.Total record(s)</span></div>
+        <div class="dashboard-card-header attendance-record-header">
+            <h2><i class="bi bi-list-check me-2" aria-hidden="true"></i> Attendance Records</h2>
+            <div class="attendance-header-actions">
+                <span class="text-muted">@Model.Total record(s)</span>
+
+            </div>
+        </div>
     }
     else
     {
@@ -38,10 +44,10 @@
                         {
                             <th scope="col" class="number-column column-number">No.</th>
                         }
-                        <th scope="col">Date / Time</th>
-                        <th scope="col">Class / Tutor</th>
-                        <th scope="col">Student</th>
-                        <th scope="col">Status</th>
+                        <th scope="col" aria-sort='@(Model.Filter.Sort == "date_asc" ? "ascending" : Model.Filter.Sort == "date_desc" ? "descending" : "none")'>@if (Model.IsPrint) { <span>Date / Time</span> } else { <a class="attendance-sort-link" asp-action="Report" asp-route-From="@Model.Filter.From.ToString("yyyy-MM-dd")" asp-route-To="@Model.Filter.To.ToString("yyyy-MM-dd")" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-Status="@Model.Filter.Status" asp-route-sort='@(Model.Filter.Sort == "date_asc" ? "date_desc" : "date_asc")'>Date / Time <i class='bi @(Model.Filter.Sort == "date_asc" ? "bi-arrow-up" : Model.Filter.Sort == "date_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a> }</th>
+                        <th scope="col" aria-sort='@(Model.Filter.Sort == "class_asc" ? "ascending" : Model.Filter.Sort == "class_desc" ? "descending" : "none")'>@if (Model.IsPrint) { <span>Class / Tutor</span> } else { <a class="attendance-sort-link" asp-action="Report" asp-route-From="@Model.Filter.From.ToString("yyyy-MM-dd")" asp-route-To="@Model.Filter.To.ToString("yyyy-MM-dd")" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-Status="@Model.Filter.Status" asp-route-sort='@(Model.Filter.Sort == "class_asc" ? "class_desc" : "class_asc")'>Class / Tutor <i class='bi @(Model.Filter.Sort == "class_asc" ? "bi-arrow-up" : Model.Filter.Sort == "class_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a> }</th>
+                        <th scope="col" aria-sort='@(Model.Filter.Sort == "student_asc" ? "ascending" : Model.Filter.Sort == "student_desc" ? "descending" : "none")'>@if (Model.IsPrint) { <span>Student</span> } else { @if (!User.IsInRole("Student") || User.IsInRole("Admin") || User.IsInRole("Tutor")) { <a class="attendance-sort-link" asp-action="Report" asp-route-From="@Model.Filter.From.ToString("yyyy-MM-dd")" asp-route-To="@Model.Filter.To.ToString("yyyy-MM-dd")" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-Status="@Model.Filter.Status" asp-route-sort='@(Model.Filter.Sort == "student_asc" ? "student_desc" : "student_asc")'>Student <i class='bi @(Model.Filter.Sort == "student_asc" ? "bi-arrow-up" : Model.Filter.Sort == "student_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a> } else { <span>Student</span> } }</th>
+                        <th scope="col" aria-sort='@(Model.Filter.Sort == "status_asc" ? "ascending" : Model.Filter.Sort == "status_desc" ? "descending" : "none")'>@if (Model.IsPrint) { <span>Status</span> } else { <a class="attendance-sort-link" asp-action="Report" asp-route-From="@Model.Filter.From.ToString("yyyy-MM-dd")" asp-route-To="@Model.Filter.To.ToString("yyyy-MM-dd")" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-Status="@Model.Filter.Status" asp-route-sort='@(Model.Filter.Sort == "status_asc" ? "status_desc" : "status_asc")'>Status <i class='bi @(Model.Filter.Sort == "status_asc" ? "bi-arrow-up" : Model.Filter.Sort == "status_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a> }</th>
                         <th scope="col">Remark</th>@if (Model.CanCorrect && !Model.IsPrint) {
                         <th scope="col">Actions</th>
                     }

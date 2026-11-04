@@ -11,7 +11,7 @@
 
         <div class="table-responsive">
             <table class="table align-middle compact-class-table" data-pagination="off">
-                <thead><tr><th>No.</th><th><a class="assessment-sort-link" asp-action="Index" asp-route-Page="1" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort='@(Model.Filter.Sort == "title_asc" ? "title_desc" : "title_asc")' data-assessment-nav>Assessment <i class="bi bi-arrow-down-up" aria-hidden="true"></i></a></th><th>Class / Tutor</th><th><a class="assessment-sort-link" asp-action="Index" asp-route-Page="1" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort='@(Model.Filter.Sort == "due_asc" ? "due_desc" : "due_asc")' data-assessment-nav>Due (MYT) <i class="bi bi-arrow-down-up" aria-hidden="true"></i></a></th><th>Submissions</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>No.</th><th><a class="assessment-sort-link" asp-action="Index" asp-route-Page="1" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort='@(Model.Filter.Sort == "title_asc" ? "title_desc" : "title_asc")' data-assessment-nav>Assessment <i class="bi bi-arrow-down-up" aria-hidden="true"></i></a></th><th><a class="assessment-sort-link" asp-action="Index" asp-route-Page="1" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort='@(Model.Filter.Sort == "class_asc" ? "class_desc" : "class_asc")' data-assessment-nav>Class / Tutor <i class='bi @(Model.Filter.Sort == "class_asc" ? "bi-arrow-up" : Model.Filter.Sort == "class_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a></th><th><a class="assessment-sort-link" asp-action="Index" asp-route-Page="1" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort='@(Model.Filter.Sort == "due_asc" ? "due_desc" : "due_asc")' data-assessment-nav>Due (MYT) <i class="bi bi-arrow-down-up" aria-hidden="true"></i></a></th><th>Submissions</th><th><a class="assessment-sort-link" asp-action="Index" asp-route-Page="1" asp-route-ClassId="@Model.Filter.ClassId" asp-route-StudentId="@Model.Filter.StudentId" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-Kind="@Model.Filter.Kind" asp-route-Month="@Model.Filter.Month" asp-route-Search="@Model.Filter.Search" asp-route-Status="@Model.Filter.Status" asp-route-Sort='@(Model.Filter.Sort == "status_asc" ? "status_desc" : "status_asc")' data-assessment-nav>Status <i class='bi @(Model.Filter.Sort == "status_asc" ? "bi-arrow-up" : Model.Filter.Sort == "status_desc" ? "bi-arrow-down" : "bi-arrow-down-up")' aria-hidden="true"></i></a></th><th>Actions</th></tr></thead>
                 <tbody>
                     @{
                         int number = (Model.Filter.Page - 1) * 25;
@@ -31,27 +31,53 @@
                                     <a asp-action="Details" asp-route-id="@row.Id" class="btn btn-sm btn-outline-secondary class-details-button"><i class="bi bi-eye" aria-hidden="true"></i> Details</a>
                                     @if (Model.IsTutor)
                                     {
-                                        <div class="dropdown"><button class="btn btn-sm btn-outline-secondary class-more-button" type="button" data-bs-toggle="dropdown" aria-label="More actions" aria-expanded="false">⋮</button><ul class="dropdown-menu dropdown-menu-end class-action-menu"><li><a asp-action="Details" asp-route-id="@row.Id" class="dropdown-item">View submissions</a></li>@if(!row.ResultsPublishedAtUtc.HasValue&&(!row.PublishedAtUtc.HasValue||AssessmentRules.NowMyt<row.OpensAtMyt)){
-                                        <li><a asp-action="Edit" asp-route-id="@row.Id" class="dropdown-item">Edit assessment</a></li>
-                                    }
-        <li><hr class="dropdown-divider" /></li><li><form asp-action="ChangeState" method="post" data-assessment-state data-confirm="Change this assessment's availability?"><input type="hidden" name="id" value="@row.Id" /><input type="hidden" name="rowVersion" value="@row.RowVersion" /><button class="dropdown-item" name="command" value="@(row.IsActive ? "deactivate" : "reactivate")">@(row.IsActive ? "Set Inactive" : "Reactivate")</button></form></li></ul></div>
-                                }
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary class-more-button" type="button" data-bs-toggle="dropdown" aria-label="More actions" aria-expanded="false">⋮</button><ul class="dropdown-menu dropdown-menu-end class-action-menu">
+                                                @if (row.IsActive && !row.ResultsPublishedAtUtc.HasValue && (!row.PublishedAtUtc.HasValue || AssessmentRules.NowMyt < row.OpensAtMyt))
+                                                {
+                                                    <li><a asp-action="Edit" asp-route-id="@row.Id" class="dropdown-item"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i> Edit Assessment</a></li>
+                                                }
+                                                @if (row.PublishedAtUtc.HasValue)
+                                                {
+                                                    <li><a asp-action="Details" asp-route-id="@row.Id" class="dropdown-item"><i class="bi bi-people me-2" aria-hidden="true"></i> View Submissions</a></li>
+                                                }
+                                                <li><hr class="dropdown-divider" /></li>
+                                                <li>
+                                                    <form asp-action="ChangeState" method="post" data-assessment-state data-confirm="@row.AvailabilityConfirmation">
+                                                        <input type="hidden" name="id" value="@row.Id" /><input type="hidden" name="rowVersion" value="@row.RowVersion" />
+                                                        <button type="submit"
+                                                                class="dropdown-item"
+                                                                name="command"
+                                                                value="@(row.IsActive ? "deactivate" : "reactivate")">
+                                                            <i class="bi @(row.IsActive
+                                                                                                                                               ? (row.PublishedAtUtc.HasValue ? "bi-eye-slash" : "bi-archive")
+                                                                                                                                               : "bi-arrow-counterclockwise") me-2"
+                                                   aria-hidden="true"></i>
+                                                @row.AvailabilityActionLabel
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
                             </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-        }
-        else
+                                                        }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
     {
 
-        <div class="assessment-learner-list">@foreach(var row in Model.Rows){
-        <div class="assessment-learner-row"><div><strong>@row.Title</strong><small>@row.Kind · @row.ClassName · @row.Subject</small><small>Due @row.DueAtMyt.ToString("dd MMM yyyy · HH:mm") MYT · @row.MaxMarks.ToString("0.##") marks</small></div><a asp-action="Details" asp-route-id="@row.Id" class="outline-button">Open →</a></div>
+        <div class="assessment-learner-list">
+            @foreach (var row in Model.Rows)
+            {
+                <div class="assessment-learner-row"><div><strong>@row.Title</strong><small>@row.Kind · @row.ClassName · @row.Subject</small><small>Due @row.DueAtMyt.ToString("dd MMM yyyy · HH:mm") MYT · @row.MaxMarks.ToString("0.##") marks</small></div><a asp-action="Details" asp-route-id="@row.Id" class="outline-button">Open →</a></div>
+            }
+        </div>
     }
-</div>
-        }
     @if (Model.Total > 0)
     {
         <nav class="assessment-pagination" aria-label="Assessment pages">

@@ -17,7 +17,7 @@
             }
             @if (Model.CanManage)
             {
-                <form asp-action="ChangeState" method="post" data-confirm="Change this assessment's availability?"><input type="hidden" name="id" value="@a.Id" /><input type="hidden" name="rowVersion" value="@a.RowVersion" /><button name="command" value="@(a.IsActive ? "deactivate" : "reactivate")" class="outline-button">@(a.IsActive ? "Set Inactive" : "Reactivate")</button></form>
+                <form asp-action="ChangeState" method="post" data-confirm="@a.AvailabilityConfirmation"><input type="hidden" name="id" value="@a.Id" /><input type="hidden" name="rowVersion" value="@a.RowVersion" /><button name="command" value="@(a.IsActive ? "deactivate" : "reactivate")" class="outline-button">@a.AvailabilityActionLabel</button></form>
             }
             @if (Model.CanUnsubmit)
             {
@@ -48,7 +48,7 @@
         <div class="assessment-summary"><div><small>Open From (MYT)</small>@a.OpensAtMyt.ToString("dd MMM yyyy · HH:mm")</div><div><small>Due (MYT)</small>@a.DueAtMyt.ToString("dd MMM yyyy · HH:mm")</div><div><small>Total Marks</small>@a.MaxMarks.ToString("0.##")</div><div><small>Tutor</small>@a.Tutor</div></div>
         @if (!a.IsActive)
         {
-            <div class="alert alert-info mt-3">Inactive. Students cannot open this assessment or submit answers.</div>
+            <div class="alert alert-info mt-3">@(a.PublishedAtUtc.HasValue ? "Inactive. Students cannot open this assessment or submit answers." : "Archived draft. Restore it before publishing. Students cannot see this draft.")</div>
         }
         @if (!string.IsNullOrWhiteSpace(a.Instructions))
         {
@@ -60,7 +60,7 @@
             <h3 class="h6 mt-4">Question Files (@Model.QuestionFiles.Count)</h3>
             <partial name="_Files" model="Model.QuestionFiles" />
         }
-        @if (Model.CanManage && a.PublishedAtUtc == null)
+        @if (Model.CanManage && a.IsActive && a.PublishedAtUtc == null)
         {
             <form asp-action="ChangeState" method="post" class="class-form-actions" data-confirm="Publish this assessment to the current eligible student roster?"><input type="hidden" name="id" value="@a.Id" /><input type="hidden" name="rowVersion" value="@a.RowVersion" /><button class="primary-button" name="command" value="publish">Publish Assessment</button></form>
         }
@@ -82,10 +82,11 @@
 
             @if (a.ResultsPublishedAtUtc.HasValue && p.Marks.HasValue)
             {
-                <div class="assessment-result"><h3 class="h6">Result: @p.Marks.Value.ToString("0.##") / @a.MaxMarks.ToString("0.##")</h3>@if (!string.IsNullOrWhiteSpace(p.Feedback)) {
-                <p class="assessment-instructions">@p.Feedback</p>
-            }
-    </div>
+                <div class="assessment-result">
+                    <h3 class="h6">Result: @p.Marks.Value.ToString("0.##") / @a.MaxMarks.ToString("0.##")</h3>@if (!string.IsNullOrWhiteSpace(p.Feedback)) {
+                    <p class="assessment-instructions">@p.Feedback</p>
+                }
+            </div>
         }
                 else
         {
