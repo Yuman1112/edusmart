@@ -40,7 +40,8 @@ public sealed class AuthenticatedSessionMiddleware
             bool background = context.Request.Path.StartsWithSegments("/Messages/UnreadCounts") ||
                 context.Request.Path.StartsWithSegments("/Messages/ReadStatuses") ||
                 context.Request.Path.StartsWithSegments("/Messages/MarkRead") ||
-                context.Request.Path.StartsWithSegments("/Security/AlertCount");
+                context.Request.Path.StartsWithSegments("/Security/AlertCount") ||
+                (context.Request.Path.StartsWithSegments("/Assessments/Details") && context.Request.Query["fragment"] == "true");
             if (!background && now.ToUnixTimeSeconds() - last >= 60)
             {
                 var result = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);

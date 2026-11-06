@@ -31,7 +31,7 @@ public sealed class AssessmentsController(ApplicationDbContext db) : Controller
     public async Task<IActionResult> Details(int id, bool fragment = false)
     {
         var model = await Service.DetailsAsync(User, id); if (model == null) return NotFound();
-        if (fragment) return model.IsStaff ? PartialView("_Submissions", model) : Forbid();
+        if (fragment) return PartialView(model.IsStaff ? "_Submissions" : "_StudentResult", model);
         PreviewPolicy(); return View(model);
     }
     [HttpGet, Authorize(Roles = "Tutor")]
