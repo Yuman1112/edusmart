@@ -34,6 +34,8 @@ namespace SecureSmartTuitionSystem.Data
             _auditChanges = auditChanges;
         }
 
+        public DbSet<SecureSmartTuitionSystem.Models.Video.RecordedLesson> RecordedLessons => Set<SecureSmartTuitionSystem.Models.Video.RecordedLesson>();
+        public DbSet<SecureSmartTuitionSystem.Models.Video.VideoWatchProgress> VideoWatchProgress => Set<SecureSmartTuitionSystem.Models.Video.VideoWatchProgress>();
         public DbSet<SecureSmartTuitionSystem.Models.Learning.Assessment> Assessments => Set<SecureSmartTuitionSystem.Models.Learning.Assessment>();
         public DbSet<SecureSmartTuitionSystem.Models.Learning.AssessmentParticipant> AssessmentParticipants => Set<SecureSmartTuitionSystem.Models.Learning.AssessmentParticipant>();
         public DbSet<SecureSmartTuitionSystem.Models.Learning.AssessmentFile> AssessmentFiles => Set<SecureSmartTuitionSystem.Models.Learning.AssessmentFile>();
@@ -73,7 +75,7 @@ namespace SecureSmartTuitionSystem.Data
             _auditPrepared = true;
             var context = _http.HttpContext;
             var changed = ChangeTracker.Entries().Where(x =>
-                x.Entity is not AuditLogEntry and not SecurityEmailDelivery &&
+                x.Entity is not AuditLogEntry and not SecurityEmailDelivery and not SecureSmartTuitionSystem.Models.Video.VideoWatchProgress &&
                 x.State is EntityState.Added or EntityState.Modified or EntityState.Deleted).ToList();
             foreach (var change in changed)
             {
@@ -203,6 +205,7 @@ namespace SecureSmartTuitionSystem.Data
             builder.ConfigureAttendance();
             builder.ConfigureLearningMaterials();
             builder.ConfigureAssessments();
+            builder.ConfigureVideoPlayback();
             builder.ConfigureMonthlyBilling();
 
             // AddDefaultIdentity uses 128-character provider/token keys at runtime.

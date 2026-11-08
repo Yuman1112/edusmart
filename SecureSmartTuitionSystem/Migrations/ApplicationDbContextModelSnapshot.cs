@@ -2318,6 +2318,123 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("TutorTeachingSubjects");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Video.RecordedLesson", b =>
+                {
+                    b.Property<int>("RecordedLessonId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RecordedLessonId"));
+
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<double>("DurationSeconds")
+                        .HasColumnType("float");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.Property<DateTime>("RecordingDate")
+                        .HasColumnType("date");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UploadedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("RecordedLessonId");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.HasIndex("ClassSessionId", "IsActive", "RecordingDate");
+
+                    b.ToTable("RecordedLessons", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_RecordedLesson_Duration", "[DurationSeconds] > 0 AND [DurationSeconds] <= 28800");
+
+                            t.HasCheckConstraint("CK_RecordedLesson_Size", "[FileSize] > 0 AND [FileSize] <= 209715200");
+                        });
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Video.VideoWatchProgress", b =>
+                {
+                    b.Property<int>("VideoWatchProgressId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VideoWatchProgressId"));
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<double>("PositionSeconds")
+                        .HasColumnType("float");
+
+                    b.Property<int>("RecordedLessonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StudentUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<double>("WatchedSeconds")
+                        .HasColumnType("float");
+
+                    b.HasKey("VideoWatchProgressId");
+
+                    b.HasIndex("StudentUserId");
+
+                    b.HasIndex("RecordedLessonId", "StudentUserId")
+                        .IsUnique();
+
+                    b.ToTable("VideoWatchProgress", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_VideoWatch_Seconds", "[PositionSeconds] >= 0 AND [WatchedSeconds] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -2914,6 +3031,44 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsRequired();
 
                     b.Navigation("TutorProfile");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Video.RecordedLesson", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", "ClassSession")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "UploadedByUser")
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassSession");
+
+                    b.Navigation("UploadedByUser");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Video.VideoWatchProgress", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Video.RecordedLesson", "RecordedLesson")
+                        .WithMany()
+                        .HasForeignKey("RecordedLessonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "StudentUser")
+                        .WithMany()
+                        .HasForeignKey("StudentUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RecordedLesson");
+
+                    b.Navigation("StudentUser");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Attendance.AttendanceLesson", b =>

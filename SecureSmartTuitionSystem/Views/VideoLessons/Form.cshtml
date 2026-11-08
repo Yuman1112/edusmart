@@ -1,0 +1,69 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoForm
+@{
+    bool editing = Model.Id > 0; ViewData["Title"] = editing ? "Edit Recorded Lesson" : "Upload Recorded Lesson";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/video-playback.css" asp-append-version="true" />
+}
+<div class="video-page">
+    <div class="page-header"><div><h1>@ViewData["Title"]</h1><p>@(editing ? "Update the recording information. The saved video and class stay unchanged." : "Share a recorded lesson with your assigned class.")</p></div><a asp-action="@(editing ? "Play" : "Index")" asp-route-id="@(editing? Model.Id: (int?)null)" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
+    <div class="class-form-card tutor-create-card">
+        <form asp-action="Save" method="post" enctype="multipart/form-data" data-video-form novalidate data-choices-url="@Url.Action("ClassChoices")" data-editing="@editing.ToString().ToLowerInvariant()">
+            <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+            <div class="text-danger" role="alert" data-video-form-error hidden></div>
+            @if (!editing)
+            {
+                <div class="alert alert-info" data-video-no-classes hidden="@(Model.Classes.Count > 0)">No active assigned classes are available. Ask your administrator to assign a class before uploading a recording.</div>
+            }
+            <section class="class-form-section">
+                <h2><i class="bi bi-camera-video" aria-hidden="true"></i> Recording Information</h2>
+                <div class="video-form-grid">
+                    <div><label asp-for="ClassSessionId" class="form-label">Class</label><select asp-for="ClassSessionId" class="form-select" disabled="@editing" data-video-classes><option value="">Select assigned class</option>@foreach(var c in Model.Classes){
+                    <option value="@c.Value">@c.Text</option>
+                                        }
+</select>@if(editing){
+                    <input type="hidden" name="ClassSessionId" value="@Model.ClassSessionId" />
+                                        }
+<span asp-validation-for="ClassSessionId" class="video-field-error"></span></div>
+                    <div><label for="video-subject-label" class="form-label">Subject &amp; Level</label><input id="video-subject-label" class="form-control" value="@Model.SubjectLabel" readonly /></div>
+                    @if (editing)
+                    {
+                        <div class="video-full"><label asp-for="Title" class="form-label">Lesson Title</label><input asp-for="Title" class="form-control" maxlength="150" placeholder="For example: Chapter 1 · Algebra revision" /><span asp-validation-for="Title" class="video-field-error"></span></div>
+                    }
+                    <div><label asp-for="RecordingDate" class="form-label">Recording Date (MYT)</label><input asp-for="RecordingDate" asp-format="{0:yyyy-MM-dd}" type="date" min="2000-01-01" max="@SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today.ToString("yyyy-MM-dd")" class="form-control" /><span asp-validation-for="RecordingDate" class="video-field-error"></span></div>
+                    <div class="video-full"><label asp-for="Description" class="form-label">Description (Optional)</label><textarea asp-for="Description" rows="4" maxlength="2000" class="form-control" placeholder="Topics covered or useful revision notes"></textarea><span asp-validation-for="Description" class="video-field-error"></span></div>
+                </div>
+            </section>
+            @if (!editing)
+            {
+                <section class="class-form-section video-upload-section">
+                    <div class="video-upload-heading"><div><h2><i class="bi bi-film" aria-hidden="true"></i> Lesson Videos</h2><p class="video-note">Each video becomes a separate recorded lesson. Class, date and description are shared.</p></div><label class="outline-button video-file-picker"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Videos<input asp-for="VideoFile" type="file" multiple accept=".mp4,video/mp4" aria-label="Select MP4 videos" /></label></div>
+                    <div class="video-drop" data-video-drop>Drop MP4 videos here, or choose Add Videos.</div>
+                    <div class="video-batch-list" data-video-queue aria-live="polite"></div>
+                    <dialog class="video-preview-dialog" data-video-preview-panel aria-labelledby="video-preview-title">
+                        <div class="video-preview-heading"><h2 id="video-preview-title" data-video-preview-title>Video Preview</h2><button type="button" class="outline-button" data-video-preview-close aria-label="Close video preview"><i class="bi bi-x-lg" aria-hidden="true"></i> Close</button></div>
+                        <video class="video-local-preview" controls preload="metadata" data-video-local hidden></video>
+                    </dialog>
+                    <span asp-validation-for="VideoFile" class="video-field-error"></span>
+                    <p class="video-note">MP4 (H.264 / AAC recommended) <span aria-hidden="true"> | </span> Up to 5 videos · 200 MB per video</p>
+                    <div data-video-upload-progress hidden><progress max="100" value="0" aria-label="Video upload progress"></progress><span role="status"></span></div>
+                    <p class="video-note" data-video-batch-status role="status"></p>
+                    <a asp-action="Index" class="outline-button" data-video-done hidden>View Recorded Lessons <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                </section>
+            }
+            else
+            {
+
+                <p class="video-note"><i class="bi bi-film" aria-hidden="true"></i> Saved video: @Model.CurrentFileName</p>
+            }
+            <div class="alert alert-danger" role="alert" data-video-submit-error hidden></div>
+            <div class="class-form-actions"><a asp-action="@(editing ? "Play" : "Index")" asp-route-id="@(editing? Model.Id: (int?)null)" class="outline-button">Cancel</a><button type="@(editing ? "submit" : "button")" class="primary-button" data-video-save>@(editing ? "Save Changes" : "Upload Videos")</button></div>
+        </form>
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" /><script src="~/js/video-playback.js" asp-append-version="true"></script>
+}
