@@ -2342,6 +2342,9 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<long>("FileSize")
                         .HasColumnType("bigint");
 
+                    b.Property<bool>("InactivatedByAdmin")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 

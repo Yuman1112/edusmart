@@ -12,8 +12,19 @@
             @if (row.CanManage)
             {
                 <a asp-action="Edit" asp-route-id="@row.Id" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit</a>
-                <form asp-action="ChangeState" method="post"><input type="hidden" name="id" value="@row.Id" /><input type="hidden" name="rowVersion" value="@row.RowVersion" /><input type="hidden" name="active" value="@(!row.IsActive)" /><button type="submit" class="outline-button"><i class="bi @(row.IsActive ? "bi-eye-slash" : "bi-arrow-counterclockwise")" aria-hidden="true"></i> @(row.IsActive ? "Set Inactive" : "Set Active")</button></form>
-}
+            }
+            @if (row.CanChangeState)
+            {
+                <form asp-action="ChangeState" method="post">
+                    <input type="hidden" name="id" value="@row.Id" />
+                    <input type="hidden" name="rowVersion" value="@row.RowVersion" />
+                    <input type="hidden" name="active" value="@(row.IsActive ? "false" : "true")" />
+                    <button type="submit" class="outline-button">
+                        <i class="bi @(row.IsActive ? "bi-eye-slash" : "bi-arrow-counterclockwise")" aria-hidden="true"></i>
+                        @(row.IsActive ? "Set Inactive" : "Restore")
+                    </button>
+                </form>
+            }
             <a asp-action="Index" asp-route-ClassId="@row.ClassId" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
         </div>
     </div>
@@ -27,12 +38,18 @@
     }
     @if (!row.IsActive)
     {
-        <div class="alert alert-warning">This recording is inactive. It is available for staff review only.</div>
+        <div class="alert alert-warning">
+            This recording is inactive. It is available for staff review only.
+            @if (row.CanManage && !row.CanChangeState)
+            {
+                <span>Only an administrator can restore it.</span>
+            }
+        </div>
     }
     <div class="video-layout">
         <section class="class-form-card video-player-card">
             <div class="video-player-heading"><span class="video-subject">@row.Level · @row.Subject</span><span class="video-badge @(row.IsActive ? "is-active" : "is-inactive")">@(row.IsActive ? "Active" : "Inactive")</span></div>
-            <video id="lesson-video" controls playsinline preload="metadata" controlslist="nodownload" data-video-player data-access-url="@Url.Action("Access", new { id = row.Id })" data-progress-url="@(Model.IsStudent? Url.Action("Progress"):null)" data-video-id="@row.Id" data-resume="@row.Position.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-completed="@row.Watched.ToString().ToLowerInvariant()"><source src="@Url.Action("Media", new { id = row.Id })" type="video/mp4" />Your browser does not support MP4 playback.</video>
+            <video id="lesson-video" controls playsinline preload="metadata" controlslist="nodownload" data-video-player data-access-url="@Url.Action("Access", new { id = row.Id, version = row.PlaybackVersion })" data-playback-version="@row.PlaybackVersion" data-progress-url="@(Model.IsStudent? Url.Action("Progress"):null)" data-video-id="@row.Id" data-resume="@row.Position.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-completed="@row.Watched.ToString().ToLowerInvariant()"><source src="@Url.Action("Media", new { id = row.Id, version = row.PlaybackVersion })" type="video/mp4" />Your browser does not support MP4 playback.</video>
             <div class="alert alert-warning mt-3" data-video-player-error role="alert" hidden></div>
             <div class="video-actions video-playback-tools"><span data-video-playback-status role="status">@(row.Watched ? "Watched" : "Ready to play")</span><button type="button" class="outline-button" data-video-start-over>Start from beginning</button></div>
             @if (Model.IsStudent)
@@ -48,10 +65,12 @@
         </section>
         <aside class="dashboard-card compact-class-card video-playlist">
             <div class="dashboard-card-header"><h2><i class="bi bi-collection-play me-2" aria-hidden="true"></i> In This Class</h2></div>
-            <div class="video-playlist-items">@foreach(var item in Model.Playlist){
-            <a asp-action="Play" asp-route-id="@item.Id" class="video-playlist-link @(item.Id == row.Id ? "is-current" : "")" aria-current="@(item.Id == row.Id ? "page" : null)"><i class="bi @(item.Id == row.Id ? "bi-play-circle-fill" : "bi-play-circle")" aria-hidden="true"></i><div><strong>@item.Title</strong><small>@item.Date.ToString("dd MMM yyyy") · @item.DurationText @(item.Watched ? " · Watched" : "")</small></div></a>
-                        }
-</div>
+            <div class="video-playlist-items">
+                @foreach (var item in Model.Playlist)
+                {
+                    <a asp-action="Play" asp-route-id="@item.Id" class="video-playlist-link @(item.Id == row.Id ? "is-current" : "")" aria-current="@(item.Id == row.Id ? "page" : null)"><i class="bi @(item.Id == row.Id ? "bi-play-circle-fill" : "bi-play-circle")" aria-hidden="true"></i><div><strong>@item.Title</strong><small>@item.Date.ToString("dd MMM yyyy") · @item.DurationText @(item.Watched ? " · Watched" : "")</small></div></a>
+                }
+            </div>
             @if (Model.Playlist.Count == 0)
             {
                 <p class="video-note p-3">No active recordings in this class.</p>

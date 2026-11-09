@@ -53,26 +53,42 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
     {
         if (!VideoLessonService.IsTutor(User)) return Forbid();
         var error = VideoLessonService.Validate(form, Services.Enrollment.ClassScheduleService.Today);
-        if (Request.Form.Files.Count > 1) ModelState.AddModelError(nameof(form.VideoFile), "Upload videos using the batch uploader. Reload the page and enable JavaScript, then select your videos again.");
+        if (Request.Form.Files.Count > 1)
+            ModelState.AddModelError(nameof(form.VideoFile), form.Id > 0
+                ? "Choose one MP4 to replace this recording."
+                : "Upload videos using the batch uploader. Reload the page and enable JavaScript, then select your videos again.");
         if (error != null) ModelState.AddModelError(nameof(form.RecordingDate), error);
         if (form.Id == 0 && form.VideoFile == null) ModelState.AddModelError(nameof(form.VideoFile), "Please select an MP4 video.");
-        if (form.Id != 0 && form.VideoFile != null) ModelState.AddModelError(nameof(form.VideoFile), "The saved video cannot be replaced. Upload another lesson instead.");
         (string Key, long Size, double Duration)? file = null;
-        bool committed = false;
+        bool discardStagedFile = true;
         try
         {
             if (ModelState.IsValid && form.Id == 0)
             {
                 if (!await new LearningMaterialService(db).Classes(User, true).AnyAsync(c => c.ClassSessionId == form.ClassSessionId, ct)) ModelState.AddModelError(nameof(form.ClassSessionId), "This assigned class is no longer available.");
-                else file = await Store.StoreAsync(form.VideoFile!, ct);
+            }
+            string? currentVideoKey = null;
+            if (ModelState.IsValid && form.Id > 0 && form.VideoFile != null)
+            {
+                currentVideoKey = await Service.Manage(User)
+                    .Where(x => x.RecordedLessonId == form.Id && !x.InactivatedByAdmin)
+                    .Select(x => x.StorageKey)
+                    .SingleOrDefaultAsync(ct);
+                if (currentVideoKey == null)
+                    ModelState.AddModelError(nameof(form.VideoFile), "This recording is not available for replacement.");
             }
             if (ModelState.IsValid)
             {
+                if (form.VideoFile != null) file = await Store.StoreAsync(form.VideoFile, ct, currentVideoKey);
+                // If the commit outcome is unknown, retain the staged file in case the database references it.
+                discardStagedFile = false;
                 var result = await Service.SaveAsync(User, form, file);
+                discardStagedFile = result.Error != null;
                 if (result.Error == null)
                 {
-                    committed = true;
-                    TempData["VideoSuccess"] = form.Id == 0 ? "Recorded lesson uploaded successfully." : "Recorded lesson updated successfully.";
+                    if (result.PreviousKey != null) Store.Remove(result.PreviousKey);
+                    TempData["VideoSuccess"] = form.Id == 0 ? "Recorded lesson uploaded successfully."
+                        : file.HasValue ? "Video replaced successfully. Student watch progress has been reset." : "Recorded lesson updated successfully.";
                     if (Request.Headers.Accept.ToString().Contains("application/json")) return Json(new { url = Url.Action("Play", new { id = result.Id }) });
                     return RedirectToAction(nameof(Play), new { id = result.Id });
                 }
@@ -84,18 +100,32 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
         finally
         {
             // A committed recording owns its file. Failed database/validation attempts leave no uploaded file.
-            if (file.HasValue && !committed) Store.Remove(file.Value.Key);
+            if (file.HasValue && discardStagedFile) Store.Remove(file.Value.Key);
         }
         if (Request.Headers.Accept.ToString().Contains("application/json")) return BadRequest(new { errors = ModelState.Where(x => x.Value!.Errors.Count > 0).ToDictionary(x => x.Key, x => x.Value!.Errors.Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Check this value." : e.ErrorMessage).ToArray()) });
+        if (form.Id > 0)
+        {
+            var saved = await Service.FormAsync(User, form.Id);
+            if (saved == null) return NotFound();
+            form.CurrentFileName = saved.CurrentFileName;
+            form.CanReplaceVideo = saved.CanReplaceVideo;
+        }
         AllowLocalPreview(); await Service.PopulateAsync(User, form); return View("Form", form);
     }
-    [HttpPost, Authorize(Roles = "Tutor")]
-    public async Task<IActionResult> ChangeState(int id, string? rowVersion, bool active)
+    [HttpPost, Authorize(Roles = "Admin,Tutor")]
+    public async Task<IActionResult> ChangeState(int id, string? rowVersion, bool? active)
     {
-        if (!VideoLessonService.IsTutor(User)) return Forbid();
-        var error = await Service.StateAsync(User, id, rowVersion, active);
-        if (Request.Headers.Accept.ToString().Contains("application/json")) return StatusCode(error == null ? 200 : 409, new { ok = error == null, message = error ?? (active ? "Recorded lesson is active." : "Recorded lesson is inactive. Students can no longer access it.") });
-        TempData[error == null ? "VideoSuccess" : "VideoWarning"] = error ?? "Recorded lesson status updated.";
+        if (!ModelState.IsValid || id <= 0 || active is null)
+            return BadRequest(new { message = "Choose a valid recording and status." });
+
+        var error = await Service.StateAsync(User, id, rowVersion, active.Value);
+        var message = error ?? (active.Value
+            ? "Recorded lesson restored."
+            : "Recorded lesson set to inactive. Students can no longer access it.");
+        if (Request.Headers.Accept.ToString().Contains("application/json"))
+            return StatusCode(error == null ? 200 : 409, new { ok = error == null, message });
+
+        TempData[error == null ? "VideoSuccess" : "VideoWarning"] = message;
         return RedirectToAction(nameof(Play), new { id });
     }
     [HttpGet]
@@ -107,16 +137,17 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
         return View("Unavailable");
     }
     [HttpGet]
-    public async Task<IActionResult> Access(int id)
+    public async Task<IActionResult> Access(int id, string? version)
     {
-        var exists = await Service.Visible(User).AnyAsync(x => x.RecordedLessonId == id);
-        return exists ? Json(new { allowed = true }) : NotFound();
+        var current = await Service.Visible(User).Where(x => x.RecordedLessonId == id).Select(x => x.StorageKey).SingleOrDefaultAsync();
+        if (current == null) return NotFound();
+        return version != null && version != current ? StatusCode(409) : Json(new { allowed = true });
     }
     [HttpGet, HttpHead]
-    public async Task<IActionResult> Media(int id)
+    public async Task<IActionResult> Media(int id, string? version)
     {
         var lesson = await Service.Visible(User).Where(x => x.RecordedLessonId == id).Select(x => new { x.StorageKey, x.UpdatedAtUtc }).SingleOrDefaultAsync();
-        if (lesson == null) return NotFound();
+        if (lesson == null || (version != null && version != lesson.StorageKey)) return NotFound();
         try
         {
             var stream = Store.Open(lesson.StorageKey); if (stream == null) return NotFound();

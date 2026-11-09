@@ -23,10 +23,12 @@ public sealed class VideoForm
     [StringLength(100)] public string? RowVersion { get; set; }
     public List<SelectListItem> Classes { get; set; } = [];
     public string SubjectLabel { get; set; } = "";
+    public bool CanReplaceVideo { get; set; }
     public string CurrentFileName { get; set; } = "";
 }
 public sealed class VideoRow
 {
+    public string PlaybackVersion { get; set; } = "";
     public int Id { get; set; }
     public int ClassId { get; set; }
     public string Title { get; set; } = "";
@@ -43,6 +45,7 @@ public sealed class VideoRow
     public DateTime CreatedAtUtc { get; set; }
     public bool IsActive { get; set; }
     public bool CanManage { get; set; }
+    public bool CanChangeState { get; set; }
     public bool Watched { get; set; }
     public double Position { get; set; }
     public string RowVersion { get; set; } = "";
@@ -71,6 +74,7 @@ public sealed class VideoPlayModel
 }
 public sealed class VideoProgressForm
 {
+    [Required, StringLength(36)] public string? PlaybackVersion { get; set; }
     [Range(1, int.MaxValue)] public int Id { get; set; }
     [Range(0, 28800)] public double Position { get; set; }
     [Range(0, 60)] public double Played { get; set; }

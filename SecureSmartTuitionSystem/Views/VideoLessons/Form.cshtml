@@ -1,6 +1,14 @@
 ﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoForm
 @{
-    bool editing = Model.Id > 0; ViewData["Title"] = editing ? "Edit Recorded Lesson" : "Upload Recorded Lesson";
+    bool editing = Model.Id > 0;
+    ViewData["Title"] = editing ? "Edit Recorded Lesson" : "Upload Recorded Lesson";
+    var listUrl = Url.Action("Index", "VideoLessons");
+    var requestedReturnUrl = Context.Request.Query["returnUrl"].ToString();
+    var listReturnUrl = editing && listUrl != null && Url.IsLocalUrl(requestedReturnUrl)
+        && string.Equals(requestedReturnUrl.Split('?', 2)[0], listUrl, StringComparison.Ordinal)
+        ? requestedReturnUrl
+        : null;
+    var backUrl = listReturnUrl ?? (editing ? Url.Action("Play", new { id = Model.Id }) : listUrl);
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
@@ -8,9 +16,9 @@
     <link rel="stylesheet" href="~/css/video-playback.css" asp-append-version="true" />
 }
 <div class="video-page">
-    <div class="page-header"><div><h1>@ViewData["Title"]</h1><p>@(editing ? "Update the recording information. The saved video and class stay unchanged." : "Share a recorded lesson with your assigned class.")</p></div><a asp-action="@(editing ? "Play" : "Index")" asp-route-id="@(editing? Model.Id: (int?)null)" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
+    <div class="page-header"><div><h1>@ViewData["Title"]</h1><p>@(editing ? "Update the recording information or replace the video for this class." : "Share a recorded lesson with your assigned class.")</p></div><a href="@backUrl" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
     <div class="class-form-card tutor-create-card">
-        <form asp-action="Save" method="post" enctype="multipart/form-data" data-video-form novalidate data-choices-url="@Url.Action("ClassChoices")" data-editing="@editing.ToString().ToLowerInvariant()">
+        <form asp-action="Save" asp-route-returnUrl="@listReturnUrl" method="post" enctype="multipart/form-data" data-video-form novalidate data-choices-url="@Url.Action("ClassChoices")" data-editing="@editing.ToString().ToLowerInvariant()">
             <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" />
             <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
             <div class="text-danger" role="alert" data-video-form-error hidden></div>
@@ -21,13 +29,16 @@
             <section class="class-form-section">
                 <h2><i class="bi bi-camera-video" aria-hidden="true"></i> Recording Information</h2>
                 <div class="video-form-grid">
-                    <div><label asp-for="ClassSessionId" class="form-label">Class</label><select asp-for="ClassSessionId" class="form-select" disabled="@editing" data-video-classes><option value="">Select assigned class</option>@foreach(var c in Model.Classes){
-                    <option value="@c.Value">@c.Text</option>
-                                        }
-</select>@if(editing){
-                    <input type="hidden" name="ClassSessionId" value="@Model.ClassSessionId" />
-                                        }
-<span asp-validation-for="ClassSessionId" class="video-field-error"></span></div>
+                    <div>
+                        <label asp-for="ClassSessionId" class="form-label">Class</label><select asp-for="ClassSessionId" class="form-select" disabled="@editing" data-video-classes>
+                            <option value="">Select assigned class</option>@foreach(var c in Model.Classes){
+                            <option value="@c.Value">@c.Text</option>
+                                                        }
+                        </select>@if(editing){
+                        <input type="hidden" name="ClassSessionId" value="@Model.ClassSessionId" />
+                                                }
+                        <span asp-validation-for="ClassSessionId" class="video-field-error"></span>
+                    </div>
                     <div><label for="video-subject-label" class="form-label">Subject &amp; Level</label><input id="video-subject-label" class="form-control" value="@Model.SubjectLabel" readonly /></div>
                     @if (editing)
                     {
@@ -57,10 +68,36 @@
             else
             {
 
-                <p class="video-note"><i class="bi bi-film" aria-hidden="true"></i> Saved video: @Model.CurrentFileName</p>
+                <section class="class-form-section video-upload-section">
+                    <h2><i class="bi bi-film" aria-hidden="true"></i> Lesson Video</h2>
+                    <p class="video-note">Current file: @Model.CurrentFileName</p>
+                    @if (Model.CanReplaceVideo)
+                    {
+                        <label asp-for="VideoFile" class="form-label">Replace Video (Optional)</label>
+                        <input asp-for="VideoFile" type="file" class="form-control" accept=".mp4,video/mp4" aria-describedby="video-replace-help" />
+                        <span asp-validation-for="VideoFile" class="video-field-error"></span>
+                        <div class="video-actions mt-2" data-video-replacement-actions hidden>
+                            <button type="button" class="outline-button" data-video-replacement-preview>Preview</button>
+                            <button type="button" class="outline-button" data-video-replacement-clear>Remove Selection</button>
+                        </div>
+                        <dialog class="video-preview-dialog" data-video-preview-panel aria-labelledby="video-preview-title">
+                            <div class="video-preview-heading">
+                                <h2 id="video-preview-title" data-video-preview-title>Video Preview</h2>
+                                <button type="button" class="outline-button" data-video-preview-close><i class="bi bi-x-lg" aria-hidden="true"></i> Close</button>
+                            </div>
+                            <video class="video-local-preview" controls preload="metadata" data-video-local hidden></video>
+                        </dialog>
+                        <p id="video-replace-help" class="video-note mt-2">One MP4 · Max. 200 MB. Replacing the file resets student watch progress for this lesson.</p>
+                        <div data-video-upload-progress hidden><progress max="100" value="0" aria-label="Video upload progress"></progress><span role="status"></span></div>
+                    }
+                    else
+                    {
+                        <p class="video-note">An administrator must restore this recording before its video can be replaced.</p>
+                    }
+                </section>
             }
             <div class="alert alert-danger" role="alert" data-video-submit-error hidden></div>
-            <div class="class-form-actions"><a asp-action="@(editing ? "Play" : "Index")" asp-route-id="@(editing? Model.Id: (int?)null)" class="outline-button">Cancel</a><button type="@(editing ? "submit" : "button")" class="primary-button" data-video-save>@(editing ? "Save Changes" : "Upload Videos")</button></div>
+            <div class="class-form-actions"><a href="@backUrl" class="outline-button">Cancel</a><button type="@(editing ? "submit" : "button")" class="primary-button" data-video-save>@(editing ? "Save Changes" : "Upload Videos")</button></div>
         </form>
     </div>
 </div>

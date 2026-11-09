@@ -8,6 +8,7 @@
         const file = one('[name="VideoFile"]', form), save = one('[data-video-save]', form);
         const preview = one('[data-video-local]', form), drop = one('[data-video-drop]', form);
         const classes = one('[data-video-classes]', form);
+        const editing = form.dataset.editing === 'true';
         const original = ['Title', 'Description', 'RecordingDate'].map(k => (form.elements[k]?.value || '').trim());
         let busy = false, blob = '', choices = [];
         function error(key, message) {
@@ -16,7 +17,7 @@
             const input = form.elements[key]; if (input) input.classList.toggle('input-validation-error', !!message);
         }
         function summary(message) { const node = one('[data-video-form-error]', form); if (node) { node.textContent = message; node.hidden = !message; } const footer = one('[data-video-submit-error]', form); if (footer) { footer.textContent = message; footer.hidden = !message; } }
-        function dirty() { save.disabled = busy || (typeof started !== 'undefined' && started && queue.some(x => x.state === 'unknown')) || (form.dataset.editing === 'true' && original.every((v, i) => v === form.elements[['Title', 'Description', 'RecordingDate'][i]].value.trim())); }
+        function dirty() { save.disabled = busy || (typeof started !== 'undefined' && started && queue.some(x => x.state === 'unknown')) || (editing && !file?.files.length && original.every((v, i) => v === form.elements[['Title', 'Description', 'RecordingDate'][i]].value.trim())); }
         form.addEventListener('input', dirty);
         const queue = [], list = one('[data-video-queue]', form);
         const batchStatus = one('[data-video-batch-status]', form);
@@ -66,7 +67,35 @@
             }
             error('VideoFile', messages.join(' ')); file.value = ''; renderQueue();
         }
-        if (file) {
+        if (editing && file) {
+            const actions = one('[data-video-replacement-actions]', form);
+            function replacementChanged() {
+                closePreview();
+                const selected = file.files[0];
+                const invalid = selected && (!/\.mp4$/i.test(selected.name) || !selected.size || selected.size > 209715200);
+                error('VideoFile', invalid ? 'Choose an MP4 video of at most 200 MB.' : '');
+                if (invalid) file.value = '';
+                actions.hidden = !file.files.length;
+                dirty();
+            }
+            file.addEventListener('change', replacementChanged);
+            one('[data-video-replacement-clear]', form).addEventListener('click', () => {
+                if (busy) return;
+                file.value = '';
+                replacementChanged();
+                file.focus();
+            });
+            one('[data-video-replacement-preview]', form).addEventListener('click', () => {
+                if (busy || !file.files.length) return;
+                closePreview();
+                const selected = file.files[0];
+                blob = URL.createObjectURL(selected);
+                preview.src = blob;
+                preview.hidden = false;
+                one('[data-video-preview-title]', form).textContent = selected.name;
+                previewPanel.showModal();
+            });
+        } else if (file) {
             file.addEventListener('change', () => addFiles(Array.from(file.files)));
             ['dragenter', 'dragover'].forEach(e => drop.addEventListener(e, event => { event.preventDefault(); if (!started) drop.classList.add('is-dragging'); }));
             ['dragleave', 'drop'].forEach(e => drop.addEventListener(e, event => { event.preventDefault(); drop.classList.remove('is-dragging'); }));
@@ -112,11 +141,10 @@
         async function submitVideo(event) {
             event.preventDefault(); if (busy) return;
             try {
-                const editing = form.dataset.editing === 'true';
                 let valid = true; summary(''); error('VideoFile', '');
                 const keys = [['ClassSessionId', 'Please select an assigned class.'], ['RecordingDate', 'Please choose the recording date.']];
                 if (editing) keys.push(['Title', 'Please enter a lesson title.']);
-                keys.forEach(([key, message]) => { const missing = !form.elements[key].value.trim(); error(key, missing ? message : ''); valid = valid && !missing; });
+                keys.forEach(([key, message]) => { const missing = !(key === 'ClassSessionId' ? classes : form.elements[key]).value.trim(); error(key, missing ? message : ''); valid = valid && !missing; });
                 const pending = queue.filter(x => x.state === 'ready' || x.state === 'failed');
                 if (!editing && (!pending.length || pending.some(x => !x.title.trim()))) { error('VideoFile', pending.length ? 'Enter a lesson title for every video.' : 'Add at least one video to upload.'); valid = false; }
                 for (const key of ['RecordingDate', 'Description', ...(editing ? ['Title'] : [])]) {
@@ -129,7 +157,10 @@
                 const progress = one('[data-video-upload-progress]', form);
                 if (progress) { progress.hidden = false; one('progress', progress).value = 0; }
                 if (editing) {
-                    const result = await send(new FormData(form), progress);
+                    const data = new FormData(form);
+                    if (file) file.disabled = true;
+                    const result = await send(data, progress);
+                    if (file) file.disabled = false;
                     if (result.ok) { const url = new URL(result.url, location.href); if (url.origin === location.origin) { location.assign(url.href); return; } }
                     if (result.errors) Object.entries(result.errors).forEach(([key, messages]) => key ? error(key, messages.join(' ')) : summary(messages.join(' '))); else summary(result.message);
                 } else {
@@ -155,6 +186,7 @@
                 busy = false; if (progress) progress.hidden = true; renderQueue(); dirty();
                 if (!editing) { save.textContent = 'Retry Remaining Videos'; save.disabled = queue.some(x => x.state === 'unknown') || !queue.some(x => x.state === 'ready' || x.state === 'failed'); }
             } catch (exception) {
+                if (editing && file) file.disabled = false;
                 console.error('Video upload could not continue.', exception);
                 summary('The uploader could not continue. Your selected files are still here. Check Recorded Lessons before retrying if an upload had started.');
                 if (busy) queue.filter(x => x.state === 'uploading').forEach(x => { x.state = 'unknown'; x.message = 'Upload status could not be confirmed. Check Recorded Lessons.'; });
@@ -170,11 +202,67 @@
     if (filter) {
         let loading = false, controller, serial = 0, timer;
         function dropdowns() { document.querySelectorAll('[data-video-results] [data-bs-toggle="dropdown"]').forEach(button => window.bootstrap?.Dropdown.getOrCreateInstance(button, { popperConfig: c => ({ ...c, strategy: 'fixed' }) })); }
-        dropdowns();
+        const pendingThumbnails = new Set();
+        function captureThumbnail(canvas) {
+            const context = canvas.getContext('2d');
+            if (!context) return;
+
+            const source = document.createElement('video');
+            source.muted = true;
+            source.preload = 'auto';
+            const timeout = setTimeout(stop, 12000);
+            pendingThumbnails.add(stop);
+
+            function stop() {
+                clearTimeout(timeout);
+                pendingThumbnails.delete(stop);
+                source.removeAttribute('src');
+                source.load();
+            }
+
+            source.addEventListener('loadedmetadata', () => {
+                if (Number.isFinite(source.duration) && source.duration > 0) {
+                    source.currentTime = Math.min(5, source.duration / 2);
+                } else {
+                    stop();
+                }
+            }, { once: true });
+            source.addEventListener('seeked', () => {
+                if (source.videoWidth && source.videoHeight && source.readyState >= 2) {
+                    const scale = Math.max(canvas.width / source.videoWidth, canvas.height / source.videoHeight);
+                    const width = source.videoWidth * scale;
+                    const height = source.videoHeight * scale;
+                    context.drawImage(source, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+                }
+                stop();
+            }, { once: true });
+            source.addEventListener('error', stop, { once: true });
+            source.src = canvas.dataset.videoThumbnail;
+        }
+
+        const thumbnailObserver = typeof IntersectionObserver === 'function'
+            ? new IntersectionObserver(entries => {
+                for (const { target, isIntersecting } of entries) {
+                    if (!isIntersecting || !target.isConnected) continue;
+                    thumbnailObserver.unobserve(target);
+                    captureThumbnail(target);
+                }
+            })
+            : null;
+
+        function initializeResults() {
+            dropdowns();
+            document.querySelectorAll('[data-video-results] [data-video-thumbnail]')
+                .forEach(canvas => thumbnailObserver?.observe(canvas));
+        }
+
+        const fingerprint = node => node.innerHTML.replace(/(<input[^>]*\bname="__RequestVerificationToken"[^>]*\bvalue=")[^"]*/g, '$1');
+        let lastFingerprint = fingerprint(one('[data-video-results]'));
+        initializeResults();
         const feedback = one('[data-video-feedback]');
         function message(text, success) { feedback.textContent = text; feedback.className = `alert ${success ? 'alert-success' : 'alert-warning'}`; feedback.hidden = false; if (success) setTimeout(() => { if (feedback.textContent === text) feedback.hidden = true; }, 5000); }
         async function update(url, navigate = false, writeHistory = true) {
-            if (!navigate && (loading || document.hidden || one('.dropdown-menu.show') || one('[data-video-results]')?.contains(document.activeElement))) return;
+            if (!navigate && (loading || document.hidden || one('[data-video-results] .dropdown-menu.show'))) return;
             controller?.abort(); controller = new AbortController(); const aborter = controller; const ticket = ++serial; loading = true;
             const clean = new URL(url, location.href); clean.searchParams.delete('fragment');
             const requestUrl = new URL(clean); requestUrl.searchParams.set('fragment', 'true');
@@ -186,8 +274,31 @@
                 const holder = document.createElement('template'); holder.innerHTML = html; const next = one('[data-video-results]', holder.content);
                 if (!next) throw new Error();
                 const current = one('[data-video-results]');
-                const fingerprint = n => n.innerHTML.replace(/value="[^"]*"(?=[^>]*name="__RequestVerificationToken")/g, '').replace(/(<input[^>]*name="__RequestVerificationToken"[^>]*value=")[^"]*/g, '$1');
-                if (fingerprint(current) !== fingerprint(next)) { current.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(n => window.bootstrap?.Dropdown.getInstance(n)?.dispose()); current.replaceWith(next); dropdowns(); }
+                if (!navigate && one('.dropdown-menu.show', current)) return;
+                const nextFingerprint = fingerprint(next);
+                if (lastFingerprint !== nextFingerprint) {
+                    const focused = current.contains(document.activeElement) ? document.activeElement : null;
+                    const focusId = focused?.id;
+                    const focusHref = focused?.getAttribute('href');
+                    const scrollLeft = one('.table-responsive', current)?.scrollLeft ?? 0;
+                    current.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(n => window.bootstrap?.Dropdown.getInstance(n)?.dispose());
+                    thumbnailObserver?.disconnect();
+                    pendingThumbnails.forEach(stop => stop());
+                    current.replaceWith(next);
+                    lastFingerprint = nextFingerprint;
+                    initializeResults();
+                    const scroller = one('.table-responsive', next);
+                    if (scroller) scroller.scrollLeft = scrollLeft;
+                    if (focused && !navigate) {
+                        const replacement = (focusId && document.getElementById(focusId))
+                            || (focusHref && Array.from(next.querySelectorAll('a')).find(link => link.getAttribute('href') === focusHref));
+                        if (replacement) replacement.focus({ preventScroll: true });
+                        else {
+                            next.tabIndex = -1;
+                            next.focus({ preventScroll: true });
+                        }
+                    }
+                }
                 if (navigate) { if (writeHistory) history.pushState(null, '', clean); for (const element of filter.elements) if (element.name) element.value = clean.searchParams.get(element.name) ?? (element.name === 'Sort' ? 'date_desc' : element.name === 'Status' ? 'active' : element.name === 'Watch' ? 'all' : ''); }
                 one('[data-video-refresh]').textContent = 'Updates automatically while visible.';
             } catch (e) { if (e.name !== 'AbortError') one('[data-video-refresh]').textContent = 'Updates paused. Check your connection or sign-in; the current list is retained.'; }
@@ -202,12 +313,15 @@
             const state = e.target.closest('[data-video-state]'); if (!state) return; e.preventDefault();
             if (!confirm('Change this recorded lesson’s availability to students?')) return;
             const button = one('button', state); button.disabled = true;
-            try { const response = await fetch(state.action, { method: 'POST', body: new FormData(state), headers: { ...headers, Accept: 'application/json' } }); const result = await response.json(); message(result.message || 'Could not change the lesson status.', response.ok); document.activeElement?.blur(); window.bootstrap?.Dropdown.getInstance(state.closest('.dropdown').querySelector('[data-bs-toggle]'))?.hide(); await update(location.href, true); }
+            try { const response = await fetch(state.action, { method: 'POST', body: new FormData(state), headers: { ...headers, Accept: 'application/json' } }); const result = await response.json(); message(result.message || 'Could not change the lesson status.', response.ok); document.activeElement?.blur(); window.bootstrap?.Dropdown.getInstance(state.closest('.dropdown').querySelector('[data-bs-toggle]'))?.hide(); await update(location.href, true, false); }
             catch { message('Could not change the lesson status. Check your connection or sign-in.', false); }
             finally { button.disabled = false; }
         });
         window.addEventListener('popstate', () => update(location.href, true, false));
-        setInterval(() => update(location.href), 15000);
+        const refresh = () => update(location.href);
+        document.addEventListener('visibilitychange', refresh);
+        window.addEventListener('focus', refresh);
+        setInterval(refresh, 5000);
     }
     const video = one('[data-video-player]');
     if (video) {
@@ -217,10 +331,10 @@
         function playerError(text) { const node = one('[data-video-player-error]'); node.textContent = text; node.hidden = false; }
         async function access() {
             if (document.hidden || denied) return;
-            try { const response = await fetch(video.dataset.accessUrl, { headers, cache: 'no-store', signal: AbortSignal.timeout(12000) }); if ([401, 403, 404].includes(response.status) || response.redirected) { denied = true; video.pause(); video.removeAttribute('src'); video.querySelectorAll('source').forEach(n => n.remove()); video.load(); playerError('This recording is no longer available to your account. Return to the lesson list or sign in again.'); } }
+            try { const response = await fetch(video.dataset.accessUrl, { headers, cache: 'no-store', signal: AbortSignal.timeout(12000) }); if ([401, 403, 404, 409].includes(response.status) || response.redirected) { denied = true; video.pause(); video.removeAttribute('src'); video.querySelectorAll('source').forEach(n => n.remove()); video.load(); playerError(response.status === 409 ? 'This video was replaced. Reload this lesson to watch the new recording.' : 'This recording is no longer available to your account. Return to the lesson list or sign in again.'); } }
             catch { /* Media requests still enforce access; do not discard buffered playback on a transient network failure. */ }
         }
-        function data(seconds) { return new URLSearchParams({ __RequestVerificationToken: token, Id: video.dataset.videoId, Position: String(Number.isFinite(video.currentTime) ? video.currentTime : 0), Played: String(Math.min(60, seconds)) }); }
+        function data(seconds) { return new URLSearchParams({ __RequestVerificationToken: token, Id: video.dataset.videoId, PlaybackVersion: video.dataset.playbackVersion, Position: String(Number.isFinite(video.currentTime) ? video.currentTime : 0), Played: String(Math.min(60, seconds)) }); }
         async function saveProgress() {
             if (!token || sending || denied || pending <= 0) return;
             const seconds = Math.min(60, pending); pending -= seconds; sending = true;

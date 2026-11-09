@@ -35,6 +35,7 @@ public sealed class RecordedLesson
     public double DurationSeconds { get; set; }
 
     public bool IsActive { get; set; } = true;
+    public bool InactivatedByAdmin { get; set; }
 
     public DateTime CreatedAtUtc { get; set; }
 

@@ -41,6 +41,7 @@ public sealed class VideoLessonService(ApplicationDbContext db)
     private IQueryable<VideoRow> Rows(IQueryable<RecordedLesson> query, ClaimsPrincipal user)
     {
         var id = Own(user); var manage = Manage(user).Select(x => x.RecordedLessonId);
+        var admin = user.IsInRole("Admin");
         return query.Select(x => new VideoRow
         {
             Id = x.RecordedLessonId,
@@ -53,12 +54,14 @@ public sealed class VideoLessonService(ApplicationDbContext db)
             Level = x.ClassSession.Subject.AcademicLevel,
             Tutor = x.UploadedByUser.FullName ?? "",
             FileName = x.OriginalFileName,
+            PlaybackVersion = x.StorageKey,
             FileSize = x.FileSize,
             Duration = x.DurationSeconds,
             Date = x.RecordingDate,
             CreatedAtUtc = x.CreatedAtUtc,
             IsActive = x.IsActive,
             CanManage = manage.Contains(x.RecordedLessonId),
+            CanChangeState = admin || (!x.InactivatedByAdmin && manage.Contains(x.RecordedLessonId)),
             RowVersion = Convert.ToBase64String(x.RowVersion),
             Watched = db.Set<VideoWatchProgress>().Any(p => p.RecordedLessonId == x.RecordedLessonId && p.StudentUserId == id && p.CompletedAtUtc != null),
             Position = db.Set<VideoWatchProgress>().Where(p => p.RecordedLessonId == x.RecordedLessonId && p.StudentUserId == id).Select(p => (double?)p.PositionSeconds).FirstOrDefault() ?? 0
@@ -101,7 +104,7 @@ public sealed class VideoLessonService(ApplicationDbContext db)
     {
         VideoForm? form;
         if (id == 0) form = new() { RecordingDate = ClassScheduleService.Today };
-        else form = await Manage(user).AsNoTracking().Where(x => x.RecordedLessonId == id).Select(x => new VideoForm { Id = x.RecordedLessonId, ClassSessionId = x.ClassSessionId, Title = x.Title, Description = x.Description, RecordingDate = x.RecordingDate, RowVersion = Convert.ToBase64String(x.RowVersion), CurrentFileName = x.OriginalFileName }).SingleOrDefaultAsync();
+        else form = await Manage(user).AsNoTracking().Where(x => x.RecordedLessonId == id).Select(x => new VideoForm { Id = x.RecordedLessonId, ClassSessionId = x.ClassSessionId, Title = x.Title, Description = x.Description, RecordingDate = x.RecordingDate, RowVersion = Convert.ToBase64String(x.RowVersion), CurrentFileName = x.OriginalFileName, CanReplaceVideo = !x.InactivatedByAdmin }).SingleOrDefaultAsync();
         if (form != null) await PopulateAsync(user, form); return form;
     }
     public async Task PopulateAsync(ClaimsPrincipal user, VideoForm form)
@@ -115,45 +118,71 @@ public sealed class VideoLessonService(ApplicationDbContext db)
         if (!form.RecordingDate.HasValue || form.RecordingDate.Value.Date < new DateTime(2000, 1, 1) || form.RecordingDate.Value.Date > today.Date) return "Choose a recording date from 2000 up to today (MYT).";
         return null;
     }
-    public async Task<(int Id, string? Error)> SaveAsync(ClaimsPrincipal user, VideoForm form, (string Key, long Size, double Duration)? file)
+    public async Task<(int Id, string? Error, string? PreviousKey)> SaveAsync(ClaimsPrincipal user, VideoForm form, (string Key, long Size, double Duration)? file)
     {
-        var error = Validate(form, ClassScheduleService.Today); if (error != null) return (0, error);
+        var error = Validate(form, ClassScheduleService.Today); if (error != null) return (0, error, null);
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        RecordedLesson lesson;
+        string? previousKey = null;
         try
         {
             var cls = await Access.Classes(user, true).Where(c => c.ClassSessionId == form.ClassSessionId).Select(c => new { c.ClassSessionId, c.StartDate, c.EndDate }).SingleOrDefaultAsync();
-            if (!IsTutor(user) || cls == null) return (0, "This assigned class is no longer available. Choose another class.");
-            if (cls.StartDate.HasValue && form.RecordingDate!.Value.Date < cls.StartDate.Value.Date || cls.EndDate.HasValue && form.RecordingDate!.Value.Date > cls.EndDate.Value.Date) return (0, "The recording date must fall within the class date range.");
-            RecordedLesson lesson;
+            if (!IsTutor(user) || cls == null) return (0, "This assigned class is no longer available. Choose another class.", null);
+            if (cls.StartDate.HasValue && form.RecordingDate!.Value.Date < cls.StartDate.Value.Date || cls.EndDate.HasValue && form.RecordingDate!.Value.Date > cls.EndDate.Value.Date) return (0, "The recording date must fall within the class date range.", null);
             if (form.Id == 0)
             {
-                if (file == null) return (0, "Please select an MP4 video.");
-                lesson = new() { ClassSessionId = cls.ClassSessionId, UploadedByUserId = Own(user), StorageKey = file.Value.Key, FileSize = file.Value.Size, DurationSeconds = file.Value.Duration, OriginalFileName = Path.GetFileName((form.VideoFile?.FileName ?? "recording.mp4").Replace('\\', '/'))[..Math.Min(180, Path.GetFileName((form.VideoFile?.FileName ?? "recording.mp4").Replace('\\', '/')).Length)], CreatedAtUtc = DateTime.UtcNow };
+                if (file == null) return (0, "Please select an MP4 video.", null);
+                lesson = new() { ClassSessionId = cls.ClassSessionId, UploadedByUserId = Own(user), CreatedAtUtc = DateTime.UtcNow };
                 db.Add(lesson);
             }
             else
             {
                 var found = await Manage(user).Where(x => x.RecordedLessonId == form.Id).AsTracking().SingleOrDefaultAsync();
-                if (found == null) return (0, "This recording can no longer be edited."); lesson = found;
-                if (lesson.ClassSessionId != form.ClassSessionId) return (0, "The recording class cannot be changed.");
-                if (!AssessmentRules.Version(lesson.RowVersion, form.RowVersion)) return (0, "This recording changed. Reload before saving.");
-                if (lesson.Title == form.Title.Trim() && lesson.Description == (string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim()) && lesson.RecordingDate == form.RecordingDate!.Value.Date) return (0, "No changes to save.");
+                if (found == null) return (0, "This recording can no longer be edited.", null); lesson = found;
+                if (lesson.ClassSessionId != form.ClassSessionId) return (0, "The recording class cannot be changed.", null);
+                if (!AssessmentRules.Version(lesson.RowVersion, form.RowVersion)) return (0, "This recording changed. Reload before saving.", null);
+                if (file.HasValue && lesson.InactivatedByAdmin) return (0, "Only an administrator can restore this recording before it can be replaced.", null);
+                if (!file.HasValue && lesson.Title == form.Title.Trim() && lesson.Description == (string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim()) && lesson.RecordingDate == form.RecordingDate!.Value.Date) return (0, "No changes to save.", null);
+            }
+            if (file is { } uploaded)
+            {
+                if (form.Id > 0)
+                {
+                    previousKey = lesson.StorageKey;
+                    await db.VideoWatchProgress.Where(p => p.RecordedLessonId == lesson.RecordedLessonId).ExecuteDeleteAsync();
+                }
+                var name = Path.GetFileName((form.VideoFile?.FileName ?? "recording.mp4").Replace('\\', '/'));
+                lesson.OriginalFileName = name[..Math.Min(180, name.Length)];
+                lesson.StorageKey = uploaded.Key;
+                lesson.FileSize = uploaded.Size;
+                lesson.DurationSeconds = uploaded.Duration;
             }
             lesson.Title = form.Title.Trim(); lesson.Description = string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim(); lesson.RecordingDate = form.RecordingDate!.Value.Date; lesson.UpdatedAtUtc = DateTime.UtcNow;
-            await db.SaveChangesAsync(); await tx.CommitAsync(); return (lesson.RecordedLessonId, null);
+            await db.SaveChangesAsync();
         }
-        catch (Exception e) when (e is DbUpdateException or SqlException) { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return (0, "The recording could not be saved. Reload and try again."); }
+        catch (Exception e) when (e is DbUpdateException or SqlException) { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return (0, "The recording could not be saved. Reload and try again.", null); }
+        await tx.CommitAsync();
+        return (lesson.RecordedLessonId, null, previousKey);
     }
     public async Task<string?> StateAsync(ClaimsPrincipal user, int id, string? version, bool active)
     {
+        var admin = user.IsInRole("Admin");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
-            var lesson = await Manage(user).Where(x => x.RecordedLessonId == id).AsTracking().SingleOrDefaultAsync();
+            var recordings = admin ? Visible(user) : Manage(user);
+            var lesson = await recordings.AsTracking().SingleOrDefaultAsync(x => x.RecordedLessonId == id);
             if (lesson == null) return "This recording is not available for management.";
             if (!AssessmentRules.Version(lesson.RowVersion, version)) return "The recording changed. Reload and try again.";
             if (lesson.IsActive == active) return "The recording already has this status.";
-            lesson.IsActive = active; lesson.UpdatedAtUtc = DateTime.UtcNow; await db.SaveChangesAsync(); await tx.CommitAsync(); return null;
+            if (!admin && lesson.InactivatedByAdmin) return "Only an administrator can restore this recording.";
+
+            lesson.IsActive = active;
+            lesson.InactivatedByAdmin = admin && !active;
+            lesson.UpdatedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+            return null;
         }
         catch (Exception e) when (e is DbUpdateException or SqlException) { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return "The recording changed. Reload before trying again."; }
     }
@@ -163,7 +192,8 @@ public sealed class VideoLessonService(ApplicationDbContext db)
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
-            var lesson = await Visible(user).Where(x => x.RecordedLessonId == form.Id).Select(x => new { x.DurationSeconds }).SingleOrDefaultAsync(); if (lesson == null) return false;
+            var lesson = await Visible(user).Where(x => x.RecordedLessonId == form.Id).Select(x => new { x.DurationSeconds, x.StorageKey }).SingleOrDefaultAsync();
+            if (lesson == null || lesson.StorageKey != form.PlaybackVersion) return false;
             var id = Own(user); var now = DateTime.UtcNow;
             var p = await db.Set<VideoWatchProgress>().SingleOrDefaultAsync(x => x.RecordedLessonId == form.Id && x.StudentUserId == id);
             if (p == null) { p = new() { RecordedLessonId = form.Id, StudentUserId = id, UpdatedAtUtc = now.AddSeconds(-15) }; db.Add(p); }

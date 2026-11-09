@@ -1,6 +1,7 @@
 ﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoIndexModel
 @{
     string Link(string sort, int page = 1) => Url.Action("Index", new { Model.Filter.ClassId, Model.Filter.SubjectId, Model.Filter.Search, Model.Filter.Month, Model.Filter.Status, Model.Filter.Watch, Sort = sort, Page = page })!;
+    var listReturnUrl = Link(Model.Filter.Sort, Model.Filter.Page);
     string Next(string key) => Model.Filter.Sort == key + "_asc" ? key + "_desc" : key + "_asc";
     string Icon(string key) => Model.Filter.Sort == key + "_asc" ? "bi-arrow-up" : Model.Filter.Sort == key + "_desc" ? "bi-arrow-down" : "bi-arrow-down-up";
 }
@@ -32,9 +33,37 @@
                             <td>
                                 <div class="video-actions">
                                     <a asp-action="Play" asp-route-id="@row.Id" class="btn btn-sm btn-outline-secondary class-details-button"><i class="bi bi-play-circle" aria-hidden="true"></i> Details</a>
-                                    @if (row.CanManage)
+                                    @if (row.CanManage || row.CanChangeState)
                                     {
-                                        <div class="dropdown"><button type="button" class="btn btn-sm btn-outline-secondary class-more-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@($"More actions for {row.Title}")"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></button><div class="dropdown-menu dropdown-menu-end"><a class="dropdown-item" asp-action="Edit" asp-route-id="@row.Id"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Lesson</a><div class="dropdown-divider"></div><form asp-action="ChangeState" method="post" data-video-state><input type="hidden" name="id" value="@row.Id" /><input type="hidden" name="rowVersion" value="@row.RowVersion" /><input type="hidden" name="active" value="@(!row.IsActive)" /><button type="submit" class="dropdown-item"><i class="bi @(row.IsActive ? "bi-eye-slash" : "bi-arrow-counterclockwise")" aria-hidden="true"></i> @(row.IsActive ? "Set Inactive" : "Set Active")</button></form></div></div>
+                                        <div class="dropdown">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary class-more-button" id="video-actions-@row.Id" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@($"More actions for {row.Title}")">
+                                                <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-end">
+                                                @if (row.CanManage)
+                                                {
+                                                    <a class="dropdown-item" asp-action="Edit" asp-route-id="@row.Id" asp-route-returnUrl="@listReturnUrl">
+                                                        <i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Lesson
+                                                    </a>
+                                                    @if (row.CanChangeState)
+                                                    {
+                                                        <div class="dropdown-divider"></div>
+                                                    }
+                                                }
+                                                @if (row.CanChangeState)
+                                                {
+                                                    <form asp-action="ChangeState" method="post" data-video-state>
+                                                        <input type="hidden" name="id" value="@row.Id" />
+                                                        <input type="hidden" name="rowVersion" value="@row.RowVersion" />
+                                                        <input type="hidden" name="active" value="@(row.IsActive ? "false" : "true")" />
+                                                        <button type="submit" class="dropdown-item">
+                                                            <i class="bi @(row.IsActive ? "bi-eye-slash" : "bi-arrow-counterclockwise")" aria-hidden="true"></i>
+                                                            @(row.IsActive ? "Set Inactive" : "Restore")
+                                                        </button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </div>
                                     }
                                 </div>
                             </td>
@@ -50,14 +79,19 @@
             @foreach (var row in Model.Rows)
             {
                 <article class="video-lesson-card">
-                    <div class="video-card-top video-student-poster">
+                    <a asp-action="Play" asp-route-id="@row.Id"
+                       class="video-card-top video-student-poster"
+                       aria-label="@($"Play {row.Title}")">
+                        <canvas width="480" height="270"
+                                data-video-thumbnail="@Url.Action("Media", new { id = row.Id, version = row.PlaybackVersion })"
+                                aria-hidden="true"></canvas>
                         @if (!row.Watched && row.CreatedAtUtc >= DateTime.UtcNow.AddDays(-7))
                         {
                             <span class="video-badge video-new-badge">New</span>
                         }
                         <i class="bi bi-play-circle" aria-hidden="true"></i>
                         <span class="video-duration">@row.DurationText</span>
-                    </div>
+                    </a>
                     <div class="video-card-content">
                         <span class="video-subject">@row.Level · @row.Subject</span>
                         <h3>@row.Title</h3><p>@row.ClassName</p>

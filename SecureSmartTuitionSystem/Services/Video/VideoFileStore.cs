@@ -29,12 +29,12 @@ public sealed class VideoFileStore
     public FileStream? Open(string key)
     {
         var path = FilePath(key);
-        try { return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, FileOptions.Asynchronous | FileOptions.RandomAccess); }
+        try { return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 65536, FileOptions.Asynchronous | FileOptions.RandomAccess); }
         catch (FileNotFoundException) { return null; }
         catch (DirectoryNotFoundException) { return null; }
     }
     public void Remove(string key) { try { File.Delete(FilePath(key)); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
-    public async Task<(string Key, long Size, double Duration)> StoreAsync(IFormFile upload, CancellationToken ct)
+    public async Task<(string Key, long Size, double Duration)> StoreAsync(IFormFile upload, CancellationToken ct, string? currentVideoKey = null)
     {
         if (upload.Length <= 0 || upload.Length > MaxBytes || !string.Equals(Path.GetExtension(upload.FileName), ".mp4", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Choose one MP4 video, up to 200 MB.");
@@ -58,10 +58,36 @@ public sealed class VideoFileStore
             if (length != upload.Length) throw new InvalidDataException("The upload was incomplete. Select the video again.");
             using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             var duration = InspectMp4(file);
+            if (currentVideoKey != null)
+            {
+                await using var current = Open(currentVideoKey);
+                if (current != null && current.Length == length)
+                {
+                    file.Position = 0;
+                    if (await SameContentAsync(file, current, ct))
+                        throw new InvalidDataException("This video is already saved for this lesson. Select a different MP4 or remove the selection to save other changes.");
+                }
+            }
             return (key, length, duration);
         }
         catch { Remove(key); throw; }
     }
+    private static async Task<bool> SameContentAsync(Stream first, Stream second, CancellationToken ct)
+    {
+        var firstBuffer = new byte[65536];
+        var secondBuffer = new byte[firstBuffer.Length];
+        var remaining = first.Length;
+        while (remaining > 0)
+        {
+            var count = (int)Math.Min(remaining, firstBuffer.Length);
+            await first.ReadExactlyAsync(firstBuffer.AsMemory(0, count), ct);
+            await second.ReadExactlyAsync(secondBuffer.AsMemory(0, count), ct);
+            if (!firstBuffer.AsSpan(0, count).SequenceEqual(secondBuffer.AsSpan(0, count))) return false;
+            remaining -= count;
+        }
+        return true;
+    }
+
     // Check ISO BMFF boundaries, MP4 file type, movie duration, media data and a video track.
     // This is structural validation, not malware scanning or transcoding.
     public static double InspectMp4(Stream stream)
