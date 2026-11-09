@@ -1,0 +1,110 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoIndexModel
+@{
+    ViewData["Title"] = Model.IsStaff ? "Video Playback Vault" : "Recorded Lessons";
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/video-playback.css" asp-append-version="true" />
+}
+<div class="video-page">
+    <div class="page-header">
+        <div><h1>@ViewData["Title"]</h1><p>@(Model.IsTutor ? "Upload and manage recorded lessons for your assigned classes." : Model.IsStaff ? "Review recorded lessons across classes." : "Revisit your lessons and continue learning at your own pace.")</p></div>
+        @if (Model.IsTutor)
+        {
+            <a asp-action="Create" class="primary-button"><i class="bi bi-upload" aria-hidden="true"></i> Upload Lesson</a>
+        }
+    </div>
+    @if (TempData["VideoSuccess"] is string success)
+    {
+        <div class="alert alert-success" role="status" data-video-notice>@success</div>
+    }
+    @if (TempData["VideoWarning"] is string warning)
+    {
+        <div class="alert alert-warning" role="alert">@warning</div>
+    }
+    <div class="class-filter-card">
+        <div class="class-filter-heading"><div><h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Recorded Lessons</h2><p>The lesson list updates automatically while visible.</p></div></div>
+        <form asp-action="Index" method="get" class="video-filters" data-video-filter>
+            <div><label for="video-search" class="form-label">Search title</label><input id="video-search" name="Search" value="@Model.Filter.Search" placeholder="Search recorded lessons" maxlength="100" class="form-control" /></div>
+            <div>
+                <label for="video-class" class="form-label">Class</label><select id="video-class" name="ClassId" class="form-select">
+                    <option value="">All Available Classes</option>@foreach(var c in Model.Classes){
+                    <option value="@c.Value" selected="@(Model.Filter.ClassId?.ToString() == c.Value)">@c.Text</option>
+                                        }
+                </select>
+            </div>
+            @if (!Model.IsStaff)
+            {
+                <div>
+                    <label for="video-watch" class="form-label">Watch status</label><select id="video-watch" name="Watch" class="form-select">
+                        <option value="all" selected="@(Model.Filter.Watch == "all")">All Videos</option>
+                        <option value="not" selected="@(Model.Filter.Watch == "not")">Not watched</option>
+                        <option value="progress" selected="@(Model.Filter.Watch == "progress")">In progress</option>
+                        <option value="watched" selected="@(Model.Filter.Watch == "watched")">Watched</option>
+                    </select>
+                </div>
+            }
+            @if (!Model.IsStaff)
+            {
+                <details class="video-more-filters" open="@(Model.Filter.SubjectId.HasValue || !string.IsNullOrEmpty(Model.Filter.Month))">
+                    <summary>More filters</summary><div class="video-student-extra">
+                        <div><label for="student-video-subject" class="form-label">Subject</label><select id="student-video-subject" name="SubjectId" class="form-select"><option value="">All Subjects</option>@foreach(var c in Model.Subjects){
+                        <option value="@c.Value" selected="@(Model.Filter.SubjectId?.ToString() == c.Value)">@c.Text</option>
+                    }
+</select></div>
+                    <div><label for="student-video-month" class="form-label">Recording Month</label><input id="student-video-month" type="month" name="Month" value="@Model.Filter.Month" min="2000-01" max="2100-12" class="form-control" /></div>
+                    <div><label for="student-video-sort" class="form-label">Sort by</label><select id="student-video-sort" name="Sort" class="form-select">@foreach(var item in new Dictionary<string,string>{{"date_desc","Recorded: newest first"},{"date_asc","Recorded: oldest first"},{"title_asc","Title: A–Z"},{"title_desc","Title: Z–A"},{"class_asc","Class: A–Z"},{"class_desc","Class: Z–A"}}){
+                    <option value="@item.Key" selected="@(Model.Filter.Sort == item.Key)">@item.Value</option>
+                                        }
+</select></div>
+                </div>
+            </details>
+                        }
+            @if (Model.IsStaff)
+            {
+                <div>
+                    <label for="video-subject" class="form-label">Subject</label><select id="video-subject" name="SubjectId" class="form-select">
+                        <option value="">All Subjects</option>@foreach(var c in Model.Subjects){
+                        <option value="@c.Value" selected="@(Model.Filter.SubjectId?.ToString() == c.Value)">@c.Text</option>
+                    }
+                </select>
+            </div>
+            <div><label for="video-month" class="form-label">Recording Month</label><input id="video-month" type="month" name="Month" value="@Model.Filter.Month" min="2000-01" max="2100-12" class="form-control" /></div>
+            @if (Model.IsStaff)
+            {
+                <div>
+                    <label for="video-status" class="form-label">Status</label><select id="video-status" name="Status" class="form-select">
+                        @foreach (var status in new[] { "active", "inactive", "all" })
+                        {
+                            <option value="@status" selected="@(Model.Filter.Status == status)">@(status == "all" ? "All Statuses" : status == "active" ? "Active" : "Inactive")</option>
+                        }
+                    </select>
+                </div>
+            }
+                        }
+            @if (Model.IsStaff)
+            {
+                <div>
+                    <label for="video-sort" class="form-label">Sort by</label><select id="video-sort" name="Sort" class="form-select">
+                        @foreach (var item in new Dictionary<string, string> { { "date_desc", "Recorded: newest first" }, { "date_asc", "Recorded: oldest first" }, { "title_asc", "Title: A–Z" }, { "title_desc", "Title: Z–A" }, { "class_asc", "Class: A–Z" }, { "class_desc", "Class: Z–A" } })
+                        {
+                            <option value="@item.Key" selected="@(Model.Filter.Sort == item.Key)">@item.Value</option>
+                        }
+                        @if (Model.IsStaff)
+                        {
+                            <option value="status_asc" selected="@(Model.Filter.Sort == "status_asc")">Status: active first</option>
+                            <option value="status_desc" selected="@(Model.Filter.Sort == "status_desc")">Status: inactive first</option>
+                        }
+                    </select>
+                </div>
+            }
+            <noscript><button type="submit" class="primary-button">View Lessons</button></noscript>
+        </form>
+    </div>
+    <div class="alert" data-video-feedback role="status" hidden></div>
+    <partial name="_Results" model="Model" />
+    <p class="video-note" role="status" data-video-refresh>Updates automatically while visible.</p>
+</div>
+@section Scripts {
+    <script src="~/js/video-playback.js" asp-append-version="true"></script>
+}

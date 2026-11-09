@@ -1,0 +1,87 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoPlayModel
+@{
+    var row = Model.Lesson; ViewData["Title"] = row.Title;
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/video-playback.css" asp-append-version="true" />
+}
+<div class="video-page">
+    <div class="page-header">
+        <div><h1>@row.Title</h1><p>@row.ClassCode · @row.ClassName</p></div><div class="video-actions">
+            @if (row.CanManage)
+            {
+                <a asp-action="Edit" asp-route-id="@row.Id" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit</a>
+            }
+            @if (row.CanChangeState)
+            {
+                <form asp-action="ChangeState" method="post">
+                    <input type="hidden" name="id" value="@row.Id" />
+                    <input type="hidden" name="rowVersion" value="@row.RowVersion" />
+                    <input type="hidden" name="active" value="@(row.IsActive ? "false" : "true")" />
+                    <button type="submit" class="outline-button">
+                        <i class="bi @(row.IsActive ? "bi-eye-slash" : "bi-arrow-counterclockwise")" aria-hidden="true"></i>
+                        @(row.IsActive ? "Set Inactive" : "Restore")
+                    </button>
+                </form>
+            }
+            <a asp-action="Index" asp-route-ClassId="@row.ClassId" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
+        </div>
+    </div>
+    @if (TempData["VideoSuccess"] is string success)
+    {
+        <div class="alert alert-success" role="status" data-video-notice>@success</div>
+    }
+    @if (TempData["VideoWarning"] is string warning)
+    {
+        <div class="alert alert-warning" role="alert">@warning</div>
+    }
+    @if (!row.IsActive)
+    {
+        <div class="alert alert-warning">
+            This recording is inactive. It is available for staff review only.
+            @if (row.CanManage && !row.CanChangeState)
+            {
+                <span>Only an administrator can restore it.</span>
+            }
+        </div>
+    }
+    <div class="video-layout">
+        <section class="class-form-card video-player-card">
+            <div class="video-player-heading"><span class="video-subject">@row.Level · @row.Subject</span><span class="video-badge @(row.IsActive ? "is-active" : "is-inactive")">@(row.IsActive ? "Active" : "Inactive")</span></div>
+            <video id="lesson-video" controls playsinline preload="metadata" controlslist="nodownload" data-video-player data-access-url="@Url.Action("Access", new { id = row.Id, version = row.PlaybackVersion })" data-playback-version="@row.PlaybackVersion" data-progress-url="@(Model.IsStudent? Url.Action("Progress"):null)" data-video-id="@row.Id" data-resume="@row.Position.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-completed="@row.Watched.ToString().ToLowerInvariant()"><source src="@Url.Action("Media", new { id = row.Id, version = row.PlaybackVersion })" type="video/mp4" />Your browser does not support MP4 playback.</video>
+            <div class="alert alert-warning mt-3" data-video-player-error role="alert" hidden></div>
+            <div class="video-actions video-playback-tools"><span data-video-playback-status role="status">@(row.Watched ? "Watched" : "Ready to play")</span><button type="button" class="outline-button" data-video-start-over>Start from beginning</button></div>
+            @if (Model.IsStudent)
+            {
+                <form data-video-progress-token>@Html.AntiForgeryToken()</form>
+            }
+            <div class="video-meta"><span><i class="bi bi-calendar3" aria-hidden="true"></i> @row.Date.ToString("dd MMM yyyy") MYT</span><span><i class="bi bi-person" aria-hidden="true"></i> @row.Tutor</span><span><i class="bi bi-clock" aria-hidden="true"></i> @row.DurationText</span></div>
+            @if (!string.IsNullOrWhiteSpace(row.Description))
+            {
+                <p class="video-description">@row.Description</p>
+            }
+            <p class="video-note">Playback controls include play/pause, volume, seeking and full screen.</p>
+        </section>
+        <aside class="dashboard-card compact-class-card video-playlist">
+            <div class="dashboard-card-header"><h2><i class="bi bi-collection-play me-2" aria-hidden="true"></i> In This Class</h2></div>
+            <div class="video-playlist-items">
+                @foreach (var item in Model.Playlist)
+                {
+                    <a asp-action="Play" asp-route-id="@item.Id" class="video-playlist-link @(item.Id == row.Id ? "is-current" : "")" aria-current="@(item.Id == row.Id ? "page" : null)"><i class="bi @(item.Id == row.Id ? "bi-play-circle-fill" : "bi-play-circle")" aria-hidden="true"></i><div><strong>@item.Title</strong><small>@item.Date.ToString("dd MMM yyyy") · @item.DurationText @(item.Watched ? " · Watched" : "")</small></div></a>
+                }
+            </div>
+            @if (Model.Playlist.Count == 0)
+            {
+                <p class="video-note p-3">No active recordings in this class.</p>
+            }
+            @if (Model.PlaylistLimited)
+            {
+                <p class="video-note p-3">Latest 100 recordings shown. <a asp-action="Index" asp-route-ClassId="@row.ClassId">View all recordings</a></p>
+            }
+        </aside>
+    </div>
+</div>
+@section Scripts {
+    <script src="~/js/video-playback.js" asp-append-version="true"></script>
+}

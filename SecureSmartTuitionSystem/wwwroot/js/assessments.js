@@ -1,5 +1,41 @@
 ﻿(() => {
     function init() {
+        let ownResult = document.querySelector('[data-student-result]');
+        if (ownResult) {
+            let pending = false, stopped = false;
+            const status = document.querySelector('[data-student-result-status]');
+            async function refreshOwnResult() {
+                if (pending || stopped || document.hidden || document.querySelector('dialog[open]')) return;
+                pending = true;
+                const abort = new AbortController(), timeout = setTimeout(() => abort.abort(), 12000);
+                try {
+                    const response = await fetch(ownResult.dataset.refreshUrl, { credentials: 'same-origin', cache: 'no-store', signal: abort.signal, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    if ([401, 403, 404].includes(response.status) || response.redirected) {
+                        stopped = true;
+                        status.textContent = 'This assessment is no longer available, or your sign-in has expired. Return to Assessments or sign in again.';
+                        document.querySelectorAll('[data-student-unsubmit] button, [data-assessment-upload-form] button[type=submit], [data-assessment-upload-form] .class-form-actions button').forEach(b => b.disabled = true);
+                        return;
+                    }
+                    if (!response.ok) throw new Error();
+                    const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+                    const next = doc.querySelector('[data-student-result]');
+                    if (!next || stopped) return;
+                    if (next.outerHTML !== ownResult.outerHTML) { ownResult.replaceWith(next); ownResult = next; }
+                    const badge = document.querySelector('[data-assessment-detail-state]'); if (badge) badge.textContent = next.dataset.state;
+                    const unsubmit = document.querySelector('[data-student-unsubmit]'); if (unsubmit) unsubmit.hidden = next.dataset.canUnsubmit !== 'true';
+                    const upload = document.querySelector('[data-assessment-upload-form]');
+                    if (upload && next.dataset.canSubmit !== 'true') {
+                        upload.querySelectorAll('.class-form-actions button').forEach(b => b.disabled = true);
+                        status.textContent = 'Submission availability changed. Your selected files and note are retained; reopen this assessment to check its current status.';
+                    } else status.textContent = 'Results update automatically while this page is visible.';
+                } catch { status.textContent = 'Results could not be updated. Check your connection or sign-in; the current content is retained.'; }
+                finally { clearTimeout(timeout); pending = false; }
+            }
+            const ownTimer = setInterval(refreshOwnResult, 10000);
+            window.addEventListener('focus', refreshOwnResult);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshOwnResult(); });
+            window.addEventListener('pagehide', () => { stopped = true; clearInterval(ownTimer); });
+        }
         document.querySelectorAll('[data-grade-form]').forEach(form => {
             const marks = form.querySelector('[name="Form.Marks"]'), feedback = form.querySelector('[name="Form.Feedback"]'), save = form.querySelector('[data-grade-save]');
             if (!marks || !feedback || !save) return;

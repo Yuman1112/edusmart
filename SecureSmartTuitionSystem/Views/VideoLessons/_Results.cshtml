@@ -1,0 +1,145 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoIndexModel
+@{
+    string Link(string sort, int page = 1) => Url.Action("Index", new { Model.Filter.ClassId, Model.Filter.SubjectId, Model.Filter.Search, Model.Filter.Month, Model.Filter.Status, Model.Filter.Watch, Sort = sort, Page = page })!;
+    var listReturnUrl = Link(Model.Filter.Sort, Model.Filter.Page);
+    string Next(string key) => Model.Filter.Sort == key + "_asc" ? key + "_desc" : key + "_asc";
+    string Icon(string key) => Model.Filter.Sort == key + "_asc" ? "bi-arrow-up" : Model.Filter.Sort == key + "_desc" ? "bi-arrow-down" : "bi-arrow-down-up";
+}
+<div data-video-results class="dashboard-card compact-class-card video-results">
+    <div class="dashboard-card-header"><h2><i class="bi bi-play-circle me-2" aria-hidden="true"></i> @(Model.IsStaff ? "All Recorded Lessons" : "My Recorded Lessons")</h2><span>@Model.Total lesson(s)</span></div>
+    @if (Model.Total == 0)
+    {
+        <div class="video-empty"><i class="bi bi-camera-video" aria-hidden="true"></i><h3>No recorded lessons found</h3><p>@(Model.IsTutor ? "Upload a recording for one of your assigned classes, or adjust the filters." : "Try another filter. Recordings appear here when your tutor uploads them and your class access is active.")</p></div>
+    }
+    else if (Model.IsStaff)
+    {
+        <div class="table-responsive">
+            <table class="table compact-class-table align-middle" data-pagination="off">
+                <thead><tr><th scope="col">No.</th><th scope="col"><a href="@Link(Next("title"))" data-video-nav class="video-sort-link">Lesson <i class="bi @Icon("title")" aria-hidden="true"></i></a></th><th scope="col"><a href="@Link(Next("class"))" data-video-nav class="video-sort-link">Class / Subject <i class="bi @Icon("class")" aria-hidden="true"></i></a></th><th scope="col"><a href="@Link(Next("date"))" data-video-nav class="video-sort-link">Recorded (MYT) <i class="bi @Icon("date")" aria-hidden="true"></i></a></th><th scope="col">Duration</th><th scope="col"><a href="@Link(Next("status"))" data-video-nav class="video-sort-link">Status <i class="bi @Icon("status")" aria-hidden="true"></i></a></th><th scope="col">Actions</th></tr></thead>
+                <tbody>
+                    @{
+                        int number = (Model.Filter.Page - 1) * 25;
+                    }
+                    @foreach (var row in Model.Rows)
+                    {
+                        number++;
+                        <tr>
+                            <td>@number</td>
+                            <td><strong>@row.Title</strong><small>@row.Tutor</small></td>
+                            <td><strong>@row.ClassCode</strong><small>@row.Level · @row.Subject</small></td>
+                            <td>@row.Date.ToString("dd MMM yyyy")</td>
+                            <td>@row.DurationText</td>
+                            <td><span class="video-badge @(row.IsActive ? "is-active" : "is-inactive")">@(row.IsActive ? "Active" : "Inactive")</span></td>
+                            <td>
+                                <div class="video-actions">
+                                    <a asp-action="Play" asp-route-id="@row.Id" class="btn btn-sm btn-outline-secondary class-details-button"><i class="bi bi-play-circle" aria-hidden="true"></i> Details</a>
+                                    @if (row.CanManage || row.CanChangeState)
+                                    {
+                                        <div class="dropdown">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary class-more-button" id="video-actions-@row.Id" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@($"More actions for {row.Title}")">
+                                                <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-end">
+                                                @if (row.CanManage)
+                                                {
+                                                    <a class="dropdown-item" asp-action="Edit" asp-route-id="@row.Id" asp-route-returnUrl="@listReturnUrl">
+                                                        <i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Lesson
+                                                    </a>
+                                                    @if (row.CanChangeState)
+                                                    {
+                                                        <div class="dropdown-divider"></div>
+                                                    }
+                                                }
+                                                @if (row.CanChangeState)
+                                                {
+                                                    <form asp-action="ChangeState" method="post" data-video-state>
+                                                        <input type="hidden" name="id" value="@row.Id" />
+                                                        <input type="hidden" name="rowVersion" value="@row.RowVersion" />
+                                                        <input type="hidden" name="active" value="@(row.IsActive ? "false" : "true")" />
+                                                        <button type="submit" class="dropdown-item">
+                                                            <i class="bi @(row.IsActive ? "bi-eye-slash" : "bi-arrow-counterclockwise")" aria-hidden="true"></i>
+                                                            @(row.IsActive ? "Set Inactive" : "Restore")
+                                                        </button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="video-card-grid video-student-grid">
+            @foreach (var row in Model.Rows)
+            {
+                <article class="video-lesson-card">
+                    <a asp-action="Play" asp-route-id="@row.Id"
+                       class="video-card-top video-student-poster"
+                       aria-label="@($"Play {row.Title}")">
+                        <canvas width="480" height="270"
+                                data-video-thumbnail="@Url.Action("Media", new { id = row.Id, version = row.PlaybackVersion })"
+                                aria-hidden="true"></canvas>
+                        @if (!row.Watched && row.CreatedAtUtc >= DateTime.UtcNow.AddDays(-7))
+                        {
+                            <span class="video-badge video-new-badge">New</span>
+                        }
+                        <i class="bi bi-play-circle" aria-hidden="true"></i>
+                        <span class="video-duration">@row.DurationText</span>
+                    </a>
+                    <div class="video-card-content">
+                        <span class="video-subject">@row.Level · @row.Subject</span>
+                        <h3>@row.Title</h3><p>@row.ClassName</p>
+                        <small>@row.Date.ToString("dd MMM yyyy") · @row.Tutor</small>
+                        <div class="video-watch-state @(row.Watched ? "is-watched" : "")">
+                            <i class="bi @(row.Watched ? "bi-check-circle" : row.Position > 0 ? "bi-clock" : "bi-circle")" aria-hidden="true"></i>
+                            @if (row.Watched)
+                            {
+                                <span>Watched</span>
+                            }
+                            else if (row.Position > 0)
+                            {
+
+                                <span>In progress · @row.PositionText / @row.DurationText</span>
+                            }
+                            else
+                            {
+
+                                <span>Not watched</span>
+                            }
+                        </div>
+                        @if (!row.Watched && row.Position > 0)
+                        {
+                            <div class="video-position-track" role="progressbar" aria-label="Playback position" aria-valuenow="@row.PositionPercent.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" aria-valuemin="0" aria-valuemax="100"><span style="width:@(row.PositionPercent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></span></div>
+                        }
+                    </div>
+                    <div class="video-card-footer"><a asp-action="Play" asp-route-id="@row.Id" class="@(row.WatchState == "progress" ? "primary-button" : "outline-button")"><i class="bi @(row.Watched ? "bi-arrow-counterclockwise" : "bi-play-fill")" aria-hidden="true"></i> @(row.Watched ? "Watch Again" : row.Position > 0 ? "Continue Watching" : "Play Lesson")</a></div>
+                </article>
+            }
+        </div>
+    }
+    @if (Model.Total > 0)
+    {
+        <nav class="video-pagination" aria-label="Recorded lesson pages">
+            <span>@((Model.Filter.Page - 1) * 25 + 1)–@Math.Min(Model.Filter.Page * 25, Model.Total) of @Model.Total · 25 per page</span><div class="video-actions">
+                @foreach (var link in new[] { (Text: "First", Page: 1, Off: Model.Filter.Page == 1), (Text: "Previous", Page: Model.Filter.Page - 1, Off: Model.Filter.Page == 1), (Text: Model.Filter.Page.ToString(), Page: Model.Filter.Page, Off: true), (Text: "Next", Page: Model.Filter.Page + 1, Off: Model.Filter.Page == Model.PageCount), (Text: "Last", Page: Model.PageCount, Off: Model.Filter.Page == Model.PageCount) })
+                {
+                    if (link.Off)
+                    {
+                        <span class="video-page-number" aria-disabled="true">@link.Text</span>
+                    }
+                    else
+                    {
+
+                        <a class="video-page-number" href="@Link(Model.Filter.Sort, link.Page)" data-video-nav>@link.Text</a>
+                    }
+                }
+            </div>
+        </nav>
+    }
+</div>
