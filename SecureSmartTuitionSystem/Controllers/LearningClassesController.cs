@@ -51,12 +51,13 @@ public sealed class LearningClassesController(ApplicationDbContext db) : Control
         var today = ClassScheduleService.Today;
         var enrollments = await db.StudentEnrollments.AsNoTracking().Include(x => x.ClassSession).ThenInclude(x => x.Subject)
             .Include(x => x.ClassSession).ThenInclude(x => x.TutorUser)
+            .Include(x => x.EnrollmentApplication)
             .Where(x => x.StudentProfileId == student.StudentProfileId).ToListAsync();
         model.NextStartDate = enrollments.Where(x => x.StartDate.Date > today &&
             (x.Status == StudentEnrollmentStatus.Active || x.Status == StudentEnrollmentStatus.PendingDrop))
             .Select(x => (DateTime?)x.StartDate.Date).Min();
-        model.Enrollments = enrollments.Where(x => LearningAccessService.Started(x, today) && ClassScheduleService.ValidOn(x.ClassSession, today)).ToList();
-        // Future enrollment never reveals class names, tutors, schedules or Meet links before its start date.
+        model.Enrollments = enrollments.Where(x => LearningAccessService.EnrolledInMonth(x, today)).OrderBy(x => x.StartDate).ThenBy(x => x.ClassSessionId).ToList();
+        // Monthly membership is separate from access: future lessons and Meet links remain locked until enrollment starts.
         var started = enrollments.Where(x => x.StartDate.Date <= today).ToList();
         var ids = started.Select(x => x.ClassSessionId).Distinct().ToList();
         if (ids.Count == 0) return model;

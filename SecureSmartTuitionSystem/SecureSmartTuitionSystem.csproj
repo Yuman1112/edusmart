@@ -3,6 +3,10 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>cd9acc97-044c-4f79-a9c3-86dbedf03829</UserSecretsId>
   </PropertyGroup>
@@ -44,6 +48,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Build" Version="17.10.46" PrivateAssets="all" />
+    <PackageReference Include="NuGet.Packaging" Version="6.11.2" PrivateAssets="all" />
+    <PackageReference Include="NuGet.Protocol" Version="6.11.2" PrivateAssets="all" />
     <PackageReference Include="Stripe.net" Version="52.4.2" />
   </ItemGroup>
 

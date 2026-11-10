@@ -104,6 +104,22 @@ public sealed class EnrollmentExitsController(ApplicationDbContext db, Enrollmen
         TempData["SuccessMessage"] = "Review note saved. Withdrawal and refund status are unchanged.";
         return RedirectToAction(nameof(Details), new { id });
     }
+    [HttpGet]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> Receipt(int id)
+    {
+        var request = await Allowed.AsNoTracking()
+            .Include(x => x.StudentEnrollment).ThenInclude(x => x.StudentProfile)
+            .Include(x => x.StudentEnrollment).ThenInclude(x => x.ClassSession)
+            .Include(x => x.Payment).ThenInclude(x => x!.Bill)
+            .FirstOrDefaultAsync(x => x.EnrollmentExitRequestId == id);
+        if (request == null) return NotFound();
+        if (request.RefundStatus != ExitRefundStatus.Completed || !request.RefundCompletedAtUtc.HasValue ||
+            request.ApprovedRefund <= 0m || string.IsNullOrWhiteSpace(request.ProviderRefundId) || request.Payment == null)
+            return NotFound();
+        return View(request);
+    }
+
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> CancelWithdrawal(int id, bool confirmed)
     {

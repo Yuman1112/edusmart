@@ -1,0 +1,32 @@
+@using SecureSmartTuitionSystem.Models.Enrollment
+@model EnrollmentExitRequest
+@{
+    string reference = $"RF{Model.EnrollmentExitRequestId:D6}";
+    string filename = $"EduSmart - Refund Receipt - {reference}";
+    ViewData["Title"] = filename;
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/receipt.css" asp-append-version="true" />
+}
+<div class="receipt-page">
+    <div class="receipt-toolbar">
+        <a asp-action="Details" asp-route-id="@Model.EnrollmentExitRequestId" class="receipt-outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
+        <button type="button" id="printReceiptButton" class="receipt-print-button" data-receipt-file-name="@filename"><i class="bi bi-download" aria-hidden="true"></i> Download refund receipt</button>
+    </div>
+    <main class="receipt-card">
+        <header class="receipt-header"><div><span class="receipt-brand">EDUSMART ONLINE TUITION</span><h1>Refund Receipt</h1><p>@reference</p></div><div class="receipt-paid-stamp">REFUNDED</div></header>
+        <section class="receipt-reference-grid">
+            <div><span>Refund reference</span><strong>@reference</strong></div>
+            <div><span>Original bill</span><strong>@Model.Payment!.Bill.BillNumber</strong></div>
+            <div><span>Original payment</span><strong>@Model.Payment.PaymentNumber</strong></div>
+            <div><span>Confirmed at (MYT)</span><strong>@Model.RefundCompletedAtUtc!.Value.AddHours(8).ToString("dd MMM yyyy, hh:mm tt")</strong></div>
+        </section>
+        <section class="receipt-party-section"><h2>Student</h2><p>@Model.StudentEnrollment.StudentProfile.FullName (@Model.StudentEnrollment.StudentProfile.StudentNumber)</p></section>
+        <div class="receipt-table-wrapper"><table class="receipt-table" data-pagination="none"><thead><tr><th>Description</th><th>Quantity</th><th>Unit Amount</th><th>Total</th></tr></thead><tbody><tr>
+            <td><strong>Refund of unused prepaid tuition</strong><ul class="receipt-tuition-classes"><li>@Model.StudentEnrollment.ClassSession.ClassName</li></ul><p>Withdrawal effective: @Model.EffectiveDate.ToString("dd MMM yyyy")</p></td>
+            <td>1</td><td>@Model.Payment.Currency @Model.ApprovedRefund.ToString("F2")</td><td class="receipt-line-total">@Model.Payment.Currency @Model.ApprovedRefund.ToString("F2")</td>
+        </tr></tbody></table></div>
+        <section class="receipt-total-panel"><div class="receipt-grand-total"><span>Total refunded</span><strong>@Model.Payment.Currency @Model.ApprovedRefund.ToString("F2")</strong></div></section>
+    </main>
+</div>
+@section Scripts { <script src="~/js/receipt-print.js" asp-append-version="true"></script> }
