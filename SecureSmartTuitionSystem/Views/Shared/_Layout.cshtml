@@ -375,9 +375,12 @@
                             </div>
                         </div>
 
-                        <a class="sidebar-link @(currentController == "VideoLessons" ? "active" : "")" asp-controller="VideoLessons" asp-action="Index" aria-current="@(currentController == "VideoLessons" ? "page" : null)">
-                            <i class="bi bi-play-circle" aria-hidden="true"></i><span>Video Playback Vault</span>
-                        </a>
+                        <span class="sidebar-link disabled-link"
+                              aria-disabled="true"
+                              title="This module will be developed later">
+                            <i class="bi bi-play-circle" aria-hidden="true"></i>
+                            <span>Video Playback Vault</span>
+                        </span>
                     }
                     else
                     {
@@ -541,13 +544,6 @@
                         </div>
                     }
 
-                    @if (isTutor && !isAdmin)
-                    {
-                        <a class="sidebar-link @(currentController == "VideoLessons" ? "active" : "")" asp-controller="VideoLessons" asp-action="Index" aria-current="@(currentController == "VideoLessons" ? "page" : null)">
-                            <i class="bi bi-play-circle" aria-hidden="true"></i><span>Video Playback Vault</span>
-                        </a>
-                    }
-
                     <!-- Shared: Communication -->
                     <div class="sidebar-module">
                         <button type="button"
@@ -587,7 +583,7 @@
 
                             @if (isAdmin)
                             {
-                                <a class="sidebar-submenu-link @(currentController == "GuestEnquiries" ? "active" : "")" asp-controller="GuestEnquiries" asp-action="Index"><i class="bi bi-envelope" aria-hidden="true"></i><span>Guest enquiries</span></a>
+                                <a class="sidebar-submenu-link @(currentController == "GuestEnquiries" ? "active" : "")" asp-controller="GuestEnquiries" asp-action="Index"><i class="bi bi-envelope" aria-hidden="true"></i><span>Guest enquiries</span>@await Component.InvokeAsync("GuestEnquiryPending")</a>
                             }
 
                             @if (!isAdmin && !User.IsInRole("Tutor"))
@@ -739,12 +735,11 @@
                             else if (User.IsInRole("Student"))
                             {
                                 <div class="learner-nav-group dropdown">
-                                    <button type="button" class="public-nav-link dropdown-toggle @((learningModuleActive || currentController == "VideoLessons") ? "active" : "")" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-journal-bookmark" aria-hidden="true"></i>Learning</button>
+                                    <button type="button" class="public-nav-link dropdown-toggle @(learningModuleActive ? "active" : "")" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-journal-bookmark" aria-hidden="true"></i>Learning</button>
                                     <div class="dropdown-menu learner-nav-menu">
                                         <a class="dropdown-item @(learningMaterialsActive ? "active" : "")" asp-controller="LearningMaterials" asp-action="Index" aria-current="@(learningMaterialsActive ? "page" : null)"><i class="bi bi-journal-bookmark" aria-hidden="true"></i>Learning Materials</a>
                                         <a class="dropdown-item @(learningAssessmentsActive ? "active" : "")" asp-controller="Assessments" asp-action="Index" aria-current="@(learningAssessmentsActive ? "page" : null)"><i class="bi bi-file-earmark-text" aria-hidden="true"></i>Assessments</a>
                                         <a class="dropdown-item @(learningProgressActive ? "active" : "")" asp-controller="Assessments" asp-action="Progress" aria-current="@(learningProgressActive ? "page" : null)"><i class="bi bi-bar-chart" aria-hidden="true"></i>My Learning Progress</a>
-                                        <a class="dropdown-item @(currentController == "VideoLessons" ? "active" : "")" asp-controller="VideoLessons" asp-action="Index"><i class="bi bi-play-circle" aria-hidden="true"></i>Recorded Lessons</a>
                                     </div>
                                 </div>
                             }

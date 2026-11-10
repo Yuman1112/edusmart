@@ -43,7 +43,7 @@ public sealed class EnrollmentRulesService(ApplicationDbContext db)
                 cancelled.Where(x => x.ClassSessionId == c.ClassSessionId).Select(x => x.OriginalDate)).Count == 0)
                 return $"Class {c.ClassName} has no remaining regular lessons in the requested start month. Choose another start month.";
             if (!c.Subject.IsActive) return $"Subject {c.Subject.SubjectName} is no longer available for enrollment.";
-            if (!ClassScheduleService.ValidOn(c, start)) return $"Class {c.ClassName} is unavailable on the selected enrollment start date.";
+            if (!AcademicYearPolicy.CanEnrollOn(c, start)) return $"Class {c.ClassName} is unavailable on the selected enrollment start date.";
             if (await OccupiedSeatsAsync(c.ClassSessionId, applicationId, ct, start) >= c.Capacity) return $"Class {c.ClassName} has reached its maximum capacity, including approved applications awaiting payment.";
         }
         var other = studentId.HasValue ? await db.StudentEnrollments.AsNoTracking().Include(x => x.ClassSession)

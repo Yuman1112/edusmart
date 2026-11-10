@@ -456,3 +456,16 @@
         display: none !important;
     }
 }
+
+/* Included class names remain visible in both screen and printed/PDF receipts. */
+.receipt-table .receipt-tuition-classes {
+    margin: 10px 0 0;
+    padding-left: 18px;
+    list-style: disc;
+    font-size: inherit;
+    font-weight: 400;
+    line-height: 1.6;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.receipt-table .receipt-tuition-classes li + li { margin-top: 6px; }

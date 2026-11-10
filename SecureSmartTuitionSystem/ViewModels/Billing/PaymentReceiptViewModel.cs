@@ -64,6 +64,8 @@
 
     public sealed class PaymentReceiptItemViewModel
     {
+        public List<string> ClassNames { get; set; } = new();
+
         public string Description { get; set; }
             = string.Empty;
 

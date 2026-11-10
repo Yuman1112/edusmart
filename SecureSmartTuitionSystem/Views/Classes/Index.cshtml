@@ -52,7 +52,7 @@
                 </p>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(Model.SelectedStage) ||
+            @if (Model.SelectedYear.HasValue || !string.IsNullOrWhiteSpace(Model.SelectedStage) ||
                         !string.IsNullOrWhiteSpace(
                         Model.SelectedSubject) ||
                         !string.IsNullOrWhiteSpace(
@@ -73,8 +73,18 @@
               asp-action="Index"
               id="browseFilterForm"
               class="browse-filter-grid">
-            <div class="browse-form-field browse-date-field"><label for="browseStartDate" class="form-label">Requested Start Date</label><input id="browseStartDate" name="requestedStartDate" type="date" value="@ViewBag.RequestedStartDate" min="@DateTime.UtcNow.AddHours(8).ToString("yyyy-MM-dd")" max="@DateTime.UtcNow.AddHours(8).AddYears(1).ToString("yyyy-MM-dd")" class="form-control browse-filter-input" /></div>
 
+
+            <div class="browse-form-field">
+                <label for="yearFilter">Year</label>
+                <select id="yearFilter" name="year" class="form-select browse-filter-input">
+                    <option value="">All Years</option>
+                    @foreach (var item in Model.Years)
+                    {
+                        <option value="@item" selected="@(item == Model.SelectedYear)">@item</option>
+                    }
+                </select>
+            </div>
 
             <div class="browse-form-field">
                 <label for="stageFilter">Academic Stage</label>

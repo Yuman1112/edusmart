@@ -75,15 +75,28 @@
             let firstGroup = true;
             for (const name of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']) {
                 const choices = slots.filter(slot => slot.day === name);
-                if (!choices.length) continue;
                 const group = document.createElement('details');
                 group.className = 'tutor-slot-day';
-                group.open = selected ? selected.day === name : firstGroup;
-                firstGroup = false;
+                group.setAttribute('name', 'tutor-weekly-times');
+                // Keep exclusive expansion in browsers without native details[name] support.
+                group.addEventListener('toggle', () => {
+                    if (!group.open) return;
+                    list.querySelectorAll('details.tutor-slot-day').forEach(other => {
+                        if (other !== group) other.open = false;
+                    });
+                });
+                group.open = selected ? selected.day === name : (firstGroup && choices.length > 0);
+                if (choices.length) firstGroup = false;
                 const heading = document.createElement('summary');
                 heading.textContent = `${name} · ${choices.length} ${choices.length === 1 ? "time" : "times"}`;
                 const buttons = document.createElement('div');
                 buttons.className = 'tutor-slot-buttons';
+                if (!choices.length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'text-muted mb-0';
+                    empty.textContent = 'No available weekly time for this day, duration and term. Check teaching hours, existing lessons or choose another term.';
+                    buttons.append(empty);
+                }
                 choices.forEach(slot => {
                     const button = document.createElement('button');
                     button.type = 'button';

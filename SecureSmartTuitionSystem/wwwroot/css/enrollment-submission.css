@@ -1345,3 +1345,55 @@
         gap: 9px
     }
 }
+
+/* The confirmation reuses the same card geometry as its detail summary. */
+.submission-selected-classes {
+    margin-bottom: 24px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+.submission-selected-classes ol { margin: 12px 0 0; padding-left: 24px; }
+.submission-selected-classes li + li { margin-top: 10px; }
+
+/* Enrollment Options: complete schedule conflict summary. */
+.enrollment-page .enrollment-overlap-alert {
+    scroll-margin-top: 120px;
+    margin: 0 0 24px;
+    padding: 20px 22px;
+    border: 1px solid #e7a0a7;
+    border-left: 4px solid #c73545;
+    border-radius: 12px;
+    background: #fff5f5;
+    color: #8f2332;
+    font-size: 0.875rem;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+}
+.enrollment-page .enrollment-overlap-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.enrollment-page .enrollment-overlap-heading h2 {
+    margin: 0;
+    color: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.5;
+}
+.enrollment-page .enrollment-overlap-alert p { margin: 0; }
+.enrollment-page .enrollment-overlap-alert ol { margin: 12px 0; padding-left: 24px; }
+.enrollment-page .enrollment-overlap-alert .enrollment-overlap-pair + .enrollment-overlap-pair { margin-top: 18px; padding-top: 16px; border-top: 1px solid #efc9cd; }
+.enrollment-page .enrollment-overlap-alert li::marker { font-weight: 700; }
+.enrollment-page .enrollment-overlap-alert .enrollment-overlap-guidance { font-weight: 600; }
+
+.enrollment-page .enrollment-overlap-pair h3 { margin: 0 0 8px; color: inherit; font-size: 0.9375rem; font-weight: 700; line-height: 1.5; }
+.enrollment-page .enrollment-overlap-classes { margin: 0 0 10px; padding-left: 20px; list-style: disc; }
+.enrollment-page .enrollment-overlap-classes li + li { margin-top: 6px; }
+.enrollment-page .enrollment-overlap-alert .enrollment-overlap-time { margin-top: 10px; }
+
+.enrollment-page .enrollment-overlap-alert .enrollment-overlap-list { list-style: none; padding-left: 0; }

@@ -844,3 +844,7 @@
             font-size: 1rem;
         }
 }
+
+/* Tuition details use the same readable class list as payment and receipt views. */
+.billing-tuition-classes { margin: 10px 0 0; padding-left: 18px; list-style: disc; font-size: inherit; font-weight: 400; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; }
+.billing-tuition-classes li + li { margin-top: 6px; }

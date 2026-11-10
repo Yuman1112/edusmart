@@ -44,7 +44,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 message = tutors.Count == 0 ? "No active, setup-complete tutors are qualified for this subject and level."
                     : !selected ? "Select a qualified tutor to see available weekly times."
                     : slots.Count == 0 ? "No weekly time fits this tutor, duration and entire class term. Choose another tutor, duration or term."
-                    : "Select an available weekly time below. All lesson dates in this term were checked."
+                    : "Select an available weekly time below. Upcoming lesson dates in this term were checked."
             });
         }
 
@@ -333,7 +333,7 @@ namespace SecureSmartTuitionSystem.Controllers
         {
             model.ClassSessionId = null; // Creation never trusts a posted existing class identifier.
             NormalizeInput(model);
-            await GenerateClassNameIfEmptyAsync(model);
+            await GenerateClassNameAsync(model);
 
             await ValidateClassSessionAsync(
                 model,
@@ -353,6 +353,15 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 await ValidateClassSessionAsync(model, existingClassSessionId: null);
                 if (!ModelState.IsValid) { await PopulateSelectionsAsync(model); return View(model); }
+                var firstLesson = TutorSchedulingService.FirstUpcomingLesson(model.StartDate!.Value,
+                    model.EndDate ?? AcademicYearPolicy.EndOfYear(model.StartDate.Value), model.DayOfWeek!.Value,
+                    model.StartTime!.Value, ClassScheduleService.Now);
+                if (!firstLesson.HasValue)
+                {
+                    ModelState.AddModelError(nameof(model.StartTime), "No upcoming regular lesson remains for this weekly time and term. Choose another time or term.");
+                    await PopulateSelectionsAsync(model);
+                    return View(model);
+                }
                 Subject subject =
                     await FindOrCreateSubjectAsync(model);
 
@@ -361,7 +370,7 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 var classSession = new ClassSession
                 {
-                    StartDate = model.StartDate!.Value.Date,
+                    StartDate = firstLesson.Value.Date,
                     EndDate = model.EndDate?.Date,
                     ClassCode = classCode,
                     ClassName = model.ClassName!,
@@ -383,7 +392,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 await transaction.CommitAsync();
 
                 TempData["SuccessMessage"] =
-                    $"Class {classCode} was created successfully.";
+                    $"Class {classCode} was created successfully. First lesson: {firstLesson.Value:dd MMM yyyy}.";
 
                 return RedirectToAction(nameof(Index));
             }
@@ -466,7 +475,7 @@ namespace SecureSmartTuitionSystem.Controllers
             }
 
             NormalizeInput(model);
-            await GenerateClassNameIfEmptyAsync(model);
+            await GenerateClassNameAsync(model);
 
             await ValidateClassSessionAsync(
                 model,
@@ -764,11 +773,10 @@ namespace SecureSmartTuitionSystem.Controllers
                 " ");
         }
 
-        private async Task GenerateClassNameIfEmptyAsync(
+        private async Task GenerateClassNameAsync(
             ClassSessionFormViewModel model)
         {
-            if (!string.IsNullOrWhiteSpace(model.ClassName) ||
-                string.IsNullOrWhiteSpace(model.AcademicLevel) ||
+            if (string.IsNullOrWhiteSpace(model.AcademicLevel) ||
                 string.IsNullOrWhiteSpace(model.SubjectName) ||
                 string.IsNullOrWhiteSpace(model.TutorUserId) ||
                 !model.DayOfWeek.HasValue ||
@@ -804,6 +812,8 @@ namespace SecureSmartTuitionSystem.Controllers
                 $"{tutorName} - " +
                 $"{model.DayOfWeek.Value} - " +
                 $"{startTime}";
+            // Ignore stale or tampered posted names; redisplay the generated value after validation errors.
+            ModelState.Remove(nameof(model.ClassName));
         }
 
         private async Task ValidateClassSessionAsync(
@@ -1271,6 +1281,7 @@ namespace SecureSmartTuitionSystem.Controllers
         {
             return sortBy?.Trim().ToLowerInvariant() switch
             {
+                "year" => "year",
                 "subject" => "subject",
                 "educationstage" => "educationStage",
                 "academiclevel" => "academicLevel",
@@ -1292,6 +1303,12 @@ namespace SecureSmartTuitionSystem.Controllers
 
             return sortBy switch
             {
+                "year" => descending
+                    ? query.OrderByDescending(session => (session.StartDate ?? session.CreatedAt.AddHours(8)).Year)
+                        .ThenBy(session => session.ClassName).ThenBy(session => session.ClassSessionId)
+                    : query.OrderBy(session => (session.StartDate ?? session.CreatedAt.AddHours(8)).Year)
+                        .ThenBy(session => session.ClassName).ThenBy(session => session.ClassSessionId),
+
                 "subject" => descending
                     ? query
                         .OrderByDescending(session =>

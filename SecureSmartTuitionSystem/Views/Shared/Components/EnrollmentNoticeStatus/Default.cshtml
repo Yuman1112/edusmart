@@ -1,0 +1,35 @@
+@model List<SecureSmartTuitionSystem.Models.Communication.EnrollmentNotice>
+@using SecureSmartTuitionSystem.Models.Communication
+@{
+    var issues = Model.Where(row => row.State is EnrollmentNoticeState.Unconfirmed or EnrollmentNoticeState.Failed).ToList();
+}
+@if (issues.Count > 0)
+{
+<section class="class-details-card mt-3">
+    <h2>Email delivery needs attention</h2>
+    <p class="text-muted">An application notice failed or its sending outcome is unconfirmed. Check the mailbox or mail logs before recording an outcome or retrying.</p>
+    @foreach (var row in issues)
+    {
+        <div class="border-top py-3">
+            <strong>@row.Kind · @row.RecipientRole</strong>
+            <span class="status-pill @(row.State == EnrollmentNoticeState.Sent ? "status-success" : "status-warning")">@row.State</span>
+            <p class="text-muted mb-1">Queued @row.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT
+            @if (row.SentAtUtc.HasValue) { <span> · Sent/recorded @row.SentAtUtc.Value.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</span> }</p>
+            @if (row.State == EnrollmentNoticeState.Pending) { <p class="mb-0">Waiting for the mail worker. Check SMTP configuration if this remains pending.</p> }
+            @if (row.Note != null) { <p class="mb-0">@row.Note</p> }
+            @if (row.State is EnrollmentNoticeState.Unconfirmed or EnrollmentNoticeState.Failed)
+            {
+                <form asp-controller="EnrollmentNotices" asp-action="Recover" method="post" class="mt-2">
+                    <input type="hidden" name="id" value="@row.EnrollmentNoticeId" />
+                    <input type="hidden" name="attemptId" value="@row.AttemptId" />
+                    <label class="d-block mb-2"><input type="checkbox" name="verified" value="true" required /> I checked the mailbox/mail logs and verified this outcome.</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-primary" name="outcome" value="not-sent">Confirmed not sent — retry</button>
+                        <button class="btn btn-outline-secondary" name="outcome" value="sent">Confirmed sent — record</button>
+                    </div>
+                </form>
+            }
+        </div>
+    }
+</section>
+}

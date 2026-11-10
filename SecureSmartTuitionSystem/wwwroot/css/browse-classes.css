@@ -121,7 +121,7 @@
 .browse-filter-grid {
     display: grid;
     padding: 21px 22px 23px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 18px;
 }
 
@@ -521,6 +521,10 @@
 ========================================================= */
 
 @media (max-width: 991.98px) {
+    .browse-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .browse-page {
         padding: 24px 22px 40px;
     }
@@ -599,5 +603,3 @@
     .browse-empty-state p span + span {
         margin-top: 4px;
     }
-.browse-date-field { grid-column:1 / -1; }
-.browse-date-field input { max-width:320px; }

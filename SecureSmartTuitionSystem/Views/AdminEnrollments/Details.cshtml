@@ -1063,3 +1063,5 @@
 @if (Model.Status == EnrollmentStatus.ApprovedPendingPayment) {
 <div class="alert alert-info mt-3">Selected seats remain reserved while payment is pending, including after the due date. If the family will not proceed, cancel this unpaid application to release the seats.</div>
 }
+
+@await Component.InvokeAsync("EnrollmentNoticeStatus", new { applicationId = Model.EnrollmentApplicationId })

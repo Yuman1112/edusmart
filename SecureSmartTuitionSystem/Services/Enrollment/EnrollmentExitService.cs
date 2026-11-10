@@ -15,6 +15,9 @@ public sealed class EnrollmentExitService(ApplicationDbContext db, ClassSchedule
         return db.StudentEnrollments.Where(e => (student && e.StudentProfile.ApplicationUserId == id) ||
             (parent && e.StudentProfile.ParentStudents.Any(p => p.IsActive && p.ParentProfile.ApplicationUserId == id)));
     }
+    public static bool ValidRefundAmount(decimal amount, decimal maximum) =>
+        amount > 0m && amount <= maximum && decimal.Round(amount, 2) == amount;
+
     public static decimal TuitionRefund(decimal discountedTuition, decimal totalMonthlyFee, decimal classMonthlyFee, int paidMonths, int unusedMonths)
     {
         if (discountedTuition <= 0 || totalMonthlyFee <= 0 || classMonthlyFee <= 0 || paidMonths <= 0 || unusedMonths <= 0) return 0m;
@@ -54,6 +57,48 @@ public sealed class EnrollmentExitService(ApplicationDbContext db, ClassSchedule
             .SumAsync(x => (decimal?)x.ApprovedRefund) ?? 0m;
         return (payment, Math.Max(0m, Math.Min(quote, Math.Min(payment.Amount, payment.Bill.DiscountedTuitionAmount) - committed)));
     }
+    public static bool CanCancelWithdrawal(EnrollmentExitRequest request, DateTime today) =>
+        request.CancelledAtUtc == null && today.Date < request.EffectiveDate.Date &&
+        request.StudentEnrollment.Status == StudentEnrollmentStatus.PendingDrop &&
+        request.StudentEnrollment.DropEffectiveDate?.Date == request.EffectiveDate.Date &&
+        request.RefundStatus is ExitRefundStatus.NoRefundDue or ExitRefundStatus.PendingReview or ExitRefundStatus.Rejected &&
+        !request.RefundStartedAtUtc.HasValue && request.ApprovedRefund == 0m && request.ProviderRefundId == null;
+
+    public async Task CancelWithdrawalAsync(ClaimsPrincipal user, int id)
+    {
+        string? actor = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (actor == null || (!user.IsInRole("Admin") && !user.IsInRole("Parent") && !user.IsInRole("Student")))
+            throw new InvalidOperationException("You cannot cancel this withdrawal.");
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var request = await db.EnrollmentExitRequests.Include(x => x.StudentEnrollment).ThenInclude(x => x.ClassSession)
+            .FirstOrDefaultAsync(x => x.EnrollmentExitRequestId == id)
+            ?? throw new InvalidOperationException("Withdrawal not found.");
+        if (!user.IsInRole("Admin") && (request.RequestedByUserId != actor ||
+            !await Accessible(user).AnyAsync(x => x.StudentEnrollmentId == request.StudentEnrollmentId)))
+            throw new InvalidOperationException("Only Admin or the student/parent who submitted this withdrawal can cancel it.");
+        if (!CanCancelWithdrawal(request, ClassScheduleService.Today))
+            throw new InvalidOperationException("Only a pending withdrawal before its effective date and without a refund attempt can be cancelled.");
+        var e = request.StudentEnrollment;
+        if (e.ClassSession.Status != ClassSessionStatus.Active)
+            throw new InvalidOperationException("This class is no longer active; the withdrawal cannot be cancelled.");
+        var restoreFrom = new[] { request.EffectiveDate.Date, e.StartDate.Date, ClassScheduleService.FirstDate(e.ClassSession) }.Max();
+        if (restoreFrom <= AcademicYearPolicy.ClassEnd(e.ClassSession))
+        {
+            var error = await new EnrollmentRulesService(db).ValidateAsync([e.ClassSessionId], restoreFrom, e.StudentProfileId);
+            if (error != null) throw new InvalidOperationException("Cannot restore enrollment: " + error);
+        }
+        e.Status = StudentEnrollmentStatus.Active;
+        e.DropRequestedAt = null; e.DropEffectiveDate = null; e.WithdrawalReason = null;
+        request.CancelledAtUtc = DateTime.UtcNow; request.CancelledByUserId = actor;
+        request.RefundStatus = ExitRefundStatus.Cancelled;
+        var recipients = await schedules.RecipientsAsync(new() { e.StudentProfileId }, e.ClassSession.TutorUserId);
+        foreach (var recipient in recipients.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())
+            db.UserNotifications.Add(new SecureSmartTuitionSystem.Models.Communication.UserNotification {
+                UserId = recipient, Title = "Withdrawal cancelled", AvailableFromDate = ClassScheduleService.Today,
+                Text = $"{e.ClassSession.ClassName}: the pending withdrawal has been cancelled. Enrollment continues under its original class term and billing rules." });
+        await db.SaveChangesAsync(); await tx.CommitAsync();
+    }
+
     public async Task<EnrollmentExitRequest> StopAsync(ClaimsPrincipal user, int enrollmentId, string reason, DateTime? expectedEffectiveDate = null, decimal? expectedRefund = null)
     {
         if (user.IsInRole("Admin") || (!user.IsInRole("Parent") && !user.IsInRole("Student")))
@@ -62,7 +107,7 @@ public sealed class EnrollmentExitService(ApplicationDbContext db, ClassSchedule
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var e = await Accessible(user).Include(x => x.ClassSession).FirstOrDefaultAsync(x => x.StudentEnrollmentId == enrollmentId)
             ?? throw new InvalidOperationException("Enrollment not found or not accessible.");
-        var existing = await db.EnrollmentExitRequests.FirstOrDefaultAsync(x => x.StudentEnrollmentId == enrollmentId);
+        var existing = await db.EnrollmentExitRequests.FirstOrDefaultAsync(x => x.StudentEnrollmentId == enrollmentId && x.CancelledAtUtc == null);
         if (existing != null) { await tx.CommitAsync(); return existing; }
         if (e.Status != StudentEnrollmentStatus.Active) throw new InvalidOperationException("Only active enrollments can be withdrawn.");
         var effective = new DateTime(ClassScheduleService.Today.Year, ClassScheduleService.Today.Month, 1).AddMonths(1);

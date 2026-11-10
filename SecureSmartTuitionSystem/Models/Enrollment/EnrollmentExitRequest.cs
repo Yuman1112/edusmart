@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using SecureSmartTuitionSystem.Models.Billing;
 namespace SecureSmartTuitionSystem.Models.Enrollment;
-public enum ExitRefundStatus { NoRefundDue, PendingReview, Processing, PendingProvider, Completed, Rejected, Failed }
+public enum ExitRefundStatus { NoRefundDue, PendingReview, Processing, PendingProvider, Completed, Rejected, Failed, Cancelled }
 public sealed class EnrollmentExitRequest
 {
     public int EnrollmentExitRequestId { get; set; }
@@ -17,6 +17,8 @@ public sealed class EnrollmentExitRequest
     public ExitRefundStatus RefundStatus { get; set; }
     [MaxLength(450)] public string? ReviewedByUserId { get; set; }
     [MaxLength(500)] public string? ReviewNote { get; set; }
+    public DateTime? CancelledAtUtc { get; set; }
+    [MaxLength(450)] public string? CancelledByUserId { get; set; }
     public DateTime? RefundStartedAtUtc { get; set; }
     public DateTime? RefundCompletedAtUtc { get; set; }
     [MaxLength(255)] public string? ProviderRefundId { get; set; }

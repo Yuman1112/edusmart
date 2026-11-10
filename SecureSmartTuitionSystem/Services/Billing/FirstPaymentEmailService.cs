@@ -2,6 +2,10 @@
 using System.Net.Mail;
 using System.Text;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
+using SecureSmartTuitionSystem.Data;
+using SecureSmartTuitionSystem.Models.Enrollment;
+using SecureSmartTuitionSystem.Services.Enrollment;
 using SecureSmartTuitionSystem.Models.Billing;
 using SecureSmartTuitionSystem.Settings;
 
@@ -11,11 +15,14 @@ namespace SecureSmartTuitionSystem.Services.Billing
         : IFirstPaymentEmailService
     {
         private readonly EmailSettings _settings;
+        private readonly ApplicationDbContext _context;
 
         public FirstPaymentEmailService(
-            IOptions<EmailSettings> options)
+            IOptions<EmailSettings> options,
+            ApplicationDbContext context)
         {
             _settings = options.Value;
+            _context = context;
         }
 
         public async Task SendAsync(
@@ -40,6 +47,14 @@ namespace SecureSmartTuitionSystem.Services.Billing
             string subject =
                 $"EduSmart payment required for {studentName}";
 
+            // Load classes from this bill's own application, independently of navigation loading.
+            var classNames = await _context.Set<EnrollmentApplicationSubject>().AsNoTracking()
+                .Where(selected => selected.EnrollmentApplicationId == bill.EnrollmentApplicationId)
+                .OrderBy(selected => selected.ClassSessionId)
+                .Select(selected => selected.ClassSession.ClassName ?? selected.ClassSession.ClassCode)
+                .ToListAsync(cancellationToken);
+            string tuitionClassesHtml = BuildTuitionClassList(classNames);
+
             var itemRows = new StringBuilder();
 
             foreach (BillItem item in
@@ -47,6 +62,8 @@ namespace SecureSmartTuitionSystem.Services.Billing
             {
                 string safeDescription =
                     WebUtility.HtmlEncode(item.Description);
+
+                string classListHtml = item.ItemType == BillItemType.Tuition ? tuitionClassesHtml : string.Empty;
 
                 string lineTotalColour =
                     item.LineTotal < 0
@@ -57,6 +74,7 @@ namespace SecureSmartTuitionSystem.Services.Billing
                     <tr>
                         <td style="padding:14px 16px;border-bottom:1px solid #d7e8eb;font-weight:700;">
                             {{safeDescription}}
+                            {{classListHtml}}
                         </td>
                         <td style="padding:14px 12px;border-bottom:1px solid #d7e8eb;text-align:center;">
                             {{item.Quantity}}
@@ -286,6 +304,15 @@ namespace SecureSmartTuitionSystem.Services.Billing
             await smtpClient.SendMailAsync(
                 message,
                 cancellationToken);
+        }
+
+        private static string BuildTuitionClassList(IEnumerable<string?> names)
+        {
+            var items = names.Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => $"<li style='margin:6px 0;overflow-wrap:anywhere'>{WebUtility.HtmlEncode(ClassNameFormatter.Clean(name!))}</li>");
+            var content = string.Concat(items);
+            return content.Length == 0 ? string.Empty :
+                "<ul style='margin:10px 0 0;padding-left:18px;list-style-type:disc;font-size:12px;font-weight:400;line-height:1.6;color:#06356b;text-align:left'>" + content + "</ul>";
         }
 
         private void ValidateSettings()

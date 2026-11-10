@@ -22,9 +22,6 @@
         const classNameInput =
             document.getElementById("ClassName");
 
-        const useSuggestedButton =
-            document.getElementById("UseSuggestedName");
-
         const initialAcademicLevel =
             document.getElementById("InitialAcademicLevel")?.value || "";
 
@@ -190,10 +187,6 @@
                 "PER"
             ]
         };
-
-        let classNameManuallyEdited =
-            classNameInput &&
-            classNameInput.value.trim() !== "";
 
         function resetSelect(selectElement, placeholder) {
             if (!selectElement) {
@@ -362,31 +355,8 @@
             );
         }
 
-        function updateSuggestedClassName(forceUpdate = false) {
-            if (!classNameInput) {
-                return;
-            }
-
-            const suggestedName =
-                buildSuggestedClassName();
-
-            if (!suggestedName) {
-                if (!classNameManuallyEdited) {
-                    classNameInput.value = "";
-                }
-
-                return;
-            }
-
-            if (
-                forceUpdate ||
-                !classNameManuallyEdited
-            ) {
-                classNameInput.value =
-                    suggestedName;
-
-                classNameManuallyEdited = false;
-            }
+        function updateSuggestedClassName() {
+            if (classNameInput) classNameInput.value = buildSuggestedClassName();
         }
 
         educationStageSelect?.addEventListener(
@@ -395,7 +365,6 @@
                 populateAcademicLevels();
                 populateSubjects();
 
-                classNameManuallyEdited = false;
                 updateSuggestedClassName();
             }
         );
@@ -405,7 +374,6 @@
             function () {
                 populateSubjects();
 
-                classNameManuallyEdited = false;
                 updateSuggestedClassName();
             }
         );
@@ -445,21 +413,22 @@
             }
         );
 
-        classNameInput?.addEventListener(
-            "input",
-            function () {
-                classNameManuallyEdited =
-                    classNameInput.value.trim() !== "";
-            }
-        );
-
-        useSuggestedButton?.addEventListener(
-            "click",
-            function () {
-                classNameManuallyEdited = false;
-                updateSuggestedClassName(true);
-            }
-        );
+        const durationInput = document.getElementById("LessonDurationMinutes");
+        const endTimeInput = document.getElementById("EndTime");
+        function updateDisplayedDuration() {
+            if (!durationInput?.readOnly) return;
+            const minutes = value => {
+                const parts = value.split(":").map(Number);
+                return parts.length >= 2 ? parts[0] * 60 + parts[1] : NaN;
+            };
+            const total = minutes(endTimeInput?.value || "") - minutes(startTimeInput?.value || "");
+            durationInput.value = Number.isFinite(total) && total >= 0 ? String(total) : "";
+        }
+        [startTimeInput, endTimeInput].forEach(field => {
+            field?.addEventListener("input", updateDisplayedDuration);
+            field?.addEventListener("change", updateDisplayedDuration);
+        });
+        updateDisplayedDuration();
 
         /*
          * Restore selected values when:

@@ -178,6 +178,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     .AsNoTracking()
                     .Include(item =>
                         item.EnrollmentApplication)
+                    .ThenInclude(application => application.SelectedSubjects)
+                    .ThenInclude(selected => selected.ClassSession)
                     .Include(item =>
                         item.Items)
                     .FirstOrDefaultAsync(item =>
@@ -290,6 +292,15 @@ namespace SecureSmartTuitionSystem.Controllers
                                 {
                                     Description =
                                         item.Description,
+
+                                    ClassNames = item.ItemType == BillItemType.Tuition
+                                        ? bill.EnrollmentApplication.SelectedSubjects
+                                            .OrderBy(selected => selected.ClassSessionId)
+                                            .Select(selected => selected.ClassSession.ClassName)
+                                            .Where(name => !string.IsNullOrWhiteSpace(name))
+                                            .Select(name => name!)
+                                            .ToList()
+                                        : new List<string>(),
 
                                     Quantity =
                                         item.Quantity,
@@ -940,7 +951,7 @@ namespace SecureSmartTuitionSystem.Controllers
             }
 
             PaymentReceiptViewModel viewModel =
-                BuildReceiptViewModel(payment);
+                await BuildReceiptViewModelAsync(payment);
 
             return View(
                 "Receipt",
@@ -1017,7 +1028,7 @@ namespace SecureSmartTuitionSystem.Controllers
             }
 
             PaymentReceiptViewModel viewModel =
-                BuildReceiptViewModel(payment);
+                await BuildReceiptViewModelAsync(payment);
 
             return View(
                 "Receipt",
@@ -1031,8 +1042,8 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
-        private static PaymentReceiptViewModel
-            BuildReceiptViewModel(
+        private async Task<PaymentReceiptViewModel>
+            BuildReceiptViewModelAsync(
                 Payment payment)
         {
             Bill bill =
@@ -1080,6 +1091,12 @@ namespace SecureSmartTuitionSystem.Controllers
                 tuitionPeriod =
                     $"{startMonthText} to {endMonthText}";
             }
+
+            var receiptClassNames = await _context.Set<SecureSmartTuitionSystem.Models.Enrollment.EnrollmentApplicationSubject>()
+                .AsNoTracking().Where(selected => selected.EnrollmentApplicationId == application.EnrollmentApplicationId)
+                .OrderBy(selected => selected.ClassSessionId)
+                .Select(selected => selected.ClassSession.ClassName ?? selected.ClassSession.ClassCode)
+                .ToListAsync(HttpContext.RequestAborted);
 
             return new PaymentReceiptViewModel
             {
@@ -1147,6 +1164,11 @@ namespace SecureSmartTuitionSystem.Controllers
                             {
                                 Description =
                                     item.Description,
+
+                                ClassNames = item.ItemType == BillItemType.Tuition
+                                    ? receiptClassNames.Where(name => !string.IsNullOrWhiteSpace(name))
+                                        .Select(name => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(name!)).ToList()
+                                    : new List<string>(),
 
                                 Quantity =
                                     item.Quantity,

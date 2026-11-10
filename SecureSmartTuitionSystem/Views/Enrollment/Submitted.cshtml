@@ -52,8 +52,21 @@
             <div><span>Requested Start Date</span><strong>@Model.RequestedStartDate.ToString("dd MMM yyyy")</strong></div>
             <div><span>Estimated Total</span><strong>RM @Model.EstimatedTotal.ToString("F2")</strong></div>
             <div><span>Status</span><strong>@statusText</strong></div>            
-            <div><span>Submitted</span><strong>@Model.SubmittedAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</strong></div>
+            <div><span>Submitted</span><strong>@Model.SubmittedAt.AddHours(8).ToString("dd MMM yyyy, hh:mm tt")</strong></div>
         </div>
+
+        @if (Model.SelectedClassNames.Count > 0)
+        {
+            <section class="submission-selected-classes">
+                <h2>Selected classes</h2>
+                <ol>
+                    @foreach (var name in Model.SelectedClassNames)
+                    {
+                        <li><strong>@SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(name)</strong></li>
+                    }
+                </ol>
+            </section>
+        }
 
         <a asp-controller="Home" asp-action="Index" class="primary-button">
             <i class="bi bi-house"></i> Return Home

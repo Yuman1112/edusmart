@@ -915,6 +915,60 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("ConversationUserPreferences");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.EnrollmentNotice", b =>
+                {
+                    b.Property<long>("EnrollmentNoticeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("EnrollmentNoticeId"));
+
+                    b.Property<Guid?>("AttemptId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AttemptedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EnrollmentApplicationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ProtectedPayload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RecipientRole")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("State")
+                        .HasColumnType("int");
+
+                    b.HasKey("EnrollmentNoticeId");
+
+                    b.HasIndex("State", "CreatedAtUtc");
+
+                    b.HasIndex("EnrollmentApplicationId", "Kind", "RecipientRole")
+                        .IsUnique();
+
+                    b.ToTable("EnrollmentNotices");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.GuestEnquiry", b =>
                 {
                     b.Property<int>("GuestEnquiryId")
@@ -1462,6 +1516,13 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<decimal>("ApprovedRefund")
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CancelledByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime>("EffectiveDate")
                         .HasColumnType("date");
 
@@ -1526,7 +1587,8 @@ namespace SecureSmartTuitionSystem.Migrations
                         .HasFilter("[ProviderRefundId] IS NOT NULL");
 
                     b.HasIndex("StudentEnrollmentId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[CancelledAtUtc] IS NULL");
 
                     b.ToTable("EnrollmentExitRequests");
                 });
@@ -2768,6 +2830,17 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("Conversation");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.EnrollmentNotice", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.EnrollmentApplication", "EnrollmentApplication")
+                        .WithMany()
+                        .HasForeignKey("EnrollmentApplicationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EnrollmentApplication");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.MessageAttachment", b =>

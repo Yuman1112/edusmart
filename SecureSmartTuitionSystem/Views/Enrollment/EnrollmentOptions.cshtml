@@ -38,7 +38,37 @@
             </div>
 
             <div asp-validation-summary="ModelOnly" class="text-danger validation-summary"></div>
-            <span asp-validation-for="SelectedClassSessionIds" class="text-danger"></span>
+            @if (Model.ScheduleConflicts.Count > 0)
+            {
+                <div id="scheduleConflictAlert" class="enrollment-overlap-alert" role="alert" aria-labelledby="scheduleOverlapTitle" tabindex="-1">
+                    <div class="enrollment-overlap-heading">
+                        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                        <h2 id="scheduleOverlapTitle">@(Model.ScheduleConflicts.Count == 1
+                            ? "1 Schedule Conflict Found"
+                            : $"{Model.ScheduleConflicts.Count} Schedule Conflicts Found")</h2>
+                    </div>
+                    <p>The following class pairs have overlapping lesson times:</p>
+                    <ol class="enrollment-overlap-list">
+                        @for (int conflictIndex = 0; conflictIndex < Model.ScheduleConflicts.Count; conflictIndex++)
+                        {
+                            var conflict = Model.ScheduleConflicts[conflictIndex];
+                            <li class="enrollment-overlap-pair">
+                                <h3>Conflict @(conflictIndex + 1) · @conflict.Day</h3>
+                                <ul class="enrollment-overlap-classes">
+                                    <li><strong>@conflict.FirstClassName:</strong> @conflict.Day · @conflict.FirstStart.ToString("hh:mm tt", CultureInfo.InvariantCulture)–@conflict.FirstEnd.ToString("hh:mm tt", CultureInfo.InvariantCulture)</li>
+                                    <li><strong>@conflict.SecondClassName:</strong> @conflict.Day · @conflict.SecondStart.ToString("hh:mm tt", CultureInfo.InvariantCulture)–@conflict.SecondEnd.ToString("hh:mm tt", CultureInfo.InvariantCulture)</li>
+                                </ul>
+                                <p class="enrollment-overlap-time"><strong>Overlapping time:</strong> @conflict.Day · @conflict.OverlapStart.ToString("hh:mm tt", CultureInfo.InvariantCulture)–@conflict.OverlapEnd.ToString("hh:mm tt", CultureInfo.InvariantCulture)</p>
+                            </li>
+                        }
+                    </ol>
+                    <p class="enrollment-overlap-guidance">Please return to Select Classes and choose classes with different lesson times before continuing.</p>
+                </div>
+            }
+            else
+            {
+                <span asp-validation-for="SelectedClassSessionIds" class="text-danger"></span>
+            }
 
             <section class="enrollment-section">
                 <div class="enrollment-section-title">
@@ -282,7 +312,7 @@
                         formmethod="post" class="outline-button" formnovalidate>
                     <i class="bi bi-arrow-left"></i> Back: Select Classes
                 </button>
-                <button type="submit" class="primary-button">
+                <button type="submit" class="primary-button" id="reviewSubmitButton" formnovalidate="@(Model.ScheduleConflicts.Count > 0)">
                     Review & Submit <i class="bi bi-send-check"></i>
                 </button>
             </div>
@@ -298,6 +328,27 @@
         document.addEventListener(
             "DOMContentLoaded",
             function () {
+                // Prioritize known schedule conflicts before checkbox or field validation.
+                const optionsForm = document.getElementById("enrollmentOptionsForm");
+                const reviewButton = document.getElementById("reviewSubmitButton");
+                const conflictAlert = document.getElementById("scheduleConflictAlert");
+                function showScheduleConflicts(event) {
+                    if (!conflictAlert) return;
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    conflictAlert.focus({ preventScroll: true });
+                    conflictAlert.scrollIntoView({
+                        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                        block: "start"
+                    });
+                }
+                reviewButton?.addEventListener("click", showScheduleConflicts, true);
+                optionsForm?.addEventListener("submit", function (event) {
+                    // The Back button must continue to return to class selection.
+                    if (event.submitter && event.submitter !== reviewButton) return;
+                    showScheduleConflicts(event);
+                }, true);
+
                 const hardcopyCheckbox =
                     document.getElementById(
                         "hardcopyRequested"

@@ -81,6 +81,11 @@ public sealed class EnrollmentExitsController(ApplicationDbContext db, Enrollmen
             .Include(x => x.Payment).ThenInclude(x => x!.Bill).FirstOrDefaultAsync(x => x.EnrollmentExitRequestId == id);
         if (request == null) return NotFound();
         ViewBag.CurrentQuote = (await exits.QuoteAsync(request.StudentEnrollment, request.EffectiveDate, id)).Amount;
+        ViewBag.MaximumRefund = Math.Max(0m, Math.Min(request.EstimatedRefund, (decimal)ViewBag.CurrentQuote));
+        ViewBag.MonthlyFeeAtApplication = await db.Set<EnrollmentApplicationSubject>().AsNoTracking()
+            .Where(x => x.EnrollmentApplicationId == request.StudentEnrollment.EnrollmentApplicationId &&
+                x.ClassSessionId == request.StudentEnrollment.ClassSessionId)
+            .Select(x => (decimal?)x.MonthlyFeeAtApplication).FirstOrDefaultAsync();
         return View(request);
     }
     [Authorize(Roles = "Admin"), HttpPost, ValidateAntiForgeryToken]
@@ -99,10 +104,22 @@ public sealed class EnrollmentExitsController(ApplicationDbContext db, Enrollmen
         TempData["SuccessMessage"] = "Review note saved. Withdrawal and refund status are unchanged.";
         return RedirectToAction(nameof(Details), new { id });
     }
-    [Authorize(Roles = "Admin"), HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Process(int id, string? note, bool confirmed)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelWithdrawal(int id, bool confirmed)
     {
-        if (!confirmed || note is { Length: > 500 }) return BadRequest();
+        if (!confirmed) { TempData["ErrorMessage"] = "Please confirm that you want to cancel this withdrawal."; return RedirectToAction(nameof(Details), new { id }); }
+        try { await exits.CancelWithdrawalAsync(User, id); TempData["SuccessMessage"] = "Withdrawal cancelled. The enrollment remains active."; }
+        catch (InvalidOperationException ex) { TempData["ErrorMessage"] = ex.Message; }
+        catch (DbUpdateConcurrencyException) { TempData["ErrorMessage"] = "This withdrawal changed while it was being processed. Refresh and check its status."; }
+        catch (Exception ex) when (ex is DbUpdateException or Microsoft.Data.SqlClient.SqlException)
+        { logger.LogWarning(ex, "Withdrawal cancellation could not be committed for {RequestId}.", id); TempData["ErrorMessage"] = "The withdrawal could not be cancelled. Refresh its status and try again."; }
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [Authorize(Roles = "Admin"), HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Process(int id, string? note, bool confirmed, decimal? refundAmount = null)
+    {
+        if (!confirmed || !ModelState.IsValid || note is { Length: > 500 }) return BadRequest();
         string refundNote = string.IsNullOrWhiteSpace(note)
             ? "Refund of unused future prepaid tuition based on the server-calculated amount and original payment."
             : note.Trim();
@@ -112,6 +129,7 @@ public sealed class EnrollmentExitsController(ApplicationDbContext db, Enrollmen
             var found = await db.EnrollmentExitRequests.Include(x => x.StudentEnrollment).Include(x => x.Payment).FirstOrDefaultAsync(x => x.EnrollmentExitRequestId == id);
             if (found == null) return NotFound();
             request = found;
+            if (request.CancelledAtUtc.HasValue) return BadRequest();
             if (request.RefundStatus == ExitRefundStatus.Processing)
             {
                 // An uncertain outcome must never be retried after the idempotency safety window.
@@ -123,7 +141,13 @@ public sealed class EnrollmentExitsController(ApplicationDbContext db, Enrollmen
                 var quote = await exits.QuoteAsync(request.StudentEnrollment, request.EffectiveDate, id);
                 if (quote.Payment == null || quote.Amount <= 0m || string.IsNullOrWhiteSpace(quote.Payment.ProviderPaymentIntentId))
                 { TempData["ErrorMessage"] = "No eligible prepaid tuition or verified Stripe payment intent is available. Check the original payment."; return RedirectToAction(nameof(Details), new { id }); }
-                request.ApprovedRefund = Math.Min(request.EstimatedRefund, quote.Amount); request.RefundStatus = ExitRefundStatus.Processing;
+                decimal maximum = Math.Max(0m, Math.Min(request.EstimatedRefund, quote.Amount));
+                decimal selectedAmount = refundAmount ?? maximum;
+                if (!EnrollmentExitService.ValidRefundAmount(selectedAmount, maximum))
+                { TempData["ErrorMessage"] = $"Enter a refund amount from RM 0.01 to RM {maximum:F2}, using at most two decimal places."; return RedirectToAction(nameof(Details), new { id }); }
+                if (selectedAmount < maximum && string.IsNullOrWhiteSpace(note))
+                { TempData["ErrorMessage"] = "Please explain why the selected refund is less than the maximum eligible amount."; return RedirectToAction(nameof(Details), new { id }); }
+                request.ApprovedRefund = selectedAmount; request.RefundStatus = ExitRefundStatus.Processing;
                 request.RefundStartedAtUtc = DateTime.UtcNow; request.ReviewNote = refundNote; request.ReviewedByUserId = UserId;
             }
             else return BadRequest();

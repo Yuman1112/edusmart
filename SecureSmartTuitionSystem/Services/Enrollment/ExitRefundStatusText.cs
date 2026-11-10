@@ -11,6 +11,7 @@ public static class ExitRefundStatusText
         ExitRefundStatus.Completed => "Completed",
         ExitRefundStatus.Rejected => "Rejected",
         ExitRefundStatus.Failed => "Failed",
+        ExitRefundStatus.Cancelled => "Withdrawal Cancelled",
         _ => status.ToString()
     };
 }
