@@ -7,9 +7,13 @@
 @foreach (var e in Model.Members)
 {
     no++;
+    var termEnd = AcademicYearPolicy.ClassEnd(e.ClassSession);
+    var effectiveEnd = new[] { termEnd, AcademicYearPolicy.EndOfYear(e.StartDate),
+        e.DropEffectiveDate?.Date.AddDays(-1) ?? DateTime.MaxValue,
+        e.EndedAt?.Date.AddDays(-1) ?? DateTime.MaxValue }.Min();
     var ended = e.DropEffectiveDate.HasValue && e.DropEffectiveDate.Value <= ClassScheduleService.Today;
     var status = ended ? "Dropped" : e.Status == StudentEnrollmentStatus.Active && e.StartDate.Date > ClassScheduleService.Today ? "Starts later" : e.Status.ToString();
-    <tr><td>@no</td><td>@e.StudentProfile.StudentNumber</td><td>@e.StudentProfile.FullName</td><td>@e.StartDate.ToString("dd MMM yyyy")</td><td>@status</td><td>@e.DropEffectiveDate?.ToString("dd MMM yyyy")</td>
+    <tr><td>@no</td><td>@e.StudentProfile.StudentNumber</td><td>@e.StudentProfile.FullName</td><td>@e.StartDate.ToString("dd MMM yyyy")</td><td>@status</td><td>@effectiveEnd.ToString("dd MMM yyyy")</td>
     @if (Model.CanWithdraw) {
     <td><div class="d-flex gap-2 flex-wrap align-items-center"><a class="outline-button table-view-button" asp-controller="EnrollmentExits" asp-action="Index" asp-route-studentProfileId="@e.StudentProfileId"><i class="bi bi-clock-history" aria-hidden="true"></i> Withdrawal history</a>
     @if (User.IsInRole("Admin") && e.StudentProfile.IsActive) { <form class="m-0" asp-controller="Enrollment" asp-action="AddSubjects" method="post"><input type="hidden" name="studentId" value="@e.StudentProfileId" /><button type="submit" class="outline-button table-view-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add subjects</button></form> }

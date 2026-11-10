@@ -187,6 +187,11 @@ namespace SecureSmartTuitionSystem.Controllers
                     .Include(session => session.Subject)
                     .Include(session => session.TutorUser);
 
+            model.Years = await _context.ClassSessions.AsNoTracking()
+                .Select(x => (x.StartDate ?? x.CreatedAt.AddHours(8)).Year).Distinct().OrderBy(x => x).ToListAsync();
+            if (model.Year.HasValue)
+                query = query.Where(x => (x.StartDate ?? x.CreatedAt.AddHours(8)).Year == model.Year.Value);
+
             if (!string.IsNullOrWhiteSpace(model.SubjectName))
             {
                 query = query.Where(session =>

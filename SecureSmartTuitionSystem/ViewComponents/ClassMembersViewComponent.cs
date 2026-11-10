@@ -12,7 +12,7 @@ public sealed class ClassMembersViewComponent(ApplicationDbContext db) : ViewCom
         bool admin = HttpContext.User.IsInRole("Admin");
         if (!admin && (!HttpContext.User.IsInRole("Tutor") || !await db.ClassSessions.AnyAsync(x => x.ClassSessionId == classSessionId && x.TutorUserId == id))) return Content("");
         return View(new ClassMembersModel { ClassSessionId = classSessionId, CanWithdraw = admin,
-            Members = await db.StudentEnrollments.AsNoTracking().Include(x => x.StudentProfile).Where(x => x.ClassSessionId == classSessionId)
+            Members = await db.StudentEnrollments.AsNoTracking().Include(x => x.StudentProfile).Include(x => x.ClassSession).Where(x => x.ClassSessionId == classSessionId)
                 .OrderBy(x => x.StudentProfile.StudentNumber).ThenByDescending(x => x.EnrolledAt).ToListAsync() });
     }
 }

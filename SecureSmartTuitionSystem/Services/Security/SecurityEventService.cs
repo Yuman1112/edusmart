@@ -43,7 +43,7 @@ public sealed class SecurityEventService
             {
                 var since = DateTime.UtcNow.AddMinutes(-15);
                 int recent = await db.AuditLogEntries.AsNoTracking().CountAsync(x =>
-                    x.EventName == eventName && x.RemoteIp == entry.RemoteIp && x.OccurredAtUtc >= since);
+                    x.EventName == eventName && x.Severity != SecuritySeverity.Information && x.RemoteIp == entry.RemoteIp && x.OccurredAtUtc >= since);
                 if (recent >= 4) entry.Severity = SecuritySeverity.High;
             }
             _integrity.Seal(entry);

@@ -113,6 +113,13 @@
     </div>
 
     <div class="class-filter-grid">
+        <div>
+            <label asp-for="Year" class="form-label">Year</label>
+            <select asp-for="Year" class="form-select auto-filter">
+                <option value="">All Years</option>
+                @foreach (var year in Model.Years) { <option value="@year">@year</option> }
+            </select>
+        </div>
 
         <div>
             <label asp-for="EducationStage"
