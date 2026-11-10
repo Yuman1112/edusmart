@@ -210,6 +210,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     .AsNoTracking()
                     .Include(item =>
                         item.EnrollmentApplication)
+                    .ThenInclude(application => application.SelectedSubjects)
+                    .ThenInclude(selected => selected.ClassSession)
                     .Include(item =>
                         item.Items)
                     .Include(item =>
@@ -355,6 +357,12 @@ namespace SecureSmartTuitionSystem.Controllers
 
                                     Description =
                                         item.Description,
+
+                                    ClassNames = item.ItemType == BillItemType.Tuition
+                                        ? application.SelectedSubjects.OrderBy(selected => selected.ClassSessionId)
+                                            .Select(selected => selected.ClassSession.ClassName ?? selected.ClassSession.ClassCode)
+                                            .Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name!).ToList()
+                                        : new List<string>(),
 
                                     Quantity =
                                         item.Quantity,

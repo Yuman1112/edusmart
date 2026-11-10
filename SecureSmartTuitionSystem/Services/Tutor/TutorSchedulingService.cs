@@ -18,22 +18,37 @@ public sealed class TutorSchedulingService(ApplicationDbContext db)
             return "The end date must be on or after the start date, within the same academic year.";
         return null;
     }
+    public static DateTime? FirstUpcomingLesson(DateTime from, DateTime to, DayOfWeek day, TimeOnly start, DateTime now)
+    {
+        var date = from.Date.AddDays(((int)day - (int)from.DayOfWeek + 7) % 7);
+        for (; date <= to.Date; date = date.AddDays(7))
+            if (LateMonthEnrollmentPolicy.IsRegularTeachingDate(date) && date.Add(start.ToTimeSpan()) > now)
+                return date;
+        return null;
+    }
     public static bool IsFree(IEnumerable<int> availability, IReadOnlyList<LessonItem> booked,
-        DateTime from, DateTime to, DayOfWeek day, TimeOnly start, TimeOnly end, DateTime now)
+        DateTime from, DateTime to, DayOfWeek day, TimeOnly start, TimeOnly end, DateTime now,
+        IReadOnlyList<ClassSession>? weeklyReservations = null)
     {
         if (ValidateTerm(from, to, now) != null || !Enum.IsDefined(day) || day == DayOfWeek.Sunday
             || start >= end || start < new TimeOnly(8, 0) || end > new TimeOnly(22, 0)
             || end - start < TimeSpan.FromMinutes(30) || end - start > TimeSpan.FromHours(4)
             || !TutorAvailabilityService.Covers(availability, (int)day, start, end)) return false;
-        var first = from.Date.AddDays(((int)day - (int)from.DayOfWeek + 7) % 7);
-        while (first <= to.Date && !LateMonthEnrollmentPolicy.IsRegularTeachingDate(first)) first = first.AddDays(7);
-        if (first > to.Date || first.Add(start.ToTimeSpan()) <= now) return false;
-        for (var date = first; date <= to.Date; date = date.AddDays(7))
+        var first = FirstUpcomingLesson(from, to, day, start, now);
+        if (!first.HasValue) return false;
+        // A one-off cancellation does not release an active recurring class's weekly reservation.
+        // Reserve across subjects/levels for the same tutor, but only where actual term dates overlap.
+        if (weeklyReservations != null && weeklyReservations.Any(session =>
+            session.Status == ClassSessionStatus.Active && ClassScheduleService.WeeklyOverlap(
+                first.Value, to, day, start, end, ClassScheduleService.FirstDate(session),
+                AcademicYearPolicy.ClassEnd(session), session.DayOfWeek, session.StartTime, session.EndTime))) return false;
+        for (var date = first.Value; date <= to.Date; date = date.AddDays(7))
             if (LateMonthEnrollmentPolicy.IsRegularTeachingDate(date) && booked.Any(x => !x.Cancelled && x.Date.Date == date && start < x.End && end > x.Start)) return false;
         return true;
     }
     public static List<TutorWeeklySlot> BuildSlots(IEnumerable<int> availability, IReadOnlyList<LessonItem> booked,
-        DateTime from, DateTime to, int durationMinutes, DateTime now)
+        DateTime from, DateTime to, int durationMinutes, DateTime now,
+        IReadOnlyList<ClassSession>? weeklyReservations = null)
     {
         var result = new List<TutorWeeklySlot>();
         if (durationMinutes < 30 || durationMinutes > 240 || ValidateTerm(from, to, now) != null) return result;
@@ -44,9 +59,8 @@ public sealed class TutorSchedulingService(ApplicationDbContext db)
             {
                 var start = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(minutes));
                 var end = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(minutes + durationMinutes));
-                if (!IsFree(values, booked, from, to, (DayOfWeek)day, start, end, now)) continue;
-                var first = from.Date.AddDays((day - (int)from.DayOfWeek + 7) % 7);
-                while (first <= to.Date && !LateMonthEnrollmentPolicy.IsRegularTeachingDate(first)) first = first.AddDays(7);
+                if (!IsFree(values, booked, from, to, (DayOfWeek)day, start, end, now, weeklyReservations)) continue;
+                var first = FirstUpcomingLesson(from, to, (DayOfWeek)day, start, now)!.Value;
                 int lessonCount = 0;
                 for (var date = first; date <= to.Date; date = date.AddDays(7))
                     if (LateMonthEnrollmentPolicy.IsRegularTeachingDate(date)) lessonCount++;
@@ -70,12 +84,18 @@ public sealed class TutorSchedulingService(ApplicationDbContext db)
             .OrderBy(p => p.FullName).Select(p => new TutorSchedulingChoice(p.ApplicationUserId,
                 p.FullName + " · " + p.ApplicationUser.UserName)).ToListAsync();
     }
+    private Task<List<ClassSession>> WeeklyReservationsAsync(string tutorId, DateTime from, DateTime to) =>
+        db.ClassSessions.AsNoTracking().Where(x => x.TutorUserId == tutorId && x.Status == ClassSessionStatus.Active &&
+            (!x.EndDate.HasValue || x.EndDate.Value >= from.Date) &&
+            (x.StartDate ?? x.CreatedAt.AddHours(8)).Date <= to.Date).ToListAsync();
+
     public async Task<List<TutorWeeklySlot>> OptionsAsync(string tutorId, DateTime from, DateTime? end, int duration)
     {
         var to = end?.Date ?? AcademicYearPolicy.EndOfYear(from);
         var availability = await new TutorAvailabilityService(db).GetSlotsAsync(tutorId);
         var booked = await new ClassScheduleService(db).GetLessonsAsync(from.Date, to, tutorId);
-        return BuildSlots(availability, booked, from, to, duration, ClassScheduleService.Now);
+        var reservations = await WeeklyReservationsAsync(tutorId, from, to);
+        return BuildSlots(availability, booked, from, to, duration, ClassScheduleService.Now, reservations);
     }
     // Used again by the existing Create validator, including its Serializable save transaction.
     public async Task<string?> ValidateSelectionAsync(string tutorId, DateTime from, DateTime? end,
@@ -86,7 +106,8 @@ public sealed class TutorSchedulingService(ApplicationDbContext db)
         var to = end?.Date ?? AcademicYearPolicy.EndOfYear(from);
         var availability = await new TutorAvailabilityService(db).GetSlotsAsync(tutorId);
         var booked = await new ClassScheduleService(db).GetLessonsAsync(from.Date, to, tutorId);
-        return IsFree(availability, booked, from, to, day, start, finish, ClassScheduleService.Now) ? null
+        var reservations = await WeeklyReservationsAsync(tutorId, from, to);
+        return IsFree(availability, booked, from, to, day, start, finish, ClassScheduleService.Now, reservations) ? null
             : "The selected weekly time is no longer available for the entire class term. Select another suggested slot.";
     }
 }

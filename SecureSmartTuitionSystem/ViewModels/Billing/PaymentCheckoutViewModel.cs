@@ -54,6 +54,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Billing
 
     public class PaymentCheckoutItemViewModel
     {
+        public List<string> ClassNames { get; set; } = new();
+
         public string Description { get; set; }
             = string.Empty;
 

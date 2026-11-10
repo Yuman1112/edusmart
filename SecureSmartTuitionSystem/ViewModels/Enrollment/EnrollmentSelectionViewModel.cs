@@ -30,6 +30,9 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public List<int> SelectedClassSessionIds { get; set; }
             = new();
 
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public List<EnrollmentScheduleConflictViewModel> ScheduleConflicts { get; set; } = new();
+
         public List<EnrollmentSelectableClassViewModel>
             AvailableClasses
         { get; set; }
@@ -115,6 +118,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public DateTime? SelectedTermEndDate { get; set; }
 
         public int SelectedClassCount { get; set; }
+        public List<string> SelectedClassNames { get; set; } = new();
 
         public int UniqueSubjectCount { get; set; }
 
@@ -344,6 +348,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
             = string.Empty;
 
         public int SelectedClassCount { get; set; }
+        public List<string> SelectedClassNames { get; set; } = new();
 
         public decimal TotalMonthlyFee { get; set; }
 
@@ -359,4 +364,18 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 
         public DateTime SubmittedAt { get; set; }
     }
+    public sealed class EnrollmentScheduleConflictViewModel
+    {
+        public string PairTitle { get; set; } = string.Empty;
+        public string FirstClassName { get; set; } = string.Empty;
+        public string SecondClassName { get; set; } = string.Empty;
+        public DayOfWeek Day { get; set; }
+        public TimeOnly FirstStart { get; set; }
+        public TimeOnly FirstEnd { get; set; }
+        public TimeOnly SecondStart { get; set; }
+        public TimeOnly SecondEnd { get; set; }
+        public TimeOnly OverlapStart { get; set; }
+        public TimeOnly OverlapEnd { get; set; }
+    }
+
 }

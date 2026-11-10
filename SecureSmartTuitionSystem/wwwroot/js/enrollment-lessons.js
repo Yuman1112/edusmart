@@ -82,6 +82,9 @@
             update();
         });
         form?.addEventListener('submit', function (event) {
+            // Back/navigation buttons intentionally bypass required-field validation.
+            // Do not call reportValidity(), which ignores the submitter's formnovalidate.
+            if (event.defaultPrevented || event.submitter?.formNoValidate) return;
             update();
             if (!form.reportValidity()) event.preventDefault();
         });

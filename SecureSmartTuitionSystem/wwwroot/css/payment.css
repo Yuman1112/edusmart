@@ -516,3 +516,17 @@
         padding: 36px 22px;
     }
 }
+
+/* Class names belonging to the tuition line on Payment Details. */
+.payment-table .payment-tuition-classes {
+    margin: 10px 0 0;
+    padding-left: 18px;
+    list-style: disc;
+    font-size: inherit;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--navy);
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.payment-table .payment-tuition-classes li + li { margin-top: 6px; }

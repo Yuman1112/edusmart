@@ -13,7 +13,7 @@ namespace SecureSmartTuitionSystem.Controllers;
 public sealed class GuestSupportController(ApplicationDbContext db, IMessageProtectionService protection) : Controller
 {
     [HttpGet] public IActionResult Index() => View(new GuestSupportForm { SubmissionKey = Guid.NewGuid() });
-    [HttpPost, ValidateAntiForgeryToken, EnableRateLimiting("GuestEnquiryPolicy")]
+    [HttpPost, ValidateAntiForgeryToken, EnableRateLimiting("GuestEnquiryPolicy"), RequestSizeLimit(32768)]
     public async Task<IActionResult> Index(GuestSupportForm model, CancellationToken ct)
     {
         model.Name = (model.Name ?? "").Trim();

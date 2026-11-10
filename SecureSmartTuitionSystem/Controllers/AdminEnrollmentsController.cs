@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Services.Communication;
 using Stripe;
 using Stripe.Checkout;
 using SecureSmartTuitionSystem.Services.Enrollment;
@@ -20,6 +21,7 @@ namespace SecureSmartTuitionSystem.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminEnrollmentsController : Controller
     {
+        private readonly EnrollmentNoticeService _notices;
         private readonly ApplicationDbContext _context;
         private readonly StripeClient _stripeClient;
         private readonly SecurityEventService _securityEvents;
@@ -41,9 +43,10 @@ namespace SecureSmartTuitionSystem.Controllers
             UserManager<ApplicationUser> userManager,
             IBillingService billingService,
             IFirstPaymentEmailService firstPaymentEmailService,
-            ILogger<AdminEnrollmentsController> logger, SecurityEventService securityEvents, StripeClient stripeClient)
+            ILogger<AdminEnrollmentsController> logger, SecurityEventService securityEvents, StripeClient stripeClient, EnrollmentNoticeService notices)
         {
             _context = context;
+            _notices = notices;
             _stripeClient = stripeClient;
             _userManager = userManager;
             _billingService = billingService;
@@ -503,9 +506,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             });
                     }
 
-                    if (classSession.Status != ClassSessionStatus.Active ||
-                        (classSession.StartDate.HasValue && application.RequestedStartDate.Date < classSession.StartDate.Value.Date) ||
-                        (classSession.EndDate.HasValue && application.RequestedStartDate.Date > classSession.EndDate.Value.Date))
+                    if (!AcademicYearPolicy.CanEnrollOn(classSession, application.RequestedStartDate))
                     {
                         TempData["ErrorMessage"] =
                             $"Class {GetClassDisplayName(classSession)} " +
@@ -829,8 +830,10 @@ namespace SecureSmartTuitionSystem.Controllers
                     });
             }
 
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             var application =
                 await _context.EnrollmentApplications
+                    .Include(x => x.SelectedSubjects)
                     .FirstOrDefaultAsync(item =>
                         item.EnrollmentApplicationId ==
                         model.EnrollmentApplicationId);
@@ -894,7 +897,9 @@ namespace SecureSmartTuitionSystem.Controllers
                         model.RejectionReason.Trim()
                 });
 
+            await _notices.QueueAsync(application, rejected: true);
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             TempData["SuccessMessage"] =
                 $"Application {application.ApplicationNumber} " +
@@ -935,6 +940,7 @@ namespace SecureSmartTuitionSystem.Controllers
             await using var cancelTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             var application =
                 await _context.EnrollmentApplications
+                    .Include(item => item.SelectedSubjects)
                     .FirstOrDefaultAsync(item =>
                         item.EnrollmentApplicationId ==
                         model.EnrollmentApplicationId);
@@ -1012,6 +1018,7 @@ namespace SecureSmartTuitionSystem.Controllers
 
             var unpaidBills = await _context.Bills.Where(b => b.EnrollmentApplicationId == application.EnrollmentApplicationId && (b.Status == BillStatus.PendingPayment || b.Status == BillStatus.Overdue)).ToListAsync();
             foreach (var bill in unpaidBills) { bill.Status = BillStatus.Cancelled; bill.CancelledAt = DateTime.UtcNow; bill.CancellationReason = model.CancellationReason.Trim(); bill.PaymentAccessTokenHash = null; bill.PaymentAccessTokenExpiresAt = null; }
+            await _notices.QueueAsync(application, rejected: true, cancellationReason: model.CancellationReason.Trim());
             await _context.SaveChangesAsync();
             await cancelTransaction.CommitAsync();
 

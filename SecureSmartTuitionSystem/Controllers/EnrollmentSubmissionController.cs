@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Services.Communication;
 using SecureSmartTuitionSystem.Services.Enrollment;
 using SecureSmartTuitionSystem.Models.Security;
 using SecureSmartTuitionSystem.Services.Security;
@@ -49,6 +50,7 @@ namespace SecureSmartTuitionSystem.Controllers
 
         private const decimal EastMalaysiaShippingFee = 18.00m;
 
+        private readonly EnrollmentNoticeService _notices;
         private readonly ApplicationDbContext _context;
         private readonly SecurityEventService _securityEvents;
 
@@ -61,9 +63,10 @@ namespace SecureSmartTuitionSystem.Controllers
         public EnrollmentSubmissionController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            ILogger<EnrollmentSubmissionController> logger, SecurityEventService securityEvents)
+            ILogger<EnrollmentSubmissionController> logger, SecurityEventService securityEvents, EnrollmentNoticeService notices)
         {
             _context = context;
+            _notices = notices;
             _userManager = userManager;
             _logger = logger;
             _securityEvents = securityEvents;
@@ -179,7 +182,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 return View(SelectClassesViewPath, model);
             }
 
-            if (selectedClasses.Any(c => !ClassScheduleService.ValidOn(c, model.RequestedStartDate!.Value)))
+            if (selectedClasses.Any(c => !AcademicYearPolicy.CanEnrollOn(c, model.RequestedStartDate!.Value)))
             { ModelState.AddModelError("", "Choose classes valid for the selected start date and academic year."); await PopulateSelectionViewModelAsync(model); return View(SelectClassesViewPath, model); }
             int? addStudentId = HttpContext.Session.GetInt32("Enrollment.AddSubjectStudentId");
             if (addStudentId.HasValue)
@@ -411,53 +414,13 @@ namespace SecureSmartTuitionSystem.Controllers
                  * Check selected classes for schedule
                  * conflicts.
                  */
-                for (int firstIndex = 0;
-                     firstIndex < selectedClasses.Count;
-                     firstIndex++)
+                var conflicts = FindSelectedScheduleConflicts(selectedClasses, model.RequestedStartDate!.Value);
+                if (conflicts.Count > 0)
                 {
-                    for (int secondIndex =
-                             firstIndex + 1;
-                         secondIndex <
-                             selectedClasses.Count;
-                         secondIndex++)
-                    {
-                        var firstClass =
-                            selectedClasses[firstIndex];
-
-                        var secondClass =
-                            selectedClasses[secondIndex];
-
-                        bool sameDay =
-                            firstClass.DayOfWeek ==
-                            secondClass.DayOfWeek;
-
-                        bool timeOverlaps =
-                            firstClass.StartTime <
-                                secondClass.EndTime &&
-                            secondClass.StartTime <
-                                firstClass.EndTime;
-
-                        if (sameDay &&
-                            timeOverlaps)
-                        {
-                            ModelState.AddModelError(
-                                nameof(
-                                    model
-                                        .SelectedClassSessionIds),
-                                $"Classes " +
-                                $"{GetClassName(firstClass)} " +
-                                $"and " +
-                                $"{GetClassName(secondClass)} " +
-                                "have overlapping schedules.");
-
-                            await PopulateSelectionViewModelAsync(
-                                model);
-
-                            return View(
-                                EnrollmentOptionsViewPath,
-                                model);
-                        }
-                    }
+                    ModelState.AddModelError(nameof(model.SelectedClassSessionIds),
+                        $"There are {conflicts.Count} schedule overlap(s). Please change your class selection.");
+                    await PopulateSelectionViewModelAsync(model);
+                    return View(EnrollmentOptionsViewPath, model);
                 }
 
                 /*
@@ -466,10 +429,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 foreach (var classSession
                          in selectedClasses)
                 {
-                    if (classSession.Status !=
-                        ClassSessionStatus.Active ||
-                        (classSession.StartDate.HasValue && model.RequestedStartDate!.Value.Date < classSession.StartDate.Value.Date) ||
-                        (classSession.EndDate.HasValue && model.RequestedStartDate!.Value.Date > classSession.EndDate.Value.Date))
+                    if (!AcademicYearPolicy.CanEnrollOn(classSession, model.RequestedStartDate!.Value))
                     {
                         ModelState.AddModelError(
                             nameof(
@@ -978,6 +938,7 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 _context.EnrollmentApplications.Add(
                     application);
+                await _notices.QueueAsync(application, rejected: false);
 
                 await _context.SaveChangesAsync();
 
@@ -1079,6 +1040,9 @@ namespace SecureSmartTuitionSystem.Controllers
                             SelectedClassCount =
                                 item.SelectedSubjects.Count,
 
+                            SelectedClassNames = item.SelectedSubjects.OrderBy(x => x.EnrollmentApplicationSubjectId)
+                                .Select(x => x.ClassSession.ClassName ?? x.ClassSession.ClassCode).ToList(),
+
                             TotalMonthlyFee =
                                 item.MonthlyTuitionFeeAtApplication,
 
@@ -1158,6 +1122,10 @@ namespace SecureSmartTuitionSystem.Controllers
             }
 
             var availability = await EnrollmentAvailability.LoadAsync(_context,classSessions.Select(x=>x.ClassSessionId).ToList(),addStudentId);
+            var classIds = classSessions.Select(x => x.ClassSessionId).ToList();
+            var cancelled = await _context.ClassLessonChanges.AsNoTracking()
+                .Where(x => classIds.Contains(x.ClassSessionId))
+                .Select(x => new { x.ClassSessionId, x.OriginalDate }).ToListAsync();
             var availableClasses =
                 new List<
                     EnrollmentSelectableClassViewModel>();
@@ -1172,7 +1140,12 @@ namespace SecureSmartTuitionSystem.Controllers
                 var until = AcademicYearPolicy.ClassEnd(classSession);
                 if (until > from.AddYears(1)) until = from.AddYears(1);
                 for(var day=from;day<=until;day=day.AddDays(1)) {
-                    if(day<ClassScheduleService.FirstDate(classSession)||day.Year!=ClassScheduleService.FirstDate(classSession).Year)continue;
+                    if (!AcademicYearPolicy.CanEnrollOn(classSession, day)) continue;
+                    if (LateMonthEnrollmentPolicy.RemainingDates(day, classSession.DayOfWeek,
+                        ClassScheduleService.FirstDate(classSession), AcademicYearPolicy.ClassEnd(classSession),
+                        classSession.StartTime, ClassScheduleService.Now,
+                        cancelled.Where(x => x.ClassSessionId == classSession.ClassSessionId).Select(x => x.OriginalDate)).Count == 0)
+                    { dates[day.ToString("yyyy-MM-dd")] = -2; continue; }
                     var blocked=addStudentId.HasValue&&availability.SubjectBlocked(addStudentId.Value,classSession.SubjectId,day,AcademicYearPolicy.ClassEnd(classSession));
                     dates[day.ToString("yyyy-MM-dd")]=blocked?-1:Math.Max(0,classSession.Capacity-availability.PeakSeats(classSession.ClassSessionId,day,AcademicYearPolicy.ClassEnd(classSession)));
                 }
@@ -1238,15 +1211,14 @@ namespace SecureSmartTuitionSystem.Controllers
                     });
             }
 
-            var availableIds = availableClasses.Select(x => x.ClassSessionId).ToList();
-            var cancelled = await _context.ClassLessonChanges.AsNoTracking()
-                .Where(x => availableIds.Contains(x.ClassSessionId))
-                .Select(x => new { x.ClassSessionId, x.OriginalDate }).ToListAsync();
+
             foreach (var item in availableClasses)
                 item.CancelledDates = cancelled.Where(x => x.ClassSessionId == item.ClassSessionId)
                     .Select(x => x.OriginalDate.ToString("yyyy-MM-dd")).ToList();
             model.AvailableClasses = availableClasses;
-            var selectedTerms = await _context.ClassSessions.AsNoTracking().Where(x => model.SelectedClassSessionIds.Contains(x.ClassSessionId)).ToListAsync();
+            var selectedTerms = await _context.ClassSessions.AsNoTracking().Include(x => x.Subject).Where(x => model.SelectedClassSessionIds.Contains(x.ClassSessionId)).ToListAsync();
+            model.ScheduleConflicts = FindSelectedScheduleConflicts(selectedTerms,
+                model.RequestedStartDate ?? GetRequestedStartDate());
             model.SelectedTermEndDate = selectedTerms.Count > 0 ? selectedTerms.Select(AcademicYearPolicy.BillableEnd).Min() : null;
 
             model.AcademicLevelOptions =
@@ -1438,6 +1410,44 @@ namespace SecureSmartTuitionSystem.Controllers
 
             return guardianDetails.GuardianName ??
                    "Parent / Guardian";
+        }
+
+        private static List<EnrollmentScheduleConflictViewModel> FindSelectedScheduleConflicts(List<ClassSession> classes, DateTime requestedStart)
+        {
+            var conflicts = new List<EnrollmentScheduleConflictViewModel>();
+            for (int i = 0; i < classes.Count; i++)
+            {
+                var first = classes[i];
+                var firstStart = ClassScheduleService.FirstDate(first) > requestedStart.Date
+                    ? ClassScheduleService.FirstDate(first) : requestedStart.Date;
+                for (int j = i + 1; j < classes.Count; j++)
+                {
+                    var second = classes[j];
+                    var secondStart = ClassScheduleService.FirstDate(second) > requestedStart.Date
+                        ? ClassScheduleService.FirstDate(second) : requestedStart.Date;
+                    if (ClassScheduleService.WeeklyOverlap(firstStart, AcademicYearPolicy.ClassEnd(first),
+                        first.DayOfWeek, first.StartTime, first.EndTime,
+                        secondStart, AcademicYearPolicy.ClassEnd(second), second.DayOfWeek, second.StartTime, second.EndTime))
+                    {
+                        string DisplayName(ClassSession c)
+                        {
+                            var name = GetClassName(c);
+                            var suffix = $" - {c.DayOfWeek} - {c.StartTime.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)}";
+                            return name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) ? name[..^suffix.Length] : name;
+                        }
+                        conflicts.Add(new EnrollmentScheduleConflictViewModel
+                        {
+                            PairTitle = $"{first.Subject?.AcademicLevel ?? DisplayName(first)} & {second.Subject?.AcademicLevel ?? DisplayName(second)}",
+                            FirstClassName = DisplayName(first), SecondClassName = DisplayName(second), Day = first.DayOfWeek,
+                            FirstStart = first.StartTime, FirstEnd = first.EndTime,
+                            SecondStart = second.StartTime, SecondEnd = second.EndTime,
+                            OverlapStart = first.StartTime > second.StartTime ? first.StartTime : second.StartTime,
+                            OverlapEnd = first.EndTime < second.EndTime ? first.EndTime : second.EndTime
+                        });
+                    }
+                }
+            }
+            return conflicts;
         }
 
         private static string GetClassName(

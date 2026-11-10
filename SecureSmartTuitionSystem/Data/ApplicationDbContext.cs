@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Models.Video;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -34,8 +35,6 @@ namespace SecureSmartTuitionSystem.Data
             _auditChanges = auditChanges;
         }
 
-        public DbSet<SecureSmartTuitionSystem.Models.Video.RecordedLesson> RecordedLessons => Set<SecureSmartTuitionSystem.Models.Video.RecordedLesson>();
-        public DbSet<SecureSmartTuitionSystem.Models.Video.VideoWatchProgress> VideoWatchProgress => Set<SecureSmartTuitionSystem.Models.Video.VideoWatchProgress>();
         public DbSet<SecureSmartTuitionSystem.Models.Learning.Assessment> Assessments => Set<SecureSmartTuitionSystem.Models.Learning.Assessment>();
         public DbSet<SecureSmartTuitionSystem.Models.Learning.AssessmentParticipant> AssessmentParticipants => Set<SecureSmartTuitionSystem.Models.Learning.AssessmentParticipant>();
         public DbSet<SecureSmartTuitionSystem.Models.Learning.AssessmentFile> AssessmentFiles => Set<SecureSmartTuitionSystem.Models.Learning.AssessmentFile>();
@@ -77,7 +76,7 @@ namespace SecureSmartTuitionSystem.Data
             _auditPrepared = true;
             var context = _http.HttpContext;
             var changed = ChangeTracker.Entries().Where(x =>
-                x.Entity is not AuditLogEntry and not SecurityEmailDelivery and not SecureSmartTuitionSystem.Models.Video.VideoWatchProgress &&
+                x.Entity is not AuditLogEntry and not SecurityEmailDelivery &&
                 x.State is EntityState.Added or EntityState.Modified or EntityState.Deleted).ToList();
             foreach (var change in changed)
             {
@@ -182,6 +181,11 @@ namespace SecureSmartTuitionSystem.Data
         public DbSet<Announcement> Announcements =>
             Set<Announcement>();
 
+        public DbSet<RecordedLesson> RecordedLessons => Set<RecordedLesson>();
+        public DbSet<VideoWatchProgress> VideoWatchProgress => Set<VideoWatchProgress>();
+
+        public DbSet<EnrollmentNotice> EnrollmentNotices => Set<EnrollmentNotice>();
+
         public DbSet<AnnouncementRead> AnnouncementReads =>
             Set<AnnouncementRead>();
 
@@ -207,7 +211,6 @@ namespace SecureSmartTuitionSystem.Data
             builder.ConfigureAttendance();
             builder.ConfigureLearningMaterials();
             builder.ConfigureAssessments();
-            builder.ConfigureVideoPlayback();
             builder.ConfigureMonthlyBilling();
 
             // AddDefaultIdentity uses 128-character provider/token keys at runtime.
@@ -233,7 +236,7 @@ namespace SecureSmartTuitionSystem.Data
             ConfigureSecurity(builder);
             builder.Entity<EnrollmentExitRequest>(entity =>
             {
-                entity.HasIndex(x => x.StudentEnrollmentId).IsUnique();
+                entity.HasIndex(x => x.StudentEnrollmentId).IsUnique().HasFilter("[CancelledAtUtc] IS NULL");
                 entity.HasIndex(x => x.ProviderRefundId).IsUnique().HasFilter("[ProviderRefundId] IS NOT NULL");
                 entity.Property(x => x.EffectiveDate).HasColumnType("date");
                 entity.HasOne(x => x.StudentEnrollment).WithMany().HasForeignKey(x => x.StudentEnrollmentId).OnDelete(DeleteBehavior.Restrict);
@@ -307,6 +310,29 @@ namespace SecureSmartTuitionSystem.Data
                     .HasForeignKey(item => item.CreatedByUserId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+
+            builder.Entity<RecordedLesson>(entity =>
+            {
+                entity.ToTable("RecordedLessons", table => {
+                    table.HasCheckConstraint("CK_RecordedLesson_Duration", "[DurationSeconds] > 0 AND [DurationSeconds] <= 28800");
+                    table.HasCheckConstraint("CK_RecordedLesson_Size", "[FileSize] > 0 AND [FileSize] <= 209715200");
+                });
+                entity.Property(x => x.RecordingDate).HasColumnType("date");
+                entity.HasIndex(x => x.StorageKey).IsUnique();
+                entity.HasIndex(x => new { x.ClassSessionId, x.IsActive, x.RecordingDate });
+                entity.HasOne(x => x.ClassSession).WithMany().HasForeignKey(x => x.ClassSessionId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.UploadedByUser).WithMany().HasForeignKey(x => x.UploadedByUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<VideoWatchProgress>(entity =>
+            {
+                entity.ToTable("VideoWatchProgress", table => table.HasCheckConstraint("CK_VideoWatch_Seconds", "[PositionSeconds] >= 0 AND [WatchedSeconds] >= 0"));
+                entity.HasIndex(x => new { x.RecordedLessonId, x.StudentUserId }).IsUnique();
+                entity.HasOne(x => x.RecordedLesson).WithMany().HasForeignKey(x => x.RecordedLessonId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.StudentUser).WithMany().HasForeignKey(x => x.StudentUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<EnrollmentNotice>().HasOne(x => x.EnrollmentApplication).WithMany()
+                .HasForeignKey(x => x.EnrollmentApplicationId).OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<AnnouncementRead>(entity =>
             {

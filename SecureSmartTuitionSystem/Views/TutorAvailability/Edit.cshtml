@@ -55,8 +55,8 @@
                     <caption class="visually-hidden">Weekly teaching availability in 30-minute intervals</caption>
                     <thead>
                         <tr>
-                            <th scope="col">Time</th>@foreach (var day in days) {
-                            <th scope="col">@((DayOfWeek)day)</th>
+                            <th scope="col" data-sortable="false">Time</th>@foreach (var day in days) {
+                            <th scope="col" data-sortable="false">@((DayOfWeek)day)</th>
                                                         }
                         </tr>
                     </thead>

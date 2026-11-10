@@ -34,7 +34,8 @@ public sealed class NotificationCenterController(ApplicationDbContext db) : Cont
         int announcements = admin || !audience.HasValue ? 0 : await db.Announcements.AsNoTracking().CountAsync(x => !x.IsArchived && x.PublishAt <= now &&
             (!x.ExpiresAt.HasValue || x.ExpiresAt > now) && (x.TargetAudience == AnnouncementAudience.All || x.TargetAudience == audience.Value) &&
             !x.Reads.Any(r => r.UserId == id));
-        return Json(new { announcements, notifications });
+        int guestEnquiries = admin ? await db.GuestEnquiries.AsNoTracking().CountAsync(x => !x.IsResolved) : 0;
+        return Json(new { announcements, notifications, guestEnquiries });
     }
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ReadAll(int page = 1, bool unreadOnly = false)

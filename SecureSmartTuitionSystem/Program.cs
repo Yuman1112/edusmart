@@ -50,15 +50,20 @@ builder.Services.AddSingleton<FinancialFieldProtection>();
 builder.Services.AddSingleton<PaymentCallbackTokenService>();
 builder.Services.AddSingleton<SecurityEventService>();
 builder.Services.Configure<ChatbotSettings>(builder.Configuration.GetSection(ChatbotSettings.SectionName));
-builder.Services.AddHttpClient<SecureSmartTuitionSystem.Services.Communication.ChatbotAIService>(client => client.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddHttpClient<SecureSmartTuitionSystem.Services.Communication.ChatbotAIService>(client => client.Timeout = TimeSpan.FromSeconds(15))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
 builder.Services.AddScoped<IGuestEnquiryEmailSender, GuestEnquiryEmailSender>();
+builder.Services.AddScoped<EnrollmentNoticeService>();
+builder.Services.AddScoped<IEnrollmentNoticeSender, EnrollmentNoticeSender>();
+builder.Services.AddHostedService<EnrollmentNoticeWorker>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotKnowledgeStore>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotContextService>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotAssistantService>();
 builder.Services.AddSingleton<SecureSmartTuitionSystem.Services.Communication.ChatbotSessionService>();
 builder.Services.Configure<SecuritySettings>(builder.Configuration.GetSection(SecuritySettings.SectionName));
 builder.Services.Configure<SecurityExplanationAISettings>(builder.Configuration.GetSection(SecurityExplanationAISettings.SectionName));
-builder.Services.AddHttpClient<SecurityExplanationAI>(client => client.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddHttpClient<SecurityExplanationAI>(client => client.Timeout = TimeSpan.FromSeconds(15))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
 builder.Services.AddHostedService<SecurityAlertWorker>();
 builder.Services.AddHostedService<BillExpiryWorker>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Billing.MonthlyBillingService>();
@@ -375,9 +380,8 @@ for (int attempt = 1; attempt <= maxInitializationAttempts; attempt++)
 
         var tutorTimer = System.Diagnostics.Stopwatch.StartNew();
 
-        await DbInitializer.SeedEnrollmentTestTutorAsync(
-            app.Services,
-            app.Configuration);
+        if (app.Environment.IsDevelopment())
+            await DbInitializer.SeedEnrollmentTestTutorAsync(app.Services, app.Configuration);
 
         tutorTimer.Stop();
 
@@ -476,8 +480,18 @@ app.Use(async (context, next) =>
 {
     string nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
     context.Items["CspNonce"] = nonce;
-    if (context.User.Identity?.IsAuthenticated == true)
-        context.Response.Headers["Cache-Control"] = "no-store";
+    context.Response.OnStarting(() =>
+    {
+        // Authentication runs later in the pipeline; inspect the resolved principal now.
+        if (context.User.Identity?.IsAuthenticated == true ||
+            context.Request.Path.StartsWithSegments("/Payments") ||
+            context.Request.Path.StartsWithSegments("/MonthlyPayments"))
+        {
+            context.Response.Headers["Cache-Control"] = "no-store, no-cache";
+            context.Response.Headers["Pragma"] = "no-cache";
+        }
+        return Task.CompletedTask;
+    });
     context.Response.Headers.TryAdd(
         "X-Content-Type-Options",
         "nosniff");

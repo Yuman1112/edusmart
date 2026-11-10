@@ -20,10 +20,17 @@ public static class AcademicYearPolicy
         return end >= last ? new DateTime(end.Year, end.Month, DateTime.DaysInMonth(end.Year, end.Month))
             : new DateTime(end.Year, end.Month, 1).AddDays(-1);
     }
+    // Enrollment is monthly: the requested date may precede the first weekly
+    // lesson within its opening month. Actual lessons still use ValidOn/FirstDate.
+    public static bool CanEnrollOn(ClassSession c, DateTime start)
+    {
+        var first = ClassScheduleService.FirstDate(c);
+        return c.Status == ClassSessionStatus.Active && start.Year == first.Year &&
+            start.Date >= new DateTime(first.Year, first.Month, 1) && start.Date <= ClassEnd(c);
+    }
     // Editing a class must use the same teaching-month boundary as enrollment.
     public static bool CoversPlan(ClassSession proposed, DateTime start, int months) =>
-        months is >= 1 and <= 12 && start.Date >= ClassScheduleService.FirstDate(proposed) &&
-        start.Date <= ClassEnd(proposed) && BillableEnd(proposed) >= new DateTime(start.Year, start.Month, 1).AddMonths(months).AddDays(-1);
+        months is >= 1 and <= 12 && CanEnrollOn(proposed, start) && BillableEnd(proposed) >= new DateTime(start.Year, start.Month, 1).AddMonths(months).AddDays(-1);
     public static int MaximumMonths(DateTime start, DateTime limit)
     {
         limit = limit.Date < EndOfYear(start) ? limit.Date : EndOfYear(start);

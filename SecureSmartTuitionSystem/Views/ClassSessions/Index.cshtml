@@ -1,6 +1,7 @@
 @model SecureSmartTuitionSystem.ViewModels.Enrollment.ClassSessionIndexViewModel
 
 @using SecureSmartTuitionSystem.Models.Enrollment
+@using SecureSmartTuitionSystem.Services.Enrollment
 
 @{
     ViewData["Title"] = "Manage Class Sessions";
@@ -271,6 +272,7 @@
                 <colgroup>
                     <col class="column-number" />
                     <col class="column-class-name" />
+                    <col class="column-year" />
                     <col class="column-subject" />
                     <col class="column-tutor" />
                     <col class="column-schedule" />
@@ -293,6 +295,15 @@
 
                                 Class Name
 
+                                <i class="bi bi-arrow-down-up"></i>
+                            </button>
+                        </th>
+
+                        <th>
+                            <button type="button"
+                                    class="sort-button"
+                                    data-sort="year">
+                                Year
                                 <i class="bi bi-arrow-down-up"></i>
                             </button>
                         </th>
@@ -385,6 +396,10 @@
                                     <span>@title</span>
                                     <span>@scheduleSuffix[3..]</span>
                                 </strong>
+                            </td>
+
+                            <td>
+                                @ClassScheduleService.FirstDate(session).Year
                             </td>
 
                             <td>

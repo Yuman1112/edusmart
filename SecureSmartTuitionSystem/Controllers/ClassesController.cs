@@ -14,7 +14,7 @@ public class ClassesController(ApplicationDbContext context) : Controller
     private static readonly string[] SecondaryLevels = ["FORM 1", "FORM 2", "FORM 3", "FORM 4", "FORM 5"];
 
     [AllowAnonymous, HttpGet]
-    public async Task<IActionResult> Index(string? subject, string? level, string? stage, DateTime? requestedStartDate = null)
+    public async Task<IActionResult> Index(string? subject, string? level, string? stage, int? year = null)
     {
         string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToUpperInvariant();
         subject = Normalize(subject);
@@ -30,15 +30,17 @@ public class ClassesController(ApplicationDbContext context) : Controller
         };
         // A stale URL or a change in stage must not retain an incompatible level.
         if (level != null && !levels.Contains(level, StringComparer.OrdinalIgnoreCase)) { level = null; subject = null; }
-        var today = ClassScheduleService.Today;
-        var date=(requestedStartDate??today).Date;
-        if(!ModelState.IsValid||date<today||date>today.AddYears(1))return BadRequest("Choose a start date from today through the next year.");
-        ViewBag.RequestedStartDate=date.ToString("yyyy-MM-dd");
+        var now = ClassScheduleService.Now;
+        var today = now.Date;
+        // Browsing is a catalogue: future terms must not disappear behind today's date.
+        // Enrollment still checks the user's requested start date independently.
         var query = context.ClassSessions.AsNoTracking().Where(c =>
             c.Status == ClassSessionStatus.Active && c.Subject.IsActive &&
-            (!c.EndDate.HasValue || c.EndDate.Value.Date >= date) &&
-            (c.StartDate ?? c.CreatedAt.AddHours(8)).Date <= date &&
-            (c.StartDate ?? c.CreatedAt.AddHours(8)).Year == date.Year);
+            (!c.EndDate.HasValue || c.EndDate.Value.Date >= today));
+        var years = await query.Select(c => (c.StartDate ?? c.CreatedAt.AddHours(8)).Year)
+            .Distinct().OrderBy(y => y).ToListAsync();
+        if (year.HasValue)
+            query = query.Where(c => (c.StartDate ?? c.CreatedAt.AddHours(8)).Year == year.Value);
         if (selectedStage.HasValue) query = query.Where(c => c.Subject.EducationStage == selectedStage.Value);
         if (level != null) query = query.Where(c => c.Subject.AcademicLevel.ToUpper() == level);
         // Determine subjects before applying the subject filter, so changing subject remains possible.
@@ -48,9 +50,12 @@ public class ClassesController(ApplicationDbContext context) : Controller
             c.Subject.SubjectName, c.Subject.AcademicLevel, c.Subject.MonthlyFee,
             TutorName = c.TutorUser.FullName ?? c.TutorUser.Email ?? "Tutor" 
         }).ToListAsync();
-        var availability=await EnrollmentAvailability.LoadAsync(context,rows.Select(x=>x.ClassSessionId).ToList());
-        var occupied=rows.ToDictionary(x=>x.ClassSessionId,x=>availability.PeakSeats(x.ClassSessionId,date,AcademicYearPolicy.ClassEnd(x.Class)));
-        rows=rows.Where(x=>occupied[x.ClassSessionId]<x.Capacity).ToList();
+        var firstLessons = rows.ToDictionary(x => x.ClassSessionId, x => BrowseClassPolicy.FirstAvailableLesson(x.Class, now));
+        rows = rows.Where(x => firstLessons[x.ClassSessionId].HasValue && firstLessons[x.ClassSessionId]!.Value <= today.AddYears(1)).ToList();
+        var availability = await EnrollmentAvailability.LoadAsync(context, rows.Select(x => x.ClassSessionId).ToList());
+        var occupied = rows.ToDictionary(x => x.ClassSessionId, x => availability.PeakSeats(x.ClassSessionId,
+            firstLessons[x.ClassSessionId]!.Value, AcademicYearPolicy.ClassEnd(x.Class)));
+        rows = rows.Where(x => occupied[x.ClassSessionId] < x.Capacity).ToList();
         var subjects = rows.Select(x => x.SubjectName).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
         var order = PrimaryLevels.Concat(SecondaryLevels).Select((v, i) => new { v, i }).ToDictionary(x => x.v, x => x.i, StringComparer.OrdinalIgnoreCase);
         var classes = rows.Where(x => subject == null || string.Equals(x.SubjectName.Trim(), subject, StringComparison.OrdinalIgnoreCase))
@@ -63,7 +68,7 @@ public class ClassesController(ApplicationDbContext context) : Controller
                 StartTime = x.StartTime.ToString("hh:mm tt"), EndTime = x.EndTime.ToString("hh:mm tt"),
                 Venue = "Online class", MonthlyFee = x.MonthlyFee, Capacity = x.Capacity, SeatsRemaining = x.Capacity - occupied[x.ClassSessionId]
             }).ToList();
-        return View(new BrowseClassesViewModel { SelectedStage = stage, SelectedLevel = level, SelectedSubject = subject,
+        return View(new BrowseClassesViewModel { SelectedYear = year, Years = years, SelectedStage = stage, SelectedLevel = level, SelectedSubject = subject,
             AcademicLevels = levels, Subjects = subjects, Classes = classes });
     }
 }

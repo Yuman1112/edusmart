@@ -2,6 +2,10 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 {
     public class BrowseClassesViewModel
     {
+        public int? SelectedYear { get; set; }
+
+        public List<int> Years { get; set; } = new();
+
         public string? SelectedStage { get; set; }
 
         public string? SelectedSubject { get; set; }

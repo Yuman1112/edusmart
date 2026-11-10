@@ -161,6 +161,15 @@
                                         <strong>
                                             @item.Description
                                         </strong>
+                                        @if (item.ClassNames.Count > 0)
+                                        {
+                                            <ul class="payment-tuition-classes" aria-label="Included classes">
+                                                @foreach (var className in item.ClassNames)
+                                                {
+                                                    <li>@className</li>
+                                                }
+                                            </ul>
+                                        }
                                     </td>
 
                                     <td>

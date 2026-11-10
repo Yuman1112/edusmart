@@ -85,6 +85,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Billing
 
     public class BillItemViewModel
     {
+        public List<string> ClassNames { get; set; } = new();
+
         public BillItemType ItemType { get; set; }
 
         public string Description { get; set; } = string.Empty;

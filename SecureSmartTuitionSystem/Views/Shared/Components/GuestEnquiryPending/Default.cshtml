@@ -1,0 +1,2 @@
+@model int
+<span class="message-unread-badge" data-guest-enquiry-pending hidden="@(Model == 0)" title="@Model unresolved guest enquiry(s)" aria-label="@Model unresolved guest enquiry(s)">@(Model > 99 ? "99+" : Model.ToString())</span>

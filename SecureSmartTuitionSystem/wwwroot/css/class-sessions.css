@@ -276,7 +276,11 @@
 ========================================================= */
 
     .compact-class-table .column-class-name {
-        width: 27%;
+        width: 21%;
+    }
+
+    .compact-class-table .column-year {
+        width: 6%;
     }
 
     .compact-class-table .column-subject {
