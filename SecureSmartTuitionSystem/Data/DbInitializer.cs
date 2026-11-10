@@ -85,7 +85,8 @@ namespace SecureSmartTuitionSystem.Data
                 IsActive = true,
                 EmailConfirmed = false,
                 MustChangePassword = true,
-                LockoutEnabled = true
+                LockoutEnabled = true,
+                TwoFactorEnabled = true
             };
 
             // Used for class assignment; no login password is created.
@@ -172,7 +173,7 @@ namespace SecureSmartTuitionSystem.Data
                     LockoutEnabled = true,
                     EmailConfirmed = false,
                     MustChangePassword = false,
-                    TwoFactorEnabled = false
+                    TwoFactorEnabled = true
                 };
 
                 IdentityResult createResult =

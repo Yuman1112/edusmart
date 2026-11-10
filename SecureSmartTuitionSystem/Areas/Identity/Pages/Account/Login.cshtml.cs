@@ -1,3 +1,4 @@
+
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,9 @@ using SecureSmartTuitionSystem.Services.Security;
 namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
 {
     [EnableRateLimiting("LoginPolicy")]
+    [ResponseCache(
+        NoStore = true,
+        Location = ResponseCacheLocation.None)]
     public class LoginModel : PageModel
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
@@ -23,7 +27,9 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
         public LoginModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
-            ILogger<LoginModel> logger, SecurityEventService events, EmailLoginChallenge challenge)
+            ILogger<LoginModel> logger,
+            SecurityEventService events,
+            EmailLoginChallenge challenge)
         {
             _signInManager = signInManager;
             _userManager = userManager;
@@ -53,12 +59,23 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
         // GET - LOGIN
         // =========================================================
         public async Task<IActionResult> OnGetAsync(
-            string? returnUrl = null, string? reason = null)
+            string? returnUrl = null,
+            string? reason = null)
         {
             ReturnUrl = returnUrl;
-            if (reason == "expired") ModelState.AddModelError(string.Empty, "Your session expired. Please sign in again.");
 
-            // If already logged in, redirect to the appropriate page.
+            if (reason == "expired")
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "Your session expired. Please sign in again.");
+            }
+
+            if (TempData["TwoFactorSuccess"] is string message)
+            {
+                ModelState.AddModelError(string.Empty, message);
+            }
+
             if (User.Identity?.IsAuthenticated == true)
             {
                 return await RedirectToDashboardAsync();
@@ -80,7 +97,6 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return Page();
             }
 
-            // Remove accidental spaces before/after User ID or Email.
             string loginIdentifier = Input.UserId.Trim();
 
             ApplicationUser? user;
@@ -90,14 +106,24 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             if (loginIdentifier.Contains('@'))
             {
-                string? email = _userManager.NormalizeEmail(loginIdentifier);
-                var matches = await _userManager.Users.Where(u => u.NormalizedEmail == email)
-                    .Take(2).ToListAsync();
+                string? email =
+                    _userManager.NormalizeEmail(loginIdentifier);
+
+                var matches = await _userManager.Users
+                    .Where(u => u.NormalizedEmail == email)
+                    .Take(2)
+                    .ToListAsync();
+
                 if (matches.Count > 1)
                 {
-                    ModelState.AddModelError(string.Empty, "This email is shared by multiple accounts. Sign in with your User ID.");
+                    ModelState.AddModelError(
+                        string.Empty,
+                        "This email is shared by multiple accounts. " +
+                        "Sign in with your User ID.");
+
                     return Page();
                 }
+
                 user = matches.SingleOrDefault();
             }
             else
@@ -108,7 +134,12 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
 
             if (user == null)
             {
-                await _events.RecordAsync(HttpContext, "LoginFailed", SecuritySeverity.Warning, "Invalid sign-in attempt.");
+                await _events.RecordAsync(
+                    HttpContext,
+                    "LoginFailed",
+                    SecuritySeverity.Warning,
+                    "Invalid sign-in attempt.");
+
                 _logger.LogWarning(
                     "Login failed for an unknown account from {RemoteIp}.",
                     HttpContext.Connection.RemoteIpAddress);
@@ -125,7 +156,13 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             if (!user.IsActive)
             {
-                await _events.RecordAsync(HttpContext, "LoginFailed", SecuritySeverity.Warning, "Inactive account sign-in rejected.", user.Id);
+                await _events.RecordAsync(
+                    HttpContext,
+                    "LoginFailed",
+                    SecuritySeverity.Warning,
+                    "Inactive account sign-in rejected.",
+                    user.Id);
+
                 ModelState.AddModelError(
                     string.Empty,
                     "This account is currently inactive.");
@@ -136,9 +173,8 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             // VALIDATE PASSWORD
             // =====================================================
-            // CheckPasswordSignInAsync validates the password and
-            // counts failed attempts toward account lockout.
-            // It does not create the login cookie yet.
+            // Validates password and applies account lockout.
+            // Does not create an authentication cookie.
             var result =
                 await _signInManager.CheckPasswordSignInAsync(
                     user,
@@ -155,7 +191,13 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             if (result.IsLockedOut)
             {
-                await _events.RecordAsync(HttpContext, "AccountLocked", SecuritySeverity.High, "Account lockout enforced.", user.Id);
+                await _events.RecordAsync(
+                    HttpContext,
+                    "AccountLocked",
+                    SecuritySeverity.High,
+                    "Account lockout enforced.",
+                    user.Id);
+
                 DateTimeOffset? lockoutEnd =
                     await _userManager.GetLockoutEndDateAsync(user);
 
@@ -166,11 +208,10 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     TimeSpan remainingTime =
                         lockoutEnd.Value - DateTimeOffset.UtcNow;
 
-                    remainingMinutes =
-                        Math.Max(
-                            1,
-                            (int)Math.Ceiling(
-                                remainingTime.TotalMinutes));
+                    remainingMinutes = Math.Max(
+                        1,
+                        (int)Math.Ceiling(
+                            remainingTime.TotalMinutes));
                 }
 
                 _logger.LogWarning(
@@ -204,14 +245,19 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             if (!result.Succeeded)
             {
-                await _events.RecordAsync(HttpContext, "LoginFailed", SecuritySeverity.Warning, "Invalid sign-in attempt.", user.Id);
+                await _events.RecordAsync(
+                    HttpContext,
+                    "LoginFailed",
+                    SecuritySeverity.Warning,
+                    "Invalid sign-in attempt.",
+                    user.Id);
+
                 int failedAttempts =
                     await _userManager.GetAccessFailedCountAsync(user);
 
-                int remainingAttempts =
-                    Math.Max(
-                        0,
-                        maximumAttempts - failedAttempts);
+                int remainingAttempts = Math.Max(
+                    0,
+                    maximumAttempts - failedAttempts);
 
                 _logger.LogWarning(
                     "Login failed for account {UserId}. " +
@@ -234,32 +280,134 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             }
 
             // =====================================================
-            // ADDITIONAL LOGIN STEPS
+            // ADDITIONAL ACCOUNT CHECKS
             // =====================================================
             if (user.MustChangePassword)
             {
-                ModelState.AddModelError(string.Empty, "Please complete the account setup link sent to your email before signing in.");
-                return Page();
-            }
-            var destination = Url.IsLocalUrl(ReturnUrl) ? ReturnUrl! : string.Empty;
-            var error = await _challenge.StartAsync(HttpContext, user, destination);
-            if (error != null)
-            {
-                ModelState.AddModelError(string.Empty, error);
+                ModelState.AddModelError(
+                    string.Empty,
+                    "Please complete the account setup link " +
+                    "sent to your email before signing in.");
+
                 return Page();
             }
 
-            await _events.RecordAsync(HttpContext, "TwoFactorChallenge", SecuritySeverity.Information,
-                "Password verified; email verification required.", user.Id);
-            return RedirectToPage("./LoginWith2fa");
+            if (!user.IsActive ||
+                await _userManager.IsLockedOutAsync(user) ||
+                !await _signInManager.CanSignInAsync(user))
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "This account is not allowed to sign in.");
+
+                return Page();
+            }
+
+            string destination =
+                Url.IsLocalUrl(ReturnUrl)
+                    ? ReturnUrl!
+                    : string.Empty;
+
+            // =====================================================
+            // EMAIL 2FA - CHECK USER PREFERENCE
+            // =====================================================
+            bool twoFactorEnabled =
+                await _userManager.GetTwoFactorEnabledAsync(user);
+
+            if (twoFactorEnabled)
+            {
+                // 2FA enabled:
+                // Send email OTP before creating login cookie.
+
+                string? error = await _challenge.StartAsync(
+                    HttpContext,
+                    user,
+                    destination);
+
+                if (error != null)
+                {
+                    ModelState.AddModelError(
+                        string.Empty,
+                        error);
+
+                    return Page();
+                }
+
+                await _events.RecordAsync(
+                    HttpContext,
+                    "TwoFactorChallenge",
+                    SecuritySeverity.Information,
+                    "Password verified; email verification required.",
+                    user.Id);
+
+                return RedirectToPage("./LoginWith2fa");
+            }
+
+            // =====================================================
+            // EMAIL 2FA DISABLED - PASSWORD LOGIN
+            // =====================================================
+            // Password has already been verified.
+            // Recheck the latest account state before signing in.
+
+            var latestUser =
+                await _userManager.FindByIdAsync(user.Id);
+
+            if (latestUser == null ||
+                !latestUser.IsActive ||
+                latestUser.MustChangePassword ||
+                await _userManager.IsLockedOutAsync(latestUser) ||
+                !await _signInManager.CanSignInAsync(latestUser))
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "This account is not allowed to sign in.");
+
+                return Page();
+            }
+
+            // Do not bypass 2FA if the setting changed
+            // while this login request was being processed.
+            if (await _userManager.GetTwoFactorEnabledAsync(latestUser))
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "Your authentication settings changed. " +
+                    "Please sign in again.");
+
+                return Page();
+            }
+
+            // No OTP required when Email 2FA is disabled.
+            await _signInManager.SignInAsync(
+                latestUser,
+                isPersistent: false);
+
+            await _events.RecordAsync(
+                HttpContext,
+                "LoginSucceeded",
+                SecuritySeverity.Information,
+                "User signed in without Email 2FA.",
+                latestUser.Id);
+
+            if (!string.IsNullOrEmpty(destination))
+            {
+                return LocalRedirect(destination);
+            }
+
+            // Pass the authenticated user explicitly.
+            // HttpContext.User may still contain the old
+            // unauthenticated principal during this request.
+            return await RedirectToDashboardAsync(latestUser);
         }
 
         // =========================================================
         // ROLE-BASED REDIRECTION
         // =========================================================
-        private async Task<IActionResult> RedirectToDashboardAsync()
+        private async Task<IActionResult> RedirectToDashboardAsync(
+            ApplicationUser? authenticatedUser = null)
         {
             ApplicationUser? user =
+                authenticatedUser ??
                 await _userManager.GetUserAsync(User);
 
             if (user == null)
@@ -267,10 +415,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 return RedirectToPage("/Account/Login");
             }
 
-            // Admin
-            if (await _userManager.IsInRoleAsync(
-                    user,
-                    "Admin"))
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
             {
                 return RedirectToAction(
                     "Index",
@@ -278,10 +423,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     new { area = "" });
             }
 
-            // Tutor
-            if (await _userManager.IsInRoleAsync(
-                    user,
-                    "Tutor"))
+            if (await _userManager.IsInRoleAsync(user, "Tutor"))
             {
                 return RedirectToAction(
                     "Index",
@@ -289,10 +431,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     new { area = "" });
             }
 
-            // Parent
-            if (await _userManager.IsInRoleAsync(
-                    user,
-                    "Parent"))
+            if (await _userManager.IsInRoleAsync(user, "Parent"))
             {
                 return RedirectToAction(
                     "Index",
@@ -300,10 +439,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     new { area = "" });
             }
 
-            // Student
-            if (await _userManager.IsInRoleAsync(
-                    user,
-                    "Student"))
+            if (await _userManager.IsInRoleAsync(user, "Student"))
             {
                 return RedirectToAction(
                     "Index",
@@ -311,7 +447,6 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     new { area = "" });
             }
 
-            // Fallback
             return RedirectToAction(
                 "Index",
                 "Home",
@@ -319,4 +454,3 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
         }
     }
 }
-

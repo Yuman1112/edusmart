@@ -29,6 +29,9 @@ public sealed class LoginWith2faModel(
         ErrorMessage = "Enter the six-digit verification code.")]
     public string Code { get; set; } = "";
 
+    // =========================================================
+    // GET - EMAIL OTP VERIFICATION PAGE
+    // =========================================================
     public IActionResult OnGet()
     {
         return challenge.IsPending(HttpContext)
@@ -36,13 +39,20 @@ public sealed class LoginWith2faModel(
             : RedirectToPage("./Login");
     }
 
+    // =========================================================
+    // POST - VERIFY EMAIL OTP
+    // =========================================================
     public async Task<IActionResult> OnPostAsync()
     {
         if (!challenge.IsPending(HttpContext))
+        {
             return RedirectToPage("./Login");
+        }
 
         if (!ModelState.IsValid)
+        {
             return Page();
+        }
 
         var result = await challenge.VerifyAsync(
             HttpContext,
@@ -61,13 +71,17 @@ public sealed class LoginWith2faModel(
         var user = await signIn.UserManager.FindByIdAsync(
             result.User.Id);
 
-        if (user == null
-            || !user.IsActive
-            || user.MustChangePassword
-            || !await signIn.CanSignInAsync(user)
-            || await signIn.UserManager.IsLockedOutAsync(user))
+        // Ensure that Email 2FA is still enabled.
+        // Also recheck account status and lockout.
+        if (user == null ||
+            !user.IsActive ||
+            user.MustChangePassword ||
+            !await signIn.UserManager
+                .GetTwoFactorEnabledAsync(user) ||
+            !await signIn.CanSignInAsync(user) ||
+            await signIn.UserManager.IsLockedOutAsync(user))
         {
-            HttpContext.Session.Clear();
+            challenge.ClearPending(HttpContext);
 
             await events.RecordAsync(
                 HttpContext,
@@ -77,17 +91,17 @@ public sealed class LoginWith2faModel(
                 result.User.Id);
 
             ModelState.AddModelError(
-                "",
+                string.Empty,
                 "This account is not available for sign-in. " +
                 "Please contact your administrator.");
 
             return Page();
         }
 
-        // Clear the pending OTP session.
-        HttpContext.Session.Clear();
+        // Remove only the pending login challenge.
+        challenge.ClearPending(HttpContext);
 
-        // Create the authentication cookie only after verification.
+        // Create the authentication cookie after OTP verification.
         await signIn.SignInAsync(
             user,
             isPersistent: false,
@@ -100,9 +114,13 @@ public sealed class LoginWith2faModel(
             "User signed in after email verification.",
             user.Id);
 
+        // Redirect only to a local URL.
         if (Url.IsLocalUrl(result.Destination))
+        {
             return LocalRedirect(result.Destination);
+        }
 
+        // Role-based dashboard redirection.
         var roles =
             await signIn.UserManager.GetRolesAsync(user);
 

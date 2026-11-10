@@ -1,0 +1,629 @@
+﻿@model SecureSmartTuitionSystem.Controllers.AccountSettingsController.TwoFactorViewModel
+
+@{
+    ViewData["Title"] = "Two-Factor Authentication";
+
+    string? twoFactorError =
+        TempData["TwoFactorError"] as string;
+
+    string? passwordError = Model.EmailVerified && !Model.Pending
+        ? twoFactorError switch
+        {
+            "Incorrect current password." => "Incorrect current password. Please try again.",
+            "Please enter your current password." => twoFactorError,
+            _ => null
+        }
+        : null;
+
+    string? codeError = Model.EmailVerified && Model.Pending &&
+        (twoFactorError == "Enter a valid six-digit verification code." ||
+         twoFactorError?.StartsWith("Incorrect code. ", StringComparison.Ordinal) == true)
+        ? twoFactorError
+        : null;
+}
+
+@section Styles {
+    @if (Model.EmailVerified && Model.Pending)
+    {
+        <link rel="stylesheet" href="~/css/login-otp.css" asp-append-version="true" />
+        <noscript>
+            <style>
+                .twofa-otp-field {
+                    height: auto;
+                }
+
+                    .twofa-otp-field .otp-real-input {
+                        position: static;
+                        height: auto;
+                        opacity: 1;
+                    }
+
+                    .twofa-otp-field .otp-digits {
+                        display: none;
+                    }
+            </style>
+        </noscript>
+    }
+}
+
+<style>
+    .twofa-page {
+        width: 100%;
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 30px 12px 55px;
+        color: #082e58;
+    }
+
+    .twofa-heading {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+
+    .twofa-heading-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        flex-shrink: 0;
+        background: #d9f6f7;
+        border-radius: 18px;
+        color: #008f9f;
+        font-size: 27px;
+    }
+
+    .twofa-heading h1 {
+        font-size: clamp(24px, 3vw, 32px);
+        font-weight: 750;
+        margin: 0 0 5px;
+    }
+
+    .twofa-heading p {
+        color: #71839a;
+        margin: 0;
+        font-size: 14px;
+    }
+
+    .twofa-card {
+        background: #fff;
+        border: 1px solid #dce9ee;
+        border-radius: 18px;
+        padding: 28px;
+        margin-bottom: 22px;
+        box-shadow: 0 8px 28px rgba(7, 52, 83, .045);
+    }
+
+    .twofa-card-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+        .twofa-card-title i {
+            color: #0098a5;
+        }
+
+    .twofa-description {
+        color: #70839a;
+        font-size: 14px;
+        line-height: 1.7;
+        margin: 12px 0 22px;
+    }
+
+    .twofa-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 30px;
+        padding: 7px 13px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+        .twofa-status.enabled {
+            background: #e0f8ed;
+            color: #08794d;
+        }
+
+        .twofa-status.disabled {
+            background: #eef1f5;
+            color: #657386;
+        }
+
+    .twofa-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .twofa-details {
+        border-top: 1px solid #e8eef2;
+        padding-top: 10px;
+    }
+
+    .twofa-detail {
+        display: grid;
+        grid-template-columns: minmax(150px, 1fr) 1.4fr;
+        gap: 16px;
+        padding: 12px 0;
+        font-size: 14px;
+    }
+
+    .twofa-detail-label {
+        color: #73849a;
+    }
+
+    .twofa-detail-value {
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .twofa-input-label {
+        display: block;
+        margin-bottom: 9px;
+        font-size: 13px;
+        font-weight: 650;
+    }
+
+    .twofa-otp-field {
+        max-width: 370px;
+    }
+
+    .twofa-input {
+        width: 100%;
+        padding: 13px 15px;
+        border: 1px solid #d3e2e9;
+        border-radius: 10px;
+        outline: none;
+        background: #fff;
+        color: #082e58;
+        transition: border-color .2s, box-shadow .2s;
+    }
+
+        .twofa-input:focus {
+            border-color: #0098a5;
+            box-shadow: 0 0 0 3px rgba(0, 152, 165, .12);
+        }
+
+        .twofa-input.is-invalid,
+        .twofa-input.input-validation-error {
+            border-color: #dc3545;
+            background-color: #fffafa;
+        }
+
+            .twofa-input.is-invalid:focus,
+            .twofa-input.input-validation-error:focus {
+                border-color: #dc3545;
+                box-shadow: 0 0 0 3px rgba(220, 53, 69, .12);
+            }
+
+    .twofa-otp-field:has(.is-invalid, .input-validation-error) .otp-digit {
+        border-color: #dc3545;
+    }
+
+    .twofa-field-error {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 8px;
+        color: #dc3545;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.5;
+    }
+
+        .twofa-field-error.field-validation-valid {
+            display: none;
+        }
+
+
+    .twofa-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 22px;
+    }
+
+    .twofa-otp-actions {
+        gap: 16px;
+    }
+
+    .twofa-otp-buttons {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+        .twofa-otp-buttons .twofa-btn {
+            white-space: nowrap;
+        }
+
+    .twofa-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 20px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: filter .2s;
+    }
+
+        .twofa-btn:hover {
+            filter: brightness(.95);
+        }
+
+    .twofa-btn-primary {
+        background: #0099a7;
+        color: #fff;
+    }
+
+    .twofa-btn-danger {
+        background: #fff0f0;
+        color: #c34141;
+        border: 1px solid #f2caca;
+    }
+
+    .twofa-btn-outline {
+        background: #fff;
+        color: #45647c;
+        border: 1px solid #d6e3e9;
+    }
+
+    .twofa-security-note {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #8190a1;
+        font-size: 12px;
+    }
+
+    .twofa-warning {
+        background: #fff8ea;
+        color: #94620e;
+        border: 1px solid #f7e5b9;
+        border-radius: 10px;
+        padding: 13px 15px;
+        font-size: 13px;
+        margin-bottom: 20px;
+    }
+
+    @@media (max-width: 600px) {
+        .twofa-page {
+            padding: 18px 4px 35px;
+        }
+
+        .twofa-card {
+            padding: 20px;
+        }
+
+        .twofa-detail {
+            grid-template-columns: 1fr;
+            gap: 4px;
+        }
+
+        .twofa-card-header {
+            align-items: flex-start;
+        }
+
+        .twofa-actions {
+            align-items: stretch;
+        }
+
+        .twofa-btn {
+            width: 100%;
+        }
+
+        .twofa-otp-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .twofa-otp-buttons {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+            .twofa-otp-buttons .twofa-btn {
+                flex: 1 1 auto;
+                width: auto;
+            }
+    }
+
+</style>
+
+<div class="twofa-page">
+
+    <div class="twofa-heading">
+        <div class="twofa-heading-icon">
+            <i class="bi bi-shield-lock"></i>
+        </div>
+
+        <div>
+            <h1>Two-Factor Authentication</h1>
+            <p>Manage your EduSmart account security settings.</p>
+        </div>
+    </div>
+
+    @if (TempData["TwoFactorSuccess"] is string success)
+    {
+        <div class="alert alert-success" role="status">
+            @success
+        </div>
+    }
+
+
+
+    @if (!string.IsNullOrWhiteSpace(twoFactorError) &&
+        passwordError is null && codeError is null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @twoFactorError
+        </div>
+    }
+
+
+
+    @if (TempData["TwoFactorInfo"] is string info)
+    {
+        <div class="alert alert-info" role="status">
+            @info
+        </div>
+    }
+
+    <section class="twofa-card">
+
+        <div class="twofa-card-header">
+            <h2 class="twofa-card-title">
+                <i class="bi bi-envelope-check"></i>
+                Email Authentication
+            </h2>
+
+            <span class="twofa-status @(Model.Enabled ? "enabled" : "disabled")">
+                <i class="bi @(Model.Enabled ? "bi-check-circle-fill" : "bi-dash-circle")"></i>
+                @(Model.Enabled ? "Enabled" : "Disabled")
+            </span>
+        </div>
+
+        <p class="twofa-description">
+            Protect your account with an additional email
+            verification code when signing in.
+        </p>
+
+        <div class="twofa-details">
+            <div class="twofa-detail">
+                <span class="twofa-detail-label">Verification Method</span>
+                <span class="twofa-detail-value">Email OTP</span>
+            </div>
+
+            <div class="twofa-detail">
+                <span class="twofa-detail-label">Verification Email</span>
+                <span class="twofa-detail-value">
+                    @(Model.UsesGuardianEmail ? "Primary guardian’s email" : Model.Email ?? "Not provided")
+                </span>
+            </div>
+
+            <div class="twofa-detail">
+                <span class="twofa-detail-label">Email Verification</span>
+                <span class="twofa-detail-value">
+                    @(Model.EmailVerified ? "Verified" : "Not Verified")
+                </span>
+            </div>
+        </div>
+
+    </section>
+
+    <section class="twofa-card">
+
+        <h2 class="twofa-card-title">
+            <i class="bi bi-gear"></i>
+            Manage Two-Factor Authentication
+        </h2>
+
+        @if (!Model.EmailVerified)
+        {
+            <p class="twofa-description">
+                A verified email address is required before
+                changing your Email 2FA settings.
+            </p>
+
+            <div class="twofa-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Please verify your email address or contact
+                your administrator.
+            </div>
+        }
+        else if (Model.Pending)
+        {
+            <p class="twofa-description">
+                Enter the six-digit verification code sent to
+                your registered email. The code expires in 5 minutes.
+            </p>
+
+            <div class="twofa-warning">
+                You are requesting to
+                <strong>
+                    @(Model.RequestedEnable ? "enable" : "disable")
+                </strong>
+                Email 2FA.
+            </div>
+
+            <form asp-area=""
+                  asp-controller="AccountSettings"
+                  asp-action="ConfirmChange"
+                  method="post"
+                  asp-antiforgery="true">
+
+                <label class="twofa-input-label" for="otpCode">
+                    Verification Code
+                </label>
+
+                <div class="otp-input-container twofa-otp-field">
+                    <input id="otpCode"
+                           class="twofa-input otp-real-input @(codeError is null ? "" : "is-invalid")"
+                           name="Code"
+                           type="text"
+                           inputmode="numeric"
+                           autocomplete="one-time-code"
+                           maxlength="6"
+                           minlength="6"
+                           pattern="[0-9]{6}"
+                           aria-invalid="@(codeError is null ? "false" : "true")"
+                           aria-describedby="twofa-code-error"
+                           data-val="true"
+                           data-val-required="Please enter the six-digit verification code."
+                           data-val-regex="Enter a valid six-digit verification code."
+                           data-val-regex-pattern="[0-9]{6}"
+                           required />
+
+                    <div class="otp-digits" aria-hidden="true">
+                        <span class="otp-digit"></span>
+                        <span class="otp-digit"></span>
+                        <span class="otp-digit"></span>
+                        <span class="otp-digit"></span>
+                        <span class="otp-digit"></span>
+                        <span class="otp-digit"></span>
+                    </div>
+                </div>
+
+
+                <div id="twofa-code-error"
+                     class="twofa-field-error @(codeError is null ? "field-validation-valid" : "field-validation-error")"
+                     data-valmsg-for="Code"
+                     data-valmsg-replace="true"
+                     aria-live="polite">
+                    @codeError
+                </div>
+
+                <div class="twofa-actions twofa-otp-actions">
+                    <span class="twofa-security-note">
+                        <i class="bi bi-clock"></i>
+                        Code valid for 5 minutes
+                    </span>
+
+                    <div class="twofa-otp-buttons">
+                        <button type="submit"
+                                form="twofa-cancel-form"
+                                class="twofa-btn twofa-btn-outline">
+                            Cancel
+                        </button>
+
+                        <button class="twofa-btn twofa-btn-primary"
+                                type="submit">
+                            <i class="bi bi-check-circle"></i>
+                            Confirm Change
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+
+
+            <form id="twofa-cancel-form"
+                  asp-area=""
+                  asp-controller="AccountSettings"
+                  asp-action="CancelChange"
+                  method="post"
+                  asp-antiforgery="true">
+            </form>
+
+        }
+        else
+        {
+            <p class="twofa-description">
+                To @(Model.Enabled ? "disable" : "enable")
+                Email 2FA, enter your current password.
+                A verification code will be sent to your email.
+            </p>
+
+            @if (Model.Enabled)
+            {
+                <div class="twofa-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Disabling two-factor authentication will
+                    reduce your account security.
+                </div>
+            }
+
+            <form asp-area=""
+                  asp-controller="AccountSettings"
+                  asp-action="BeginChange"
+                  method="post"
+                  asp-antiforgery="true">
+
+                <input type="hidden"
+                       name="Enable"
+                       value="@(Model.Enabled ? "false" : "true")" />
+
+                <label class="twofa-input-label"
+                       for="twofa-password">
+                    Current Password
+                </label>
+
+                <input id="twofa-password"
+                       class="twofa-input @(passwordError is null ? "" : "is-invalid")"
+                       name="Password"
+                       type="password"
+                       autocomplete="current-password"
+                       placeholder="Enter your current password"
+                       aria-invalid="@(passwordError is null ? "false" : "true")"
+                       aria-describedby="twofa-password-error"
+                       data-val="true"
+                       data-val-required="Please enter your current password."
+                       required />
+
+                <div id="twofa-password-error"
+                     class="twofa-field-error @(passwordError is null ? "field-validation-valid" : "field-validation-error")"
+                     data-valmsg-for="Password"
+                     data-valmsg-replace="true"
+                     aria-live="polite">
+                    @passwordError
+                </div>
+
+
+                <div class="twofa-actions">
+                    <span class="twofa-security-note">
+                        <i class="bi bi-lock"></i>
+                        Additional verification required
+                    </span>
+
+                    <button type="submit"
+                            class="twofa-btn @(Model.Enabled ? "twofa-btn-danger" : "twofa-btn-primary")">
+
+                        <i class="bi @(Model.Enabled ? "bi-shield-x" : "bi-shield-check")"></i>
+
+                        @(Model.Enabled ? "Disable 2FA" : "Enable 2FA")
+                    </button>
+                </div>
+            </form>
+        }
+
+    </section>
+
+</div>
+
+@section Scripts {
+    @if (Model.EmailVerified)
+    {
+        <partial name="_ValidationScriptsPartial" />
+    }
+
+    @if (Model.EmailVerified && Model.Pending)
+    {
+        <script src="~/js/login-otp.js" asp-append-version="true" defer></script>
+    }
+}

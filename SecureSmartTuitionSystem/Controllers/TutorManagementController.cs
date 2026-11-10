@@ -11,8 +11,10 @@ using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models;
 using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.Models.Security;
+using SecureSmartTuitionSystem.Models.Tutor;
 using SecureSmartTuitionSystem.Services;
 using SecureSmartTuitionSystem.Services.Authentication;
+using SecureSmartTuitionSystem.Services.Learning;
 using SecureSmartTuitionSystem.Services.Tutor;
 using SecureSmartTuitionSystem.Services.Security;
 using SecureSmartTuitionSystem.ViewModels.Tutor;
@@ -224,6 +226,8 @@ public sealed class TutorManagementController(
 
                 PhoneNumber = x.ApplicationUser.PhoneNumber ?? "",
                 Qualification = x.Qualification,
+                FieldOfStudy = x.FieldOfStudy,
+                QualificationVerifiedAtUtc = x.QualificationVerifiedAtUtc,
                 EmploymentType = x.EmploymentType,
                 TeachingExperience = x.TeachingExperience,
                 AreaOfExpertise = x.AreaOfExpertise ?? "",
@@ -365,6 +369,9 @@ public sealed class TutorManagementController(
             FullName = profile.FullName,
             PhoneNumber = profile.ApplicationUser.PhoneNumber ?? "",
             Qualification = profile.Qualification,
+            FieldOfStudy = profile.FieldOfStudy ?? "",
+            ProfileVersion = profile.UpdatedAt?.Ticks ?? 0,
+            Documents = await LoadTutorDocumentsAsync(profile.TutorProfileId),
             EmploymentType = profile.EmploymentType,
             AreaOfExpertise = profile.AreaOfExpertise,
             TeachingExperience = profile.TeachingExperience,
@@ -397,6 +404,7 @@ public sealed class TutorManagementController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequestSizeLimit(22 * 1024 * 1024)]
     public async Task<IActionResult> Edit(EditTutorViewModel model)
     {
         if (string.IsNullOrWhiteSpace(model.UserId))
@@ -409,6 +417,8 @@ public sealed class TutorManagementController(
 
         bool emailChanged = false;
         bool profileChanged = false;
+        var certificate = await ReadTutorDocumentAsync(model.Certificate, nameof(model.Certificate));
+        var resume = await ReadTutorDocumentAsync(model.Resume, nameof(model.Resume));
 
         try
         {
@@ -428,6 +438,12 @@ public sealed class TutorManagementController(
             var tutor = profile.ApplicationUser;
 
             PopulateTutorEmailDisplay(model, tutor);
+            model.Documents = await LoadTutorDocumentsAsync(profile.TutorProfileId);
+            if (model.ProfileVersion != (profile.UpdatedAt?.Ticks ?? 0))
+            {
+                ModelState.AddModelError("", "This tutor profile has changed. Reload the page before editing it again.");
+                return View(model);
+            }
 
             var teachingLevels =
                 model.TeachingLevels
@@ -490,6 +506,8 @@ public sealed class TutorManagementController(
             bool professionalChanged =
                 Normalize(profile.Qualification)
                     != Normalize(model.Qualification)
+                || Normalize(profile.FieldOfStudy)
+                    != Normalize(model.FieldOfStudy)
                 || Normalize(profile.AreaOfExpertise)
                     != Normalize(model.AreaOfExpertise)
                 || Normalize(profile.TeachingExperience)
@@ -514,11 +532,36 @@ public sealed class TutorManagementController(
             bool subjectsChanged =
                 !existingSubjects.SetEquals(submittedSubjects);
 
+            var added = submittedSubjects.Except(existingSubjects).OrderBy(key => key).ToList();
+            var removed = existingSubjects.Except(submittedSubjects).OrderBy(key => key).ToList();
+            bool qualificationChanged = Normalize(profile.Qualification) != Normalize(model.Qualification)
+                || Normalize(profile.FieldOfStudy) != Normalize(model.FieldOfStudy)
+                || certificate != null;
+            if ((added.Count > 0 || qualificationChanged || model.QualificationVerified)
+                && string.IsNullOrWhiteSpace(model.FieldOfStudy))
+                ModelState.AddModelError(nameof(model.FieldOfStudy), "Enter the tutor's field of study before verifying qualifications.");
+            if ((added.Count > 0 || qualificationChanged) && !model.QualificationVerified)
+            {
+                ModelState.AddModelError(nameof(model.QualificationVerified),
+                    "Confirm qualification verification before adding teaching approvals or updating qualifications.");
+            }
+
+            var removalConflict = await TutorQualificationService.FindRemovalConflictAsync(db, model.UserId,
+                profile.TeachingSubjects.Where(subject => !submittedSubjects.Contains(
+                    SubjectKey(subject.EducationStage, subject.AcademicLevel, subject.SubjectCode))),
+                HttpContext.RequestAborted);
+            if (removalConflict != null)
+                ModelState.AddModelError(nameof(model.TeachingLevels), removalConflict);
+
+            if (!ModelState.IsValid)
+                return View(model);
+
             profileChanged =
                 personalChanged
                 || professionalChanged
                 || subjectsChanged
-                || employmentChanged;
+                || employmentChanged
+                || certificate != null || resume != null || model.QualificationVerified;
 
             emailChanged = !string.Equals(
                 users.NormalizeEmail(tutor.Email?.Trim()),
@@ -554,6 +597,7 @@ public sealed class TutorManagementController(
                     await new TutorAvailabilityService(db).SyncFullTimeSlotsAsync(model.UserId);
                 profile.FullName = model.FullName.Trim();
                 profile.Qualification = model.Qualification.Trim();
+                profile.FieldOfStudy = model.FieldOfStudy?.Trim();
                 profile.AreaOfExpertise =
                     model.AreaOfExpertise?.Trim();
                 profile.TeachingExperience =
@@ -562,10 +606,21 @@ public sealed class TutorManagementController(
 
                 tutor.FullName = profile.FullName;
                 tutor.PhoneNumber = model.PhoneNumber.Trim();
+                if (model.QualificationVerified)
+                {
+                    profile.QualificationVerifiedByUserId = adminUserId;
+                    profile.QualificationVerifiedAtUtc = profile.UpdatedAt;
+                }
+                if (certificate != null)
+                    await ReplaceTutorDocumentAsync(profile, TutorDocumentKind.Certificate, certificate);
+                if (resume != null)
+                    await ReplaceTutorDocumentAsync(profile, TutorDocumentKind.Resume, resume);
             }
 
             if (subjectsChanged)
             {
+                TutorQualificationService.AddAudit(db, auditIntegrity, HttpContext, model.UserId,
+                    $"Added: {string.Join(", ", added)}. Removed: {string.Join(", ", removed)}.");
                 var requested = teachingLevels
                     .SelectMany(level =>
                         level.SubjectCodes.Select(code => new
@@ -683,7 +738,7 @@ public sealed class TutorManagementController(
         else
         {
             TempData["TutorSuccess"] =
-                "Tutor details were updated successfully.";
+                "Tutor information updated successfully.";
         }
 
         return RedirectToAction(
@@ -719,8 +774,13 @@ public sealed class TutorManagementController(
         }
     }
     [HttpPost]
+    [RequestSizeLimit(22 * 1024 * 1024)]
     public async Task<IActionResult> Create(CreateTutorViewModel model)
     {
+        var adminId = users.GetUserId(User);
+        if (adminId == null)
+            return Challenge();
+
         // Check a valid Email even when another field is invalid.
         if (!IsValidTutorEmail(model.Email))
         {
@@ -740,6 +800,12 @@ public sealed class TutorManagementController(
 
         // Validate the selected teaching levels and subjects.
         ValidateTeachingLevels(model);
+        if (!model.QualificationVerified)
+            ModelState.AddModelError(nameof(model.QualificationVerified),
+                "Confirm that the tutor's qualifications have been verified for the selected subjects and levels.");
+
+        var certificate = await ReadTutorDocumentAsync(model.Certificate, nameof(model.Certificate));
+        var resume = await ReadTutorDocumentAsync(model.Resume, nameof(model.Resume));
 
         if (!ModelState.IsValid)
             return View(model);
@@ -778,7 +844,8 @@ public sealed class TutorManagementController(
                     IsActive = true,
                     MustChangePassword = true,
                     EmailConfirmed = false,
-                    LockoutEnabled = true
+                    LockoutEnabled = true,
+                    TwoFactorEnabled = true
                 };
                 var result = await users.CreateAsync(tutor);
                 if (result.Succeeded) result = await users.AddToRoleAsync(tutor, "Tutor");
@@ -795,6 +862,9 @@ public sealed class TutorManagementController(
                     ApplicationUserId = tutor.Id,
                     FullName = model.FullName,
                     Qualification = model.Qualification,
+                    FieldOfStudy = model.FieldOfStudy.Trim(),
+                    QualificationVerifiedByUserId = adminId,
+                    QualificationVerifiedAtUtc = DateTime.UtcNow,
                     EmploymentType = model.EmploymentType,
                     TeachingExperience = model.TeachingExperience?.Trim(),
                     AreaOfExpertise = model.AreaOfExpertise,
@@ -821,6 +891,17 @@ public sealed class TutorManagementController(
                 }
 
                 db.TutorProfiles.Add(tutorProfile);
+                if (certificate != null)
+                    db.TutorQualificationDocuments.Add(TutorQualificationService.CreateDocument(
+                        tutorProfile, TutorDocumentKind.Certificate, certificate));
+                if (resume != null)
+                    db.TutorQualificationDocuments.Add(TutorQualificationService.CreateDocument(
+                        tutorProfile, TutorDocumentKind.Resume, resume));
+
+                string approvals = string.Join(", ", tutorProfile.TeachingSubjects.Select(
+                    subject => $"{subject.AcademicLevel}/{subject.SubjectCode}"));
+                TutorQualificationService.AddAudit(db, auditIntegrity, HttpContext, tutor.Id,
+                    $"Verified qualifications and approved initial teaching subjects: {approvals}.");
                 if (model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime)
                     await new TutorAvailabilityService(db).SyncFullTimeSlotsAsync(tutor.Id);
 
@@ -1185,6 +1266,37 @@ public sealed class TutorManagementController(
             @"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+" +
             @"[A-Za-z]{2,63}$",
             RegexOptions.CultureInvariant);
+    }
+
+    private Task<List<TutorDocumentSummary>> LoadTutorDocumentsAsync(int profileId) =>
+        db.TutorQualificationDocuments.AsNoTracking()
+            .Where(document => document.TutorProfileId == profileId && document.TeachingChangeRequestId == null)
+            .OrderBy(document => document.Kind)
+            .Select(document => new TutorDocumentSummary(document.Id, document.Kind, document.FileName))
+            .ToListAsync(HttpContext.RequestAborted);
+
+    private async Task<MaterialFile?> ReadTutorDocumentAsync(IFormFile? upload, string field)
+    {
+        var (file, error) = await TutorQualificationService.ReadDocumentAsync(upload, HttpContext.RequestAborted);
+        if (error != null)
+            ModelState.AddModelError(field, error);
+        return file;
+    }
+
+    private async Task ReplaceTutorDocumentAsync(TutorProfile profile, TutorDocumentKind kind, MaterialFile file)
+    {
+        var document = await db.TutorQualificationDocuments.SingleOrDefaultAsync(
+            item => item.TutorProfileId == profile.TutorProfileId
+                && item.TeachingChangeRequestId == null && item.Kind == kind,
+            HttpContext.RequestAborted);
+        if (document == null)
+        {
+            db.TutorQualificationDocuments.Add(TutorQualificationService.CreateDocument(profile, kind, file));
+            return;
+        }
+
+        document.FileName = file.Name;
+        document.Content = file.Content;
     }
 
     private void ValidateTeachingLevels(CreateTutorViewModel model)

@@ -571,7 +571,7 @@ namespace SecureSmartTuitionSystem.Controllers
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public async Task<IActionResult> MyProfile()
         {
-            var profile = await GetOwnTutorProfileAsync();
+            var profile = await GetOwnTutorProfileAsync(includeTeachingSubjects: true);
             if (profile == null) return NotFound();
 
             var user = profile.ApplicationUser;
@@ -583,6 +583,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 Email = user.Email ?? "",
                 PhoneNumber = user.PhoneNumber ?? "",
                 Qualification = profile.Qualification,
+                FieldOfStudy = profile.FieldOfStudy,
                 AreaOfExpertise = profile.AreaOfExpertise ?? "",
                 TeachingExperience = profile.TeachingExperience,
                 IsActive = profile.IsActive && user.IsActive,
@@ -647,19 +648,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 TutorId = profile.ApplicationUser.UserName ?? "",
                 Email = profile.ApplicationUser.Email ?? "",
                 FullName = profile.FullName,
-                PhoneNumber = profile.ApplicationUser.PhoneNumber ?? "",
-                Qualification = profile.Qualification,
-                AreaOfExpertise = profile.AreaOfExpertise,
-                TeachingExperience = profile.TeachingExperience,
-                TeachingLevels = profile.TeachingSubjects
-                    .GroupBy(x => new { x.EducationStage, x.AcademicLevel })
-                    .Select(group => new TutorTeachingLevelInput
-                    {
-                        EducationStage = group.Key.EducationStage,
-                        AcademicLevel = group.Key.AcademicLevel,
-                        SubjectCodes = group.Select(x => x.SubjectCode).ToList()
-                    })
-                    .ToList()
+                PhoneNumber = profile.ApplicationUser.PhoneNumber ?? ""
             };
 
             return View(model);
@@ -696,10 +685,6 @@ namespace SecureSmartTuitionSystem.Controllers
                         "Please enter a valid email address.");
                 }
 
-                var levels = model.TeachingLevels ?? new();
-                model.TeachingLevels = levels;
-                ValidateOwnTeachingLevels(levels);
-
                 if (!ModelState.IsValid) return View(model);
 
                 emailChanged = !string.Equals(
@@ -709,32 +694,9 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 static string Clean(string? value) => (value ?? "").Trim();
 
-                var requested = levels.SelectMany(level =>
-                    level.SubjectCodes.Select(code => new
-                    {
-                        Stage = TeachingSubjectCatalog.GetStageForLevel(
-                            level.AcademicLevel)!,
-                        Level = level.AcademicLevel.Trim().ToUpperInvariant(),
-                        Code = code.Trim().ToUpperInvariant()
-                    })).ToList();
-
-                var oldSubjects = profile.TeachingSubjects
-                    .Select(x => OwnSubjectKey(
-                        x.EducationStage, x.AcademicLevel, x.SubjectCode))
-                    .ToHashSet(StringComparer.Ordinal);
-
-                var newSubjects = requested
-                    .Select(x => OwnSubjectKey(x.Stage, x.Level, x.Code))
-                    .ToHashSet(StringComparer.Ordinal);
-
-                bool subjectsChanged = !oldSubjects.SetEquals(newSubjects);
-                profileChanged = subjectsChanged
-                    || Clean(profile.FullName) != Clean(model.FullName)
+                profileChanged = Clean(profile.FullName) != Clean(model.FullName)
                     || Clean(user.FullName) != Clean(model.FullName)
-                    || Clean(user.PhoneNumber) != Clean(model.PhoneNumber)
-                    || Clean(profile.Qualification) != Clean(model.Qualification)
-                    || Clean(profile.AreaOfExpertise) != Clean(model.AreaOfExpertise)
-                    || Clean(profile.TeachingExperience) != Clean(model.TeachingExperience);
+                    || Clean(user.PhoneNumber) != Clean(model.PhoneNumber);
 
                 if (!profileChanged && !emailChanged)
                 {
@@ -745,9 +707,6 @@ namespace SecureSmartTuitionSystem.Controllers
                 if (profileChanged)
                 {
                     profile.FullName = model.FullName.Trim();
-                    profile.Qualification = model.Qualification.Trim();
-                    profile.AreaOfExpertise = model.AreaOfExpertise?.Trim();
-                    profile.TeachingExperience = model.TeachingExperience?.Trim();
                     profile.UpdatedAt = DateTime.UtcNow;
                     user.FullName = profile.FullName;
 
@@ -756,35 +715,6 @@ namespace SecureSmartTuitionSystem.Controllers
                     {
                         user.PhoneNumber = phone;
                         user.PhoneNumberConfirmed = false;
-                    }
-                }
-
-                if (subjectsChanged)
-                {
-                    foreach (var existing in profile.TeachingSubjects.ToList())
-                    {
-                        if (!newSubjects.Contains(OwnSubjectKey(
-                            existing.EducationStage,
-                            existing.AcademicLevel,
-                            existing.SubjectCode)))
-                        {
-                            _context.TutorTeachingSubjects.Remove(existing);
-                        }
-                    }
-
-                    foreach (var item in requested)
-                    {
-                        if (!oldSubjects.Contains(OwnSubjectKey(
-                            item.Stage, item.Level, item.Code)))
-                        {
-                            _context.TutorTeachingSubjects.Add(new TutorTeachingSubject
-                            {
-                                TutorProfileId = profile.TutorProfileId,
-                                EducationStage = item.Stage,
-                                AcademicLevel = item.Level,
-                                SubjectCode = item.Code
-                            });
-                        }
                     }
                 }
 
@@ -1099,79 +1029,21 @@ namespace SecureSmartTuitionSystem.Controllers
         }
 
 
-        private async Task<TutorProfile?> GetOwnTutorProfileAsync(bool tracking = false)
+        private async Task<TutorProfile?> GetOwnTutorProfileAsync(bool tracking = false, bool includeTeachingSubjects = false)
         {
             string? userId = _userManager.GetUserId(User);
             if (string.IsNullOrWhiteSpace(userId)) return null;
 
             IQueryable<TutorProfile> query = _context.TutorProfiles
                 .Include(x => x.ApplicationUser)
-                .Include(x => x.TeachingSubjects)
                 .Where(x => x.ApplicationUserId == userId
                     && x.IsActive
                     && x.ApplicationUser.IsActive
                     && !x.ApplicationUser.MustChangePassword);
 
+            if (includeTeachingSubjects) query = query.Include(x => x.TeachingSubjects);
             if (!tracking) query = query.AsNoTracking();
             return await query.FirstOrDefaultAsync();
         }
-
-
-        private static string OwnSubjectKey(string? stage, string? level, string? code)
-        {
-            return string.Join("|", (stage ?? "").Trim().ToUpperInvariant(),
-                (level ?? "").Trim().ToUpperInvariant(),
-                (code ?? "").Trim().ToUpperInvariant());
-        }
-
-        private void ValidateOwnTeachingLevels(List<TutorTeachingLevelInput> levels)
-        {
-            void Error(string message) => ModelState.AddModelError("TeachingLevels", message);
-
-            if (levels.Count == 0 || levels.Count > 11)
-            {
-                Error("Select between one and eleven academic levels.");
-                return;
-            }
-
-            var selectedLevels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var level in levels)
-            {
-                if (level == null)
-                {
-                    Error("Invalid teaching level information.");
-                    continue;
-                }
-
-                string academicLevel = (level.AcademicLevel ?? "").Trim().ToUpperInvariant();
-                if (!TeachingSubjectCatalog.IsValidStageAndLevel(
-                    level.EducationStage, academicLevel))
-                {
-                    Error("The academic level does not match the education stage.");
-                    continue;
-                }
-
-                if (!selectedLevels.Add(academicLevel))
-                    Error("Each academic level can only be selected once.");
-
-                var codes = level.SubjectCodes;
-                if (codes == null || codes.Count == 0 || codes.Count > 20)
-                {
-                    Error("Select at least one valid subject for each academic level.");
-                    continue;
-                }
-
-                var selectedCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (string? code in codes)
-                {
-                    string normalizedCode = (code ?? "").Trim().ToUpperInvariant();
-                    if (!TeachingSubjectCatalog.IsValidSubject(academicLevel, normalizedCode))
-                        Error("A selected subject is not available for its academic level.");
-                    if (!selectedCodes.Add(normalizedCode))
-                        Error("A subject cannot be selected more than once for the same level.");
-                }
-            }
-        }
-
     }
 }

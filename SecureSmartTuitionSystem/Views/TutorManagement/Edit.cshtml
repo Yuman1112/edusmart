@@ -29,16 +29,16 @@
         </p>
     </div>
 
-    <a asp-controller="TutorManagement"
-       asp-action="Details"
-       asp-route-userId="@Model.UserId"
-       class="outline-button">
-
-        <i class="bi bi-arrow-left"
-           aria-hidden="true"></i>
-
-        Back
-    </a>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-controller="TutorManagement" asp-action="ChangeStatus"
+           asp-route-userId="@Model.UserId" class="outline-button">
+            <i class="bi bi-person-gear" aria-hidden="true"></i> Change Account Status
+        </a>
+        <a asp-controller="TutorManagement" asp-action="Details"
+           asp-route-userId="@Model.UserId" class="outline-button">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
+        </a>
+    </div>
 
 </div>
 
@@ -75,6 +75,8 @@
           asp-controller="TutorManagement"
           asp-action="Edit"
           method="post"
+          enctype="multipart/form-data"
+          data-has-errors="@((!ViewData.ModelState.IsValid).ToString().ToLowerInvariant())"
           data-email-status-url="@Url.Action("EmailChangeStatus", "TutorManagement", new { userId = Model.UserId })"
           data-current-email="@Model.CurrentEmail"
           novalidate>
@@ -83,6 +85,7 @@
 
         <input asp-for="UserId"
                type="hidden" />
+        <input asp-for="ProfileVersion" type="hidden" />
 
         <div asp-validation-summary="ModelOnly"
              class="text-danger mb-3"
@@ -241,7 +244,7 @@
 
                     <label asp-for="Qualification"
                            class="form-label">
-                        Qualification
+                        Highest Qualification
                     </label>
 
                     <input asp-for="Qualification"
@@ -252,6 +255,13 @@
                     <span asp-validation-for="Qualification"
                           class="text-danger"></span>
 
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="FieldOfStudy" class="form-label"></label>
+                    <input asp-for="FieldOfStudy" class="form-control" maxlength="200"
+                           placeholder="e.g. Education (Mathematics)" />
+                    <span asp-validation-for="FieldOfStudy" class="text-danger"></span>
                 </div>
 
                 <!-- Area of Expertise -->
@@ -306,7 +316,7 @@
                 <i class="bi bi-book-half"
                    aria-hidden="true"></i>
 
-                Teaching Subjects &amp; Levels
+                Approved Subjects &amp; Levels
 
             </h2>
 
@@ -460,6 +470,45 @@
         <!-- =================================================
              6. FORM ACTIONS
         ================================================= -->
+
+        <section class="class-form-section">
+            <h2><i class="bi bi-file-earmark-check" aria-hidden="true"></i> Supporting Documents</h2>
+            <p class="tutor-section-description">Existing files stay on record unless you select a replacement. Use PDF, PNG or JPG files up to 10 MB each.</p>
+            @if (Model.Documents.Count > 0)
+            {
+                <ul class="mb-3">
+                    @foreach (var document in Model.Documents)
+                    {
+                        <li>
+                            @(document.Kind == SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "Certificate" : "Resume") ·
+                            <a asp-controller="TeachingRequests" asp-action="Document" asp-route-id="@document.Id">@document.FileName</a>
+                        </li>
+                    }
+                </ul>
+            }
+            <div class="row g-4">
+                <div class="col-12 col-md-6">
+                    <label asp-for="Certificate" class="form-label"></label>
+                    <input asp-for="Certificate" type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" />
+                    <span asp-validation-for="Certificate" class="text-danger"></span>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label asp-for="Resume" class="form-label"></label>
+                    <input asp-for="Resume" type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" />
+                    <span asp-validation-for="Resume" class="text-danger"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="class-form-section">
+            <h2><i class="bi bi-patch-check" aria-hidden="true"></i> Qualification Verification</h2>
+            <p class="tutor-section-description">Confirm verification when adding a teaching approval, changing qualifications or replacing the certificate.</p>
+            <div class="form-check">
+                <input asp-for="QualificationVerified" class="form-check-input" />
+                <label asp-for="QualificationVerified" class="form-check-label"></label>
+            </div>
+            <span asp-validation-for="QualificationVerified" class="text-danger" role="alert"></span>
+        </section>
 
         <div class="class-form-actions">
 

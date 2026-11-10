@@ -13,17 +13,37 @@
         <h1>My Profile</h1>
         <p>View your personal information and teaching profile.</p>
     </div>
+
     <div class="class-detail-header-actions">
+
         <a id="own-profile-edit-link"
            asp-controller="Tutor"
            asp-action="EditProfile"
            class="primary-button">
-            <i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile
+            <i class="bi bi-pencil-square"
+               aria-hidden="true"></i>
+            Edit Profile
         </a>
-        <a asp-controller="Tutor" asp-action="Index" class="outline-button">
-            <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
+
+        <a asp-area=""
+           asp-controller="AccountSettings"
+           asp-action="TwoFactor"
+           class="outline-button">
+            <i class="bi bi-shield-lock"
+               aria-hidden="true"></i>
+            2FA Settings
         </a>
+
+        <a asp-controller="Tutor"
+           asp-action="Index"
+           class="outline-button">
+            <i class="bi bi-arrow-left"
+               aria-hidden="true"></i>
+            Back
+        </a>
+
     </div>
+
 </div>
 
 @if (TempData["OwnProfileSuccess"] is string success)
@@ -129,9 +149,10 @@
     }
 
     <section class="class-details-section">
-        <h3><i class="bi bi-mortarboard-fill" aria-hidden="true"></i> Professional Information</h3>
+        <h3><i class="bi bi-mortarboard-fill" aria-hidden="true"></i> My Teaching Information</h3>
         <div class="class-details-grid">
-            <div class="class-detail-item"><span>Qualification</span><strong>@Model.Qualification</strong></div>
+            <div class="class-detail-item"><span>Highest Qualification</span><strong>@Model.Qualification</strong></div>
+            <div class="class-detail-item"><span>Field of Study</span><strong>@(Model.FieldOfStudy ?? "Not provided")</strong></div>
             <div class="class-detail-item">
                 <span>Area of Expertise</span>
                 <strong>@(string.IsNullOrWhiteSpace(Model.AreaOfExpertise) ? "Not provided" : Model.AreaOfExpertise)</strong>
@@ -144,7 +165,11 @@
     </section>
 
     <section class="class-details-section">
-        <h3><i class="bi bi-book-fill" aria-hidden="true"></i> Teaching Subjects &amp; Levels</h3>
+        <h3><i class="bi bi-book-fill" aria-hidden="true"></i> Approved Subjects &amp; Levels</h3>
+        <p class="text-muted">Contact the administrator to update your qualifications, or submit a request to change your approved subjects.</p>
+        <a asp-controller="TeachingRequests" asp-action="Mine" class="outline-button mb-3">
+            <i class="bi bi-clipboard-plus" aria-hidden="true"></i> Request Teaching Change
+        </a>
         @if (Model.TeachingLevels.Any())
         {
             @foreach (var stageGroup in Model.TeachingLevels.GroupBy(x => x.EducationStage))

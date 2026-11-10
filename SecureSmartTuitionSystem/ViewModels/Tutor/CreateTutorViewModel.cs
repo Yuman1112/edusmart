@@ -26,7 +26,22 @@ public sealed class CreateTutorViewModel
 
     [Required(ErrorMessage = "Please enter the tutor's qualification.")]
     [StringLength(200)]
+    [Display(Name = "Highest Qualification")]
     public string Qualification { get; set; } = "";
+
+    [Required(ErrorMessage = "Please enter the tutor's field of study.")]
+    [StringLength(200)]
+    [Display(Name = "Field of Study")]
+    public string FieldOfStudy { get; set; } = "";
+
+    [Display(Name = "Qualification Certificate")]
+    public IFormFile? Certificate { get; set; }
+
+    [Display(Name = "Resume / CV")]
+    public IFormFile? Resume { get; set; }
+
+    [Display(Name = "I have verified the tutor's qualifications for the selected subjects and levels.")]
+    public bool QualificationVerified { get; set; }
 
     [EnumDataType(typeof(SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType), ErrorMessage = "Please select a valid employment type.")]
     [Display(Name = "Employment Type")]

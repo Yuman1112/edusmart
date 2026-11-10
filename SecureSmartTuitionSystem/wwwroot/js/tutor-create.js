@@ -14,12 +14,16 @@
         "Email",
         "PhoneNumber",
         "Qualification",
+        "FieldOfStudy",
+        "QualificationVerified",
         "TeachingExperience",
         "AreaOfExpertise"
     ];
 
     const fields = fieldNames
-        .map(name => form.elements.namedItem(name))
+        .map(name => name === "QualificationVerified"
+            ? form.querySelector('input[type="checkbox"][name="QualificationVerified"]')
+            : form.elements.namedItem(name))
         .filter(Boolean);
 
     const email = form.elements.namedItem("Email");
@@ -106,7 +110,9 @@
         const value = field.value.trim();
         let message = "";
 
-        if (field.dataset.valRequired && !value) {
+        if (field.name === "QualificationVerified" && !field.checked) {
+            message = "Confirm that the tutor's qualifications have been verified for the selected subjects and levels.";
+        } else if (field.dataset.valRequired && !value) {
             message = field.dataset.valRequired;
         } else if (
             field.maxLength > 0 &&

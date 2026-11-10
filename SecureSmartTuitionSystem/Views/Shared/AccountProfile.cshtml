@@ -8,10 +8,28 @@
 }
 <div class="page-header">
     <div><h1>@ViewData["Title"]</h1><p>@(editing ? "Update your profile information." : "View your EduSmart account information.")</p></div>
+
     @if (!editing)
     {
-        <a asp-action="EditProfile" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</a>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <a asp-action="EditProfile"
+               class="primary-button">
+                <i class="bi bi-pencil-square"
+                   aria-hidden="true"></i>
+                Edit Profile
+            </a>
+
+            <a asp-area=""
+               asp-controller="AccountSettings"
+               asp-action="TwoFactor"
+               class="outline-button">
+                <i class="bi bi-shield-lock"
+                   aria-hidden="true"></i>
+                2FA Settings
+            </a>
+        </div>
     }
+
 </div>
 @if (TempData["ProfileSaved"] is string message)
 {

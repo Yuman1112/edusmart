@@ -164,9 +164,8 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 // Account setup is completed through a verified email link.
                 user!.MustChangePassword = false;
 
-                // Mark the email as confirmed after successful token verification.
-                // ResetPasswordAsync validates the token before saving the user.
-                user.EmailConfirmed = true;
+                // A guardian-delivered setup link does not confirm a student email.
+                user.EmailConfirmed = !string.IsNullOrWhiteSpace(user.Email);
 
                 IdentityResult result =
                     await _userManager.ResetPasswordAsync(

@@ -130,6 +130,12 @@ namespace SecureSmartTuitionSystem.Data
         public DbSet<TutorTeachingSubject> TutorTeachingSubjects =>
             Set<TutorTeachingSubject>();
 
+        public DbSet<TutorTeachingChangeRequest> TutorTeachingChangeRequests =>
+            Set<TutorTeachingChangeRequest>();
+
+        public DbSet<TutorQualificationDocument> TutorQualificationDocuments =>
+            Set<TutorQualificationDocument>();
+
         public DbSet<ParentProfile> ParentProfiles =>
             Set<ParentProfile>();
 
@@ -469,6 +475,26 @@ namespace SecureSmartTuitionSystem.Data
             /*
              * Tutor Teaching Subjects & Levels
              */
+            builder.Entity<TutorTeachingChangeRequest>(entity =>
+            {
+                entity.HasOne(x => x.TutorProfile).WithMany()
+                    .HasForeignKey(x => x.TutorProfileId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(x => new { x.TutorProfileId, x.AcademicLevel, x.SubjectCode })
+                    .IsUnique().HasFilter("[Status] = 0");
+            });
+
+            builder.Entity<TutorQualificationDocument>(entity =>
+            {
+                entity.HasOne(x => x.TutorProfile).WithMany()
+                    .HasForeignKey(x => x.TutorProfileId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.TeachingChangeRequest).WithMany()
+                    .HasForeignKey(x => x.TeachingChangeRequestId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(x => new { x.TutorProfileId, x.Kind })
+                    .IsUnique().HasFilter("[TeachingChangeRequestId] IS NULL");
+                entity.HasIndex(x => x.TeachingChangeRequestId)
+                    .IsUnique().HasFilter("[TeachingChangeRequestId] IS NOT NULL");
+            });
+
             builder.Entity<TutorTeachingSubject>(entity =>
             {
                 entity.HasKey(teachingSubject =>

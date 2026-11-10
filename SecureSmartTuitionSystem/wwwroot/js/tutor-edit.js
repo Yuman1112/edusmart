@@ -121,6 +121,28 @@
         });
     }
 
+    function watchSaveButton(hasChanges) {
+        const button = document.getElementById("saveTutorChanges");
+        function update() {
+            if (button) button.disabled = form.dataset.hasErrors !== "true" && !hasChanges();
+        }
+        form.addEventListener("input", update);
+        form.addEventListener("change", update);
+        update();
+        return update;
+    }
+
+    if (form.dataset.personalOnly === "true") {
+        const snapshot = () => JSON.stringify([
+            form.elements.namedItem("FullName").value.trim(),
+            form.elements.namedItem("Email").value.trim().toUpperCase(),
+            form.elements.namedItem("PhoneNumber").value.trim()
+        ]);
+        const initial = snapshot();
+        watchSaveButton(() => snapshot() !== initial);
+        return;
+    }
+
     const levels = {
         Primary: [
             "YEAR 1", "YEAR 2", "YEAR 3",
@@ -498,15 +520,13 @@
     // EDIT TUTOR - CHANGE DETECTION
     // =====================================================
 
-    const saveChangesButton =
-        document.getElementById("saveTutorChanges");
-
     const trackedFields = [
         "EmploymentType",
         "Email",
         "FullName",
         "PhoneNumber",
         "Qualification",
+        "FieldOfStudy",
         "AreaOfExpertise",
         "TeachingExperience"
     ];
@@ -558,17 +578,15 @@
             getTeachingSelectionSnapshot()
             !== originalTeachingSelection;
 
-        return fieldsChanged || teachingChanged;
+        const documentsChanged = ["Certificate", "Resume"].some(
+            name => form.elements.namedItem(name)?.files?.length > 0
+        );
+        const verificationConfirmed = form.querySelector('input[type="checkbox"][name="QualificationVerified"]')?.checked;
+
+        return fieldsChanged || teachingChanged || documentsChanged || verificationConfirmed;
     }
 
-    function updateSaveChangesState() {
-        if (!saveChangesButton) return;
-
-        saveChangesButton.disabled = !hasTutorChanges();
-    }
-
-    form.addEventListener("input", updateSaveChangesState);
-    form.addEventListener("change", updateSaveChangesState);
+    const updateSaveChangesState = watchSaveButton(hasTutorChanges);
 
     const teachingHiddenContainer =
         document.getElementById("teaching-levels-hidden");
@@ -582,7 +600,5 @@
             childList: true
         });
     }
-
-    updateSaveChangesState();
 
 })();

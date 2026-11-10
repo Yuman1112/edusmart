@@ -1,0 +1,11 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingChangeRow
+@using SecureSmartTuitionSystem.Models.Tutor
+@{
+    var statusClass = Model.Status switch
+    {
+        TeachingChangeStatus.Approved => "text-bg-success",
+        TeachingChangeStatus.Rejected => "text-bg-danger",
+        _ => "text-bg-warning"
+    };
+}
+<span class="badge rounded-pill @statusClass">@Model.StatusLabel</span>

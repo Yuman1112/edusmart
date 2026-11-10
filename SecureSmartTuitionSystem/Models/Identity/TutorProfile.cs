@@ -18,6 +18,14 @@ namespace SecureSmartTuitionSystem.Models
         [StringLength(200)]
         public string Qualification { get; set; } = string.Empty;
 
+        [StringLength(200)]
+        public string? FieldOfStudy { get; set; }
+
+        public DateTime? QualificationVerifiedAtUtc { get; set; }
+
+        [StringLength(450)]
+        public string? QualificationVerifiedByUserId { get; set; }
+
         [StringLength(500)]
         public string? TeachingExperience { get; set; }
 

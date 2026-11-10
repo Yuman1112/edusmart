@@ -41,18 +41,35 @@ public static class SecurityEmailTemplates
             """;
     }
 
-    public static string LoginOtp(string code)
+    public static string LoginOtp(string code, string? studentUserName = null)
+        => VerificationCode(
+            "Your sign-in verification code",
+            "A request was made to sign in to the EduSmart account.",
+            "Enter this code on the sign-in page to complete the login.",
+            code, studentUserName);
+
+    public static string TwoFactorSettingsOtp(string code, string? studentUserName = null)
+        => VerificationCode(
+            "Confirm your 2FA settings change",
+            "A request was made to change Email 2FA for the EduSmart account.",
+            "Enter this code in 2FA Settings to confirm the change.",
+            code, studentUserName);
+
+    private static string VerificationCode(
+        string title, string request, string instruction, string code, string? studentUserName)
     {
         string safeCode = WebUtility.HtmlEncode(code);
+        string student = studentUserName == null
+            ? ""
+            : $"<p>Student User ID: <strong>{WebUtility.HtmlEncode(studentUserName)}</strong></p>";
 
-        return Layout("Your sign-in verification code", $$"""
+        return Layout(title, $$"""
             <p>Hello,</p>
 
-            <p>A request was made to sign in to your
-               EduSmart account.</p>
+            <p>{{WebUtility.HtmlEncode(request)}}</p>
+            {{student}}
 
-            <p>Please enter the verification code below
-               to complete your login.</p>
+            <p>{{WebUtility.HtmlEncode(instruction)}}</p>
 
             <div style="text-align:center;margin:30px 0;
                         padding:20px;background:#f0fbfc;
@@ -77,7 +94,7 @@ public static class SecurityEmailTemplates
             <p>For your security, do not share this
                verification code with anyone.</p>
 
-            <p>If you did not request this login,
+            <p>If you did not make or expect this request,
                please ignore this email.</p>
 
             <p style="font-size:12px;color:#667;">

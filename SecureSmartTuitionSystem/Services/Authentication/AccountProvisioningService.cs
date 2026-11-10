@@ -267,7 +267,7 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                         true,
 
                     TwoFactorEnabled =
-                        false,
+                        true,
 
                     CreatedAt =
                         DateTime.UtcNow
@@ -458,7 +458,7 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                         true,
 
                     TwoFactorEnabled =
-                        false,
+                        true,
 
                     CreatedAt =
                         DateTime.UtcNow

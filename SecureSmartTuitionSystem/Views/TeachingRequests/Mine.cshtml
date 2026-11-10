@@ -1,0 +1,150 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingChangeInput
+@using SecureSmartTuitionSystem.Models.Tutor
+@using SecureSmartTuitionSystem.Services
+
+@{
+    ViewData["Title"] = "Teaching Change Requests";
+    var levels = TeachingSubjectCatalog.PrimaryLevels.Concat(TeachingSubjectCatalog.SecondaryLevels);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>Teaching Change Requests</h1>
+        <p>Ask the administrator to add or remove a teaching approval.</p>
+    </div>
+    <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> My Profile
+    </a>
+</div>
+
+@if (TempData["TeachingSuccess"] is string success)
+{
+    <div class="alert alert-success" role="status">@success</div>
+}
+
+<div class="class-form-card tutor-create-card mb-4">
+    <section class="class-form-section">
+        <h2><i class="bi bi-book-half" aria-hidden="true"></i> Current Approved Subjects &amp; Levels</h2>
+        @if (Model.ApprovedSubjects.Count == 0)
+        {
+            <p class="text-muted mb-0">No teaching approvals are on record.</p>
+        }
+        else
+        {
+            <ul class="mb-0">
+                @foreach (var approval in Model.ApprovedSubjects)
+                {
+                    <li>@approval</li>
+                }
+            </ul>
+        }
+    </section>
+
+    <form asp-action="Mine" method="post" enctype="multipart/form-data">
+        <section class="class-form-section">
+            <h2><i class="bi bi-clipboard-plus" aria-hidden="true"></i> Submit Teaching Change Request</h2>
+            <p class="tutor-section-description">Your teaching approvals stay in effect while the request is under review.</p>
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+            <div class="row g-4">
+                <div class="col-12">
+                    <label asp-for="Type" class="form-label"></label>
+                    <select asp-for="Type" class="form-select">
+                        <option value="">Select a request type</option>
+                        <option value="@TeachingChangeType.AddSubject">Add New Teaching Subject</option>
+                        <option value="@TeachingChangeType.AddLevel">Add New Teaching Level</option>
+                        <option value="@TeachingChangeType.Remove">Remove Existing Subject / Level</option>
+                    </select>
+                    <span asp-validation-for="Type" class="text-danger"></span>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label asp-for="AcademicLevel" class="form-label"></label>
+                    <select asp-for="AcademicLevel" class="form-select">
+                        <option value="">Select an academic level</option>
+                        @foreach (var level in levels)
+                        {
+                            <option value="@level">@level</option>
+                        }
+                    </select>
+                    <span asp-validation-for="AcademicLevel" class="text-danger"></span>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label asp-for="SubjectCode" class="form-label"></label>
+                    <select asp-for="SubjectCode" class="form-select">
+                        <option value="">Select a subject</option>
+                        @foreach (var code in TeachingSubjectCatalog.SubjectDisplayOrder)
+                        {
+                            <option value="@code" data-levels="@string.Join(",", levels.Where(level => TeachingSubjectCatalog.IsValidSubject(level, code)))">
+                                @TeachingSubjectCatalog.GetSubjectDisplayName(code)
+                            </option>
+                        }
+                    </select>
+                    <span asp-validation-for="SubjectCode" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Reason" class="form-label"></label>
+                    <textarea asp-for="Reason" class="form-control" rows="3" maxlength="1000"></textarea>
+                    <span asp-validation-for="Reason" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Evidence" class="form-label"></label>
+                    <input asp-for="Evidence" type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg"
+                           aria-describedby="teaching-evidence-help" />
+                    <div id="teaching-evidence-help" class="form-text">Optional. PDF, PNG or JPG up to 10 MB.</div>
+                    <span asp-validation-for="Evidence" class="text-danger"></span>
+                </div>
+            </div>
+        </section>
+        <div class="class-form-actions">
+            <button type="submit" class="primary-button">
+                <i class="bi bi-send" aria-hidden="true"></i> Submit Request
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="class-form-card tutor-create-card">
+    <section class="class-form-section">
+        <h2><i class="bi bi-clock-history" aria-hidden="true"></i> My Requests</h2>
+        @if (Model.Requests.Count == 0)
+        {
+            <p class="text-muted mb-0">You have not submitted any requests yet.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Request</th><th>Subject &amp; Level</th><th>Status</th><th>Admin Notes</th></tr></thead>
+                    <tbody>
+                        @foreach (var request in Model.Requests)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>#@request.Id</strong> · @request.TypeLabel
+                                    <div class="small text-muted">@request.SubmittedAtUtc.AddHours(8).ToString("dd MMM yyyy")</div>
+                                    @if (request.EvidenceId.HasValue)
+                                    {
+                                        <a asp-action="Document" asp-route-id="@request.EvidenceId">@request.EvidenceName</a>
+                                    }
+                                </td>
+                                <td>@request.SubjectLabel · @request.AcademicLevel</td>
+                                <td><partial name="_TeachingRequestStatus" model="request" /></td>
+                                <td class="text-break">@(request.ReviewNotes ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/teaching-request.js" asp-append-version="true"></script>
+}

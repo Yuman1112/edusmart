@@ -26,18 +26,4 @@ public sealed class EditOwnTutorProfileViewModel
     [Display(Name = "Phone Number")]
     public string PhoneNumber { get; set; } = "";
 
-    [Required(ErrorMessage = "Please enter your qualification.")]
-    [StringLength(200)]
-    public string Qualification { get; set; } = "";
-
-    [StringLength(200)]
-    [Display(Name = "Area of Expertise")]
-    public string? AreaOfExpertise { get; set; }
-
-    [StringLength(500)]
-    [Display(Name = "Teaching Experience")]
-    public string? TeachingExperience { get; set; }
-
-    [Display(Name = "Teaching Subjects & Levels")]
-    public List<TutorTeachingLevelInput> TeachingLevels { get; set; } = new();
 }

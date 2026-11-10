@@ -310,6 +310,7 @@ builder.Services.AddScoped<
 
 builder.Services.AddScoped<
     EmailLoginChallenge>();
+builder.Services.AddScoped<EmailOtpRecipientResolver>();
 
 builder.Services.AddScoped<
     AccountSecurityMail>();

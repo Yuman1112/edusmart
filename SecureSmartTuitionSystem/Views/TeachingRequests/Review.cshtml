@@ -1,0 +1,99 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingDecisionInput
+@using SecureSmartTuitionSystem.Models.Tutor
+
+@{
+    ViewData["Title"] = "Review Teaching Change Request";
+    var request = Model.Request!;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+}
+
+<div class="page-header">
+    <div>
+        <h1>Review Teaching Change Request</h1>
+        <p>Request #@request.Id · @request.TutorName (@request.TutorId)</p>
+    </div>
+    <a asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Requests</a>
+</div>
+
+@if (TempData["TeachingSuccess"] is string success)
+{
+    <div class="alert alert-success" role="status">@success</div>
+}
+@if (TempData["TeachingWarning"] is string warning)
+{
+    <div class="alert alert-warning" role="alert">@warning</div>
+}
+
+<div class="class-form-card tutor-create-card">
+    <section class="class-form-section">
+        <h2><i class="bi bi-clipboard-check" aria-hidden="true"></i> Request Details</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Status</dt>
+            <dd class="col-sm-8"><partial name="_TeachingRequestStatus" model="request" /></dd>
+            <dt class="col-sm-4">Request Type</dt><dd class="col-sm-8">@request.TypeLabel</dd>
+            <dt class="col-sm-4">Subject &amp; Level</dt><dd class="col-sm-8">@request.SubjectLabel · @request.AcademicLevel</dd>
+            <dt class="col-sm-4">Reason</dt><dd class="col-sm-8 text-break">@request.Reason</dd>
+            <dt class="col-sm-4">Supporting Evidence</dt>
+            <dd class="col-sm-8">
+                @if (request.EvidenceId.HasValue)
+                {
+                    <a asp-action="Document" asp-route-id="@request.EvidenceId">@request.EvidenceName</a>
+                }
+                else
+                {
+                    <span class="text-muted">No file attached</span>
+                }
+            </dd>
+        </dl>
+    </section>
+
+    @if (request.Status == TeachingChangeStatus.Pending)
+    {
+        <form asp-action="Review" method="post">
+            <input asp-for="Id" type="hidden" />
+            <section class="class-form-section">
+                <h2><i class="bi bi-pencil-square" aria-hidden="true"></i> Admin Decision</h2>
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+                <div class="mb-3">
+                    <label asp-for="ReviewNotes" class="form-label"></label>
+                    <textarea asp-for="ReviewNotes" class="form-control" rows="3" maxlength="1000"></textarea>
+                    <span asp-validation-for="ReviewNotes" class="text-danger"></span>
+                    <div class="form-text">These notes will be visible to the tutor.</div>
+                </div>
+                @if (request.Type != TeachingChangeType.Remove)
+                {
+                    <div class="form-check">
+                        <input asp-for="QualificationVerified" class="form-check-input" />
+                        <label asp-for="QualificationVerified" class="form-check-label"></label>
+                    </div>
+                    <span asp-validation-for="QualificationVerified" class="text-danger" role="alert"></span>
+                }
+            </section>
+            <div class="class-form-actions">
+                <button type="submit" name="approve" value="false" class="outline-button">Reject</button>
+                <button type="submit" name="approve" value="true" class="primary-button">
+                    <i class="bi bi-check-circle" aria-hidden="true"></i> Approve
+                </button>
+            </div>
+        </form>
+    }
+    else
+    {
+        <section class="class-form-section">
+            <h2>Admin Review Notes</h2>
+            <p class="text-break mb-0">@request.ReviewNotes</p>
+            @if (request.ReviewedAtUtc.HasValue)
+            {
+                <p class="text-muted mb-0">Reviewed @request.ReviewedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy, h:mm tt")</p>
+            }
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -155,7 +155,7 @@
                 <strong>@(Model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime ? "Full-time" : "Part-time")</strong>
             </div>
             <div class="class-detail-item">
-                <span>Qualification</span>
+                <span>Highest Qualification</span>
                 <strong>
                     @(string.IsNullOrWhiteSpace(Model.Qualification)
                                         ? "Not provided"
@@ -163,6 +163,16 @@
                 </strong>
             </div>
 
+            <div class="class-detail-item">
+                <span>Field of Study</span>
+                <strong>@(Model.FieldOfStudy ?? "Not provided")</strong>
+            </div>
+            <div class="class-detail-item">
+                <span>Qualification Verification</span>
+                <strong>@(Model.QualificationVerifiedAtUtc.HasValue
+                    ? Model.QualificationVerifiedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy, h:mm tt")
+                    : "No verification recorded")</strong>
+            </div>
             <div class="class-detail-item">
                 <span>Area of Expertise</span>
                 <strong>

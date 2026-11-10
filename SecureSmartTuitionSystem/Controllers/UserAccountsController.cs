@@ -272,7 +272,7 @@ public sealed class UserAccountsController(
                 MustChangePassword = true,
                 EmailConfirmed = false,
                 LockoutEnabled = true,
-                TwoFactorEnabled = false
+                TwoFactorEnabled = true
             };
 
             var result = await users.CreateAsync(admin);

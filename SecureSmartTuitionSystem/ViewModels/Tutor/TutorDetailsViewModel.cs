@@ -11,6 +11,8 @@ public sealed class TutorDetailsViewModel
     public string Email { get; set; } = "";
     public string PhoneNumber { get; set; } = "";
     public string Qualification { get; set; } = "";
+    public string? FieldOfStudy { get; set; }
+    public DateTime? QualificationVerifiedAtUtc { get; set; }
     public string? TeachingExperience { get; set; }
     public string AreaOfExpertise { get; set; } = "";
 

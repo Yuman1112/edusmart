@@ -1152,3 +1152,121 @@ a {
 body.messages-page-active .staff-main { display: flex; flex-direction: column; }
 body.messages-page-active .staff-topbar { flex-shrink: 0; }
 body.messages-page-active .staff-content { height: auto !important; min-height: 0; flex: 1 1 0; }
+
+
+/* EduSmart - Modern Account Dropdown */
+
+.topbar-account-dropdown {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.topbar-account-trigger {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px;
+    width: auto !important;
+    min-height: 60px;
+    padding: 8px 12px !important;
+    margin: 0;
+    border: 0 !important;
+    border-radius: 14px;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #073763;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+    .topbar-account-trigger:hover,
+    .topbar-account-trigger[aria-expanded="true"] {
+        background: #edfafa !important;
+    }
+
+    .topbar-account-trigger:focus-visible {
+        outline: 2px solid #0097a7;
+        outline-offset: 2px;
+    }
+
+    .topbar-account-trigger .user-avatar {
+        display: flex;
+        flex: 0 0 46px;
+        align-items: center;
+        justify-content: center;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: #008e9d;
+        color: white;
+        font-weight: 700;
+    }
+
+    .topbar-account-trigger .user-information {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start;
+        gap: 3px;
+        min-width: 0;
+    }
+
+        .topbar-account-trigger .user-information strong {
+            font-size: 14px;
+            line-height: 1.2;
+            color: #062b57;
+        }
+
+        .topbar-account-trigger .user-information span {
+            font-size: 12px;
+            line-height: 1.2;
+            color: #7386a2;
+        }
+
+    .topbar-account-trigger > .bi-chevron-down {
+        display: inline-block;
+        margin-left: 6px;
+        font-size: 12px;
+        color: #64748b;
+    }
+
+.topbar-account-menu {
+    min-width: 235px;
+    padding: 8px;
+    margin-top: 8px !important;
+    border: 1px solid #e1edf0;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 12px 35px rgba(6, 43, 87, 0.12);
+    z-index: 1100;
+}
+
+.topbar-account-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 12px;
+    border-radius: 9px;
+    color: #123b57;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.topbar-account-menu .dropdown-item:hover,
+.topbar-account-menu .dropdown-item:focus {
+    background: #e7f7f8;
+    color: #007e90;
+}
+
+.topbar-account-menu .dropdown-item.text-danger {
+    color: #dc3545 !important;
+}
+
+.topbar-account-menu .dropdown-item.text-danger:hover {
+    background: #fff0f1;
+}
+
+.topbar-account-menu form {
+    margin: 0;
+}
