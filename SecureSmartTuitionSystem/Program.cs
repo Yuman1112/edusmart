@@ -306,6 +306,9 @@ builder.Services.AddScoped<
     AccountProvisioningService>();
 
 builder.Services.AddScoped<
+    AccountProfileService>();
+
+builder.Services.AddScoped<
     EmailLoginChallenge>();
 
 builder.Services.AddScoped<

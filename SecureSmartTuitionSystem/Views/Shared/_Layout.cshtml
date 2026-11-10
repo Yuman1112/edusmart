@@ -202,11 +202,7 @@
 
                     @if (isAdmin)
                     {
-                        <a class="sidebar-link @(currentController == "Admin" && (currentAction == "MyProfile" || currentAction == "EditProfile") ? "active" : "")"
-                           asp-area="" asp-controller="Admin" asp-action="MyProfile">
-                            <i class="bi bi-person-circle" aria-hidden="true"></i>
-                            <span>My Profile</span>
-                        </a>
+
                         <a class="sidebar-link @(currentController == "UserAccounts" ? "active" : "")"
                            asp-controller="UserAccounts" asp-action="Index">
                             <i class="bi bi-people" aria-hidden="true"></i>
@@ -375,12 +371,13 @@
                             </div>
                         </div>
 
-                        <span class="sidebar-link disabled-link"
-                              aria-disabled="true"
-                              title="This module will be developed later">
+                        <a asp-area=""
+                           asp-controller="VideoLessons"
+                           asp-action="Index"
+                           class="sidebar-link">
                             <i class="bi bi-play-circle" aria-hidden="true"></i>
                             <span>Video Playback Vault</span>
-                        </span>
+                        </a>
                     }
                     else
                     {
@@ -545,6 +542,19 @@
                     }
 
                     <!-- Shared: Communication -->
+                    @if (isAdmin || isTutor)
+                    {
+                        <!-- Shared: Video Playback Vault -->
+                        <a asp-area=""
+                           asp-controller="VideoLessons"
+                           asp-action="Index"
+                           class="sidebar-link @(currentController == "VideoLessons" ? "active" : "")"
+                           aria-current="@(currentController == "VideoLessons" ? "page" : null)">
+
+                            <i class="bi bi-play-circle" aria-hidden="true"></i>
+                            <span>Video Playback Vault</span>
+                        </a>
+                    }
                     <div class="sidebar-module">
                         <button type="button"
                                 class="sidebar-link sidebar-module-button @(communicationActive ? "module-current" : "")"
