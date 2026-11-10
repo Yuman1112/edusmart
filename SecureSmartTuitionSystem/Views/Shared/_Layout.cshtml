@@ -5,11 +5,27 @@
     string currentPath =
         Context.Request.Path.Value?.ToLower() ?? "";
 
+
     bool isAuthPage =
-        currentPath.StartsWith(
-            "/identity/account/login") ||
-        currentPath.StartsWith(
-            "/identity/account/register");
+        currentPath.Equals(
+            "/identity/account/login",
+            StringComparison.OrdinalIgnoreCase) ||
+        currentPath.Equals(
+            "/identity/account/loginwith2fa",
+            StringComparison.OrdinalIgnoreCase) ||
+        currentPath.Equals(
+            "/identity/account/register",
+            StringComparison.OrdinalIgnoreCase) ||
+        currentPath.Equals(
+            "/identity/account/forgotpassword",
+            StringComparison.OrdinalIgnoreCase) ||
+        currentPath.Equals(
+            "/identity/account/resetpassword",
+            StringComparison.OrdinalIgnoreCase) ||
+        currentPath.Equals(
+            "/identity/account/setuppassword",
+            StringComparison.OrdinalIgnoreCase);
+
 
     bool isAdmin =
         User.Identity?.IsAuthenticated == true &&
@@ -186,6 +202,16 @@
 
                     @if (isAdmin)
                     {
+                        <a class="sidebar-link @(currentController == "Admin" && (currentAction == "MyProfile" || currentAction == "EditProfile") ? "active" : "")"
+                           asp-area="" asp-controller="Admin" asp-action="MyProfile">
+                            <i class="bi bi-person-circle" aria-hidden="true"></i>
+                            <span>My Profile</span>
+                        </a>
+                        <a class="sidebar-link @(currentController == "UserAccounts" ? "active" : "")"
+                           asp-controller="UserAccounts" asp-action="Index">
+                            <i class="bi bi-people" aria-hidden="true"></i>
+                            <span>User Accounts</span>
+                        </a>
                         <!-- Admin: Tutor Management -->
                         <a class="sidebar-link @((currentController == "TutorManagement" || currentController == "AdminTutorAvailability" || currentController == "TutorWorkload") ? "active" : "")"
                            asp-controller="TutorManagement"
@@ -437,15 +463,12 @@
                             </div>
                         </div>
 
-                        <span class="sidebar-link disabled-link"
-                              aria-disabled="true"
-                              title="This module will be developed later">
-
-                            <i class="bi bi-people"
-                               aria-hidden="true"></i>
-
+                        <a class="sidebar-link @(currentController == "Tutor" && currentAction == "Students" ? "active" : "")"
+                           asp-controller="Tutor" asp-action="Students"
+                           aria-current="@(currentController == "Tutor" && currentAction == "Students" ? "page" : null)">
+                            <i class="bi bi-people" aria-hidden="true"></i>
                             <span>Students</span>
-                        </span>
+                        </a>
 
                         <div class="sidebar-module">
                             <button type="button" class="sidebar-link sidebar-module-button @(learningModuleActive ? "module-current" : "")"
@@ -763,9 +786,15 @@
 
                         @if (User.Identity?.IsAuthenticated == true)
                         {
-                            <span class="public-user-email">
-                                @userName
-                            </span>
+                            @if (isLearner)
+                            {
+                                <a asp-area="" asp-controller="@(User.IsInRole("Parent") ? "Parent" : "Student")" asp-action="MyProfile" class="public-user-email"
+                                   aria-label="My Profile (@userName)"><i class="bi bi-person-circle" aria-hidden="true"></i> @userName</a>
+                            }
+                            else
+                            {
+                                <span class="public-user-email">@userName</span>
+                            }
 
                             <form asp-area="Identity"
                                   asp-page="/Account/Logout"

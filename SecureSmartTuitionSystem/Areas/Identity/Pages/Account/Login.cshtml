@@ -54,6 +54,10 @@
             </div>
         }
 
+        @if (TempData["PasswordResetSuccess"] is string resetSuccess)
+        {
+            <div class="alert alert-success" role="status">@resetSuccess</div>
+        }
         <form method="post"
               class="login-form">
 
@@ -119,6 +123,14 @@
                 <i class="bi bi-box-arrow-in-right"></i>
                 Login
             </button>
+
+            <div class="login-forgot-password">
+                <a asp-page="./ForgotPassword"
+                   class="login-forgot-link">
+                    Forgot password?
+                </a>
+            </div>
+
         </form>
 
         <div class="login-register-link">

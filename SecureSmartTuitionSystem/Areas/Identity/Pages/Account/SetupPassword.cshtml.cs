@@ -161,8 +161,12 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     return Page();
                 }
 
-                // Save this flag together with the password update.
+                // Account setup is completed through a verified email link.
                 user!.MustChangePassword = false;
+
+                // Mark the email as confirmed after successful token verification.
+                // ResetPasswordAsync validates the token before saving the user.
+                user.EmailConfirmed = true;
 
                 IdentityResult result =
                     await _userManager.ResetPasswordAsync(

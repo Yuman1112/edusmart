@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
 using SecureSmartTuitionSystem.Models.Identity;
+using SecureSmartTuitionSystem.Services.Authentication;
 using SecureSmartTuitionSystem.Models.Security;
 using SecureSmartTuitionSystem.Services.Security;
 
@@ -16,16 +18,18 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<LoginModel> _logger;
         private readonly SecurityEventService _events;
+        private readonly EmailLoginChallenge _challenge;
 
         public LoginModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
-            ILogger<LoginModel> logger, SecurityEventService events)
+            ILogger<LoginModel> logger, SecurityEventService events, EmailLoginChallenge challenge)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _logger = logger;
             _events = events;
+            _challenge = challenge;
         }
 
         [BindProperty]
@@ -86,8 +90,15 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             if (loginIdentifier.Contains('@'))
             {
-                user = await _userManager.FindByEmailAsync(
-                    loginIdentifier);
+                string? email = _userManager.NormalizeEmail(loginIdentifier);
+                var matches = await _userManager.Users.Where(u => u.NormalizedEmail == email)
+                    .Take(2).ToListAsync();
+                if (matches.Count > 1)
+                {
+                    ModelState.AddModelError(string.Empty, "This email is shared by multiple accounts. Sign in with your User ID.");
+                    return Page();
+                }
+                user = matches.SingleOrDefault();
             }
             else
             {
@@ -230,57 +241,17 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 ModelState.AddModelError(string.Empty, "Please complete the account setup link sent to your email before signing in.");
                 return Page();
             }
-            if (user.TwoFactorEnabled)
+            var destination = Url.IsLocalUrl(ReturnUrl) ? ReturnUrl! : string.Empty;
+            var error = await _challenge.StartAsync(HttpContext, user, destination);
+            if (error != null)
             {
-                var twoFactorResult = await _signInManager.PasswordSignInAsync(
-                    user, Input.Password, isPersistent: false, lockoutOnFailure: false);
-                string destination = !string.IsNullOrWhiteSpace(ReturnUrl) && Url.IsLocalUrl(ReturnUrl)
-                    ? ReturnUrl : Url.Content("~/Identity/Account/Login");
-                if (twoFactorResult.RequiresTwoFactor)
-                {
-                    await _events.RecordAsync(HttpContext, "TwoFactorChallenge", SecuritySeverity.Information,
-                        "Password verified; second factor required.", user.Id);
-                    return RedirectToPage("/Account/LoginWith2fa", new { area = "Identity", returnUrl = destination, rememberMe = false });
-                }
-                if (!twoFactorResult.Succeeded)
-                {
-                    ModelState.AddModelError(string.Empty, "Sign-in could not be completed.");
-                    return Page();
-                }
-                HttpContext.Session.Clear();
-                await _events.RecordAsync(HttpContext, "LoginSucceeded", SecuritySeverity.Information,
-                    "Sign-in completed using an existing remembered second factor.", user.Id);
-                return LocalRedirect(destination);
+                ModelState.AddModelError(string.Empty, error);
+                return Page();
             }
 
-            // =====================================================
-            // SIGN IN
-            // =====================================================
-            // All checks have passed. Create the authentication
-            // cookie and sign the user in.
-            HttpContext.Session.Clear();
-            await _signInManager.SignInAsync(
-                user,
-                isPersistent: false);
-
-            await _events.RecordAsync(HttpContext, "LoginSucceeded", SecuritySeverity.Information, "User signed in.", user.Id);
-            _logger.LogInformation(
-                "Login succeeded for account {UserId}.",
-                user.Id);
-
-            // =====================================================
-            // RETURN URL
-            // =====================================================
-            // If the user was redirected to Login from a protected
-            // local page, return to that page after successful login.
-            if (!string.IsNullOrWhiteSpace(ReturnUrl) &&
-                Url.IsLocalUrl(ReturnUrl))
-            {
-                return LocalRedirect(ReturnUrl);
-            }
-
-            // Otherwise redirect according to the user's role.
-            return await RedirectToDashboardAsync();
+            await _events.RecordAsync(HttpContext, "TwoFactorChallenge", SecuritySeverity.Information,
+                "Password verified; email verification required.", user.Id);
+            return RedirectToPage("./LoginWith2fa");
         }
 
         // =========================================================
@@ -348,3 +319,4 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
         }
     }
 }
+

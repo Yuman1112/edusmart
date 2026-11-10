@@ -1,0 +1,264 @@
+﻿@model SecureSmartTuitionSystem.Controllers.UserAccountsController.AccountList
+
+@{
+    ViewData["Title"] = "User Accounts";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/class-sessions.css"
+          asp-append-version="true" />
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1>User Accounts</h1>
+        <p>Review and manage system user accounts.</p>
+    </div>
+
+    <a asp-controller="UserAccounts"
+       asp-action="Create"
+       class="primary-button">
+        + Create Admin
+    </a>
+</div>
+
+<!-- Success Message -->
+@if (TempData["AccountSuccess"] is string success)
+{
+    <div class="alert alert-success"
+         role="status"
+         data-success-timeout="5000">
+        @success
+    </div>
+}
+
+<!-- Error Message -->
+@if (TempData["AccountError"] is string error)
+{
+    <div class="alert alert-warning"
+         role="alert">
+        @error
+    </div>
+}
+
+<!-- Search and Filter -->
+<div class="class-form-card mb-4">
+    <form method="get"
+          asp-controller="UserAccounts"
+          asp-action="Index"
+          class="row g-3 align-items-end">
+
+        <div class="col-md-6">
+            <label for="account-search"
+                   class="form-label">
+                Search accounts
+            </label>
+
+            <input id="account-search"
+                   name="search"
+                   value="@Model.Search"
+                   class="form-control"
+                   placeholder="User ID, name or email" />
+        </div>
+
+        <div class="col-md-3">
+            <label for="account-role"
+                   class="form-label">
+                Role
+            </label>
+
+            <select id="account-role"
+                    name="role"
+                    class="form-select">
+
+                <option value="">All Roles</option>
+
+                @foreach (var role in new[]
+                                {
+                                "Admin",
+                                "Tutor",
+                                "Student",
+                                "Parent"
+                                })
+                {
+                    <option value="@role"
+                            selected="@(Model.Role == role)">
+                        @role
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <button type="submit"
+                    class="primary-button">
+                Search
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Accounts Table -->
+<div class="class-form-card">
+
+    <h2 class="h5">Accounts (@Model.Total)</h2>
+
+    @if (Model.Rows.Count == 0)
+    {
+        <p class="text-muted">
+            No accounts match these filters.
+        </p>
+    }
+    else
+    {
+        <div class="table-responsive">
+
+            <table class="table align-middle"
+                   data-pagination="off">
+
+                <thead>
+                    <tr>
+                        <th scope="col">User ID</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var account in Model.Rows)
+                    {
+                        <tr>
+                            <td>@account.UserId</td>
+
+                            <td>@account.Name</td>
+
+                            <td>@account.Email</td>
+
+                            <td>@account.Role</td>
+
+                            <!-- Account Status -->
+                            <td>
+                                @if (!account.Active)
+                                {
+                                    <span class="badge bg-secondary">
+                                        Inactive
+                                    </span>
+                                }
+                                else if (account.SetupPending)
+                                {
+                                    <span class="badge bg-warning text-dark">
+                                        Setup pending
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">
+                                        Active
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- Account Actions -->
+                            <td>
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+
+                                    @if (account.Role == "Tutor")
+                                    {
+                                        <!-- Tutor accounts are managed separately -->
+                                        <span class="text-muted small">
+                                            Manage in Tutor Management
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <!-- Deactivate / Reactivate -->
+                                        @if (account.Id != Model.CurrentAccountId)
+                                        {
+                                            <a asp-controller="UserAccounts"
+                                               asp-action="Status"
+                                               asp-route-id="@account.Id"
+                                               class="outline-button">
+
+                                                @(account.Active
+                                                                                ? "Deactivate"
+                                                                                : "Reactivate")
+                            </a>
+                                                        }
+
+                                        <!-- Resend Admin Setup Email -->
+                                        @if (account.Role == "Admin"
+                                                                    && account.Active
+                                                                    && account.SetupPending)
+                                        {
+                                            <form asp-controller="UserAccounts"
+                                                  asp-action="ResendAdminSetup"
+                                                  method="post"
+                                                  class="d-inline">
+
+                                                @Html.AntiForgeryToken()
+
+                                                <input type="hidden"
+                                                       name="userId"
+                                                       value="@account.Id" />
+
+                                                <button type="submit"
+                                                        class="outline-button"
+                                                        onclick="return confirm('Resend the account setup email to this administrator?');">
+                                                    Resend Setup Email
+                                                </button>
+                                            </form>
+                                        }
+                                    }
+
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+        </div>
+    }
+
+    <!-- Pagination -->
+    @if (Model.PageCount > 1)
+    {
+        <nav aria-label="Account pages"
+             class="d-flex flex-wrap align-items-center gap-2">
+
+            @if (Model.Page > 1)
+            {
+                <a asp-controller="UserAccounts"
+                   asp-action="Index"
+                   asp-route-search="@Model.Search"
+                   asp-route-role="@Model.Role"
+                   asp-route-page="@(Model.Page - 1)"
+                   class="outline-button">
+                    Previous
+                </a>
+            }
+
+            <span>
+                Page @Model.Page of @Model.PageCount
+            </span>
+
+            @if (Model.Page < Model.PageCount)
+            {
+                <a asp-controller="UserAccounts"
+                   asp-action="Index"
+                   asp-route-search="@Model.Search"
+                   asp-route-role="@Model.Role"
+                   asp-route-page="@(Model.Page + 1)"
+                   class="outline-button">
+                    Next
+                </a>
+            }
+
+        </nav>
+    }
+</div>

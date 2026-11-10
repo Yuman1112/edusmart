@@ -63,7 +63,7 @@
         <div class="metric-content">
             <span>Students</span>
             <strong>@Model.ActiveStudentCount</strong>
-            <small>Across your classes</small>
+            <small><a asp-action="Students">View student roster</a></small>
         </div>
     </article>
 </section>
@@ -85,43 +85,43 @@
     <div class="dashboard-card-body">
         @if (Model.Classes.Count == 0)
         {
-        <div class="empty-state">
-            <i class="bi bi-calendar-x"></i>
-            No classes are currently assigned to you.
-        </div>
+            <div class="empty-state">
+                <i class="bi bi-calendar-x"></i>
+                No classes are currently assigned to you.
+            </div>
         }
         else
         {
-        <ul class="dashboard-list">
-            @foreach (var item in Model.Classes)
+            <ul class="dashboard-list">
+                @foreach (var item in Model.Classes)
                 {
-            <li class="dashboard-list-item">
-                <span class="list-icon">
-                    <i class="bi bi-book-half"></i>
-                </span>
+                    <li class="dashboard-list-item">
+                        <span class="list-icon">
+                            <i class="bi bi-book-half"></i>
+                        </span>
 
-                <div class="list-content">
-                    <strong>
-                        @item.SubjectName -
-                        @item.AcademicLevel
-                    </strong>
-                     <small>
-                         @item.Day | @item.Time |
+                        <div class="list-content">
+                            <strong>
+                                @item.SubjectName -
+                                @item.AcademicLevel
+                            </strong>
+                            <small>
+                                @item.Day | @item.Time |
 
-                         <a href="@item.Venue"
-                            target="_blank"
-                            rel="noopener noreferrer">
-                                Join Google Meet
-                         </a>
-                     </small>
-                </div>
+                                <a href="@item.Venue"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    Join Google Meet
+                                </a>
+                            </small>
+                        </div>
 
-                <span class="status-pill status-success">
-                    @item.StudentCount students
-                </span>
-            </li>
+                        <span class="status-pill status-success">
+                            @item.StudentCount students
+                        </span>
+                    </li>
                 }
-        </ul>
+            </ul>
         }
     </div>
 </section>

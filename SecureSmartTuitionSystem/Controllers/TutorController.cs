@@ -50,6 +50,50 @@ namespace SecureSmartTuitionSystem.Controllers
          * =====================================================
          */
 
+        private IQueryable<StudentEnrollment> CurrentRoster(string tutorId)
+        {
+            var today = ClassScheduleService.Today;
+            return _context.StudentEnrollments.AsNoTracking().Where(e =>
+                e.ClassSession.TutorUserId == tutorId &&
+                e.ClassSession.Status == ClassSessionStatus.Active &&
+                (e.ClassSession.StartDate == null || e.ClassSession.StartDate <= today) &&
+                (e.ClassSession.EndDate == null || e.ClassSession.EndDate >= today) &&
+                e.StudentProfile.IsActive && e.StartDate <= today && e.StartDate.Year == today.Year &&
+                (e.Status == StudentEnrollmentStatus.Active || e.Status == StudentEnrollmentStatus.PendingDrop) &&
+                (e.DropEffectiveDate == null || e.DropEffectiveDate > today) &&
+                (e.EndedAt == null || e.EndedAt > today));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Students(int? classId)
+        {
+            var tutorId = _userManager.GetUserId(User);
+            if (tutorId == null) return Challenge();
+
+            var classes = await _context.ClassSessions.AsNoTracking()
+                .Where(c => c.TutorUserId == tutorId && c.Status == ClassSessionStatus.Active)
+                .OrderBy(c => c.ClassCode)
+                .Select(c => new TutorRosterClass(c.ClassSessionId, c.ClassCode, c.ClassName ?? ""))
+                .ToListAsync();
+
+            if (classId.HasValue && !classes.Any(c => c.Id == classId.Value))
+                return NotFound();
+
+            var roster = await CurrentRoster(tutorId)
+                .Where(e => !classId.HasValue || e.ClassSessionId == classId.Value)
+                .Select(e => new
+                {
+                    Number = e.StudentProfile.StudentNumber,
+                    Name = e.StudentProfile.FullName,
+                    e.ClassSession.ClassCode,
+                    ClassName = e.ClassSession.ClassName ?? ""
+                })
+                .Distinct().OrderBy(e => e.Name).ThenBy(e => e.Number).ThenBy(e => e.ClassCode)
+                .Select(e => new TutorRosterStudent(e.Number, e.Name, e.ClassCode, e.ClassName))
+                .ToListAsync();
+            return View(new TutorStudentRoster(classId, classes, roster));
+        }
+
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -114,12 +158,7 @@ namespace SecureSmartTuitionSystem.Controllers
                         item => item.StudentCount);
 
             int activeStudentCount =
-                await _context.StudentEnrollments
-                    .AsNoTracking()
-                    .Where(enrollment =>
-                        classIds.Contains(
-                            enrollment.ClassSessionId) &&
-                        (enrollment.Status == StudentEnrollmentStatus.Active || (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > ClassScheduleService.Today))))
+                await CurrentRoster(tutor.Id)
                     .Select(enrollment =>
                         enrollment.StudentProfileId)
                     .Distinct()
