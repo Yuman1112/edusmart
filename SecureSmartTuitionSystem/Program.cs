@@ -199,6 +199,47 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddRateLimiter(options =>
 {
+    options.AddPolicy("EmailCodePolicy", context =>
+    RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+
+
+    // Forgot Password rate limiting
+    // Maximum 3 requests per IP address every 15 minutes.
+    options.AddPolicy("PasswordResetPolicy", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey:
+                context.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy("PasswordResetSubmitPolicy", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey:
+                context.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+
     options.AddPolicy("security-explanation", context =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -265,6 +306,12 @@ builder.Services.AddScoped<
     AccountProvisioningService>();
 
 builder.Services.AddScoped<
+    EmailLoginChallenge>();
+
+builder.Services.AddScoped<
+    AccountSecurityMail>();
+
+builder.Services.AddScoped<
     IBillingService,
     SecureSmartTuitionSystem.Services.Billing.BillingService>();
 
@@ -279,6 +326,10 @@ builder.Services.Configure<EmailSettings>(
 builder.Services.AddScoped<
     IFirstPaymentEmailService,
     FirstPaymentEmailService>();
+
+builder.Services.AddScoped<
+    IAdminAccountSetupEmailService,
+    AdminAccountSetupEmailService>();
 
 builder.Services.AddScoped<
     IParentAccountSetupEmailService,

@@ -2,6 +2,10 @@
     'use strict';
     const one = (s, root = document) => root.querySelector(s);
     const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+    async function videoHash(file) {
+        const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+        return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+    }
     document.querySelectorAll('[data-video-notice]').forEach(n => setTimeout(() => n.remove(), 5000));
     const form = one('[data-video-form]');
     if (form) {
@@ -11,16 +15,41 @@
         const editing = form.dataset.editing === 'true';
         const original = ['Title', 'Description', 'RecordingDate'].map(k => (form.elements[k]?.value || '').trim());
         let busy = false, blob = '', choices = [];
+        let replacementState = 'empty';
         function error(key, message) {
             const span = one(`[data-valmsg-for="${key}"]`, form);
-            if (span) { span.textContent = message; span.classList.toggle('field-validation-error', !!message); }
-            const input = form.elements[key]; if (input) input.classList.toggle('input-validation-error', !!message);
+            if (span) {
+                span.textContent = message;
+                span.classList.toggle('field-validation-error', !!message);
+                span.classList.toggle('field-validation-valid', !message);
+            }
+            const input = key === 'ClassSessionId' ? classes : form.elements[key];
+            if (input) input.classList.toggle('input-validation-error', !!message);
         }
         function summary(message) { const node = one('[data-video-form-error]', form); if (node) { node.textContent = message; node.hidden = !message; } const footer = one('[data-video-submit-error]', form); if (footer) { footer.textContent = message; footer.hidden = !message; } }
-        function dirty() { save.disabled = busy || (typeof started !== 'undefined' && started && queue.some(x => x.state === 'unknown')) || (editing && !file?.files.length && original.every((v, i) => v === form.elements[['Title', 'Description', 'RecordingDate'][i]].value.trim())); }
+        function replacementBlocked() {
+            return replacementState === 'checking' || replacementState === 'blocked';
+        }
+        function dirty() {
+            const retryBlocked = started && (queue.some(x => x.state === 'unknown')
+                || !queue.some(x => x.state === 'ready' || x.state === 'failed'));
+            const unchanged = editing && !file?.files.length
+                && original.every((v, i) => v === form.elements[['Title', 'Description', 'RecordingDate'][i]].value.trim());
+            save.disabled = busy || pendingSelections > 0 || replacementBlocked() || retryBlocked || unchanged;
+        }
         form.addEventListener('input', dirty);
         const queue = [], list = one('[data-video-queue]', form);
         const batchStatus = one('[data-video-batch-status]', form);
+        const selectionStatus = one('[data-video-selection-status]', form);
+        const duplicateNotice = one('[data-video-duplicates]', form);
+        let selectionChecks = Promise.resolve();
+        let pendingSelections = 0;
+        let skippedDuplicates = [];
+        one('[data-video-duplicates-close]', form)?.addEventListener('click', () => {
+            duplicateNotice.hidden = true;
+            skippedDuplicates = [];
+            file.focus();
+        });
         let started = false, previewItem = null; dirty();
         const previewPanel = one('[data-video-preview-panel]', form);
         function closePreview() {
@@ -34,6 +63,9 @@
         previewPanel?.addEventListener('cancel', event => { event.preventDefault(); closePreview(); });
         function renderQueue() {
             if (!list) return;
+            selectionStatus.textContent = pendingSelections > 0 ? 'Checking selected videos for duplicates…'
+                : started || !queue.length ? ''
+                    : `${queue.length} ${queue.length === 1 ? 'video' : 'videos'} ready to upload`;
             list.replaceChildren();
             drop.hidden = started;
             queue.forEach((item, index) => {
@@ -57,28 +89,103 @@
             });
         }
         function addFiles(files) {
-            if (busy || started) return;
+            file.value = '';
+            if (busy || started || !files.length) return;
+            if (!pendingSelections) {
+                skippedDuplicates = [];
+                duplicateNotice.hidden = true;
+            }
+            pendingSelections++;
+            selectionStatus.textContent = 'Checking selected videos for duplicates…';
+            dirty();
+            // Process selections in order so the first copy wins even if more files arrive during a check.
+            selectionChecks = selectionChecks.then(() => checkFiles(files)).finally(() => {
+                pendingSelections--;
+                renderQueue();
+                dirty();
+            });
+        }
+        async function checkFiles(files) {
             const messages = [];
             for (const f of files) {
                 if (!/\.mp4$/i.test(f.name) || !f.size || f.size > 209715200) { messages.push(`${f.name}: choose an MP4 of at most 200 MB.`); continue; }
-                if (queue.some(x => x.file.name === f.name && x.file.size === f.size && x.file.lastModified === f.lastModified)) { messages.push(`${f.name} is already selected.`); continue; }
+                let hash;
+                try {
+                    hash = await videoHash(f);
+                } catch {
+                    messages.push(`${f.name}: could not check this video. Select it again.`);
+                    continue;
+                }
+                if (queue.some(item => item.hash === hash)) {
+                    skippedDuplicates.push(f.name);
+                    continue;
+                }
                 if (queue.length >= 5) { messages.push('You can select up to 5 videos.'); break; }
-                queue.push({ file: f, title: f.name.replace(/\.mp4$/i, '').slice(0, 150), state: 'ready', message: 'Ready to upload' });
+                queue.push({ file: f, hash, title: f.name.replace(/\.mp4$/i, '').slice(0, 150), state: 'ready', message: 'Ready to upload' });
             }
-            error('VideoFile', messages.join(' ')); file.value = ''; renderQueue();
+            const count = skippedDuplicates.length;
+            duplicateNotice.hidden = count === 0;
+            one('strong', duplicateNotice).textContent = count === 1
+                ? '1 duplicate skipped. This video is already in the upload list.'
+                : `${count} duplicates skipped. These videos are already in the upload list.`;
+            one('ul', duplicateNotice).replaceChildren(...skippedDuplicates.map(name => {
+                const row = document.createElement('li');
+                row.textContent = name;
+                return row;
+            }));
+            error('VideoFile', messages.join(' '));
         }
         if (editing && file) {
             const actions = one('[data-video-replacement-actions]', form);
-            function replacementChanged() {
+            const status = one('#video-replacement-status', form);
+            let replacementRequest;
+            async function replacementChanged() {
+                replacementRequest?.abort();
+                replacementRequest = null;
                 closePreview();
                 const selected = file.files[0];
                 const invalid = selected && (!/\.mp4$/i.test(selected.name) || !selected.size || selected.size > 209715200);
                 error('VideoFile', invalid ? 'Choose an MP4 video of at most 200 MB.' : '');
                 if (invalid) file.value = '';
                 actions.hidden = !file.files.length;
+                status.hidden = !selected || invalid;
+                status.textContent = status.hidden ? '' : 'Checking for a duplicate video…';
+                replacementState = status.hidden ? 'empty' : 'checking';
+                dirty();
+                if (status.hidden) return;
+
+                const request = new AbortController();
+                replacementRequest = request;
+                const checkFailed = 'Could not check this video. Remove it and select it again.';
+                let message;
+                try {
+                    const hash = await videoHash(selected);
+                    if (request.signal.aborted) return;
+                    const data = new URLSearchParams({
+                        id: form.elements.Id.value, rowVersion: form.elements.RowVersion.value,
+                        size: String(selected.size), hash, __RequestVerificationToken: form.elements.__RequestVerificationToken.value
+                    });
+                    const response = await fetch(file.dataset.videoReplacementCheckUrl, {
+                        method: 'POST', headers, body: data,
+                        signal: AbortSignal.any([request.signal, AbortSignal.timeout(60000)])
+                    });
+                    const result = await response.json();
+                    if (!response.ok) message = result?.message || checkFailed;
+                    else if (result?.duplicate === true) message = 'This video is already saved for this lesson. Choose a different MP4 or remove the selection.';
+                    else if (result?.duplicate !== false) message = checkFailed;
+                } catch {
+                    message = checkFailed;
+                }
+                if (request.signal.aborted) return;
+
+                replacementState = message ? 'blocked' : 'ready';
+                status.textContent = '';
+                status.hidden = true;
+                error('VideoFile', message || '');
                 dirty();
             }
             file.addEventListener('change', replacementChanged);
+            if (file.files.length) replacementChanged();
             one('[data-video-replacement-clear]', form).addEventListener('click', () => {
                 if (busy) return;
                 file.value = '';
@@ -139,7 +246,7 @@
             });
         }
         async function submitVideo(event) {
-            event.preventDefault(); if (busy) return;
+            event.preventDefault(); if (busy || pendingSelections > 0 || replacementBlocked()) return;
             try {
                 let valid = true; summary(''); error('VideoFile', '');
                 const keys = [['ClassSessionId', 'Please select an assigned class.'], ['RecordingDate', 'Please choose the recording date.']];
@@ -165,6 +272,7 @@
                     if (result.errors) Object.entries(result.errors).forEach(([key, messages]) => key ? error(key, messages.join(' ')) : summary(messages.join(' '))); else summary(result.message);
                 } else {
                     started = true;
+                    duplicateNotice.hidden = true;
                     // Keep shared values stable and send one file per request, within the existing server limit.
                     const shared = new FormData(form); shared.delete('VideoFile');
                     ['ClassSessionId', 'RecordingDate', 'Description'].forEach(key => shared.set(key, form.elements[key].value));

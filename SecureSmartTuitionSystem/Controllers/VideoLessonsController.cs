@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using SecureSmartTuitionSystem.Data;
@@ -47,6 +48,38 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
         if (!VideoLessonService.IsTutor(User)) return Forbid();
         var classes = await new LearningMaterialService(db).Classes(User, true).OrderBy(x => x.ClassCode).Select(x => new { id = x.ClassSessionId, text = x.ClassCode + " · " + x.ClassName, subject = x.Subject.AcademicLevel + " · " + x.Subject.SubjectName }).ToListAsync();
         return Json(new { classes });
+    }
+    [HttpPost, Authorize(Roles = "Tutor")]
+    public async Task<IActionResult> CheckReplacement(int id, string? rowVersion, long size, string? hash, CancellationToken ct)
+    {
+        if (!VideoLessonService.IsTutor(User)) return Forbid();
+        if (!ModelState.IsValid || id <= 0 || size <= 0 || size > VideoFileStore.MaxBytes
+            || hash is not { Length: 64 } || !hash.All(Uri.IsHexDigit))
+            return BadRequest();
+
+        var current = await Service.Manage(User).AsNoTracking()
+            .Where(x => x.RecordedLessonId == id && !x.InactivatedByAdmin)
+            .Select(x => new { x.StorageKey, x.RowVersion })
+            .SingleOrDefaultAsync(ct);
+        if (current == null)
+            return NotFound(new { message = "This recording is no longer available for replacement. Reload the page." });
+        if (!AssessmentRules.Version(current.RowVersion, rowVersion))
+            return Conflict(new { message = "This recording changed. Reload the page before replacing it." });
+
+        try
+        {
+            await using var stream = Store.Open(current.StorageKey);
+            if (stream == null) return StatusCode(503);
+            if (stream.Length != size) return Json(new { duplicate = false });
+
+            var currentHash = Convert.ToHexString(await SHA256.HashDataAsync(stream, ct));
+            return Json(new { duplicate = string.Equals(currentHash, hash, StringComparison.OrdinalIgnoreCase) });
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(e, "Could not check the replacement video for recording {RecordingId}.", id);
+            return StatusCode(503);
+        }
     }
     [HttpPost, Authorize(Roles = "Tutor"), RequestSizeLimit(VideoFileStore.RequestBytes), RequestFormLimits(MultipartBodyLengthLimit = VideoFileStore.RequestBytes)]
     public async Task<IActionResult> Save(VideoForm form, CancellationToken ct)

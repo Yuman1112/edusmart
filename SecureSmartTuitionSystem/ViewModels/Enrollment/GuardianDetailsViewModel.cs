@@ -41,7 +41,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         [Display(Name = "Phone Number")]
         public string? GuardianPhoneNumber { get; set; }
 
-        [RegularExpression(@"^\d{6}-\d{2}-\d{4}$", ErrorMessage = "Please enter a valid IC number (000000-00-0000).")]
+        [RegularExpression(@"^[0-9]{6}-[0-9]{2}-[0-9]{4}$", ErrorMessage = "Please enter a valid IC number (000000-00-0000).")]
         [StringLength(14, ErrorMessage = "Please enter a valid IC number (000000-00-0000).")]
         [Display(Name = "IC Number")]
         public string? GuardianIdentificationNumber { get; set; }
@@ -62,62 +62,25 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 
             if (!System.Text.RegularExpressions.Regex.IsMatch(
                     GuardianIdentificationNumber,
-                    @"^\d{6}-\d{2}-\d{4}$"))
+                    @"^[0-9]{6}-[0-9]{2}-[0-9]{4}$"))
             {
                 yield break;
             }
 
-            var digits =
-                new string(
-                    GuardianIdentificationNumber
-                        .Where(char.IsDigit)
-                        .ToArray());
+            var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(8));
+            var yy = int.Parse(GuardianIdentificationNumber[..2], System.Globalization.CultureInfo.InvariantCulture);
+            var year = yy <= today.Year % 100 ? 2000 + yy : 1900 + yy;
+            var dateText = $"{year:D4}{GuardianIdentificationNumber[2..6]}";
 
-            var yy =
-                int.Parse(
-                    digits.Substring(0, 2));
+            string? message = null;
+            if (!DateOnly.TryParseExact(dateText, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var birthDate))
+                message = "The IC number contains an invalid date of birth.";
+            else if (birthDate >= today)
+                message = "The date of birth must be earlier than today.";
 
-            var mm =
-                int.Parse(
-                    digits.Substring(2, 2));
-
-            var dd =
-                int.Parse(
-                    digits.Substring(4, 2));
-
-            var currentTwoDigitYear =
-                DateTime.UtcNow.AddHours(8).Date.Year % 100;
-
-            var fullYear =
-                yy <= currentTwoDigitYear
-                    ? 2000 + yy
-                    : 1900 + yy;
-
-            bool validDate = true;
-
-            try
-            {
-                _ =
-                    new DateTime(
-                        fullYear,
-                        mm,
-                        dd);
-            }
-            catch
-            {
-                validDate = false;
-            }
-
-            if (!validDate)
-            {
-                yield return new ValidationResult(
-                    "The IC number contains an invalid date of birth.",
-                    new[]
-                    {
-                        nameof(
-                            GuardianIdentificationNumber)
-                    });
-            }
+            if (message != null)
+                yield return new ValidationResult(message, new[] { nameof(GuardianIdentificationNumber) });
         }
     }
 }

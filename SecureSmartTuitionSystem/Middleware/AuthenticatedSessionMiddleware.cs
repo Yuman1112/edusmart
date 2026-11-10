@@ -41,9 +41,17 @@ public sealed class AuthenticatedSessionMiddleware
                 context.Request.Path.StartsWithSegments("/Messages/ReadStatuses") ||
                 context.Request.Path.StartsWithSegments("/Messages/MarkRead") ||
                 context.Request.Path.StartsWithSegments("/Security/AlertCount") ||
-                (context.Request.Path.StartsWithSegments("/Assessments/Details") && context.Request.Query["fragment"] == "true") ||
+                context.Request.Path.StartsWithSegments("/LearningMaterials/ClassChoices") ||
+                context.Request.Path.StartsWithSegments("/ClassSessions/TutorSchedulingOptions") ||
+                context.Request.Path.StartsWithSegments("/TutorManagement/EmailChangeStatus") ||
+                context.Request.Path.StartsWithSegments("/Tutor/EmailChangeOutcome") ||
+                (context.Request.Query["fragment"] == "true" &&
+                    (context.Request.Path.StartsWithSegments("/Assessments") ||
+                     context.Request.Path.StartsWithSegments("/LearningMaterials") ||
+                     context.Request.Path.StartsWithSegments("/Attendance"))) ||
                 context.Request.Path.StartsWithSegments("/VideoLessons/ClassChoices") ||
                 context.Request.Path.StartsWithSegments("/VideoLessons/Access") ||
+                context.Request.Path.StartsWithSegments("/VideoLessons/Progress") ||
                 (context.Request.Path.StartsWithSegments("/VideoLessons") && context.Request.Query["fragment"] == "true");
             if (!background && now.ToUnixTimeSeconds() - last >= 60)
             {

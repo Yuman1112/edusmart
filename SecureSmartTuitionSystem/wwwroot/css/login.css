@@ -131,11 +131,14 @@
     color: #8297aa;
 }
 
-.login-input-wrapper .form-control:focus {
-    border-color: var(--teal);
-    background: var(--white);
-    box-shadow: 0 0 0 0.2rem rgba(7, 152, 164, 0.13);
+/* Clean single-border input focus */
+.login-page .login-input-wrapper .form-control:focus {
+    border: 1px solid #0799a4;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(7, 153, 164, 0.10);
+    background: #ffffff;
 }
+
 
 /* Hide Browse Password Eye Button */
 .login-input-wrapper input[type="password"]::-ms-reveal,
@@ -280,3 +283,34 @@
 .login-page .login-success-copy { min-width: 0; }
 .login-page .login-success-copy p { margin: 0; font-size: .95rem; line-height: 1.6; overflow-wrap: anywhere; }
 .login-page .login-success-copy .login-success-title { margin-bottom: 4px; font-weight: 600; }
+
+
+/* ========================================
+   Forgot Password Link
+   ======================================== */
+
+.login-forgot-password {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+}
+
+.login-forgot-link {
+    color: #0799a4;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+    .login-forgot-link:hover {
+        color: #087f8c;
+        text-decoration: underline;
+    }
+
+    .login-forgot-link:focus-visible {
+        outline: 2px solid #0799a4;
+        outline-offset: 4px;
+        border-radius: 3px;
+    }
+

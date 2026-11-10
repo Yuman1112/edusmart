@@ -1,16 +1,115 @@
 @page
 @model SecureSmartTuitionSystem.Areas.Identity.Pages.Account.LoginWith2faModel
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
-@{ Layout = "/Views/Shared/_Layout.cshtml"; ViewData["Title"] = "Verify sign-in"; }
-<div class="container py-5" style="max-width:520px">
-    <h1>Verify sign-in</h1><p>Enter the code from your authenticator app.</p>
-    <form method="post">
-        <input type="hidden" asp-for="ReturnUrl" />
-        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-        <label asp-for="Input.Code" class="form-label">Authenticator code</label>
-        <input asp-for="Input.Code" class="form-control" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus />
-        <span asp-validation-for="Input.Code" class="text-danger"></span>
-        <button type="submit" class="btn btn-primary mt-3">Verify</button>
-        <a asp-page="/Account/Login" class="btn btn-outline-secondary mt-3">Back to sign in</a>
-    </form>
+
+@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Two-step verification";
+}
+
+@section Styles {
+    <link rel="stylesheet"
+          href="~/css/login.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/login-otp.css"
+          asp-append-version="true" />
+}
+
+<div class="login-page otp-page">
+    <main class="otp-card">
+
+        <a class="otp-logo-link"
+           asp-controller="Home"
+           asp-action="Index"
+           aria-label="Return to home page">
+            <img src="~/images/logo.png"
+                 asp-append-version="true"
+                 alt="EduSmart"
+                 class="otp-logo" />
+        </a>
+
+        <div class="otp-icon" aria-hidden="true">
+            <i class="bi bi-shield-lock"></i>
+        </div>
+
+        <header class="otp-heading">
+            <h1>Two-step verification</h1>
+            <p>
+                Enter the 6-digit verification code sent
+                to your registered email address.
+            </p>
+        </header>
+
+        <form method="post"
+              asp-antiforgery="true"
+              class="otp-form">
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger otp-errors"
+                 role="alert"></div>
+
+            <label for="otpCode" class="otp-label">
+                Verification code
+            </label>
+
+            <div class="otp-input-container">
+                <input asp-for="Code"
+                       id="otpCode"
+                       type="text"
+                       class="otp-real-input"
+                       inputmode="numeric"
+                       autocomplete="one-time-code"
+                       maxlength="6"
+                       minlength="6"
+                       pattern="[0-9]{6}"
+                       aria-label="Six-digit verification code"
+                       required
+                       autofocus />
+
+                <div class="otp-digits" aria-hidden="true">
+                    <span class="otp-digit"></span>
+                    <span class="otp-digit"></span>
+                    <span class="otp-digit"></span>
+                    <span class="otp-digit"></span>
+                    <span class="otp-digit"></span>
+                    <span class="otp-digit"></span>
+                </div>
+            </div>
+
+            <span asp-validation-for="Code"
+                  class="text-danger otp-validation"
+                  role="alert"></span>
+
+            <div class="otp-expiry">
+                <i class="bi bi-clock" aria-hidden="true"></i>
+                <span>Code expires in 5 minutes</span>
+            </div>
+
+            <button type="submit" class="otp-submit">
+                Verify &amp; Continue
+                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            </button>
+
+            <a asp-page="./Login" class="otp-back">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                Back to sign in
+            </a>
+        </form>
+
+        <div class="otp-footer">
+            <i class="bi bi-lock-fill" aria-hidden="true"></i>
+            Secure email verification
+        </div>
+
+    </main>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="~/js/login-otp.js"
+            asp-append-version="true"
+            defer></script>
+}

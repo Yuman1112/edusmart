@@ -39,7 +39,7 @@
                                                 }
                         <span asp-validation-for="ClassSessionId" class="video-field-error"></span>
                     </div>
-                    <div><label for="video-subject-label" class="form-label">Subject &amp; Level</label><input id="video-subject-label" class="form-control" value="@Model.SubjectLabel" readonly /></div>
+                    <div><label for="video-subject-label" class="form-label">Subject &amp; Level</label><input id="video-subject-label" class="form-control" value="@Model.SubjectLabel" disabled /></div>
                     @if (editing)
                     {
                         <div class="video-full"><label asp-for="Title" class="form-label">Lesson Title</label><input asp-for="Title" class="form-control" maxlength="150" placeholder="For example: Chapter 1 · Algebra revision" /><span asp-validation-for="Title" class="video-field-error"></span></div>
@@ -53,6 +53,12 @@
                 <section class="class-form-section video-upload-section">
                     <div class="video-upload-heading"><div><h2><i class="bi bi-film" aria-hidden="true"></i> Lesson Videos</h2><p class="video-note">Each video becomes a separate recorded lesson. Class, date and description are shared.</p></div><label class="outline-button video-file-picker"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Videos<input asp-for="VideoFile" type="file" multiple accept=".mp4,video/mp4" aria-label="Select MP4 videos" /></label></div>
                     <div class="video-drop" data-video-drop>Drop MP4 videos here, or choose Add Videos.</div>
+                    <p class="video-note" data-video-selection-status role="status" aria-live="polite"></p>
+                    <div class="alert alert-warning alert-dismissible mb-0" data-video-duplicates hidden>
+                        <button type="button" class="btn-close" data-video-duplicates-close aria-label="Dismiss duplicate video notice"></button>
+                        <strong></strong>
+                        <ul class="mb-0"></ul>
+                    </div>
                     <div class="video-batch-list" data-video-queue aria-live="polite"></div>
                     <dialog class="video-preview-dialog" data-video-preview-panel aria-labelledby="video-preview-title">
                         <div class="video-preview-heading"><h2 id="video-preview-title" data-video-preview-title>Video Preview</h2><button type="button" class="outline-button" data-video-preview-close aria-label="Close video preview"><i class="bi bi-x-lg" aria-hidden="true"></i> Close</button></div>
@@ -74,8 +80,11 @@
                     @if (Model.CanReplaceVideo)
                     {
                         <label asp-for="VideoFile" class="form-label">Replace Video (Optional)</label>
-                        <input asp-for="VideoFile" type="file" class="form-control" accept=".mp4,video/mp4" aria-describedby="video-replace-help" />
-                        <span asp-validation-for="VideoFile" class="video-field-error"></span>
+                        <input asp-for="VideoFile" type="file" class="form-control" accept=".mp4,video/mp4"
+                               data-video-replacement-check-url="@Url.Action("CheckReplacement")"
+                               aria-describedby="video-replace-help video-replacement-error video-replacement-status" />
+                        <span asp-validation-for="VideoFile" id="video-replacement-error" class="video-field-error" role="alert"></span>
+                        <div id="video-replacement-status" class="video-note mt-2" role="status" hidden></div>
                         <div class="video-actions mt-2" data-video-replacement-actions hidden>
                             <button type="button" class="outline-button" data-video-replacement-preview>Preview</button>
                             <button type="button" class="outline-button" data-video-replacement-clear>Remove Selection</button>

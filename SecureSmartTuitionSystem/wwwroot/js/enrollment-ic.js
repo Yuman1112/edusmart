@@ -67,6 +67,11 @@
         });
         input.setAttribute("aria-describedby", student ? "studentIdentificationNumberValidation" : "guardianIcValidation");
         if (!student) {
+            $.validator.addMethod("edusmartGuardianBirth", function (value, element) {
+                const result = parse(value);
+                return this.optional(element) || !!result.error || result.date < today();
+            }, messages.future);
+            $(input).rules("add", { edusmartGuardianBirth: true });
             input.addEventListener("input", () => { input.value = format(input.value); validator.element(input); });
             input.addEventListener("blur", () => validator.element(input));
             if (input.value && !checkbox?.checked) validator.element(input);
