@@ -48,8 +48,8 @@ else
 }
 @if (calendar.Mode == "month") { var trailing = (7 - (((int)calendar.To.DayOfWeek + 6) % 7 + 1)) % 7; for (var i = 0; i < trailing; i++) { <div class="schedule-empty" aria-hidden="true"></div> } }
 </div></div>
-@if (Model.Enrollments.Any()) { <section class="class-details-card mt-4"><h2>My Enrolled Classes</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>No.</th><th>Class</th><th>Subject</th><th>Start Date</th><th>Status</th></tr></thead><tbody>
+@if (Model.Enrollments.Any()) { <section class="class-details-card mt-4"><h2>My Enrolled Classes · @ClassScheduleService.Today.ToString("MMMM yyyy")</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>No.</th><th>Class</th><th>Subject</th><th>Start Date</th><th>Enrollment Period</th><th>Withdrawal effective date</th><th>Status</th></tr></thead><tbody>
 @{ int no = 0; }
-@foreach (var e in Model.Enrollments) { no++; <tr><td>@no</td><td>@e.ClassSession.ClassName</td><td>@e.ClassSession.Subject.SubjectName</td><td>@e.StartDate.ToString("dd MMM yyyy")</td><td>@(e.Status == SecureSmartTuitionSystem.Models.Enrollment.StudentEnrollmentStatus.PendingDrop ? "Withdrawal scheduled" : "Active")</td></tr> }
+@foreach (var e in Model.Enrollments) { no++; <tr><td>@no</td><td>@e.ClassSession.ClassName</td><td>@e.ClassSession.Subject.SubjectName</td><td>@e.StartDate.ToString("dd MMM yyyy")</td><td>@LearningAccessService.EnrollmentPeriod(e)</td><td>@(e.DropEffectiveDate?.ToString("dd MMM yyyy") ?? "—")</td><td>@(e.DropEffectiveDate.HasValue && e.DropEffectiveDate.Value.Date <= ClassScheduleService.Today ? "Withdrawn" : e.Status == SecureSmartTuitionSystem.Models.Enrollment.StudentEnrollmentStatus.PendingDrop ? "Withdrawing" : e.Status == SecureSmartTuitionSystem.Models.Enrollment.StudentEnrollmentStatus.Completed ? "Completed" : e.StartDate.Date > ClassScheduleService.Today || ClassScheduleService.FirstDate(e.ClassSession) > ClassScheduleService.Today ? "Not Started" : "Enrolled")</td></tr> }
 </tbody></table></div></section> }
 }

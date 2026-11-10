@@ -15,6 +15,9 @@
 @if (Model.RefundStatus == ExitRefundStatus.PendingReview) { <p>Admin reviews only unused future billing months; the recorded withdrawal date remains fixed even if review is delayed. The original bill stays as the payment record.</p> }
 @if (Model.RefundStatus == ExitRefundStatus.PendingProvider || Model.RefundStatus == ExitRefundStatus.Processing) { <p>The refund is not yet confirmed as successful. Admin must check its payment-provider status.</p> }
 @if (Model.RefundStatus == ExitRefundStatus.Completed) { <p>The provider confirms the refund succeeded. The bank may take additional time to display it.</p> }
+@if (Model.RefundStatus == ExitRefundStatus.Completed && Model.RefundCompletedAtUtc.HasValue && Model.ApprovedRefund > 0m && !string.IsNullOrWhiteSpace(Model.ProviderRefundId)) {
+<a asp-action="Receipt" asp-route-id="@Model.EnrollmentExitRequestId" class="outline-button"><i class="bi bi-receipt" aria-hidden="true"></i> View / download refund receipt</a>
+}
 @if (!string.IsNullOrWhiteSpace(Model.LastError)) { <div class="alert alert-warning">@Model.LastError</div> }
 </section>
 @if (Model.CancelledAtUtc.HasValue) {

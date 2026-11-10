@@ -61,6 +61,9 @@
     <div class="table-responsive"><table class="table align-middle"><thead><tr><th>No</th><th>Student</th><th>Class</th><th>Reason</th><th>Review</th><th>Stops from</th><th>Estimated refund</th><th>Refund status</th><th>Action</th></tr></thead><tbody>
 @{ int no = 0; }
 @foreach (var x in Model) { no++; <tr><td>@no</td><td>@x.StudentEnrollment.StudentProfile.FullName</td><td>@x.StudentEnrollment.ClassSession.ClassName</td><td>@x.Reason</td><td>@(x.ReviewedByUserId == null ? "Not reviewed" : "Reviewed")</td><td>@(x.CancelledAtUtc.HasValue ? "Cancelled" : x.EffectiveDate.ToString("dd MMM yyyy"))</td><td>RM @x.EstimatedRefund.ToString("F2")</td><td>@ExitRefundStatusText.Label(x.RefundStatus)</td><td><div class="d-flex flex-wrap gap-2"><a class="outline-button table-view-button" asp-action="Details" asp-route-id="@x.EnrollmentExitRequestId"><i class="bi bi-eye" aria-hidden="true"></i> View</a>
+@if (x.RefundStatus == ExitRefundStatus.Completed && x.RefundCompletedAtUtc.HasValue && x.ApprovedRefund > 0m && !string.IsNullOrWhiteSpace(x.ProviderRefundId)) {
+<a class="outline-button table-view-button" asp-action="Receipt" asp-route-id="@x.EnrollmentExitRequestId"><i class="bi bi-receipt" aria-hidden="true"></i> Refund receipt</a>
+}
 @if ((admin || x.RequestedByUserId == User.FindFirstValue(ClaimTypes.NameIdentifier)) && EnrollmentExitService.CanCancelWithdrawal(x, ClassScheduleService.Today)) {
 <a class="outline-button table-view-button" asp-action="Details" asp-route-id="@x.EnrollmentExitRequestId" asp-fragment="cancelWithdrawal"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Cancel withdrawal</a>
 }

@@ -360,7 +360,11 @@
             <div class="enrollment-form-actions">
                 @if (additional)
                 {
-                    <a class="outline-button" asp-controller="LearningClasses" asp-action="Index" asp-route-studentId="@Context.Session.GetInt32("Enrollment.AddSubjectStudentId")"><i class="bi bi-arrow-left"></i> Back: My Classes</a>
+                    @if (User.IsInRole("Admin")) {
+                        <a class="outline-button" asp-controller="ClassSessions" asp-action="Index"><i class="bi bi-arrow-left"></i> Back: Class Sessions</a>
+                    } else {
+                        <a class="outline-button" asp-controller="LearningClasses" asp-action="Index" asp-route-studentId="@Context.Session.GetInt32("Enrollment.AddSubjectStudentId")"><i class="bi bi-arrow-left"></i> Back: My Classes</a>
+                    }
                 }
                 else
                 {
@@ -769,7 +773,7 @@
                         if (!available) checkbox.checked = false;
                     }
                     const shouldDisplay =
-                        yearMatches && stageMatches &&
+                        yearMatches && (!@(additional ? "true" : "false") || available) && stageMatches &&
                         levelMatches &&
                         subjectMatches;
 

@@ -25,6 +25,16 @@ namespace SecureSmartTuitionSystem.Controllers
                         "Admin");
                 }
 
+                if (User.IsInRole("Parent"))
+                {
+                    return RedirectToAction("Index", "Parent");
+                }
+
+                if (User.IsInRole("Student"))
+                {
+                    return RedirectToAction("Index", "Student");
+                }
+
                 if (User.IsInRole("Tutor"))
                 {
                     return RedirectToAction(

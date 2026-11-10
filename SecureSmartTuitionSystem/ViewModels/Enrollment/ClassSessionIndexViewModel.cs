@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using SecureSmartTuitionSystem.Models.Enrollment;
 
 namespace SecureSmartTuitionSystem.ViewModels.Enrollment
@@ -6,6 +6,9 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
     public class ClassSessionIndexViewModel
     {
         public List<ClassSession> Sessions { get; set; } = new();
+
+        public int? Year { get; set; }
+        public List<int> Years { get; set; } = new();
 
         public string? SubjectName { get; set; }
         public EducationStage? EducationStage { get; set; }
@@ -26,6 +29,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public List<SelectListItem> Tutors { get; set; } = new();
 
         public bool HasFilters =>
+            Year.HasValue ||
             !string.IsNullOrWhiteSpace(SubjectName) ||
             EducationStage.HasValue ||
             !string.IsNullOrWhiteSpace(AcademicLevel) ||
