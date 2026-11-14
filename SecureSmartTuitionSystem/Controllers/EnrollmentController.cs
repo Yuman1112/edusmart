@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.ViewModels.Enrollment;
+using SecureSmartTuitionSystem.Services.Enrollment;
 
 namespace SecureSmartTuitionSystem.Controllers
 {
@@ -24,6 +25,8 @@ namespace SecureSmartTuitionSystem.Controllers
 
         private const string LastSubmittedApplicationIdSessionKey =
             "Enrollment.LastSubmittedApplicationId";
+
+        private GuardianEnrollmentVerification GuardianVerification => HttpContext.RequestServices.GetRequiredService<GuardianEnrollmentVerification>();
 
         private readonly UserManager<ApplicationUser>
             _userManager;
@@ -71,6 +74,8 @@ namespace SecureSmartTuitionSystem.Controllers
         [HttpGet]
         public IActionResult Start()
         {
+            HttpContext.Session.Remove("Enrollment.GuardianOtp.Pending");
+            HttpContext.Session.Remove("Enrollment.GuardianOtp.Proof");
             /*
              * Clear any previous incomplete enrollment.
              */
@@ -240,7 +245,7 @@ namespace SecureSmartTuitionSystem.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        public IActionResult GuardianDetails()
+        public async Task<IActionResult> GuardianDetails()
         {
             if (HttpContext.Session.GetInt32("Enrollment.AddSubjectStudentId").HasValue)
                 return RedirectToAction("SelectClasses", "EnrollmentSubmission");
@@ -260,29 +265,12 @@ namespace SecureSmartTuitionSystem.Controllers
                         GuardianDetailsViewModel>(json)
                       ?? new GuardianDetailsViewModel();
 
-            /*
-             * Do not trust the ViewModel alone to determine
-             * whether an existing account is verified.
-             */
-            if (model.UseExistingParentAccount)
+            if (User.IsInRole("Parent") || model.UseExistingParentAccount)
             {
-                string? existingParentUserId =
-                    HttpContext.Session.GetString(
-                        ExistingParentUserIdSessionKey);
-
-                if (string.IsNullOrWhiteSpace(existingParentUserId) ||
-                    !User.IsInRole("Parent") || _userManager.GetUserId(User) != existingParentUserId)
-                {
-                    model.ExistingParentVerified =
-                        false;
-
-                    model.VerifiedParentName =
-                        null;
-
-                    model.VerifiedParentEmail =
-                        null;
-                }
+                await LoadSignedInParent(model);
             }
+            ViewData["GuardianOtpPending"] = GuardianVerification.HasPending(HttpContext);
+            ViewData["GuardianResendAt"] = GuardianVerification.GetResendAtUnixSeconds(HttpContext);
 
             /*
              * This GET action must display the Guardian page.
@@ -309,163 +297,68 @@ namespace SecureSmartTuitionSystem.Controllers
                 return ReturnToStudentDetails();
             }
 
-            model.UseExistingParentAccount =
-                true;
+            ModelState.Clear();
+            model.UseExistingParentAccount = true;
+            model.ExistingParentVerified = false;
+            model.VerifiedParentName = null;
+            model.VerifiedParentEmail = null;
+            string? error = await GuardianVerification.SendAsync(HttpContext,
+                model.ExistingParentEmail, model.ExistingParentIdentificationLast4);
+            model.EnrollmentOtp = null;
+            HttpContext.Session.SetString(GuardianDetailsSessionKey, JsonSerializer.Serialize(model));
+            if (error != null) ModelState.AddModelError(string.Empty, error);
+            ViewData["GuardianOtpPending"] = GuardianVerification.HasPending(HttpContext);
+            ViewData["GuardianResendAt"] = GuardianVerification.GetResendAtUnixSeconds(HttpContext);
+            ViewData["GuardianOtpMessage"] = error == null ? "A verification code has been sent to your registered email. It expires in 5 minutes." : null;
+            return View("GuardianDetails", model);
+        }
 
-            /*
-             * Remove any previous verification before
-             * checking the new details.
-             */
-            HttpContext.Session.Remove(
-                ExistingParentUserIdSessionKey);
+        [AllowAnonymous, HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmGuardianOtp(GuardianDetailsViewModel model)
+        {
+            if (!HasStudentDetails()) return ReturnToStudentDetails();
+            ModelState.Clear();
+            if (await GuardianVerification.VerifyAsync(HttpContext, model.EnrollmentOtp))
+                return RedirectToAction(nameof(GuardianDetails));
+            var saved = HttpContext.Session.GetString(GuardianDetailsSessionKey);
+            model = saved == null ? new GuardianDetailsViewModel() : JsonSerializer.Deserialize<GuardianDetailsViewModel>(saved)!;
+            model.UseExistingParentAccount = true;
+            model.ExistingParentVerified = false;
+            ModelState.AddModelError(string.Empty, "The verification code is invalid or expired. Please try again or request a new code.");
+            ViewData["GuardianOtpPending"] = GuardianVerification.HasPending(HttpContext);
+            ViewData["GuardianResendAt"] = GuardianVerification.GetResendAtUnixSeconds(HttpContext);
+            return View("GuardianDetails", model);
+        }
 
-            model.ExistingParentVerified =
-                false;
-
-            model.VerifiedParentName =
-                null;
-
-            model.VerifiedParentEmail =
-                null;
-
-            // A publicly known email and four IC digits do not establish
-            // account ownership. An authenticated Parent is required.
-            if (User.Identity?.IsAuthenticated != true || !User.IsInRole("Parent"))
+        // Resolve account ownership from the authenticated identity, never posted account details.
+        private async Task<bool> LoadSignedInParent(GuardianDetailsViewModel model)
+        {
+            model.UseExistingParentAccount = true;
+            model.ExistingParentVerified = false;
+            model.VerifiedParentName = null;
+            model.VerifiedParentEmail = null;
+            HttpContext.Session.Remove(ExistingParentUserIdSessionKey);
+            var parent = await GuardianVerification.GetVerifiedAsync(HttpContext);
+            if (parent == null && User.Identity?.IsAuthenticated == true && User.IsInRole("Parent"))
             {
-                ModelState.AddModelError(string.Empty,
-                    "Please sign in to your parent / guardian account before verifying it.");
-                return View("GuardianDetails", model);
+                string? userId = _userManager.GetUserId(User);
+                parent = await _context.ParentProfiles.Include(x => x.ApplicationUser)
+                    .SingleOrDefaultAsync(x => x.ApplicationUserId == userId);
             }
-            string? signedInParentId = _userManager.GetUserId(User);
-            if (string.IsNullOrWhiteSpace(signedInParentId)) return Forbid();
-
-            if (string.IsNullOrWhiteSpace(
-                model.ExistingParentEmail))
-            {
-                ModelState.AddModelError(
-                    nameof(
-                        model.ExistingParentEmail),
-                    "Please enter the email registered " +
-                    "with your account.");
-            }
-
-            if (string.IsNullOrWhiteSpace(
-                model
-                    .ExistingParentIdentificationLast4))
-            {
-                ModelState.AddModelError(
-                    nameof(
-                        model
-                            .ExistingParentIdentificationLast4),
-                    "Please enter the last 4 digits of " +
-                    "your identification number.");
-            }
-
-            if (!ModelState.IsValid)
-            {
-                return View(
-                    "GuardianDetails",
-                    model);
-            }
-
-            string email =
-                model.ExistingParentEmail!
-                    .Trim();
-
-            string identificationLast4 =
-                model
-                    .ExistingParentIdentificationLast4!
-                    .Trim();
-
-            string? normalizedEmail =
-                _userManager.NormalizeEmail(
-                    email);
-
-            var parentProfile =
-                await _context.ParentProfiles
-                    .Include(parent =>
-                        parent.ApplicationUser)
-                    .FirstOrDefaultAsync(parent =>
-                        parent.ApplicationUserId == signedInParentId &&
-                        parent.ApplicationUser
-                            .NormalizedEmail ==
-                            normalizedEmail &&
-                        parent.IdentificationLast4 ==
-                            identificationLast4);
-
-            /*
-             * Use a generic error message so the system does
-             * not reveal whether an email account exists.
-             */
-            if (parentProfile == null ||
-                parentProfile.ApplicationUser == null ||
-                !parentProfile.ApplicationUser.IsActive)
-            {
-                ModelState.AddModelError(
-                    string.Empty,
-                    "We couldn't find an active parent / " +
-                    "guardian account matching those " +
-                    "details. Please check the email and " +
-                    "IC number.");
-
-                return View(
-                    "GuardianDetails",
-                    model);
-            }
-
-            bool isParent =
-                await _userManager.IsInRoleAsync(
-                    parentProfile.ApplicationUser,
-                    "Parent");
-
-            if (!isParent)
-            {
-                ModelState.AddModelError(
-                    string.Empty,
-                    "We couldn't find an active parent / " +
-                    "guardian account matching those " +
-                    "details. Please check the email and " +
-                    "identification number.");
-
-                return View(
-                    "GuardianDetails",
-                    model);
-            }
-
-            /*
-             * Verification succeeded.
-             */
-            model.ExistingParentVerified =
-                true;
-
-            model.VerifiedParentName =
-                parentProfile.FullName;
-
-            model.VerifiedParentEmail =
-                parentProfile.ApplicationUser.Email;
-
-            /*
-             * Store the actual Parent user ID in Session.
-             */
-            HttpContext.Session.SetString(
-                ExistingParentUserIdSessionKey,
-                parentProfile.ApplicationUserId);
-
-            HttpContext.Session.SetString(
-                GuardianDetailsSessionKey,
-                JsonSerializer.Serialize(model));
-
-            TempData["SuccessMessage"] =
-                "Account verified. This student will be " +
-                "linked to the existing parent or guardian " +
-                "account after enrollment is completed.";
-
-            /*
-             * Stay on Guardian Details so the user can see
-             * the successful verification result.
-             */
-            return RedirectToAction(
-                nameof(GuardianDetails));
+            if (parent?.ApplicationUser == null || !parent.ApplicationUser.IsActive
+                || parent.ApplicationUser.MustChangePassword) return false;
+            model.ExistingParentVerified = true;
+            model.ExistingParentEmail = parent.ApplicationUser.Email;
+            model.ExistingParentIdentificationLast4 = parent.IdentificationLast4;
+            model.VerifiedParentName = parent.FullName;
+            model.VerifiedParentEmail = parent.ApplicationUser.Email;
+            model.GuardianName = null;
+            model.GuardianEmail = null;
+            model.GuardianPhoneNumber = null;
+            model.GuardianIdentificationNumber = null;
+            HttpContext.Session.SetString(ExistingParentUserIdSessionKey, parent.ApplicationUserId);
+            HttpContext.Session.SetString(GuardianDetailsSessionKey, JsonSerializer.Serialize(model));
+            return true;
         }
 
         /*
@@ -629,6 +522,18 @@ namespace SecureSmartTuitionSystem.Controllers
                 return ReturnToStudentDetails();
             }
 
+            if (User.IsInRole("Parent") || model.UseExistingParentAccount)
+            {
+                ModelState.Clear();
+                if (!await LoadSignedInParent(model))
+                {
+                    ModelState.AddModelError(string.Empty, "Please verify your parent / guardian account before continuing.");
+                    ViewData["GuardianOtpPending"] = GuardianVerification.HasPending(HttpContext);
+            ViewData["GuardianResendAt"] = GuardianVerification.GetResendAtUnixSeconds(HttpContext);
+                    return View(model);
+                }
+            }
+
             /*
              * =================================================
              * EXISTING PARENT / GUARDIAN
@@ -645,8 +550,7 @@ namespace SecureSmartTuitionSystem.Controllers
                  * The account must be verified before the
                  * user can continue.
                  */
-                if (string.IsNullOrWhiteSpace(existingParentUserId) ||
-                    !User.IsInRole("Parent") || _userManager.GetUserId(User) != existingParentUserId)
+                if (string.IsNullOrWhiteSpace(existingParentUserId))
                 {
                     ModelState.AddModelError(
                         string.Empty,
@@ -782,6 +686,14 @@ namespace SecureSmartTuitionSystem.Controllers
 
             if (!ModelState.IsValid)
             {
+                return View(model);
+            }
+
+            if (await GuardianIcValidation.IsRegisteredAsync(
+                    _context, model.GuardianIdentificationNumber!, HttpContext.RequestAborted))
+            {
+                ModelState.AddModelError(nameof(model.GuardianIdentificationNumber),
+                    GuardianIcValidation.DuplicateMessage);
                 return View(model);
             }
 

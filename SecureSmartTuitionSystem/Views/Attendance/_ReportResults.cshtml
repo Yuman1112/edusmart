@@ -20,7 +20,7 @@
         <h2 class="h5">Attendance Records (@Model.Total)</h2>
     }
     <div class="@(staffList ? "attendance-result-summary" : "")">
-        <p class="text-muted">@Model.Filter.From.ToString("dd MMM yyyy") – @Model.Filter.To.ToString("dd MMM yyyy") · MYT (UTC+8). Submitted and ended lessons only; unrecorded attendance is not absence.</p>
+        <p class="text-muted">@Model.Filter.From.ToString("dd MMM yyyy") – @Model.Filter.To.ToString("dd MMM yyyy") · MYT (UTC+8). @(User.IsInRole("Student") || User.IsInRole("Parent") ? "Only submitted attendance is published. Unsubmitted lessons are pending; unrecorded attendance is not absence." : "Submitted and ended draft records; drafts are not published to students or parents.")</p>
         @if (!Model.IsPrint && Model.Total > Model.Rows.Count)
         {
             <p class="text-muted">Previewing @Model.Rows.Count records. Excel and the print view include all matching records, up to 5,000. Narrow the filters for larger reports.</p>
@@ -62,7 +62,7 @@
                         {
                             <td class="number-column">@recordNumber</td>
                         }
-                        <td>@row.Date.ToString("dd MMM yyyy")<br /><small>@row.Start.ToString("HH:mm")–@row.End.ToString("HH:mm")<br />@(row.Replacement ? "Replacement" : "Regular")</small></td>
+                        <td>@if (row.SubmittedLate) { <span class="tutor-management-badge tutor-badge-pending">Late submission</span><br /> }@row.Date.ToString("dd MMM yyyy")<br /><small>@row.Start.ToString("HH:mm")–@row.End.ToString("HH:mm")<br />@(row.Replacement ? "Replacement" : "Regular")</small></td>
                         <td>
                             <strong>@row.ClassCode</strong><br />@row.Tutor<br />@if (row.ScheduleChanged) {
                             <small class="text-danger">Schedule changed · check before reporting totals</small>

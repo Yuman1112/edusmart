@@ -133,6 +133,35 @@ public sealed class TutorManagementController(
     }
 
     [HttpPost]
+    public async Task<IActionResult> PrintTutorRecords(
+        TutorExportFilterViewModel filter, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid) return BadRequest();
+        var records = await new TutorExportService(db).GetRecordsAsync(filter, cancellationToken);
+        var audit = new AuditLogEntry
+        {
+            ActorUserId = users.GetUserId(User),
+            ActorName = User.Identity?.Name ?? "Administrator",
+            EventName = "TutorRecordsPrintPrepared",
+            Severity = SecuritySeverity.Information,
+            EntityName = "TutorProfile",
+            Summary = $"Prepared print view of {records.Count} tutor records."
+        };
+        auditIntegrity.Seal(audit);
+        db.AuditLogEntries.Add(audit);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return View(new TutorPrintViewModel
+        {
+            Search = filter.Search?.Trim(),
+            Status = filter.Status,
+            Setup = filter.Setup,
+            Records = records,
+            GeneratedAtUtc = DateTime.UtcNow
+        });
+    }
+
+    [HttpPost]
     public async Task<IActionResult> DownloadTutorRecords(
         TutorExportFilterViewModel filter, CancellationToken cancellationToken)
     {

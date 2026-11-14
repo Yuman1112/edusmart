@@ -2,19 +2,20 @@
 @using SecureSmartTuitionSystem.Models.Tutor
 
 @{
-    ViewData["Title"] = "Review Teaching Change Request";
+    ViewData["Title"] = "Review Teaching Request";
     var request = Model.Request!;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/teaching-requests.css" asp-append-version="true" />
 }
 
 <div class="page-header">
     <div>
-        <h1>Review Teaching Change Request</h1>
-        <p>Request #@request.Id · @request.TutorName (@request.TutorId)</p>
+        <h1>Review Teaching Request</h1>
     </div>
     <a asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Requests</a>
 </div>
@@ -28,29 +29,11 @@
     <div class="alert alert-warning" role="alert">@warning</div>
 }
 
-<div class="class-form-card tutor-create-card">
-    <section class="class-form-section">
-        <h2><i class="bi bi-clipboard-check" aria-hidden="true"></i> Request Details</h2>
-        <dl class="row mb-0">
-            <dt class="col-sm-4">Status</dt>
-            <dd class="col-sm-8"><partial name="_TeachingRequestStatus" model="request" /></dd>
-            <dt class="col-sm-4">Request Type</dt><dd class="col-sm-8">@request.TypeLabel</dd>
-            <dt class="col-sm-4">Subject &amp; Level</dt><dd class="col-sm-8">@request.SubjectLabel · @request.AcademicLevel</dd>
-            <dt class="col-sm-4">Reason</dt><dd class="col-sm-8 text-break">@request.Reason</dd>
-            <dt class="col-sm-4">Supporting Evidence</dt>
-            <dd class="col-sm-8">
-                @if (request.EvidenceId.HasValue)
-                {
-                    <a asp-action="Document" asp-route-id="@request.EvidenceId">@request.EvidenceName</a>
-                }
-                else
-                {
-                    <span class="text-muted">No file attached</span>
-                }
-            </dd>
-        </dl>
-    </section>
-
+<div class="teaching-review-grid">
+    <div class="class-form-card tutor-create-card teaching-summary-card">
+        <partial name="_RequestSummary" model="request" />
+    </div>
+    <div class="class-form-card tutor-create-card teaching-decision-card">
     @if (request.Status == TeachingChangeStatus.Pending)
     {
         <form asp-action="Review" method="post">
@@ -66,7 +49,7 @@
                 </div>
                 @if (request.Type != TeachingChangeType.Remove)
                 {
-                    <div class="form-check">
+                    <div class="form-check teaching-qualification-confirm">
                         <input asp-for="QualificationVerified" class="form-check-input" />
                         <label asp-for="QualificationVerified" class="form-check-label"></label>
                     </div>
@@ -75,25 +58,31 @@
             </section>
             <div class="class-form-actions">
                 <button type="submit" name="approve" value="false" class="outline-button">Reject</button>
-                <button type="submit" name="approve" value="true" class="primary-button">
+                <button type="submit" name="approve" value="true" class="primary-button"
+                        disabled="@(request.Type == TeachingChangeType.Remove)">
                     <i class="bi bi-check-circle" aria-hidden="true"></i> Approve
                 </button>
             </div>
+            @if (request.Type == TeachingChangeType.Remove)
+            {
+                <p class="form-text">This earlier removal request can be rejected with an explanation. Subject removal is currently unavailable.</p>
+            }
         </form>
     }
     else
     {
         <section class="class-form-section">
-            <h2>Admin Review Notes</h2>
-            <p class="text-break mb-0">@request.ReviewNotes</p>
+            <h2><i class="bi bi-check2-circle" aria-hidden="true"></i> Review Outcome</h2>
+            <p class="teaching-review-copy">@request.ReviewNotes</p>
             @if (request.ReviewedAtUtc.HasValue)
             {
-                <p class="text-muted mb-0">Reviewed @request.ReviewedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy, h:mm tt")</p>
+                <p class="text-muted mb-0">Reviewed @request.ReviewedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy, h:mm tt") MYT</p>
             }
         </section>
     }
 </div>
 
+</div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }

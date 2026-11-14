@@ -18,6 +18,12 @@ public sealed class TutorExportViewModel : TutorExportFilterViewModel
     [BindNever] public List<TutorExportRowViewModel> PreviewRows { get; set; } = new();
 }
 
+public sealed class TutorPrintViewModel : TutorExportFilterViewModel
+{
+    public IReadOnlyList<TutorExportRowViewModel> Records { get; init; } = [];
+    public DateTime GeneratedAtUtc { get; init; }
+}
+
 public sealed class TutorExportRowViewModel
 {
     public string TutorId { get; set; } = string.Empty;

@@ -48,6 +48,7 @@ public sealed class AttendanceController(ApplicationDbContext db, UserManager<Ap
             if (sheet == null) return NotFound();
             // Preserve the old version so a stale tab cannot overwrite newer records.
             sheet.RowVersion = model.RowVersion ?? "";
+            sheet.LateSubmissionReason = model.LateSubmissionReason;
             foreach (var row in sheet.Students)
             {
                 var posted = model.Students?.FirstOrDefault(x => x.StudentProfileId == row.StudentProfileId);

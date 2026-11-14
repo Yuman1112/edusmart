@@ -40,6 +40,10 @@ public sealed class AttendanceSheetViewModel
     public TimeOnly End { get; set; }
     public string State { get; set; } = "";
     public bool CanEdit { get; set; }
+    public bool IsLateEntry { get; set; }
+    public bool CanRequestReopen { get; set; }
+    public DateTime EditUntil { get; set; }
+    [StringLength(500)] public string? LateSubmissionReason { get; set; }
     public List<AttendanceStudentRow> Students { get; set; } = [];
 }
 public sealed class AttendanceStudentRow
@@ -58,5 +62,6 @@ public sealed class SaveAttendanceViewModel
     public bool Replacement { get; set; }
     [StringLength(100)] public string? RowVersion { get; set; }
     public bool FinalSubmit { get; set; }
+    [StringLength(500)] public string? LateSubmissionReason { get; set; }
     [MaxLength(100)] public List<AttendanceStudentRow> Students { get; set; } = [];
 }

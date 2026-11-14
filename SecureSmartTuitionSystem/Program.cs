@@ -314,6 +314,7 @@ builder.Services.AddScoped<EmailOtpRecipientResolver>();
 
 builder.Services.AddScoped<
     AccountSecurityMail>();
+builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Enrollment.GuardianEnrollmentVerification>();
 
 builder.Services.AddScoped<
     IBillingService,
@@ -622,3 +623,4 @@ app.MapRazorPages();
  */
 
 app.Run();
+

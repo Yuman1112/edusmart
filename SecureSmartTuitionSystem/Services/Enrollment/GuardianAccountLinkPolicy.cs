@@ -13,6 +13,13 @@ public sealed class GuardianAccountLinkPolicy(ApplicationDbContext db)
     {
         if (!application.ExistingParentProfileId.HasValue)
         {
+            string? icError = GuardianIcValidation.GetError(application.GuardianIdentificationNumber);
+            if (icError != null)
+                return icError;
+            if (await GuardianIcValidation.IsRegisteredAsync(
+                    db, application.GuardianIdentificationNumber!, cancellationToken))
+                return GuardianIcValidation.DuplicateMessage;
+
             string email = (application.GuardianEmail ?? "").Trim().Normalize().ToUpperInvariant();
             if (email.Length == 0 || await db.Users.AsNoTracking().AnyAsync(
                 x => x.NormalizedEmail == email, cancellationToken))
@@ -26,10 +33,22 @@ public sealed class GuardianAccountLinkPolicy(ApplicationDbContext db)
                 x.ApplicationUser.IsActive, x.ApplicationUser.NormalizedEmail })
             .FirstOrDefaultAsync(cancellationToken);
         string emailSnapshot = (application.GuardianEmail ?? "").Trim().Normalize().ToUpperInvariant();
-        if (parent == null || !parent.IsActive || string.IsNullOrWhiteSpace(application.SubmittedByUserId) ||
+        if (parent == null || !parent.IsActive ||
             string.IsNullOrWhiteSpace(parent.NormalizedEmail) || parent.NormalizedEmail != emailSnapshot)
             return "The existing guardian account or email needs review. Ask the guardian to sign in and submit a new request.";
 
+        // A verified enrollment-only OTP leaves a durable receipt for approval and fulfillment.
+        string receiptName = GuardianEnrollmentVerification.ReceiptName(application.EnrollmentApplicationId);
+        string receiptValue = GuardianEnrollmentVerification.ReceiptValue(application);
+        if (await db.UserTokens.AsNoTracking().AnyAsync(t => t.UserId == parent.ApplicationUserId &&
+            t.LoginProvider == GuardianEnrollmentVerification.Provider &&
+            t.Name == receiptName &&
+            t.Value == receiptValue, cancellationToken)
+            && await db.UserRoles.AnyAsync(r => r.UserId == parent.ApplicationUserId &&
+                db.Roles.Any(role => role.Id == r.RoleId && role.Name == "Parent"), cancellationToken)) return null;
+
+        if (string.IsNullOrWhiteSpace(application.SubmittedByUserId))
+            return "This application has no valid guardian consent. Please ask the guardian to submit a new enrollment and complete email verification.";
         if (parent.ApplicationUserId == application.SubmittedByUserId) return null;
 
         // Staff-assisted additions must refer to an existing linked student.

@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.Controllers.AccountSettingsController.TwoFactorViewModel
+@model SecureSmartTuitionSystem.Controllers.AccountSettingsController.TwoFactorViewModel
 
 @{
     ViewData["Title"] = "Two-Factor Authentication";
@@ -204,6 +204,17 @@
                 border-color: #dc3545;
                 box-shadow: 0 0 0 3px rgba(220, 53, 69, .12);
             }
+
+    /* The existing border and soft ring indicate focus without a second outline. */
+    .edusmart-ui main .twofa-page .twofa-input:focus-visible {
+        outline: none;
+    }
+    .twofa-password-wrapper { position: relative; }
+    .twofa-password-wrapper .twofa-input { padding-right: 52px; background-image: none; }
+    .twofa-password-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #008b99; cursor: pointer; }
+    .twofa-password-toggle:hover { background: #edf9fa; }
+    .twofa-password-toggle:focus-visible { outline: 2px solid #0798a4; outline-offset: 2px; }
+    #twofa-password::-ms-reveal, #twofa-password::-ms-clear { display: none; }
 
     .twofa-otp-field:has(.is-invalid, .input-validation-error) .otp-digit {
         border-color: #dc3545;
@@ -574,6 +585,7 @@
                     Current Password
                 </label>
 
+                <div class="twofa-password-wrapper">
                 <input id="twofa-password"
                        class="twofa-input @(passwordError is null ? "" : "is-invalid")"
                        name="Password"
@@ -585,6 +597,11 @@
                        data-val="true"
                        data-val-required="Please enter your current password."
                        required />
+                    <button type="button" id="twofa-password-toggle" class="twofa-password-toggle"
+                            aria-label="Show password" aria-controls="twofa-password" aria-pressed="false">
+                        <i class="bi bi-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
 
                 <div id="twofa-password-error"
                      class="twofa-field-error @(passwordError is null ? "field-validation-valid" : "field-validation-error")"
@@ -617,6 +634,29 @@
 </div>
 
 @section Scripts {
+    <script nonce="@Context.Items["CspNonce"]">
+        (() => {
+            const input = document.getElementById("twofa-password");
+            const toggle = document.getElementById("twofa-password-toggle");
+            if (!input || !toggle) return;
+            toggle.addEventListener("click", () => {
+                const visible = input.type === "password";
+                input.type = visible ? "text" : "password";
+                toggle.setAttribute("aria-label", visible ? "Hide password" : "Show password");
+                toggle.setAttribute("aria-pressed", String(visible));
+                const icon = toggle.querySelector("i");
+                icon.classList.toggle("bi-eye", !visible);
+                icon.classList.toggle("bi-eye-slash", visible);
+            });
+            input.form?.addEventListener("submit", () => {
+                input.type = "password";
+                toggle.setAttribute("aria-label", "Show password");
+                toggle.setAttribute("aria-pressed", "false");
+                toggle.querySelector("i").classList.remove("bi-eye-slash");
+                toggle.querySelector("i").classList.add("bi-eye");
+            });
+        })();
+    </script>
     @if (Model.EmailVerified)
     {
         <partial name="_ValidationScriptsPartial" />
@@ -627,3 +667,4 @@
         <script src="~/js/login-otp.js" asp-append-version="true" defer></script>
     }
 }
+

@@ -1,0 +1,11 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingRequestListViewModel
+@{
+    Layout = null;
+}
+<div data-live-state data-unavailable-combinations="@System.Text.Json.JsonSerializer.Serialize(Model.UnavailableCombinations)">
+    <table><tbody data-live-rows><partial name="_RequestTableRows" model="Model" /></tbody></table>
+    @if (!Model.IsAdmin)
+    {
+        <partial name="_ApprovedSubjects" model="Model.ApprovedSubjects" />
+    }
+</div>

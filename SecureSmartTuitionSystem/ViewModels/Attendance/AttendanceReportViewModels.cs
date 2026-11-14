@@ -18,6 +18,7 @@ public sealed class AttendanceChoice
 }
 public sealed class AttendanceReportRow
 {
+    public bool SubmittedLate { get; set; }
     public int RecordId { get; set; }
     public int ClassId { get; set; }
     public DateTime Date { get; set; }

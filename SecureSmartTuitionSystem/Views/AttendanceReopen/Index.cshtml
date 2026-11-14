@@ -1,0 +1,25 @@
+@model IReadOnlyList<SecureSmartTuitionSystem.Models.Attendance.AttendanceReopenRequest>
+@using SecureSmartTuitionSystem.Models.Attendance
+@{ ViewData["Title"]="Attendance Reopening Requests"; bool admin=User.IsInRole("Admin"); }
+@section Styles { <link rel="stylesheet" href="~/css/attendance.css" asp-append-version="true" /> }
+<div class="attendance-page">
+    <div class="page-header"><div><h1>Attendance Reopening Requests</h1><p>@(admin ? "Review overdue, unsubmitted lessons. Approval opens entry for 24 hours." : "Track your requests to record overdue attendance.")</p></div><a asp-controller="Attendance" asp-action="Index" class="outline-button">Back to Attendance</a></div>
+    @foreach(var key in new[]{"AttendanceReopenSuccess","AttendanceReopenError"}) { if(TempData[key] is string message){<div class="alert @(key.EndsWith("Error")?"alert-danger":"alert-success")" role="status">@message</div>} }
+    <div class="class-form-card">
+        <h2 class="h5">Requests</h2><p class="text-muted small">Latest 500 requests. Submitted attendance must use the existing correction workflow.</p>
+        @if(Model.Count==0){<p class="text-muted">No reopening requests yet.</p>}
+        else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>No.</th><th>Lesson</th><th>Tutor / Reason</th><th>Status</th><th>Review / Entry Deadline</th><th data-sortable="false">Actions</th></tr></thead><tbody>
+        @for(int i=0;i<Model.Count;i++){var row=Model[i];<tr>
+            <td>@(i+1)</td><td><strong>@row.ClassName</strong><br />@row.LessonDate.ToString("dd MMM yyyy")<br /><small>@row.StartTime.ToString("HH:mm")–@row.EndTime.ToString("HH:mm") · @(row.IsReplacement?"Replacement":"Regular")</small></td>
+            <td>@row.TutorName<br /><small>@row.Reason</small><br /><small class="text-muted">Requested @row.RequestedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</small></td>
+            <td><span class="tutor-management-badge @(row.Decision==AttendanceReopenDecision.Approved?"tutor-badge-success":row.Decision==AttendanceReopenDecision.Rejected?"tutor-badge-inactive":"tutor-badge-pending")">@row.Decision</span></td>
+            <td>@(row.ReviewRemark??"—") @if(row.OpenUntilUtc.HasValue){<br /><small>Entry until @row.OpenUntilUtc.Value.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</small>}</td>
+            <td>@if(admin && row.Decision==AttendanceReopenDecision.Pending){
+                <form asp-action="Review" method="post"><input type="hidden" name="id" value="@row.AttendanceReopenRequestId" /><input type="hidden" name="rowVersion" value="@Convert.ToBase64String(row.RowVersion)" />
+                <label class="visually-hidden" for="review-@row.AttendanceReopenRequestId">Review reason</label><textarea id="review-@row.AttendanceReopenRequestId" name="remark" class="form-control mb-2" maxlength="500" required placeholder="Explain your approval or rejection"></textarea>
+                <button type="submit" name="decision" value="reject" class="outline-button">Reject</button> <button type="submit" name="decision" value="approve" class="primary-button">Approve</button></form>
+            } else { <a asp-controller="Attendance" asp-action="Sheet" asp-route-classId="@row.ClassSessionId" asp-route-date="@row.LessonDate.ToString("yyyy-MM-dd")" asp-route-changeId="@row.ChangeId" asp-route-replacement="@row.IsReplacement" class="outline-button">Open Attendance</a> }</td>
+        </tr>}
+        </tbody></table></div> }
+    </div>
+</div>

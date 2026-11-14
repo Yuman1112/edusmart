@@ -1,0 +1,12 @@
+.tutor-students-page .roster-filters { padding: 22px; margin-bottom: 20px; border: 1px solid var(--border,#d4e7ed); border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(6,78,102,.05); }
+.roster-filters h2 { display:flex; gap:8px; align-items:center; margin:0 0 6px; }
+.roster-filters h2 i { color:var(--teal,#0798a4); }
+.roster-filters > p { font-size:.875rem; margin-bottom:18px; }
+.roster-live-status { color:var(--muted,#58718a); font-size:.85rem; margin:0 0 10px; }
+.roster-empty { padding:24px; margin:0; color:var(--muted,#58718a); }
+.roster-badge { display:inline-flex; padding:4px 10px; border-radius:999px; font-size:.75rem; font-weight:600; white-space:nowrap; }
+.roster-badge.current { color:#087a59; background:#d1fae5; }
+.roster-badge.upcoming { color:#946200; background:#fff1cf; }
+.tutor-students-page table { min-width:850px; }
+.tutor-students-page .tutor-management-list-header { gap:12px; flex-wrap:wrap; }
+.edusmart-ui main .tutor-students-page :is(.form-control,.form-select):focus-visible { outline:none; }

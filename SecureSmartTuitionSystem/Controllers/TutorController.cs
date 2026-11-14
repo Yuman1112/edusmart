@@ -53,45 +53,57 @@ namespace SecureSmartTuitionSystem.Controllers
         private IQueryable<StudentEnrollment> CurrentRoster(string tutorId)
         {
             var today = ClassScheduleService.Today;
-            return _context.StudentEnrollments.AsNoTracking().Where(e =>
-                e.ClassSession.TutorUserId == tutorId &&
-                e.ClassSession.Status == ClassSessionStatus.Active &&
-                (e.ClassSession.StartDate == null || e.ClassSession.StartDate <= today) &&
-                (e.ClassSession.EndDate == null || e.ClassSession.EndDate >= today) &&
-                e.StudentProfile.IsActive && e.StartDate <= today && e.StartDate.Year == today.Year &&
-                (e.Status == StudentEnrollmentStatus.Active || e.Status == StudentEnrollmentStatus.PendingDrop) &&
-                (e.DropEffectiveDate == null || e.DropEffectiveDate > today) &&
-                (e.EndedAt == null || e.EndedAt > today));
+            return TutorRosterPolicy.Query(_context, tutorId, today).Where(e => e.StartDate <= today &&
+                (e.ClassSession.StartDate ?? e.ClassSession.CreatedAt.AddHours(8)).Date <= today);
         }
 
         [HttpGet]
-        public async Task<IActionResult> Students(int? classId)
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> Students(int? classId, string? search, string? status,
+            string? sort, int page = 1, bool fragment = false)
         {
             var tutorId = _userManager.GetUserId(User);
             if (tutorId == null) return Challenge();
-
+            var today = ClassScheduleService.Today;
             var classes = await _context.ClassSessions.AsNoTracking()
                 .Where(c => c.TutorUserId == tutorId && c.Status == ClassSessionStatus.Active)
                 .OrderBy(c => c.ClassCode)
                 .Select(c => new TutorRosterClass(c.ClassSessionId, c.ClassCode, c.ClassName ?? ""))
                 .ToListAsync();
-
-            if (classId.HasValue && !classes.Any(c => c.Id == classId.Value))
-                return NotFound();
-
-            var roster = await CurrentRoster(tutorId)
-                .Where(e => !classId.HasValue || e.ClassSessionId == classId.Value)
-                .Select(e => new
-                {
-                    Number = e.StudentProfile.StudentNumber,
-                    Name = e.StudentProfile.FullName,
-                    e.ClassSession.ClassCode,
-                    ClassName = e.ClassSession.ClassName ?? ""
-                })
-                .Distinct().OrderBy(e => e.Name).ThenBy(e => e.Number).ThenBy(e => e.ClassCode)
-                .Select(e => new TutorRosterStudent(e.Number, e.Name, e.ClassCode, e.ClassName))
-                .ToListAsync();
-            return View(new TutorStudentRoster(classId, classes, roster));
+            if (classId.HasValue && !classes.Any(c => c.Id == classId)) return NotFound();
+            search = (search ?? "").Trim();
+            if (search.Length > 100) search = search[..100];
+            status = status is "Current" or "Upcoming" ? status : "";
+            var query = TutorRosterPolicy.Query(_context, tutorId, today)
+                .Where(e => !classId.HasValue || e.ClassSessionId == classId)
+                .Select(e => new {
+                    Id = e.StudentEnrollmentId, Number = e.StudentProfile.StudentNumber, Name = e.StudentProfile.FullName,
+                    ClassCode = e.ClassSession.ClassCode, ClassName = e.ClassSession.ClassName ?? "",
+                    Subject = e.ClassSession.Subject.SubjectName, Level = e.ClassSession.Subject.AcademicLevel,
+                    StartDate = e.StartDate.Date > (e.ClassSession.StartDate ?? e.ClassSession.CreatedAt.AddHours(8)).Date
+                        ? e.StartDate.Date : (e.ClassSession.StartDate ?? e.ClassSession.CreatedAt.AddHours(8)).Date,
+                    Status = e.StartDate.Date > today || (e.ClassSession.StartDate ?? e.ClassSession.CreatedAt.AddHours(8)).Date > today
+                        ? "Upcoming" : "Current" });
+            if (search.Length > 0) query = query.Where(e => e.Name.Contains(search) || e.Number.Contains(search));
+            if (status.Length > 0) query = query.Where(e => e.Status == status);
+            // Explicit whitelist: every sort applies to the full filtered result, not just one page.
+            sort = sort is "number_asc" or "number_desc" or "name_asc" or "name_desc" or "class_asc" or "class_desc"
+                or "subject_asc" or "subject_desc" or "start_asc" or "start_desc" or "status_asc" or "status_desc" ? sort : "name_asc";
+            var ordered = sort switch {
+                "number_asc" => query.OrderBy(e => e.Number), "number_desc" => query.OrderByDescending(e => e.Number),
+                "name_desc" => query.OrderByDescending(e => e.Name),
+                "class_asc" => query.OrderBy(e => e.ClassCode), "class_desc" => query.OrderByDescending(e => e.ClassCode),
+                "subject_asc" => query.OrderBy(e => e.Subject).ThenBy(e => e.Level), "subject_desc" => query.OrderByDescending(e => e.Subject).ThenByDescending(e => e.Level),
+                "start_asc" => query.OrderBy(e => e.StartDate), "start_desc" => query.OrderByDescending(e => e.StartDate),
+                "status_asc" => query.OrderBy(e => e.Status), "status_desc" => query.OrderByDescending(e => e.Status),
+                _ => query.OrderBy(e => e.Name)
+            };
+            var model = new TutorStudentRoster { ClassId = classId, Classes = classes, Search = search, Status = status, Sort = sort,
+                Total = await query.CountAsync(), StudentCount = await query.Select(e => e.Number).Distinct().CountAsync() };
+            model.Page = Math.Clamp(page, 1, model.Pages);
+            model.Students = await ordered.ThenBy(e => e.Id).Skip((model.Page - 1) * model.PageSize).Take(model.PageSize)
+                .Select(e => new TutorRosterStudent(e.Id, e.Number, e.Name, e.ClassCode, e.ClassName, e.Subject, e.Level, e.StartDate, e.Status)).ToListAsync();
+            return fragment ? PartialView("_StudentRoster", model) : View(model);
         }
 
         [HttpGet]
@@ -139,12 +151,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     .ToList();
 
             var studentCounts =
-                await _context.StudentEnrollments
-                    .AsNoTracking()
-                    .Where(enrollment =>
-                        classIds.Contains(
-                            enrollment.ClassSessionId) &&
-                        (enrollment.Status == StudentEnrollmentStatus.Active || (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > ClassScheduleService.Today))))
+                await TutorRosterPolicy.Query(_context, tutor.Id, ClassScheduleService.Today)
+                    .Where(enrollment => classIds.Contains(enrollment.ClassSessionId))
                     .GroupBy(enrollment =>
                         enrollment.ClassSessionId)
                     .Select(group =>
@@ -347,12 +355,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     .ToList();
 
             var studentCounts =
-                await _context.StudentEnrollments
-                    .AsNoTracking()
-                    .Where(enrollment =>
-                        classIds.Contains(
-                            enrollment.ClassSessionId) &&
-                        (enrollment.Status == StudentEnrollmentStatus.Active || (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > ClassScheduleService.Today))))
+                await TutorRosterPolicy.Query(_context, tutor.Id, ClassScheduleService.Today)
+                    .Where(enrollment => classIds.Contains(enrollment.ClassSessionId))
                     .GroupBy(enrollment =>
                         enrollment.ClassSessionId)
                     .Select(group =>
@@ -499,13 +503,8 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
-            int studentCount =
-                await _context.StudentEnrollments
-                    .AsNoTracking()
-                    .CountAsync(enrollment =>
-                        enrollment.ClassSessionId ==
-                            session.ClassSessionId &&
-                        (enrollment.Status == StudentEnrollmentStatus.Active || (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > ClassScheduleService.Today))));
+            int studentCount = await TutorRosterPolicy.Query(_context, tutor.Id, ClassScheduleService.Today)
+                .CountAsync(e => e.ClassSessionId == session.ClassSessionId);
 
             var model =
                 new TutorClassDetailsViewModel

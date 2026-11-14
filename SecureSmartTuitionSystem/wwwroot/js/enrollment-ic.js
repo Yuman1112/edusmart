@@ -67,11 +67,25 @@
         });
         input.setAttribute("aria-describedby", student ? "studentIdentificationNumberValidation" : "guardianIcValidation");
         if (!student) {
+            const minimumAge = Number(input.dataset.minParentAge || 18);
+            const maximumAge = Number(input.dataset.maxParentAge || 80);
             $.validator.addMethod("edusmartGuardianBirth", function (value, element) {
                 const result = parse(value);
                 return this.optional(element) || !!result.error || result.date < today();
             }, messages.future);
             $(input).rules("add", { edusmartGuardianBirth: true });
+            $.validator.addMethod("edusmartGuardianAge", function (value, element) {
+                if (this.optional(element)) return true;
+                const result = parse(value);
+                if (result.error || result.date >= today()) return true;
+                const now = today();
+                let age = now.getUTCFullYear() - result.date.getUTCFullYear();
+                if (now.getUTCMonth() < result.date.getUTCMonth()
+                    || now.getUTCMonth() === result.date.getUTCMonth() && now.getUTCDate() < result.date.getUTCDate())
+                    age--;
+                return age >= minimumAge && age <= maximumAge;
+            }, "The IC number indicates an age outside the allowed range of " + minimumAge + "–" + maximumAge + ".");
+            $(input).rules("add", { edusmartGuardianAge: true });
             input.addEventListener("input", () => { input.value = format(input.value); validator.element(input); });
             input.addEventListener("blur", () => validator.element(input));
             if (input.value && !checkbox?.checked) validator.element(input);

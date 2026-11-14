@@ -415,3 +415,12 @@
     .attendance-page .attendance-sort-link .bi {
         font-size: .8em;
     }
+
+/* Keep the existing border/soft ring, without the global extra outline. */
+.edusmart-ui main .attendance-page :is(.form-control, .form-select):focus-visible {
+    outline: none;
+}
+.edusmart-ui main .attendance-page :is(.form-control, .form-select):is(.input-validation-error, .is-invalid):focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 .2rem rgba(220, 53, 69, .12);
+}

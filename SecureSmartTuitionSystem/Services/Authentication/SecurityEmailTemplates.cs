@@ -104,6 +104,23 @@ public static class SecurityEmailTemplates
             """);
     }
 
+    public static string EnrollmentVerification(string code)
+    {
+        string safeCode = WebUtility.HtmlEncode(code);
+        return Layout("Verify your enrollment", $$"""
+            <p>Hello,</p>
+            <p>Use the code below to confirm linking this enrollment to your existing EduSmart parent / guardian account.</p>
+            <div style="text-align:center;background:#e7f9fa;border-radius:10px;padding:24px;margin:25px 0;">
+                <p style="font-size:12px;font-weight:bold;color:#0097a7;margin:0 0 12px;">YOUR VERIFICATION CODE</p>
+                <div style="font-size:34px;font-weight:bold;letter-spacing:8px;color:#07356b;">{{safeCode}}</div>
+                <p style="font-size:12px;margin:12px 0 0;">This code expires in 5 minutes.</p>
+            </div>
+            <p>Use the latest code if you requested another email. Do not share this code with anyone.</p>
+            <p>This verification is for this enrollment only. It does not sign you in to your account.</p>
+            <p>If you did not request this code, please ignore this email.</p>
+            """);
+    }
+
     public static string ForgotPassword(string resetUrl)
     {
         string safeUrl = WebUtility.HtmlEncode(resetUrl);

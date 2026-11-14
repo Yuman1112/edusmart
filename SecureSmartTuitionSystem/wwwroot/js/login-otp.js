@@ -1,4 +1,4 @@
-﻿
+
 document.addEventListener("DOMContentLoaded", function () {
     const input = document.getElementById("otpCode");
     const container = document.querySelector(".otp-input-container");

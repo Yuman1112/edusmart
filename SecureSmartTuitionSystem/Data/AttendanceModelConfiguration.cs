@@ -5,6 +5,13 @@ public static class AttendanceModelConfiguration
 {
     public static void ConfigureAttendance(this ModelBuilder builder)
     {
+        builder.Entity<AttendanceReopenRequest>(entity => {
+            entity.ToTable("AttendanceReopenRequests");
+            entity.HasIndex(x => new { x.ClassSessionId, x.OriginalDate, x.IsReplacement }).IsUnique().HasFilter("[Decision] = 0");
+            entity.HasOne(x => x.ClassSession).WithMany().HasForeignKey(x => x.ClassSessionId).OnDelete(DeleteBehavior.Restrict);
+            entity.Property(x => x.OriginalDate).HasColumnType("date");
+            entity.Property(x => x.LessonDate).HasColumnType("date");
+        });
         builder.Entity<AttendanceLesson>(entity =>
         {
             entity.ToTable("AttendanceLessons");

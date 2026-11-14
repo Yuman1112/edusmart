@@ -5,36 +5,73 @@ using SecureSmartTuitionSystem.Services;
 
 namespace SecureSmartTuitionSystem.ViewModels.Tutor;
 
-public sealed class TeachingChangeInput
+public sealed class TeachingChangeInput : IValidatableObject
 {
     [Required(ErrorMessage = "Please select a request type.")]
     [EnumDataType(typeof(TeachingChangeType))]
     [Display(Name = "Request Type")]
-    public TeachingChangeType? Type { get; set; }
+    public TeachingChangeType? Type { get; set; } = TeachingChangeType.AddSubject;
 
-    [Required(ErrorMessage = "Please select an academic level.")]
-    [StringLength(20)]
-    [Display(Name = "Academic Level")]
-    public string AcademicLevel { get; set; } = "";
-
-    [Required(ErrorMessage = "Please select a subject.")]
-    [StringLength(10)]
-    [Display(Name = "Subject")]
-    public string SubjectCode { get; set; } = "";
+    [MinLength(1), MaxLength(10)]
+    public List<TeachingSubjectInput> Items { get; set; } = [new()];
 
     [Required(ErrorMessage = "Please explain why you are requesting this change.")]
     [StringLength(1000)]
     [Display(Name = "Reason for Request")]
     public string Reason { get; set; } = "";
 
+    [Display(Name = "Confirmation")]
+    public bool ConfirmAccuracy { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (!ConfirmAccuracy)
+            yield return new ValidationResult(
+                "Please confirm that you are qualified to teach the selected subjects and levels.",
+                [nameof(ConfirmAccuracy)]);
+    }
+
     [Display(Name = "Supporting Evidence")]
-    public IFormFile? Evidence { get; set; }
+    public List<IFormFile>? Evidence { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<string> UnavailableCombinations { get; set; } = [];
+
+    [MaxLength(5)]
+    public List<int> ReferenceDocumentIds { get; set; } = [];
+
+    [BindNever]
+    public IReadOnlyList<TeachingEvidenceRow> ExistingEvidence { get; set; } = [];
 
     [BindNever]
     public IReadOnlyList<TeachingChangeRow> Requests { get; set; } = [];
 
     [BindNever]
     public IReadOnlyList<string> ApprovedSubjects { get; set; } = [];
+}
+
+public sealed class TeachingSubjectInput
+{
+    [Required(ErrorMessage = "Select an academic level."), StringLength(20)]
+    public string AcademicLevel { get; set; } = "";
+
+    [Required(ErrorMessage = "Select a subject."), StringLength(10)]
+    public string SubjectCode { get; set; } = "";
+}
+
+public sealed class TeachingRequestListViewModel
+{
+    public bool IsAdmin { get; init; }
+    public IReadOnlyList<TeachingChangeRow> Requests { get; init; } = [];
+    public IReadOnlyList<string> ApprovedSubjects { get; init; } = [];
+    public IReadOnlyList<string> UnavailableCombinations { get; init; } = [];
+}
+
+public sealed class TeachingEvidenceRow
+{
+    public int Id { get; init; }
+    public string Name { get; init; } = "";
+    public int Size { get; init; }
 }
 
 public sealed class TeachingDecisionInput
@@ -56,6 +93,7 @@ public sealed class TeachingDecisionInput
 public sealed class TeachingChangeRow
 {
     public int Id { get; init; }
+    public int SubmissionId { get; init; }
     public string TutorId { get; init; } = "";
     public string TutorName { get; init; } = "";
     public TeachingChangeType Type { get; init; }
@@ -66,8 +104,7 @@ public sealed class TeachingChangeRow
     public string? ReviewNotes { get; init; }
     public DateTime SubmittedAtUtc { get; init; }
     public DateTime? ReviewedAtUtc { get; init; }
-    public int? EvidenceId { get; init; }
-    public string? EvidenceName { get; init; }
+    public IReadOnlyList<TeachingEvidenceRow> Evidence { get; init; } = [];
 
     public string TypeLabel => Type switch
     {

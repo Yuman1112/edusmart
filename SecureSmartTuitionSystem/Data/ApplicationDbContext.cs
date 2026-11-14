@@ -477,6 +477,8 @@ namespace SecureSmartTuitionSystem.Data
              */
             builder.Entity<TutorTeachingChangeRequest>(entity =>
             {
+                entity.HasOne(x => x.EvidenceRequest).WithMany()
+                    .HasForeignKey(x => x.EvidenceRequestId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(x => x.TutorProfile).WithMany()
                     .HasForeignKey(x => x.TutorProfileId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasIndex(x => new { x.TutorProfileId, x.AcademicLevel, x.SubjectCode })
@@ -492,7 +494,7 @@ namespace SecureSmartTuitionSystem.Data
                 entity.HasIndex(x => new { x.TutorProfileId, x.Kind })
                     .IsUnique().HasFilter("[TeachingChangeRequestId] IS NULL");
                 entity.HasIndex(x => x.TeachingChangeRequestId)
-                    .IsUnique().HasFilter("[TeachingChangeRequestId] IS NOT NULL");
+                    .HasFilter("[TeachingChangeRequestId] IS NOT NULL");
             });
 
             builder.Entity<TutorTeachingSubject>(entity =>

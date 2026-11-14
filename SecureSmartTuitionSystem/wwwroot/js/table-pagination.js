@@ -41,6 +41,7 @@
         });
     }
     function init(table) {
+        if (table.dataset.serverManaged === "true") return;
         prepareDropdowns(table);
         if(table.dataset.tablePaged==='true' && states.has(table))return;
         const previous = states.get(table);

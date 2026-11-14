@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
+using SecureSmartTuitionSystem.Services.Enrollment;
+
 namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 {
     public class GuardianDetailsViewModel : IValidatableObject
@@ -21,6 +23,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 
         // Used after successful verification.
         public bool ExistingParentVerified { get; set; }
+        [StringLength(6)]
+        public string? EnrollmentOtp { get; set; }
         public string? VerifiedParentName { get; set; }
         public string? VerifiedParentEmail { get; set; }
 
@@ -67,17 +71,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                 yield break;
             }
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(8));
-            var yy = int.Parse(GuardianIdentificationNumber[..2], System.Globalization.CultureInfo.InvariantCulture);
-            var year = yy <= today.Year % 100 ? 2000 + yy : 1900 + yy;
-            var dateText = $"{year:D4}{GuardianIdentificationNumber[2..6]}";
-
-            string? message = null;
-            if (!DateOnly.TryParseExact(dateText, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.None, out var birthDate))
-                message = "The IC number contains an invalid date of birth.";
-            else if (birthDate >= today)
-                message = "The date of birth must be earlier than today.";
+            string? message = GuardianIcValidation.GetError(GuardianIdentificationNumber);
 
             if (message != null)
                 yield return new ValidationResult(message, new[] { nameof(GuardianIdentificationNumber) });

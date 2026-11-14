@@ -22,6 +22,8 @@ public sealed class AttendanceLesson
     public DateTime UpdatedAtUtc { get; set; }
     [MaxLength(450)] public string UpdatedByUserId { get; set; } = "";
     public DateTime? SubmittedAtUtc { get; set; }
+    public bool SubmittedLate { get; set; }
+    [MaxLength(500)] public string? LateSubmissionReason { get; set; }
     [Timestamp] public byte[] RowVersion { get; set; } = [];
     public ClassSession ClassSession { get; set; } = null!;
     public ClassLessonChange? ClassLessonChange { get; set; }

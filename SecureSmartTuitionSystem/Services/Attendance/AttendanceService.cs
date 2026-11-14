@@ -12,7 +12,7 @@ namespace SecureSmartTuitionSystem.Services.Attendance;
 public sealed class AttendanceService(ApplicationDbContext db)
 {
     public static bool ValidSort(string? sort) => sort is "date_asc" or "date_desc" or "class_asc" or "class_desc" or "tutor_asc" or "tutor_desc" or "state_asc" or "state_desc";
-    private static int StateOrder(string state) => state switch { "Upcoming" => 0, "Unrecorded" => 1, "Draft" => 2, "Submitted" => 3, "Locked" => 4, _ => 5 };
+    private static int StateOrder(string state) => state switch { "Upcoming" => 0, "Unrecorded" => 1, "Draft" => 2, "Pending submission" => 3, "Reopened" => 4, "Submitted" => 5, "Submitted late" => 5, "Locked" => 6, _ => 7 };
     public static List<AttendanceLessonRow> SortLessons(IEnumerable<AttendanceLessonRow> rows, string sort)
     {
         var ordered = sort switch
@@ -30,10 +30,10 @@ public sealed class AttendanceService(ApplicationDbContext db)
     }
 
     public static bool Editable(DateTime date, TimeOnly start, TimeOnly end, DateTime? submitted, DateTime now) =>
-        submitted == null && start < end && now >= date.Date.Add(start.ToTimeSpan()) && now < date.Date.Add(end.ToTimeSpan());
+        AttendanceEntryPolicy.CanEdit(date, start, end, submitted, now);
     public static string State(DateTime date, TimeOnly start, TimeOnly end, DateTime? submitted, bool saved, DateTime now) =>
-        submitted != null ? "Submitted" : now >= date.Date.Add(end.ToTimeSpan()) ? (saved ? "Locked" : "Unrecorded (locked)")
-        : now < date.Date.Add(start.ToTimeSpan()) ? "Upcoming" : saved ? "Draft" : "Unrecorded";
+        submitted != null ? "Submitted" : now >= AttendanceEntryPolicy.Deadline(date,end) ? (saved ? "Locked" : "Unrecorded (locked)")
+        : now < date.Date.Add(start.ToTimeSpan()) ? "Upcoming" : now >= AttendanceEntryPolicy.LessonEnd(date,end) ? "Pending submission" : saved ? "Draft" : "Unrecorded";
     private IQueryable<AttendanceLesson> Saved(string userId, bool admin) => db.Set<AttendanceLesson>().AsNoTracking()
         .Where(x => admin || x.TutorUserId == userId);
     private async Task<LessonItem?> CurrentAsync(int classId, DateTime date, int? changeId, bool replacement, string userId, bool admin)
@@ -91,8 +91,11 @@ public sealed class AttendanceService(ApplicationDbContext db)
                 TutorName = record.TutorName,
                 Start = record.StartTime,
                 End = record.EndTime,
-                State = State(record.LessonDate, record.StartTime, record.EndTime, record.SubmittedAtUtc, true, now)
+                State = record.SubmittedLate ? "Submitted late" : State(record.LessonDate, record.StartTime, record.EndTime, record.SubmittedAtUtc, true, now)
             });
+        var grants = await db.Set<AttendanceReopenRequest>().AsNoTracking().Where(r => r.Decision == AttendanceReopenDecision.Approved && r.OpenUntilUtc > DateTime.UtcNow && (admin || r.TutorUserId == userId)).ToListAsync();
+        foreach (var row in model.Lessons.Where(r => !r.State.StartsWith("Submitted")))
+            if (grants.Any(g => g.ClassSessionId == row.ClassSessionId && g.LessonDate == row.Date.Date && g.StartTime == row.Start && g.EndTime == row.End && g.ChangeId == row.ChangeId && g.IsReplacement == row.Replacement)) row.State = "Reopened";
         model.Lessons = SortLessons(model.Lessons, sort);
         return model;
     }
@@ -122,8 +125,15 @@ public sealed class AttendanceService(ApplicationDbContext db)
             RowVersion = saved == null ? "" : Convert.ToBase64String(saved.RowVersion)
         };
         model.State = State(date, model.Start, model.End, saved?.SubmittedAtUtc, saved != null, ClassScheduleService.Now);
+        var grant = lesson == null ? null : await new AttendanceReopenService(db).GrantUntilAsync(lesson);
+        model.EditUntil = AttendanceEntryPolicy.Deadline(date, model.End, grant);
+        model.IsLateEntry = AttendanceEntryPolicy.IsLate(date, model.End, ClassScheduleService.Now);
+        model.LateSubmissionReason = saved?.LateSubmissionReason;
+        model.CanRequestReopen = !admin && lesson != null && (saved == null || Same(saved, lesson)) && saved?.SubmittedAtUtc == null && ClassScheduleService.Now >= model.EditUntil;
         model.CanEdit = !admin && lesson != null && (saved == null || Same(saved, lesson))
-            && Editable(date, model.Start, model.End, saved?.SubmittedAtUtc, ClassScheduleService.Now);
+            && AttendanceEntryPolicy.CanEdit(date, model.Start, model.End, saved?.SubmittedAtUtc, ClassScheduleService.Now, grant);
+        if (saved?.SubmittedLate == true) model.State = "Submitted late";
+        else if (model.CanEdit && model.IsLateEntry) model.State = grant.HasValue && grant.Value.AddHours(8) > AttendanceEntryPolicy.Deadline(date,model.End) ? "Reopened for late entry" : "Late entry window";
         if (saved != null && (lesson == null || !Same(saved, lesson))) model.State += " · Schedule changed (read only)";
         if (saved != null)
             model.Students = saved.Records.OrderBy(x => x.StudentNumber).Select(x => new AttendanceStudentRow
@@ -159,8 +169,12 @@ public sealed class AttendanceService(ApplicationDbContext db)
             var saved = await db.Set<AttendanceLesson>().Include(x => x.Records).SingleOrDefaultAsync(x =>
                 x.ClassSessionId == lesson.Class.ClassSessionId && x.OriginalDate == lesson.OriginalDate.Date && x.IsReplacement == lesson.Replacement);
             if (saved != null && (!Same(saved, lesson) || saved.TutorUserId != userId)) return "The schedule has changed. Existing attendance is read only.";
-            if (!Editable(lesson.Date, lesson.Start, lesson.End, saved?.SubmittedAtUtc, ClassScheduleService.Now))
-                return "Attendance can only be edited during the lesson, before final submission.";
+            var grant = await new AttendanceReopenService(db).GrantUntilAsync(lesson);
+            if (!AttendanceEntryPolicy.CanEdit(lesson.Date, lesson.Start, lesson.End, saved?.SubmittedAtUtc, ClassScheduleService.Now, grant))
+                return "The entry window is closed or attendance was already submitted. Request reopening for an overdue unsubmitted lesson.";
+            var reason = input.LateSubmissionReason?.Trim();
+            var reasonError = AttendanceEntryPolicy.ReasonError(reason,input.FinalSubmit,AttendanceEntryPolicy.IsLate(lesson.Date,lesson.End,ClassScheduleService.Now));
+            if (reasonError != null) return reasonError;
             string version = saved == null ? "" : Convert.ToBase64String(saved.RowVersion);
             if (!string.Equals(input.RowVersion ?? "", version, StringComparison.Ordinal)) return "Attendance changed in another tab. Reload before saving again.";
             var ids = saved == null ? await RosterAsync(lesson) : saved.Records.Select(x => x.StudentProfileId).ToList();
@@ -190,8 +204,16 @@ public sealed class AttendanceService(ApplicationDbContext db)
             var posted = input.Students.ToDictionary(x => x.StudentProfileId);
             foreach (var record in saved.Records) { record.Status = posted[record.StudentProfileId].Status; record.Remark = posted[record.StudentProfileId].Remark?.Trim(); }
             saved.UpdatedAtUtc = DateTime.UtcNow; saved.UpdatedByUserId = userId;
-            if (input.FinalSubmit) saved.SubmittedAtUtc = saved.UpdatedAtUtc;
-            if (!Editable(lesson.Date, lesson.Start, lesson.End, null, ClassScheduleService.Now)) return "This lesson has ended. Attendance is now locked.";
+            var finalNow = ClassScheduleService.Now;
+            if (!AttendanceEntryPolicy.CanEdit(lesson.Date,lesson.Start,lesson.End,null,finalNow,grant)) return "The entry window has ended. Attendance is now locked.";
+            bool late = AttendanceEntryPolicy.IsLate(lesson.Date,lesson.End,finalNow);
+            reasonError = AttendanceEntryPolicy.ReasonError(reason,input.FinalSubmit,late);
+            if (reasonError != null) return reasonError;
+            saved.LateSubmissionReason = reason;
+            if (input.FinalSubmit) {
+                saved.SubmittedLate = late;
+                saved.SubmittedAtUtc = DateTime.UtcNow;
+            }
             await db.SaveChangesAsync(); await tx.CommitAsync(); return null;
         }
         catch (SqlException ex) when (ex.Number == 1205)

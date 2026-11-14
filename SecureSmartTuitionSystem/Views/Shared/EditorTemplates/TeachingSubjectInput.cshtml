@@ -1,0 +1,36 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingSubjectInput
+@using SecureSmartTuitionSystem.Services
+@{
+    var levels = TeachingSubjectCatalog.PrimaryLevels.Concat(TeachingSubjectCatalog.SecondaryLevels).ToList();
+}
+<div class="teaching-subject-row" data-subject-row>
+    <div>
+        <label asp-for="AcademicLevel" class="form-label teaching-subject-label">Academic Level</label>
+        <select asp-for="AcademicLevel" class="form-select" data-teaching-level>
+            <option value="">Select an academic level</option>
+            @foreach (var level in levels)
+            {
+                <option value="@level">@level</option>
+            }
+        </select>
+        <span asp-validation-for="AcademicLevel" class="text-danger"></span>
+    </div>
+    <div>
+        <label asp-for="SubjectCode" class="form-label teaching-subject-label">Subject</label>
+        <select asp-for="SubjectCode" class="form-select" data-teaching-subject>
+            <option value="">Select a subject</option>
+            @foreach (var code in TeachingSubjectCatalog.SubjectDisplayOrder)
+            {
+                <option value="@code" data-levels="@string.Join(",", levels.Where(level => TeachingSubjectCatalog.IsValidSubject(level, code)))">
+                    @TeachingSubjectCatalog.GetSubjectDisplayName(code)
+                </option>
+            }
+        </select>
+        <span asp-validation-for="SubjectCode" class="text-danger"></span>
+    </div>
+    <div class="teaching-subject-remove">
+        <button type="button" class="teaching-remove-button" data-remove-subject aria-label="Remove this subject row">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+    </div>
+</div>

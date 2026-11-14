@@ -3,9 +3,9 @@
 @{
     var statusClass = Model.Status switch
     {
-        TeachingChangeStatus.Approved => "text-bg-success",
-        TeachingChangeStatus.Rejected => "text-bg-danger",
-        _ => "text-bg-warning"
+        TeachingChangeStatus.Approved => "tutor-badge-success",
+        TeachingChangeStatus.Rejected => "teaching-badge-rejected",
+        _ => "tutor-badge-pending"
     };
 }
-<span class="badge rounded-pill @statusClass">@Model.StatusLabel</span>
+<span class="tutor-management-badge @statusClass" data-request-status>@Model.StatusLabel</span>

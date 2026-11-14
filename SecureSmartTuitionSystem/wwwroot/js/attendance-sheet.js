@@ -1,10 +1,10 @@
-﻿(() => {
+(() => {
     "use strict";
     const form = document.getElementById("attendance-sheet-form");
     const draft = document.getElementById("attendance-save-draft");
     const submit = document.getElementById("attendance-final-submit");
     if (!form || !draft || !submit) return;
-    const fields = [...form.querySelectorAll('select[name$=".Status"], input[name$=".Remark"]')];
+    const fields = [...form.querySelectorAll('select[name$=".Status"], input[name$=".Remark"], textarea[name="LateSubmissionReason"]')];
     const snapshot = () => JSON.stringify(fields.map(field => field.value));
     const original = snapshot();
     const endsAt = Date.parse(form.dataset.endsAt);
@@ -15,7 +15,7 @@
         locked = true;
         fields.forEach(field => { field.disabled = true; });
         draft.disabled = true; submit.disabled = true;
-        document.getElementById("attendance-state").textContent = "The lesson has ended. Attendance is now locked. Unsaved changes were not saved.";
+        document.getElementById("attendance-state").textContent = "The entry deadline has passed. Attendance is now locked. Unsaved changes were not saved.";
     };
     form.addEventListener("input", update);
     form.addEventListener("change", update);

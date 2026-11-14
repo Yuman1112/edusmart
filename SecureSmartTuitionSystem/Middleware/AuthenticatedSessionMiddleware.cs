@@ -37,7 +37,7 @@ public sealed class AuthenticatedSessionMiddleware
                 return;
             }
             // Background polling does not keep an otherwise idle login alive.
-            bool background = context.Request.Path.StartsWithSegments("/Messages/UnreadCounts") ||
+            bool background = (context.Request.Path.StartsWithSegments("/Tutor/Students") && context.Request.Query["fragment"] == "true" && context.Request.Query["live"] == "true") || context.Request.Path.StartsWithSegments("/Messages/UnreadCounts") ||
                 context.Request.Path.StartsWithSegments("/Messages/ReadStatuses") ||
                 context.Request.Path.StartsWithSegments("/Messages/MarkRead") ||
                 context.Request.Path.StartsWithSegments("/Security/AlertCount") ||
@@ -68,3 +68,4 @@ public sealed class AuthenticatedSessionMiddleware
         await _next(context);
     }
 }
+

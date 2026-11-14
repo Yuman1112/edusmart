@@ -1,0 +1,39 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingChangeRow
+<div class="teaching-review-subject">
+    <div>
+        <p class="teaching-eyebrow">Subject &amp; Level</p>
+        <h2>@Model.SubjectLabel</h2>
+        <span class="teaching-level-chip">@Model.AcademicLevel</span>
+    </div>
+    <partial name="_TeachingRequestStatus" model="Model" />
+</div>
+<p class="teaching-review-tutor"><i class="bi bi-person-badge" aria-hidden="true"></i> @Model.TutorName <span class="text-muted">(@Model.TutorId)</span></p>
+<dl class="teaching-review-metadata">
+    <div><dt>Request ID</dt><dd>#@Model.Id</dd></div>
+    <div><dt>Request Type</dt><dd>@Model.TypeLabel</dd></div>
+    <div class="teaching-metadata-wide"><dt>Submitted On</dt><dd>@Model.SubmittedAtUtc.AddHours(8).ToString("dd MMM yyyy, h:mm tt") MYT</dd></div>
+</dl>
+<section class="teaching-review-section">
+    <h3><i class="bi bi-chat-left-text" aria-hidden="true"></i> Reason for Request</h3>
+    <p class="teaching-review-copy">@Model.Reason</p>
+</section>
+<section class="teaching-review-section">
+    <div class="teaching-section-heading">
+        <h3><i class="bi bi-paperclip" aria-hidden="true"></i> Supporting Evidence</h3>
+        <span class="teaching-section-count">@Model.Evidence.Count file(s)</span>
+    </div>
+    @if (Model.Evidence.Count == 0)
+    {
+        <p class="text-muted mb-0">No supporting files were attached.</p>
+    }
+    @foreach (var document in Model.Evidence)
+    {
+        <div class="teaching-review-file">
+            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+            <div><strong>@document.Name</strong><small class="text-muted">@((document.Size / 1024d / 1024).ToString("0.##")) MB</small></div>
+            <a asp-controller="TeachingRequests" asp-action="Document" asp-route-id="@document.Id" class="outline-button">
+                <i class="bi bi-download" aria-hidden="true"></i> Download
+            </a>
+        </div>
+    }
+</section>

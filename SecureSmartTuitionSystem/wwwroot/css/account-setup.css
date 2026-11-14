@@ -13,3 +13,65 @@
 .account-setup-page .password-toggle-input:is(.is-invalid,.input-validation-error,:invalid) {background-image:none !important;}
 .account-setup-page input[type="password"]::-ms-reveal,
 .account-setup-page input[type="password"]::-ms-clear {display:none;}
+
+/* Account setup uses a full-width wrapper instead of nested percentage columns
+   inside the authentication layout's centered flex container. */
+.account-setup-page.account-setup-screen {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 16px 0;
+}
+.account-setup-screen .account-setup-shell {
+    width: 100%;
+    max-width: 520px;
+    min-width: 0;
+    margin-inline: auto;
+}
+.account-setup-screen .account-setup-card {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 26px 30px 30px;
+    border: 1px solid var(--border, #cce5ea);
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 18px 50px rgba(5, 104, 124, .13);
+}
+.account-setup-screen .account-setup-logo-link {
+    display: block;
+    width: fit-content;
+    margin: 0 auto 16px;
+}
+.account-setup-screen .account-setup-logo {
+    display: block;
+    width: 96px;
+    max-width: 100%;
+    height: auto;
+}
+.account-setup-screen .account-setup-heading { text-align: center; margin-bottom: 24px; }
+.edusmart-ui main .account-setup-page.account-setup-screen h1 {
+    margin: 0 0 10px;
+    font-size: clamp(1.5rem, 2.5vw, 1.8rem) !important;
+    line-height: 1.25;
+    color: var(--navy, #07356b);
+    overflow-wrap: normal;
+}
+.account-setup-screen .account-setup-heading p { font-size: 1rem; line-height: 1.6; }
+.account-setup-screen #passwordChecklist {
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: var(--surface-tint, #f3fafb);
+    line-height: 1.6;
+}
+.account-setup-screen .validation-summary-errors ul { list-style: none; padding: 0; margin: 0; }
+.account-setup-screen .validation-summary-errors li::marker { content: ''; }
+.edusmart-ui main .account-setup-screen .form-control:focus-visible { outline: none; }
+.edusmart-ui main .account-setup-screen .form-control:is(.input-validation-error,.is-invalid):focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 .2rem rgba(220,53,69,.12);
+}
+@media (max-width: 575.98px) {
+    .account-setup-page.account-setup-screen { padding: 0; }
+    .account-setup-screen .account-setup-card { padding: 24px 20px; border-radius: 16px; }
+}

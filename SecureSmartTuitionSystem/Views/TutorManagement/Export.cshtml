@@ -114,6 +114,11 @@
         </div>
         <div class="class-form-actions mt-4">
             <a asp-controller="TutorManagement" asp-action="Index" class="outline-button">Cancel</a>
+            <button type="submit" class="outline-button"
+                    formaction="@Url.Action("PrintTutorRecords", "TutorManagement")"
+                    formtarget="_blank" disabled="@(Model.TotalRecords == 0)">
+                <i class="bi bi-printer" aria-hidden="true"></i> Print / Save PDF
+            </button>
             <button type="submit" class="primary-button" disabled="@(Model.TotalRecords == 0)"><i class="bi bi-download" aria-hidden="true"></i> Confirm &amp; Download</button>
         </div>
     </form>

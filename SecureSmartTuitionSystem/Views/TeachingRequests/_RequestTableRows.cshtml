@@ -1,0 +1,46 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingRequestListViewModel
+@using SecureSmartTuitionSystem.Models.Tutor
+@{
+    var number = 0;
+}
+@foreach (var request in Model.Requests)
+{
+    number++;
+    <tr data-request-id="@request.Id" data-request-version="@($"{request.Status}|{request.ReviewedAtUtc?.Ticks}|{request.ReviewNotes}")">
+        <td>@number</td>
+        <td data-sort-value="@request.Id">
+            <strong>#@request.Id</strong>
+        </td>
+        @if (Model.IsAdmin)
+        {
+            <td><strong>@request.TutorName</strong><div class="small text-muted">@request.TutorId</div></td>
+        }
+        <td><strong>@request.SubjectLabel</strong><div class="small text-muted">@request.AcademicLevel</div></td>
+        <td data-sort-value="@request.SubmittedAtUtc.ToString("O")">
+            @request.SubmittedAtUtc.AddHours(8).ToString("dd MMM yyyy")
+            <div class="small text-muted">@request.SubmittedAtUtc.AddHours(8).ToString("h:mm tt") MYT</div>
+        </td>
+        <td data-status-cell><partial name="_TeachingRequestStatus" model="request" /></td>
+        @if (Model.IsAdmin)
+        {
+            <td>
+                <a asp-controller="TeachingRequests" asp-action="Review" asp-route-id="@request.Id"
+                   class="outline-button teaching-review-link">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                    <span data-review-label>@(request.Status == TeachingChangeStatus.Pending ? "Review" : "View")</span>
+                </a>
+            </td>
+        }
+        else
+        {
+            <td class="teaching-table-notes">
+                <span data-review-notes>@(string.IsNullOrWhiteSpace(request.ReviewNotes) ? "—" : request.ReviewNotes)</span>
+                <div class="small text-muted @(request.ReviewedAtUtc.HasValue ? "" : "d-none")" data-reviewed-on>@(request.ReviewedAtUtc?.AddHours(8).ToString("dd MMM yyyy, h:mm tt") ?? "—")</div>
+                @foreach (var document in request.Evidence)
+                {
+                    <div class="small"><a asp-controller="TeachingRequests" asp-action="Document" asp-route-id="@document.Id">@document.Name</a></div>
+                }
+            </td>
+        }
+    </tr>
+}

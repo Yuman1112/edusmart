@@ -304,12 +304,13 @@ namespace SecureSmartTuitionSystem.Controllers
                 return ReturnToGuardianDetails();
             }
 
-            // An existing parent for a new child must still be signed in at
-            // the final POST. AddSubjects has its own linked-student check above.
+            var enrollmentVerification = HttpContext.RequestServices.GetRequiredService<GuardianEnrollmentVerification>();
+            var consentParent = !addStudentId.HasValue && guardianDetails.UseExistingParentAccount
+                ? await enrollmentVerification.GetVerifiedAsync(HttpContext) : null;
             if (!addStudentId.HasValue && guardianDetails.UseExistingParentAccount &&
-                (!User.IsInRole("Parent") || _userManager.GetUserId(User) !=
+                consentParent == null && (!User.IsInRole("Parent") || _userManager.GetUserId(User) !=
                     HttpContext.Session.GetString(ExistingParentUserIdSessionKey)))
-                return Forbid();
+                return ReturnToGuardianDetails();
 
             model.StudentName =
                 studentDetails.StudentName;
@@ -942,6 +943,15 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 await _context.SaveChangesAsync();
 
+                if (consentParent != null && application.ExistingParentProfileId == consentParent.ParentProfileId)
+                {
+                    var currentConsent = await enrollmentVerification.GetVerifiedAsync(HttpContext);
+                    if (currentConsent == null || currentConsent.ParentProfileId != consentParent.ParentProfileId
+                        || currentConsent.ApplicationUser.Email != application.GuardianEmail)
+                        throw new InvalidOperationException("Guardian consent expired or changed. Please verify the guardian email again.");
+                    enrollmentVerification.RecordConsent(application, consentParent.ApplicationUserId);
+                    await _context.SaveChangesAsync();
+                }
                 await transaction.CommitAsync();
 
                 HttpContext.Session.SetInt32(
@@ -1332,6 +1342,8 @@ namespace SecureSmartTuitionSystem.Controllers
 
         private void ClearEnrollmentDraftSession()
         {
+            HttpContext.Session.Remove("Enrollment.GuardianOtp.Pending");
+            HttpContext.Session.Remove("Enrollment.GuardianOtp.Proof");
             HttpContext.Session.Remove("Enrollment.AddSubjectStudentId");
             HttpContext.Session.Remove("Enrollment.RequestedStartDate");
             HttpContext.Session.Remove(

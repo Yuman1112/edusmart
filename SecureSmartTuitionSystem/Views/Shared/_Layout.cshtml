@@ -53,10 +53,19 @@
     bool learningProgressActive = currentController == "Assessments" && currentAction == "Progress";
     bool learningAssessmentsActive = currentController == "Assessments" && !learningProgressActive;
 
+    bool tutorListActive =
+        currentController == "TutorManagement"
+        || currentController == "AdminTutorAvailability";
+    bool tutorWorkloadActive = currentController == "TutorWorkload";
+    bool teachingRequestsActive = currentController == "TeachingRequests";
+    bool tutorManagementActive =
+        tutorListActive || tutorWorkloadActive || teachingRequestsActive;
+
     // Attendance menu
     bool attendanceModuleActive =
         currentController == "Attendance"
-        || currentController == "AttendanceCorrections";
+        || currentController == "AttendanceCorrections"
+        || currentController == "AttendanceReopen";
 
     bool attendanceRecordsActive =
         currentController == "Attendance"
@@ -70,6 +79,8 @@
 
     bool attendanceCorrectionsActive =
         currentController == "AttendanceCorrections";
+
+    bool attendanceReopenActive = currentController == "AttendanceReopen";
 
     bool tutorProfileActive =
     currentController == "Tutor"
@@ -209,13 +220,48 @@
                             <span>User Accounts</span>
                         </a>
                         <!-- Admin: Tutor Management -->
-                        <a class="sidebar-link @((currentController == "TutorManagement" || currentController == "AdminTutorAvailability" || currentController == "TutorWorkload") ? "active" : "")"
-                           asp-controller="TutorManagement"
-                           asp-action="Index"
-                           aria-current="@((currentController == "TutorManagement" || currentController == "AdminTutorAvailability" || currentController == "TutorWorkload") ? "page" : null)">
-                            <i class="bi bi-person-badge" aria-hidden="true"></i>
-                            <span>Tutor Management</span>
-                        </a>
+                        <div class="sidebar-module">
+                            <button type="button"
+                                    class="sidebar-link sidebar-module-button @(tutorManagementActive ? "module-current" : "")"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#tutorManagementMenu"
+                                    aria-expanded="@(tutorManagementActive ? "true" : "false")"
+                                    aria-controls="tutorManagementMenu">
+                                <span class="sidebar-link-content">
+                                    <i class="bi bi-person-badge" aria-hidden="true"></i>
+                                    <span>Tutor Management</span>
+                                </span>
+                                <i class="bi bi-chevron-down sidebar-module-arrow"
+                                   aria-hidden="true"></i>
+                            </button>
+
+                            <div id="tutorManagementMenu"
+                                 class="collapse sidebar-submenu @(tutorManagementActive ? "show" : "")">
+                                <a class="sidebar-submenu-link @(tutorListActive ? "active" : "")"
+                                   asp-controller="TutorManagement"
+                                   asp-action="Index"
+                                   aria-current="@(tutorListActive ? "page" : null)">
+                                    <i class="bi bi-people" aria-hidden="true"></i>
+                                    <span>All Tutors</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(tutorWorkloadActive ? "active" : "")"
+                                   asp-controller="TutorWorkload"
+                                   asp-action="Index"
+                                   aria-current="@(tutorWorkloadActive ? "page" : null)">
+                                    <i class="bi bi-bar-chart" aria-hidden="true"></i>
+                                    <span>Tutor Workload</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(teachingRequestsActive ? "active" : "")"
+                                   asp-controller="TeachingRequests"
+                                   asp-action="Index"
+                                   aria-current="@(teachingRequestsActive ? "page" : null)">
+                                    <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+                                    <span>Teaching Change Requests</span>
+                                </a>
+                            </div>
+                        </div>
 
                         <!-- Admin: Class & Enrollment -->
                         <div class="sidebar-module">
@@ -368,6 +414,13 @@
                                     <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                     <span>Correction Requests</span>
                                 </a>
+
+                                <a class="sidebar-submenu-link @(attendanceReopenActive ? "active" : "")"
+                                   asp-controller="AttendanceReopen" asp-action="Index"
+                                   aria-current="@(attendanceReopenActive ? "page" : null)">
+                                    <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                    <span>Reopening Requests</span>
+                                </a>
                             </div>
                         </div>
 
@@ -384,6 +437,16 @@
                                aria-hidden="true"></i>
 
                             <span>Availability</span>
+                        </a>
+
+                        <!-- Tutor: Teaching Requests -->
+                        <a class="sidebar-link @(currentController == "TeachingRequests" ? "active" : "")"
+                           asp-area=""
+                           asp-controller="TeachingRequests"
+                           asp-action="Mine"
+                           aria-current="@(currentController == "TeachingRequests" ? "page" : null)">
+                            <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+                            <span>Teaching Requests</span>
                         </a>
 
                         <!-- Tutor: Classes -->
@@ -517,6 +580,13 @@
                                    aria-current="@(attendanceCorrectionsActive ? "page" : null)">
                                     <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                     <span>Correction Requests</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(attendanceReopenActive ? "active" : "")"
+                                   asp-controller="AttendanceReopen" asp-action="Index"
+                                   aria-current="@(attendanceReopenActive ? "page" : null)">
+                                    <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                    <span>Reopening Requests</span>
                                 </a>
                             </div>
                         </div>

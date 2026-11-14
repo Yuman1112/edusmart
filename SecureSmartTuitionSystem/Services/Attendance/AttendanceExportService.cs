@@ -6,8 +6,8 @@ using SecureSmartTuitionSystem.ViewModels.Attendance;
 namespace SecureSmartTuitionSystem.Services.Attendance;
 public static class AttendanceExportService
 {
-    private static readonly string[] Headers = ["Date", "Time (MYT)", "Class Code", "Class Name", "Tutor", "Student ID", "Student Name", "Attendance", "Lesson Type", "Remark", "Schedule Changed", "Timezone"];
-    private static string[] Cells(AttendanceReportRow row) => [row.Date.ToString("yyyy-MM-dd"), row.Start.ToString("HH:mm") + "-" + row.End.ToString("HH:mm"), row.ClassCode, row.ClassName, row.Tutor, row.StudentNumber, row.StudentName, row.Status?.ToString() ?? "Unrecorded", row.Replacement ? "Replacement" : "Regular", row.Remark ?? "", row.ScheduleChanged ? "Yes - check before reporting totals" : "No", "MYT (UTC+8)"];
+    private static readonly string[] Headers = ["Date", "Time (MYT)", "Class Code", "Class Name", "Tutor", "Student ID", "Student Name", "Attendance", "Lesson Type", "Remark", "Schedule Changed", "Timezone", "Late Submission"];
+    private static string[] Cells(AttendanceReportRow row) => [row.Date.ToString("yyyy-MM-dd"), row.Start.ToString("HH:mm") + "-" + row.End.ToString("HH:mm"), row.ClassCode, row.ClassName, row.Tutor, row.StudentNumber, row.StudentName, row.Status?.ToString() ?? "Unrecorded", row.Replacement ? "Replacement" : "Regular", row.Remark ?? "", row.ScheduleChanged ? "Yes - check before reporting totals" : "No", "MYT (UTC+8)", row.SubmittedLate ? "Yes" : "No"];
     public static string CleanXmlText(string text)
     {
         var result = new StringBuilder();

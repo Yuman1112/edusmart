@@ -1,0 +1,43 @@
+.print-actions {
+    margin-bottom: 24px;
+}
+
+.tutor-print-report {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.tutor-print-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #008b9c;
+}
+
+.tutor-print-header img {
+    height: auto;
+    flex-shrink: 0;
+}
+
+.tutor-print-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin-top: 16px;
+}
+
+.tutor-print-filters p,
+.tutor-print-report td p {
+    margin: 4px 0;
+}
+
+.tutor-print-report table {
+    table-layout: fixed;
+}
+
+@media print {
+    .tutor-print-report {
+        max-width: none;
+    }
+}

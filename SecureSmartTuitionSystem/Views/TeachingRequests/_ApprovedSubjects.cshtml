@@ -1,0 +1,32 @@
+@model IReadOnlyList<string>
+@{
+    var subjects = Model.Select(approval => approval.Split(" · ", 2)).GroupBy(parts => parts[0]).ToList();
+}
+<div id="teaching-approved-panel" data-approved-version="@System.Text.Json.JsonSerializer.Serialize(Model)">
+    <div class="teaching-section-heading">
+        <h2><i class="bi bi-patch-check" aria-hidden="true"></i> Current Approved Subjects &amp; Levels</h2>
+        <span class="teaching-section-count">@subjects.Count @(subjects.Count == 1 ? "subject" : "subjects")</span>
+    </div>
+    @if (subjects.Count == 0)
+    {
+        <p class="text-muted mb-0">No teaching approvals are on record.</p>
+    }
+    else
+    {
+        <div class="teaching-approved-grid">
+            @foreach (var subject in subjects)
+            {
+                <div class="teaching-approved-subject">
+                    <strong>@subject.Key</strong>
+                    <div class="teaching-approved-levels">
+                        @foreach (var level in subject.Select(parts => parts.Length > 1 ? parts[1] : "").Where(level => level.Length > 0).Distinct())
+                        {
+                            <span><i class="bi bi-check2" aria-hidden="true"></i> @level</span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    <p class="text-muted small mt-3 mb-0">To change or remove an approved teaching subject or level, please contact the administrator.</p>
+</div>

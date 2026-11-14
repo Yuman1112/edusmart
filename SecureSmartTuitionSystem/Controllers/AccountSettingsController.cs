@@ -1,4 +1,4 @@
-﻿
+
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -8,14 +8,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.Services.Authentication;
 
 namespace SecureSmartTuitionSystem.Controllers;
 
 [Authorize(Roles = "Admin,Tutor,Parent,Student")]
-[EnableRateLimiting("EmailCodePolicy")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class AccountSettingsController(
     UserManager<ApplicationUser> users,
@@ -33,8 +31,6 @@ public sealed class AccountSettingsController(
     private static readonly TimeSpan CodeLifetime =
         TimeSpan.FromMinutes(5);
 
-    private static readonly TimeSpan Cooldown =
-        TimeSpan.FromMinutes(1);
 
     private readonly IDataProtector protector =
         dataProtection.CreateProtector(
@@ -75,6 +71,15 @@ public sealed class AccountSettingsController(
         public string Code { get; set; } = "";
     }
 
+    private bool AllowOperation(ApplicationUser user, string operation)
+    {
+        int seconds = SecureSmartTuitionSystem.Services.Security.TwoFactorRequestLimits.TryAcquire(
+            user.Id, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", operation);
+        if (seconds == 0) return true;
+        TempData["TwoFactorInfo"] = $"Too many requests. Please wait {seconds} seconds before trying again.";
+        return false;
+    }
+
     [HttpGet]
     public async Task<IActionResult> TwoFactor()
     {
@@ -109,6 +114,9 @@ public sealed class AccountSettingsController(
 
         if (user == null)
             return Forbid();
+
+        if (!AllowOperation(user, "password"))
+            return RedirectToAction(nameof(TwoFactor));
 
         if (!ModelState.IsValid)
         {
@@ -154,18 +162,8 @@ public sealed class AccountSettingsController(
             return RedirectToAction(nameof(TwoFactor));
         }
 
-        var previous = ReadPending();
-
-        if (previous != null &&
-            previous.UserId == user.Id &&
-            DateTimeOffset.UtcNow - previous.IssuedAt < Cooldown)
-        {
-            TempData["TwoFactorError"] =
-                "Please wait one minute before requesting " +
-                "another verification code.";
-
+        if (!AllowOperation(user, "send"))
             return RedirectToAction(nameof(TwoFactor));
-        }
 
         string code =
             RandomNumberGenerator.GetInt32(1000000)
@@ -226,6 +224,9 @@ public sealed class AccountSettingsController(
 
         if (user == null)
             return Forbid();
+
+        if (!AllowOperation(user, "verify"))
+            return RedirectToAction(nameof(TwoFactor));
 
         var recipient = await recipients.ResolveAsync(
             user, requireVerifiedOwnEmail: true, HttpContext.RequestAborted);
@@ -310,36 +311,26 @@ public sealed class AccountSettingsController(
 
         ClearPending();
 
-        // Force a fresh login after changing authentication security.
-        // This also avoids keeping an old authentication cookie.
-        var stampResult =
-            await users.UpdateSecurityStampAsync(user);
-
-        await signIn.SignOutAsync();
-
+        // Invalidate older sessions, then renew this browser's cookie with the new stamp.
+        var stampResult = await users.UpdateSecurityStampAsync(user);
         if (!stampResult.Succeeded)
         {
+            await signIn.SignOutAsync();
             TempData["TwoFactorError"] =
-                "Your 2FA preference was updated, but " +
-                "session invalidation could not be completed. " +
-                "Please contact your administrator.";
+                "Your 2FA preference was updated, but session security could not be refreshed. Please sign in again.";
+            logger.LogWarning("Unable to renew session security after account {UserId} changed Email 2FA.", user.Id);
+            return RedirectToPage("/Account/Login", new { area = "Identity" });
         }
-        else
-        {
-            TempData["AuthSuccess"] =
-                pending.Enable
-                    ? "Email 2FA has been enabled successfully. Please sign in again."
-                    : "Email 2FA has been disabled successfully. Please sign in again.";
-        }
+
+        // Uses SecurityClaimsPrincipalFactory, which supplies a fresh LastActivityUtc claim.
+        await signIn.RefreshSignInAsync(user);
+        TempData["TwoFactorSuccess"] = pending.Enable
+            ? "Email 2FA has been enabled successfully."
+            : "Email 2FA has been disabled successfully.";
 
         logger.LogInformation(
-            "Account {UserId} changed Email 2FA to {Enabled}.",
-            user.Id,
-            pending.Enable);
-
-        return RedirectToPage(
-            "/Account/Login",
-            new { area = "Identity" });
+            "Account {UserId} changed Email 2FA to {Enabled}.", user.Id, pending.Enable);
+        return RedirectToAction(nameof(TwoFactor));
     }
 
     [HttpPost]
@@ -429,3 +420,4 @@ public sealed class AccountSettingsController(
         HttpContext.Session.Remove(SessionKey);
     }
 }
+

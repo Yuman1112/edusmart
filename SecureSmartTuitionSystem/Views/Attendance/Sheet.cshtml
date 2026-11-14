@@ -48,14 +48,26 @@
              role="status">
             @Model.State.
             @(Model.CanEdit
-                        ? "Save a draft while taking attendance. Final submission locks this sheet immediately; otherwise it locks at the lesson end time."
-                        : "This sheet is read only. Attendance can only be edited by the assigned tutor during the lesson and before final submission.")
+                        ? "Save a draft while taking attendance. Final submission locks this sheet immediately. Unsubmitted attendance may be recorded for 24 hours after the lesson, or within an approved reopening window."
+                        : "This sheet is read only. Attendance can only be edited by the assigned tutor within the allowed entry window and before final submission.")
         </div>
 
+        @if (TempData["AttendanceReopenError"] is string reopenError) { <div class="alert alert-danger">@reopenError</div> }
+        @if (Model.CanEdit) { <p class="text-muted">Entry deadline: @Model.EditUntil.ToString("dd MMM yyyy HH:mm") MYT. Drafts are not published to students or parents.</p> }
+        @if (Model.CanRequestReopen) {
+            <div class="alert alert-warning">The 24-hour entry window has ended. Request approval to record this unsubmitted lesson.</div>
+            <form asp-controller="AttendanceReopen" asp-action="Apply" method="post" class="mb-4">
+                <input type="hidden" name="classId" value="@Model.ClassSessionId" /><input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="changeId" value="@Model.ChangeId" /><input type="hidden" name="replacement" value="@Model.Replacement.ToString().ToLowerInvariant()" />
+                <label for="reopen-reason" class="form-label">Reason for Reopening</label>
+                <textarea id="reopen-reason" name="reason" class="form-control mb-3" required maxlength="500" placeholder="Explain why attendance was not submitted on time"></textarea>
+                <button type="submit" class="outline-button">Request Reopening</button>
+            </form>
+        }
         <form asp-action="Save"
               method="post"
               id="attendance-sheet-form"
-              data-ends-at="@(Model.Date.ToString("yyyy-MM-dd") + "T" + Model.End.ToString("HH:mm:ss") + "+08:00")">
+              data-ends-at="@(Model.EditUntil.ToString("yyyy-MM-dd") + "T" + Model.EditUntil.ToString("HH:mm:ss") + "+08:00")">
 
             @Html.AntiForgeryToken()
 
@@ -153,6 +165,13 @@
                 </div>
             }
 
+            @if (Model.CanEdit) {
+                <div class="mt-3">
+                    <label asp-for="LateSubmissionReason" class="form-label">Late Submission Reason @(Model.IsLateEntry ? "(required when submitting)" : "(required if submitted after lesson end)")</label>
+                    <textarea asp-for="LateSubmissionReason" class="form-control" maxlength="500" placeholder="Explain the late submission if the lesson has ended"></textarea>
+                    <span asp-validation-for="LateSubmissionReason" class="text-danger"></span>
+                </div>
+            } else if (!string.IsNullOrWhiteSpace(Model.LateSubmissionReason)) { <p><strong>Late submission reason:</strong> @Model.LateSubmissionReason</p> }
             <div class="class-form-actions mt-4">
                 <a asp-action="Index"
                    asp-route-week="@Model.Date.ToString("yyyy-MM-dd")"
@@ -190,3 +209,4 @@
     <script src="~/js/attendance-sheet.js"
             asp-append-version="true"></script>
 }
+

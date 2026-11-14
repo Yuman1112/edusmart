@@ -95,8 +95,8 @@
             </h3>
 
             <p class="text-muted">
-                Attendance can be edited during the lesson.
-                Final submission or the lesson end time locks the records.
+                Attendance can be edited during the lesson and for 24 hours after it ends.
+                Final submission locks the records immediately. After the entry deadline, unsubmitted lessons require reopening approval.
                 Unrecorded attendance is not counted as absence.
             </p>
         </div>
@@ -160,7 +160,7 @@
                             </td>
 
                             <td>
-                                <span class="tutor-management-badge @(row.State == "Submitted" ? "tutor-badge-success" : "tutor-badge-pending")">
+                                <span class="tutor-management-badge @(row.State.StartsWith("Submitted") ? "tutor-badge-success" : "tutor-badge-pending")">
                                     @row.State
                                 </span>
                             </td>

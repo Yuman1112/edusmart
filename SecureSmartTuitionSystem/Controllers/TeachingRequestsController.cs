@@ -10,6 +10,7 @@ using SecureSmartTuitionSystem.Models.Tutor;
 using SecureSmartTuitionSystem.Services;
 using SecureSmartTuitionSystem.Services.Security;
 using SecureSmartTuitionSystem.Services.Tutor;
+using SecureSmartTuitionSystem.Services.Learning;
 using SecureSmartTuitionSystem.ViewModels.Tutor;
 
 namespace SecureSmartTuitionSystem.Controllers;
@@ -26,30 +27,38 @@ public sealed class TeachingRequestsController(
     [HttpGet]
     public async Task<IActionResult> Mine(CancellationToken token)
     {
+        AllowEvidencePreview();
         var profile = await OwnProfileAsync(token);
         return profile == null ? NotFound() : View(await PopulateMineAsync(new(), profile, token));
     }
 
     [Authorize(Roles = "Tutor")]
     [HttpPost]
-    [RequestSizeLimit(12 * 1024 * 1024)]
+    [RequestSizeLimit(27 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 27 * 1024 * 1024)]
     public async Task<IActionResult> Mine(TeachingChangeInput model, CancellationToken token)
     {
+        AllowEvidencePreview();
         var profile = await OwnProfileAsync(token);
         if (profile == null)
             return NotFound();
 
+        if (model.Type != TeachingChangeType.AddSubject)
+            ModelState.AddModelError(nameof(model.Type), "Only requests to add subjects and levels are available.");
         if (!ModelState.IsValid)
             return View(await PopulateMineAsync(model, profile, token));
 
-        string level = model.AcademicLevel.Trim().ToUpperInvariant();
-        string code = model.SubjectCode.Trim().ToUpperInvariant();
-        if (!TeachingSubjectCatalog.IsValidSubject(level, code))
-            ModelState.AddModelError(nameof(model.SubjectCode), "Select a subject available for this academic level.");
-
-        var (file, uploadError) = await TutorQualificationService.ReadDocumentAsync(model.Evidence, token);
-        if (uploadError != null)
-            ModelState.AddModelError(nameof(model.Evidence), uploadError);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int index = 0; index < model.Items.Count; index++)
+        {
+            var item = model.Items[index];
+            item.AcademicLevel = item.AcademicLevel.Trim().ToUpperInvariant();
+            item.SubjectCode = item.SubjectCode.Trim().ToUpperInvariant();
+            if (!TeachingSubjectCatalog.IsValidSubject(item.AcademicLevel, item.SubjectCode))
+                ModelState.AddModelError($"Items[{index}].SubjectCode", "Select a subject available for this academic level.");
+            if (!seen.Add(item.AcademicLevel + "/" + item.SubjectCode))
+                ModelState.AddModelError($"Items[{index}].SubjectCode", "This subject and level is already in this submission.");
+        }
         if (!ModelState.IsValid)
             return View(await PopulateMineAsync(model, profile, token));
 
@@ -57,37 +66,44 @@ public sealed class TeachingRequestsController(
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, token);
             var approvals = await LoadApprovalsAsync(profile.TutorProfileId, token);
-            var type = model.Type!.Value;
-            string? requestError = ValidateChange(type, level, code, approvals);
-            if (requestError != null)
+            var pending = await db.TutorTeachingChangeRequests
+                .Where(x => x.TutorProfileId == profile.TutorProfileId && x.Status == TeachingChangeStatus.Pending)
+                .Select(x => new { x.AcademicLevel, x.SubjectCode }).ToListAsync(token);
+            for (int index = 0; index < model.Items.Count; index++)
             {
-                ModelState.AddModelError(nameof(model.SubjectCode), requestError);
-                return View(await PopulateMineAsync(model, profile, token));
+                var item = model.Items[index];
+                var error = ValidateChange(TeachingChangeType.AddSubject, item.AcademicLevel, item.SubjectCode, approvals);
+                if (error != null)
+                    ModelState.AddModelError($"Items[{index}].SubjectCode", error);
+                if (pending.Any(x => x.AcademicLevel == item.AcademicLevel && x.SubjectCode == item.SubjectCode))
+                    ModelState.AddModelError($"Items[{index}].SubjectCode", "There is already a pending request for this subject and level.");
             }
-
-            if (await db.TutorTeachingChangeRequests.AnyAsync(x => x.TutorProfileId == profile.TutorProfileId
-                && x.AcademicLevel == level && x.SubjectCode == code && x.Status == TeachingChangeStatus.Pending, token))
-            {
-                ModelState.AddModelError(nameof(model.SubjectCode), "There is already a pending request for this subject and level.");
+            var files = await ReadEvidenceAsync(model, profile.TutorProfileId, token);
+            if (!ModelState.IsValid)
                 return View(await PopulateMineAsync(model, profile, token));
-            }
 
-            var request = new TutorTeachingChangeRequest
+            TutorTeachingChangeRequest? evidenceRequest = null;
+            foreach (var item in model.Items)
             {
-                TutorProfileId = profile.TutorProfileId,
-                Type = type,
-                AcademicLevel = level,
-                SubjectCode = code,
-                Reason = model.Reason.Trim(),
-                SubmittedAtUtc = DateTime.UtcNow
-            };
-            db.TutorTeachingChangeRequests.Add(request);
-            if (file != null)
+                var request = new TutorTeachingChangeRequest
+                {
+                    TutorProfileId = profile.TutorProfileId,
+                    Type = TeachingChangeType.AddSubject,
+                    AcademicLevel = item.AcademicLevel,
+                    SubjectCode = item.SubjectCode,
+                    Reason = model.Reason.Trim(),
+                    SubmittedAtUtc = DateTime.UtcNow,
+                    EvidenceRequest = evidenceRequest
+                };
+                db.TutorTeachingChangeRequests.Add(request);
+                evidenceRequest ??= request;
+            }
+            foreach (var file in files)
             {
                 db.TutorQualificationDocuments.Add(new TutorQualificationDocument
                 {
                     TutorProfileId = profile.TutorProfileId,
-                    TeachingChangeRequest = request,
+                    TeachingChangeRequest = evidenceRequest,
                     Kind = TutorDocumentKind.RequestEvidence,
                     FileName = file.Name,
                     Content = file.Content
@@ -103,7 +119,7 @@ public sealed class TeachingRequestsController(
             return View(await PopulateMineAsync(model, profile, token));
         }
 
-        TempData["TeachingSuccess"] = "Teaching change request submitted for review.";
+        TempData["TeachingSuccess"] = $"{model.Items.Count} subject and level request(s) submitted. Each item will be reviewed separately.";
         return RedirectToAction(nameof(Mine));
     }
 
@@ -114,6 +130,32 @@ public sealed class TeachingRequestsController(
             .OrderBy(x => x.Status == TeachingChangeStatus.Pending ? 0 : 1)
             .ThenByDescending(x => x.Id)
             .ToListAsync(token));
+
+    [HttpGet]
+    public async Task<IActionResult> Live(CancellationToken token)
+    {
+        if (User.IsInRole("Admin"))
+        {
+            return PartialView("_LiveState", new TeachingRequestListViewModel
+            {
+                IsAdmin = true,
+                Requests = await RequestRows(db.TutorTeachingChangeRequests)
+                    .OrderBy(x => x.Status == TeachingChangeStatus.Pending ? 0 : 1)
+                    .ThenByDescending(x => x.Id).ToListAsync(token)
+            });
+        }
+
+        var profile = await OwnProfileAsync(token);
+        if (profile == null)
+            return Forbid();
+        var mine = await PopulateMineAsync(new TeachingChangeInput(), profile, token);
+        return PartialView("_LiveState", new TeachingRequestListViewModel
+        {
+            Requests = mine.Requests,
+            ApprovedSubjects = mine.ApprovedSubjects,
+            UnavailableCombinations = mine.UnavailableCombinations
+        });
+    }
 
     [Authorize(Roles = "Admin")]
     [HttpGet]
@@ -155,44 +197,33 @@ public sealed class TeachingRequestsController(
 
             if (approve == true)
             {
+                if (request.Type == TeachingChangeType.Remove)
+                {
+                    ModelState.AddModelError("", "Subject removal requests are currently unavailable. You can reject this earlier request with an explanation.");
+                    return View(model);
+                }
                 var approvals = await LoadApprovalsAsync(request.TutorProfileId, token);
                 var error = ValidateChange(request.Type, request.AcademicLevel, request.SubjectCode, approvals);
                 if (error != null)
                     ModelState.AddModelError("", error + " Reload the request or reject it with an explanation.");
-                if (request.Type != TeachingChangeType.Remove && !model.QualificationVerified)
+                if (!model.QualificationVerified)
                     ModelState.AddModelError(nameof(model.QualificationVerified),
                         "Confirm that you reviewed the qualification or supporting evidence.");
                 if (!ModelState.IsValid)
                     return View(model);
 
-                if (request.Type == TeachingChangeType.Remove)
+                db.TutorTeachingSubjects.Add(new TutorTeachingSubject
                 {
-                    var removed = approvals.Where(item => TutorQualificationService.SameApproval(item,
-                        request.AcademicLevel, request.SubjectCode)).ToList();
-                    var conflict = await TutorQualificationService.FindRemovalConflictAsync(
-                        db, request.TutorProfile.ApplicationUserId, removed, token);
-                    if (conflict != null)
-                    {
-                        ModelState.AddModelError("", conflict);
-                        return View(model);
-                    }
-                    db.TutorTeachingSubjects.RemoveRange(removed);
-                }
-                else
-                {
-                    db.TutorTeachingSubjects.Add(new TutorTeachingSubject
-                    {
-                        TutorProfileId = request.TutorProfileId,
-                        EducationStage = TeachingSubjectCatalog.GetStageForLevel(request.AcademicLevel)!,
-                        AcademicLevel = request.AcademicLevel,
-                        SubjectCode = request.SubjectCode
-                    });
-                }
+                    TutorProfileId = request.TutorProfileId,
+                    EducationStage = TeachingSubjectCatalog.GetStageForLevel(request.AcademicLevel)!,
+                    AcademicLevel = request.AcademicLevel,
+                    SubjectCode = request.SubjectCode
+                });
 
                 request.TutorProfile.UpdatedAt = DateTime.UtcNow;
                 TutorQualificationService.AddAudit(db, auditIntegrity, HttpContext,
                     request.TutorProfile.ApplicationUserId,
-                    $"Request #{request.Id}: {(request.Type == TeachingChangeType.Remove ? "removed" : "added")} {request.AcademicLevel} / {request.SubjectCode}.");
+                    $"Request #{request.Id}: added {request.AcademicLevel} / {request.SubjectCode}.");
             }
 
             request.Status = approve == true ? TeachingChangeStatus.Approved : TeachingChangeStatus.Rejected;
@@ -234,6 +265,22 @@ public sealed class TeachingRequestsController(
         return File(document.Content, "application/octet-stream", document.FileName);
     }
 
+    private void AllowEvidencePreview()
+    {
+        var policy = Response.Headers["Content-Security-Policy"].ToString();
+        if (policy.Length == 0)
+            policy = "default-src 'self'; img-src 'self' data:;";
+        var directives = policy.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        directives.RemoveAll(directive => directive.StartsWith("frame-src ", StringComparison.OrdinalIgnoreCase));
+        var imageIndex = directives.FindIndex(directive => directive.StartsWith("img-src ", StringComparison.OrdinalIgnoreCase));
+        if (imageIndex < 0)
+            directives.Add("img-src 'self' data: blob:");
+        else if (!directives[imageIndex].Split(' ').Contains("blob:"))
+            directives[imageIndex] += " blob:";
+        directives.Add("frame-src 'self' blob:");
+        Response.Headers["Content-Security-Policy"] = string.Join("; ", directives) + ";";
+    }
+
     private Task<TutorProfile?> OwnProfileAsync(CancellationToken token)
     {
         string? userId = users.GetUserId(User);
@@ -242,12 +289,75 @@ public sealed class TeachingRequestsController(
                 && x.ApplicationUser.IsActive && !x.ApplicationUser.MustChangePassword, token);
     }
 
+    private async Task<List<MaterialFile>> ReadEvidenceAsync(
+        TeachingChangeInput model, int profileId, CancellationToken token)
+    {
+        const long totalLimit = 25L * 1024 * 1024;
+        var uploads = model.Evidence ?? [];
+        var files = new List<MaterialFile>();
+        var selectedIds = model.ReferenceDocumentIds.Distinct().ToList();
+        if (selectedIds.Count != model.ReferenceDocumentIds.Count
+            || uploads.Count + selectedIds.Count > 5)
+        {
+            ModelState.AddModelError(nameof(model.Evidence), "Choose at most five files in total, including existing documents.");
+            return files;
+        }
+
+        var existing = selectedIds.Count == 0 ? new List<TutorQualificationDocument>()
+            : await db.TutorQualificationDocuments.AsNoTracking()
+            .Where(x => selectedIds.Contains(x.Id) && x.TutorProfileId == profileId
+                && x.TeachingChangeRequestId == null && x.TutorProfile.QualificationVerifiedAtUtc != null)
+            .ToListAsync(token);
+        if (existing.Count != selectedIds.Count)
+        {
+            ModelState.AddModelError(nameof(model.ReferenceDocumentIds), "An existing document is no longer available or verified. Select the documents again.");
+            return files;
+        }
+
+        long size = existing.Sum(x => (long)x.Content.Length);
+        foreach (var upload in uploads)
+        {
+            if (upload.Length < 1 || upload.Length > MaterialFileService.MaxBytes)
+                ModelState.AddModelError(nameof(model.Evidence), "Each uploaded file must be non-empty and no larger than 10 MB.");
+            size += upload.Length;
+        }
+        if (size > totalLimit)
+            ModelState.AddModelError(nameof(model.Evidence), "The combined evidence must not exceed 25 MB.");
+        if (!ModelState.IsValid)
+            return files;
+
+        foreach (var document in existing)
+        {
+            var type = MaterialFileService.PreviewContentType(document.FileName);
+            if (type == null || !MaterialFileService.Matches(Path.GetExtension(document.FileName), document.Content))
+                ModelState.AddModelError(nameof(model.ReferenceDocumentIds), "Choose valid PDF, PNG or JPG evidence.");
+            else
+                files.Add(new MaterialFile(document.FileName, type, document.Content));
+        }
+        foreach (var upload in uploads)
+        {
+            var (file, error) = await TutorQualificationService.ReadDocumentAsync(upload, token);
+            if (error != null)
+                ModelState.AddModelError(nameof(model.Evidence), error);
+            else if (file != null)
+                files.Add(file);
+        }
+        return files;
+    }
+
     private Task<List<TutorTeachingSubject>> LoadApprovalsAsync(int profileId, CancellationToken token) =>
         db.TutorTeachingSubjects.Where(x => x.TutorProfileId == profileId).ToListAsync(token);
 
     private async Task<TeachingChangeInput> PopulateMineAsync(
         TeachingChangeInput model, TutorProfile profile, CancellationToken token)
     {
+        if (model.Items.Count == 0)
+            model.Items.Add(new TeachingSubjectInput());
+        model.ExistingEvidence = await db.TutorQualificationDocuments.AsNoTracking()
+            .Where(x => x.TutorProfileId == profile.TutorProfileId
+                && x.TeachingChangeRequestId == null && x.TutorProfile.QualificationVerifiedAtUtc != null)
+            .Select(x => new TeachingEvidenceRow { Id = x.Id, Name = x.FileName, Size = x.Content.Length })
+            .ToListAsync(token);
         var approvals = await db.TutorTeachingSubjects.AsNoTracking()
             .Where(x => x.TutorProfileId == profile.TutorProfileId)
             .Select(x => new { x.AcademicLevel, x.SubjectCode })
@@ -258,6 +368,10 @@ public sealed class TeachingRequestsController(
         model.Requests = await RequestRows(db.TutorTeachingChangeRequests.Where(x => x.TutorProfileId == profile.TutorProfileId))
             .OrderByDescending(x => x.Id)
             .ToListAsync(token);
+        model.UnavailableCombinations = approvals.Select(x => x.AcademicLevel.Trim().ToUpperInvariant() + "/" + x.SubjectCode.Trim().ToUpperInvariant())
+            .Concat(model.Requests.Where(x => x.Status == TeachingChangeStatus.Pending)
+                .Select(x => x.AcademicLevel.Trim().ToUpperInvariant() + "/" + x.SubjectCode.Trim().ToUpperInvariant()))
+            .Distinct().ToList();
         return model;
     }
 
@@ -265,13 +379,10 @@ public sealed class TeachingRequestsController(
         RequestRows(db.TutorTeachingChangeRequests.Where(x => x.Id == id)).SingleOrDefaultAsync(token);
 
     private IQueryable<TeachingChangeRow> RequestRows(IQueryable<TutorTeachingChangeRequest> requests) =>
-        from request in requests.AsNoTracking()
-        join document in db.TutorQualificationDocuments.Where(x => x.TeachingChangeRequestId != null)
-            on (int?)request.Id equals document.TeachingChangeRequestId into evidence
-        from document in evidence.DefaultIfEmpty()
-        select new TeachingChangeRow
+        requests.AsNoTracking().Select(request => new TeachingChangeRow
         {
             Id = request.Id,
+            SubmissionId = request.EvidenceRequestId ?? request.Id,
             TutorId = request.TutorProfile.ApplicationUser.UserName ?? "",
             TutorName = request.TutorProfile.FullName,
             Type = request.Type,
@@ -282,9 +393,15 @@ public sealed class TeachingRequestsController(
             ReviewNotes = request.ReviewNotes,
             SubmittedAtUtc = request.SubmittedAtUtc,
             ReviewedAtUtc = request.ReviewedAtUtc,
-            EvidenceId = document == null ? null : document.Id,
-            EvidenceName = document == null ? null : document.FileName
-        };
+            Evidence = db.TutorQualificationDocuments
+                .Where(document => document.TutorProfileId == request.TutorProfileId
+                    && document.TeachingChangeRequestId == (request.EvidenceRequestId ?? request.Id))
+                .OrderBy(document => document.Id)
+                .Select(document => new TeachingEvidenceRow
+                {
+                    Id = document.Id, Name = document.FileName, Size = document.Content.Length
+                }).ToList()
+        });
 
     private static string? ValidateChange(TeachingChangeType type, string level, string code,
         IReadOnlyCollection<TutorTeachingSubject> approvals)
@@ -293,17 +410,10 @@ public sealed class TeachingRequestsController(
             return "This subject is not available for the selected academic level.";
 
         bool exact = approvals.Any(item => TutorQualificationService.SameApproval(item, level, code));
-        bool alreadyTeachesSubject = approvals.Any(item =>
-            string.Equals(item.SubjectCode?.Trim(), code, StringComparison.OrdinalIgnoreCase));
-
         return type switch
         {
-            TeachingChangeType.Remove when !exact => "This subject and level are not currently approved.",
-            TeachingChangeType.Remove when approvals.Count == 1 => "At least one teaching subject and level must remain approved.",
             TeachingChangeType.AddSubject or TeachingChangeType.AddLevel when exact => "This subject and level are already approved.",
-            TeachingChangeType.AddSubject when alreadyTeachesSubject => "This subject is already approved at another level. Choose Add New Level.",
-            TeachingChangeType.AddLevel when !alreadyTeachesSubject => "Choose Add New Subject for a subject you are not yet approved to teach.",
-            TeachingChangeType.AddSubject or TeachingChangeType.AddLevel or TeachingChangeType.Remove => null,
+            TeachingChangeType.AddSubject or TeachingChangeType.AddLevel => null,
             _ => "Select a valid request type."
         };
     }

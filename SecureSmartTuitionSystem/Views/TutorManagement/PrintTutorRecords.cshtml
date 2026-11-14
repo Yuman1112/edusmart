@@ -1,0 +1,84 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorPrintViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tutor Records - EduSmart</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/attendance-print.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-records-print.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="print-actions">
+        <button type="button" id="tutor-records-print">Print / Save PDF</button>
+        <a asp-controller="TutorManagement" asp-action="Export"
+           asp-route-search="@Model.Search" asp-route-status="@Model.Status"
+           asp-route-setup="@Model.Setup" class="outline-button">Back to Export</a>
+        <p>Choose “Save as PDF” in your browser's print dialog to save this report.</p>
+    </div>
+    <main class="tutor-print-report">
+        <header class="tutor-print-header">
+            <img src="~/images/logo.png" alt="EduSmart" width="100" />
+            <div>
+                <h1>Tutor Records</h1>
+                <p>Generated @Model.GeneratedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture) MYT (UTC+8)</p>
+            </div>
+        </header>
+        <div class="tutor-print-filters">
+            <p><strong>Search</strong> @(string.IsNullOrWhiteSpace(Model.Search) ? "All tutors" : Model.Search)</p>
+            <p><strong>Status</strong> @(Model.Status == "active" ? "Active" : Model.Status == "inactive" ? "Inactive" : "All statuses")</p>
+            <p><strong>Account setup</strong> @(Model.Setup == "pending" ? "Pending" : Model.Setup == "completed" ? "Completed" : "All setup statuses")</p>
+            <p><strong>Total records</strong> @Model.Records.Count</p>
+        </div>
+        @if (Model.Records.Count == 0)
+        {
+            <p>No tutor records match these filters.</p>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Tutor</th>
+                        <th scope="col">Contact Details</th>
+                        <th scope="col">Qualifications &amp; Experience</th>
+                        <th scope="col">Teaching Subjects &amp; Levels</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Account Setup</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Records)
+                    {
+                        <tr>
+                            <td><strong>@row.FullName</strong><br />@row.TutorId</td>
+                            <td>@row.Email<br />@row.PhoneNumber</td>
+                            <td>
+                                @row.Qualification
+                                @if (!string.IsNullOrWhiteSpace(row.AreaOfExpertise))
+                                {
+                                    <p>Expertise — @row.AreaOfExpertise</p>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(row.TeachingExperience))
+                                {
+                                    <p>Experience — @row.TeachingExperience</p>
+                                }
+                            </td>
+                            <td>@(string.IsNullOrEmpty(row.TeachingSummary) ? "Not recorded" : row.TeachingSummary)</td>
+                            <td>@(row.IsActive ? "Active" : "Inactive")</td>
+                            <td>@(row.SetupPending ? "Pending" : "Completed")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </main>
+    <script src="~/js/tutor-records-print.js" asp-append-version="true" defer></script>
+</body>
+</html>

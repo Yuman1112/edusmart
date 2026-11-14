@@ -296,6 +296,10 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<bool>("IsReplacement")
                         .HasColumnType("bit");
 
+                    b.Property<string>("LateSubmissionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<DateTime>("LessonDate")
                         .HasColumnType("date");
 
@@ -313,6 +317,9 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.Property<DateTime?>("SubmittedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("SubmittedLate")
+                        .HasColumnType("bit");
 
                     b.Property<string>("TutorName")
                         .IsRequired()
@@ -386,6 +393,90 @@ namespace SecureSmartTuitionSystem.Migrations
                         {
                             t.HasCheckConstraint("CK_AttendanceRecord_Status", "[Status] IS NULL OR [Status] IN (1,2,3)");
                         });
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Attendance.AttendanceReopenRequest", b =>
+                {
+                    b.Property<int>("AttendanceReopenRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AttendanceReopenRequestId"));
+
+                    b.Property<int?>("ChangeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClassName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Decision")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("IsReplacement")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LessonDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("OpenUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("OriginalDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewRemark")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time");
+
+                    b.Property<string>("TutorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TutorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("AttendanceReopenRequestId");
+
+                    b.HasIndex("ClassSessionId", "OriginalDate", "IsReplacement")
+                        .IsUnique()
+                        .HasFilter("[Decision] = 0");
+
+                    b.ToTable("AttendanceReopenRequests", (string)null);
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Billing.Bill", b =>
@@ -2365,6 +2456,104 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("TutorAvailabilitySlots");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorQualificationDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TeachingChangeRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TutorProfileId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TeachingChangeRequestId")
+                        .HasFilter("[TeachingChangeRequestId] IS NOT NULL");
+
+                    b.HasIndex("TutorProfileId", "Kind")
+                        .IsUnique()
+                        .HasFilter("[TeachingChangeRequestId] IS NULL");
+
+                    b.ToTable("TutorQualificationDocuments");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorTeachingChangeRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AcademicLevel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("EvidenceRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SubjectCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime>("SubmittedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TutorProfileId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EvidenceRequestId");
+
+                    b.HasIndex("TutorProfileId", "AcademicLevel", "SubjectCode")
+                        .IsUnique()
+                        .HasFilter("[Status] = 0");
+
+                    b.ToTable("TutorTeachingChangeRequests");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorProfile", b =>
                 {
                     b.Property<int>("TutorProfileId")
@@ -2387,6 +2576,10 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<int>("EmploymentType")
                         .HasColumnType("int");
 
+                    b.Property<string>("FieldOfStudy")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -2399,6 +2592,13 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("QualificationVerifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("QualificationVerifiedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("TeachingExperience")
                         .HasMaxLength(500)
@@ -2685,6 +2885,17 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("AttendanceLesson");
 
                     b.Navigation("StudentProfile");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Attendance.AttendanceReopenRequest", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", "ClassSession")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassSession");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Billing.Bill", b =>
@@ -3154,6 +3365,42 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsRequired();
 
                     b.Navigation("ApplicationUser");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorQualificationDocument", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Tutor.TutorTeachingChangeRequest", "TeachingChangeRequest")
+                        .WithMany()
+                        .HasForeignKey("TeachingChangeRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.TutorProfile", "TutorProfile")
+                        .WithMany()
+                        .HasForeignKey("TutorProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TeachingChangeRequest");
+
+                    b.Navigation("TutorProfile");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorTeachingChangeRequest", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Tutor.TutorTeachingChangeRequest", "EvidenceRequest")
+                        .WithMany()
+                        .HasForeignKey("EvidenceRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.TutorProfile", "TutorProfile")
+                        .WithMany()
+                        .HasForeignKey("TutorProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EvidenceRequest");
+
+                    b.Navigation("TutorProfile");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorProfile", b =>

@@ -1,0 +1,53 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorStudentRoster
+@{
+    string Link(int page, string? sort = null) => Url.Action("Students", "Tutor", new { classId = Model.ClassId, search = Model.Search, status = Model.Status, sort = sort ?? Model.Sort, page })!;
+    string Direction(string key) => Model.Sort == key + "_asc" ? "ascending" : Model.Sort == key + "_desc" ? "descending" : "none";
+}
+<section class="tutor-management-list-card shared-table-card" data-roster-page="@Model.Page">
+    <div class="tutor-management-list-header">
+        <h2><i class="bi bi-people" aria-hidden="true"></i> Student Roster</h2>
+        <span class="text-muted small">@Model.StudentCount student(s) · @Model.Total enrollment record(s)</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0 edusmart-data-table" data-server-managed="true">
+            <thead><tr>
+                <th scope="col">No.</th>
+                @foreach (var col in new[] { ("number", "Student ID"), ("name", "Student Name"), ("class", "Class"), ("subject", "Subject & Level"), ("start", "Start Date"), ("status", "Status") })
+                { <th scope="col" aria-sort="@Direction(col.Item1)"><a href="@Link(1, Model.SortFor(col.Item1))" class="table-sort-button" data-roster-link>@col.Item2 <span class="table-sort-arrow" aria-hidden="true">↕</span></a></th> }
+            </tr></thead>
+            <tbody>
+                @for (int i = 0; i < Model.Students.Count; i++) {
+                    var student = Model.Students[i];
+                    <tr>
+                        <td>@((Model.Page - 1) * Model.PageSize + i + 1)</td>
+                        <td>@student.Number</td><td><strong>@student.Name</strong></td>
+                        <td><strong>@student.ClassCode</strong><div class="text-muted small">@student.ClassName</div></td>
+                        <td>@student.Subject<div class="text-muted small">@student.Level</div></td>
+                        <td><time datetime="@student.StartDate.ToString("yyyy-MM-dd")">@student.StartDate.ToString("dd MMM yyyy")</time></td>
+                        <td><span class="roster-badge @(student.Status == "Current" ? "current" : "upcoming")">@student.Status</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.Total == 0) {
+        <p class="roster-empty">@(Model.ClassId.HasValue || Model.Search.Length > 0 || Model.Status.Length > 0 ? "No students match your filters. Try another class or status." : "No current or upcoming students are enrolled in your active classes.")</p>
+    }
+    <nav class="table-pagination" aria-label="Student roster pages">
+        <span class="table-pagination-summary">@(Model.Total == 0 ? 0 : (Model.Page - 1) * Model.PageSize + 1)–@Math.Min(Model.Page * Model.PageSize, Model.Total) of @Model.Total rows · 25 per page</span>
+        <div class="table-pagination-controls">
+            @foreach (var item in new[] { ("First", 1), ("Previous", Model.Page - 1) }) {
+                if (Model.Page == 1) { <button type="button" class="table-page-button" disabled>@item.Item1</button> }
+                else { <a href="@Link(item.Item2)" class="table-page-button" data-roster-link>@item.Item1</a> }
+            }
+            @for (int n = Math.Max(1, Model.Page - 2); n <= Math.Min(Model.Pages, Model.Page + 2); n++) {
+                if (n == Model.Page) { <button type="button" class="table-page-button active" aria-current="page">@n</button> }
+                else { <a href="@Link(n)" class="table-page-button" data-roster-link>@n</a> }
+            }
+            @foreach (var item in new[] { ("Next", Model.Page + 1), ("Last", Model.Pages) }) {
+                if (Model.Page == Model.Pages) { <button type="button" class="table-page-button" disabled>@item.Item1</button> }
+                else { <a href="@Link(item.Item2)" class="table-page-button" data-roster-link>@item.Item1</a> }
+            }
+        </div>
+    </nav>
+</section>

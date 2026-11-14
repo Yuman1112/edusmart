@@ -4,9 +4,19 @@
 @{
     ViewData["Title"] = "Parent / Guardian Details";
     Layout = "/Views/Shared/_Layout.cshtml";
+    string MaskEmail(string email)
+    {
+        int at = email.IndexOf('@');
+        if (at <= 0) return "***";
+        string local = email[..at];
+        string visible = local.Length >= 5 ? local[..2] + "***" + local[^2..]
+            : local.Length >= 4 ? local[..1] + "***" + local[^1..]
+            : local.Length >= 2 ? local[..1] + "***" : "***";
+        return visible + email[at..];
+    }
 }
 
-<div class="row justify-content-center py-4">
+<div class="row justify-content-center py-4 guardian-details-page">
     <div class="col-md-10 col-lg-8">
 
         <partial name="_EnrollmentSteps" model="@(2)" />
@@ -26,7 +36,7 @@
                 </div>
             }
 
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+            <div asp-validation-summary="ModelOnly" class="guardian-validation-summary text-danger mb-3" role="alert"></div>
 
             <form asp-controller="Enrollment"
                   asp-action="GuardianDetails"
@@ -36,7 +46,7 @@
                 <!-- ==========================================
                      EXISTING PARENT CHECKBOX
                      ========================================== -->
-                <div class="form-check mb-4">
+                <div class="form-check mb-4" hidden="@(User.IsInRole("Parent") ? "hidden" : null)">
 
                     <input asp-for="UseExistingParentAccount"
                            class="form-check-input"
@@ -56,37 +66,15 @@
                      class="mb-4"
                      hidden>
 
-                    <div class="alert alert-info">
-
-                        <strong>
-                            Verify your existing account
-                        </strong>
-
-                        <div class="mt-1">
-                            Sign in to your parent / guardian account first. Then enter the email and last 4 digits of the
-                            identification number registered with your
-                            EduSmart account.
-                        </div>
-
-                    </div>
-
-                    @if (User.Identity?.IsAuthenticated != true)
-                    {
-                        <p>After signing in, start the enrollment form again to protect your session.</p>
-                        <p><a asp-area="Identity" asp-page="/Account/Login"
-                              asp-route-returnUrl="/Enrollment/Start"
-                              class="outline-button">Sign in to your existing account</a></p>
-                    }
-
                     @if (Model.ExistingParentVerified)
                     {
                         <!-- ==================================
                              VERIFIED SUCCESS
                              ================================== -->
-                        <div class="alert alert-success">
+                        <div class="guardian-account-confirmation">
 
                             <div class="fw-bold mb-2">
-                                ✓ Account verified
+                                <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>Parent account verified
                             </div>
 
                             @if (!string.IsNullOrWhiteSpace(
@@ -103,87 +91,69 @@
                             {
                                 <div>
                                     <strong>Email:</strong>
-                                    @Model.VerifiedParentEmail
+                                    @MaskEmail(Model.VerifiedParentEmail)
                                 </div>
                             }
 
                             <div class="mt-2">
-                                This student will be linked to your existing
+                                This student will be linked to this
                                 parent / guardian account after the
                                 enrollment is completed.
                             </div>
 
                         </div>
 
-                        <!-- Keep these values when Continue is clicked -->
-                        <input asp-for="ExistingParentEmail"
-                               type="hidden" />
-
-                        <input asp-for="ExistingParentIdentificationLast4"
-                               type="hidden" />
                     }
                     else
                     {
-                        <div class="row">
-
-                            <!-- Registered Email -->
-                            <div class="col-md-6 mb-3">
-
-                                <label asp-for="ExistingParentEmail"
-                                       class="form-label">
-                                    Registered Email
-                                </label>
-
-                                <input asp-for="ExistingParentEmail"
-                                       class="form-control"
-                                       type="email"
-                                       maxlength="256"
-                                       autocomplete="email"
-                                       placeholder="Enter registered email" />
-
-                                <span asp-validation-for="ExistingParentEmail"
-                                      class="text-danger">
-                                </span>
-
+                        <section class="guardian-verification-panel" aria-labelledby="guardian-account-heading">
+                            <h2 id="guardian-account-heading"><i class="bi bi-person-check" aria-hidden="true"></i> Parent Account Details</h2>
+                            <p class="text-muted">Confirm your account details to receive an email verification code. No sign-in is needed.</p>
+                            <div class="row g-3">
+                                <div class="col-md-7">
+                                    <label asp-for="ExistingParentEmail" class="form-label">Registered Email</label>
+                                    <input asp-for="ExistingParentEmail" class="form-control" type="email" maxlength="256" autocomplete="email" placeholder="Enter your registered email" />
+                                    <span asp-validation-for="ExistingParentEmail" class="text-danger"></span>
+                                </div>
+                                <div class="col-md-5">
+                                    <label asp-for="ExistingParentIdentificationLast4" class="form-label">Last 4 Digits of IC Number</label>
+                                    <input asp-for="ExistingParentIdentificationLast4" class="form-control" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Enter the last 4 digits of your IC" aria-describedby="guardian-last4-help" />
+                                    <span asp-validation-for="ExistingParentIdentificationLast4" class="text-danger"></span>
+                                    <div class="form-text" id="guardian-last4-help">Include any leading zero, e.g. 0101.</div>
+                                </div>
                             </div>
-
-                            <!-- Last 4 Digits -->
-                            <div class="col-md-6 mb-3">
-
-                                <label asp-for="ExistingParentIdentificationLast4"
-                                       class="form-label">
-                                    Last 4 Digits of Identification Number
-                                </label>
-
-                                <input asp-for="ExistingParentIdentificationLast4"
-                                       class="form-control"
-                                       inputmode="numeric"
-                                       maxlength="4"
-                                       autocomplete="off"
-                                       placeholder="Last 4 digits"
-                                       oninput="this.value = this.value.replace(/\D/g, '').slice(0, 4)" />
-
-                                <span asp-validation-for="ExistingParentIdentificationLast4"
-                                      class="text-danger">
-                                </span>
-
-                            </div>
-
-                        </div>
-
-                        <button type="submit"
-                                asp-controller="Enrollment"
-                                asp-action="VerifyExistingParent"
-                                class="outline-button">
-
-                            Verify Account
-
-                        </button>
-
-                        <div asp-validation-summary="ModelOnly"
-                             class="text-danger mt-2 mb-3 validation-summary-no-bullets"
-                             role="alert">
-                        </div>
+                            @if (ViewData["GuardianOtpPending"] is not true)
+                            {
+                                <div class="guardian-send-action">
+                                    <button type="submit" asp-action="VerifyExistingParent" class="outline-button" formnovalidate data-guardian-resend data-resend-at="@(ViewData["GuardianResendAt"] ?? 0)" data-idle-label="Send Verification Code">
+                                        <i class="bi bi-envelope" aria-hidden="true"></i><span>Send Verification Code</span>
+                                    </button>
+                                </div>
+                            }
+                        </section>
+                        @if (ViewData["GuardianOtpPending"] is true)
+                        {
+                            <section class="guardian-verification-panel guardian-code-panel" aria-labelledby="guardian-code-heading">
+                                <h2 id="guardian-code-heading"><i class="bi bi-shield-check" aria-hidden="true"></i> Email Verification</h2>
+                                <p class="guardian-code-notice" role="status"><i class="bi bi-envelope-check" aria-hidden="true"></i> Code sent. Check your registered email and enter the 6-digit code below.</p>
+                                <label asp-for="EnrollmentOtp" class="form-label" for="otpCode">Email Verification Code</label>
+                                <div class="guardian-code-actions">
+                                    <div class="otp-input-container guardian-otp-field">
+                                        <input asp-for="EnrollmentOtp" id="otpCode" class="form-control otp-real-input" type="text" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="6" pattern="[0-9]{6}" placeholder="Enter the 6-digit code" aria-describedby="guardian-code-help guardian-code-error" />
+                                        <div class="otp-digits" aria-hidden="true">
+                                            <span class="otp-digit"></span><span class="otp-digit"></span><span class="otp-digit"></span><span class="otp-digit"></span><span class="otp-digit"></span><span class="otp-digit"></span>
+                                        </div>
+                                    </div>
+                                    <button type="submit" asp-action="ConfirmGuardianOtp" class="primary-button" formnovalidate>Verify Code</button>
+                                </div>
+                                <div id="guardian-code-error" class="text-danger mt-2" role="alert" hidden></div>
+                                <div class="form-text" id="guardian-code-help">Valid for 5 minutes · Up to 5 attempts. Use the latest code received.</div>
+                                <div class="guardian-resend-action">
+                                    <span class="text-muted">Didn't receive a code?</span>
+                                    <button type="submit" asp-action="VerifyExistingParent" class="outline-button" formnovalidate data-guardian-resend data-resend-at="@(ViewData["GuardianResendAt"] ?? 0)" data-idle-label="Resend Code"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i><span>Resend Code</span></button>
+                                </div>
+                            </section>
+                        }
                     }
 
                 </div>
@@ -268,6 +238,8 @@
                         <input asp-for="GuardianIdentificationNumber"
                                class="form-control"
                                id="guardianIc"
+                               data-min-parent-age="@SecureSmartTuitionSystem.Services.Enrollment.GuardianIcValidation.MinimumAge"
+                               data-max-parent-age="@SecureSmartTuitionSystem.Services.Enrollment.GuardianIcValidation.MaximumAge"
                                inputmode="numeric"
                                maxlength="14"
                                autocomplete="off"
@@ -277,6 +249,7 @@
                               class="text-danger"
                               id="guardianIcValidation">
                         </span>
+                        <div class="form-text" id="guardianIcHelp">Enter your 12-digit IC number. Eligible age: 18–80.</div>
                     </div>
 
                 </fieldset>
@@ -299,7 +272,8 @@
                     <button type="submit"
                             asp-controller="Enrollment"
                             asp-action="GuardianDetails"
-                            class="primary-button">
+                            class="primary-button"
+                            id="guardianContinue">
 
                         Continue
                         <i class="bi bi-arrow-right"></i>
@@ -313,19 +287,69 @@
 </div>
 
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/login-otp.css" asp-append-version="true" />
+    <noscript><style nonce="@Context.Items["CspNonce"]">.guardian-otp-field { height: auto; }.guardian-otp-field .otp-real-input { position: static; height: auto; opacity: 1; }.guardian-otp-field .otp-digits { display: none; }</style></noscript>
+}
+
+<style nonce="@Context.Items["CspNonce"]">
+    .guardian-details-page > div { width: 100%; max-width: 960px; }
+    .guardian-details-page .enrollment-form-actions { border-top: 1px solid #d3e8ec; padding-top: 20px; margin-top: 24px; }
+    .edusmart-ui main .guardian-details-page .form-control:focus-visible { outline: none; }
+    .guardian-verification-panel { border: 1px solid #d3e8ec; border-radius: 12px; padding: 20px; margin-top: 18px; background: #fff; }
+    .guardian-verification-panel h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+    .guardian-verification-panel h2 i { color: #0798a4; }
+    .guardian-verification-panel > p { margin: 0 0 18px; }
+    .guardian-send-action { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 18px; }
+    .guardian-send-action > span { font-size: .875rem; }
+    .guardian-code-panel { background: #f5fbfc; }
+    .guardian-code-notice { color: #087981; font-size: .9rem; }
+    .guardian-code-actions { display: flex; align-items: stretch; gap: 12px; width: 100%; max-width: 560px; }
+    .guardian-code-actions .guardian-otp-field { flex: 1; min-width: 0; }
+    .guardian-otp-field .otp-real-input { height: 100%; }
+    .guardian-otp-field:has(.input-validation-error) .otp-digit { border-color: #dc3545; }
+    .guardian-resend-action { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; font-size: .875rem; }
+    .guardian-code-actions .primary-button { flex-shrink: 0; }
+    .guardian-validation-summary.validation-summary-errors { padding: 12px 15px; background: #fff5f5; border: 1px solid #f1cccc; border-radius: 9px; }
+    #guardianContinue:disabled { opacity: .55; cursor: not-allowed; }
+    @@media (max-width: 575.98px) {
+        .guardian-verification-panel { padding: 16px; }
+        .guardian-code-actions { flex-direction: column; }
+    }
+    .guardian-account-confirmation { padding: 18px; border: 1px solid #b5dfcf; border-radius: 9px; background: #eaf7f0; color: #07675c; }
+    #guardianForm .form-control.input-validation-error,
+    #guardianForm .form-control.is-invalid { border-color: #dc3545; }
+    #guardianForm .form-control.input-validation-error:focus,
+    #guardianForm .form-control.is-invalid:focus {
+        border-color: #dc3545;
+        outline: none;
+        box-shadow: 0 0 0 .2rem rgba(220,53,69,.12);
+    }
+    .enrollment-card .guardian-validation-summary ul { list-style: none; padding-left: 0; margin: 0; }
+    .enrollment-card .guardian-validation-summary li::marker { content: ""; }
+    .enrollment-card .guardian-validation-summary li::before { content: none; }
+    #guardianForm .validation-summary-valid { display: none; }
+    #guardianIcValidation.field-validation-error:not(:empty) + #guardianIcHelp { display: none; }
+</style>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/enrollment-ic.js" asp-append-version="true"></script>
+    <script src="~/js/login-otp.js" asp-append-version="true"></script>
+    <script src="~/js/guardian-verification.js" asp-append-version="true"></script>
     <script nonce="@Context.Items["CspNonce"]">
         (() => {
             const checkbox = document.getElementById("UseExistingParentAccount");
             const existingFields = document.getElementById("existing-parent-fields");
             const newFields = document.getElementById("new-parent-fields");
             const phone = document.getElementById("guardianPhone");
+            const continueButton = document.getElementById("guardianContinue");
+            const existingVerified = @(Model.ExistingParentVerified ? "true" : "false");
             function updateFields() {
                 existingFields.hidden = !checkbox.checked;
                 newFields.hidden = checkbox.checked;
                 newFields.disabled = checkbox.checked;
+                continueButton.disabled = checkbox.checked && !existingVerified;
             }
             phone?.addEventListener("input", () => {
                 let digits = phone.value.replace(/\D/g, "");
@@ -338,3 +362,4 @@
         })();
     </script>
 }
+

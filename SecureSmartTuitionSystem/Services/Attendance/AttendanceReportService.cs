@@ -35,6 +35,7 @@ public sealed class AttendanceReportService(ApplicationDbContext db)
         var now = ClassScheduleService.Now; var today = now.Date; var time = TimeOnly.FromDateTime(now);
         records = records.Where(x => x.AttendanceLesson.SubmittedAtUtc != null || x.AttendanceLesson.LessonDate < today
             || (x.AttendanceLesson.LessonDate == today && x.AttendanceLesson.EndTime <= time));
+        if (role is "Student" or "Parent") records = records.Where(x => x.AttendanceLesson.SubmittedAtUtc != null);
         return role switch
         {
             "Admin" => records,
@@ -62,6 +63,7 @@ public sealed class AttendanceReportService(ApplicationDbContext db)
         model.Rows = await Order(query, filter.Sort).Take(full ? 5000 : 500)
             .Select(x => new AttendanceReportRow
             {
+                SubmittedLate = x.AttendanceLesson.SubmittedLate,
                 RecordId = x.AttendanceRecordId,
                 ClassId = x.AttendanceLesson.ClassSessionId,
                 Date = x.AttendanceLesson.LessonDate,

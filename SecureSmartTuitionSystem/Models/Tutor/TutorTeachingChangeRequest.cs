@@ -10,6 +10,8 @@ public sealed class TutorTeachingChangeRequest
     public int Id { get; set; }
     public int TutorProfileId { get; set; }
     public TutorProfile TutorProfile { get; set; } = null!;
+    public int? EvidenceRequestId { get; set; }
+    public TutorTeachingChangeRequest? EvidenceRequest { get; set; }
     public TeachingChangeType Type { get; set; }
     public TeachingChangeStatus Status { get; set; }
 

@@ -1,47 +1,42 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorStudentRoster
-@{
-    ViewData["Title"] = "My Students";
-}
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorStudentRoster
+@{ ViewData["Title"] = "My Students"; }
 @section Styles {
-    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-students.css" asp-append-version="true" />
 }
-<div class="page-header">
-    <div><h1>My Students</h1><p>View current students in your assigned classes.</p></div>
-    <a asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Dashboard</a>
+<div class="tutor-students-page" data-roster-url="@Url.Action("Students", "Tutor")">
+    <div class="page-header">
+        <div><h1>My Students</h1><p>View current and upcoming students in your assigned classes.</p></div>
+        <a asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Dashboard</a>
+    </div>
+    <section class="tutor-management-filter-card roster-filters">
+        <h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Students</h2>
+        <p class="text-muted">The student list updates automatically.</p>
+        <form asp-action="Students" method="get" id="roster-filter-form" class="row g-3">
+            <div class="col-lg-4">
+                <label for="roster-search" class="form-label">Search Student</label>
+                <input id="roster-search" name="search" value="@Model.Search" class="form-control" maxlength="100" placeholder="Search by name or student ID" />
+            </div>
+            <div class="col-lg-5">
+                <label for="roster-class" class="form-label">Class</label>
+                <select id="roster-class" name="classId" class="form-select">
+                    <option value="">All My Classes</option>
+                    @foreach (var choice in Model.Classes) { <option value="@choice.Id" selected="@(Model.ClassId == choice.Id)">@choice.Code · @choice.Name</option> }
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <label for="roster-status" class="form-label">Status</label>
+                <select id="roster-status" name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="Current" selected="@(Model.Status == "Current")">Current</option>
+                    <option value="Upcoming" selected="@(Model.Status == "Upcoming")">Upcoming</option>
+                </select>
+            </div>
+            <input type="hidden" name="sort" value="@Model.Sort" />
+            <noscript><button type="submit" class="primary-button">Apply Filters</button></noscript>
+        </form>
+    </section>
+    <p class="roster-live-status" data-roster-status role="status" aria-live="polite">Updates automatically every 15 seconds.</p>
+    <div id="roster-results"><partial name="_StudentRoster" model="Model" /></div>
 </div>
-<div class="class-form-card mb-4">
-    <form asp-action="Students" method="get" class="row g-3 align-items-end">
-        <div class="col-md-7">
-            <label for="roster-class" class="form-label">Class</label>
-            <select id="roster-class" name="classId" class="form-select">
-                <option value="">All My Classes</option>
-                @foreach (var choice in Model.Classes)
-                {
-                    <option value="@choice.Id" selected="@(Model.ClassId == choice.Id)">@choice.Code · @choice.Name</option>
-                }
-            </select>
-        </div>
-        <div class="col-md-5"><button type="submit" class="primary-button">View Students</button></div>
-    </form>
-</div>
-<div class="class-form-card">
-    <h2 class="h5">Student Roster</h2>
-    @if (Model.Students.Count == 0)
-    {
-        <p class="text-muted">No students are currently enrolled in these classes.</p>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table align-middle">
-                <thead><tr><th scope="col">Student ID</th><th scope="col">Student Name</th><th scope="col">Class</th></tr></thead>
-                <tbody>
-                    @foreach (var student in Model.Students)
-                    {
-                        <tr><td>@student.Number</td><td>@student.Name</td><td>@student.ClassCode · @student.ClassName</td></tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
-</div>
+@section Scripts { <script src="~/js/tutor-students.js" asp-append-version="true" defer></script> }
