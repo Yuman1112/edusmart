@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -129,9 +129,30 @@ public sealed class AttendanceService(ApplicationDbContext db)
         model.EditUntil = AttendanceEntryPolicy.Deadline(date, model.End, grant);
         model.IsLateEntry = AttendanceEntryPolicy.IsLate(date, model.End, ClassScheduleService.Now);
         model.LateSubmissionReason = saved?.LateSubmissionReason;
+        model.SubmittedAtUtc = saved?.SubmittedAtUtc;
+        model.SubmittedLate = saved?.SubmittedLate ?? false;
         model.CanRequestReopen = !admin && lesson != null && (saved == null || Same(saved, lesson)) && saved?.SubmittedAtUtc == null && ClassScheduleService.Now >= model.EditUntil;
         model.CanEdit = !admin && lesson != null && (saved == null || Same(saved, lesson))
             && AttendanceEntryPolicy.CanEdit(date, model.Start, model.End, saved?.SubmittedAtUtc, ClassScheduleService.Now, grant);
+        if (!admin && lesson != null)
+        {
+            model.LatestReopenRequest = await db.Set<AttendanceReopenRequest>().AsNoTracking()
+                .Where(r => r.TutorUserId == userId && r.ClassSessionId == classId
+                    && r.OriginalDate == lesson.OriginalDate.Date && r.IsReplacement == replacement)
+                .OrderByDescending(r => r.RequestedAtUtc).ThenByDescending(r => r.AttendanceReopenRequestId).FirstOrDefaultAsync();
+            if (model.CanEdit && model.IsLateEntry && string.IsNullOrWhiteSpace(model.LateSubmissionReason)
+                && model.LatestReopenRequest?.Decision == AttendanceReopenDecision.Approved
+                && AttendanceReopenService.Same(model.LatestReopenRequest, lesson))
+                model.LateSubmissionReason = model.LatestReopenRequest.Reason;
+            if (model.LatestReopenRequest?.Decision == AttendanceReopenDecision.Pending)
+                model.CanRequestReopen = false;
+        }
+        if (model.CanEdit && lesson != null)
+        {
+            var approvedRequest = await new AttendanceReopenService(db).ApprovedRequestAsync(lesson);
+            model.UsesApprovedReopenReason = approvedRequest != null;
+            if (approvedRequest != null) model.LateSubmissionReason = approvedRequest.Reason;
+        }
         if (saved?.SubmittedLate == true) model.State = "Submitted late";
         else if (model.CanEdit && model.IsLateEntry) model.State = grant.HasValue && grant.Value.AddHours(8) > AttendanceEntryPolicy.Deadline(date,model.End) ? "Reopened for late entry" : "Late entry window";
         if (saved != null && (lesson == null || !Same(saved, lesson))) model.State += " · Schedule changed (read only)";
@@ -172,7 +193,9 @@ public sealed class AttendanceService(ApplicationDbContext db)
             var grant = await new AttendanceReopenService(db).GrantUntilAsync(lesson);
             if (!AttendanceEntryPolicy.CanEdit(lesson.Date, lesson.Start, lesson.End, saved?.SubmittedAtUtc, ClassScheduleService.Now, grant))
                 return "The entry window is closed or attendance was already submitted. Request reopening for an overdue unsubmitted lesson.";
-            var reason = input.LateSubmissionReason?.Trim();
+            // Use the matching, unexpired approval from the database, never a posted reason.
+            var approvedRequest = await new AttendanceReopenService(db).ApprovedRequestAsync(lesson);
+            var reason = approvedRequest != null ? approvedRequest.Reason.Trim() : input.LateSubmissionReason?.Trim();
             var reasonError = AttendanceEntryPolicy.ReasonError(reason,input.FinalSubmit,AttendanceEntryPolicy.IsLate(lesson.Date,lesson.End,ClassScheduleService.Now));
             if (reasonError != null) return reasonError;
             string version = saved == null ? "" : Convert.ToBase64String(saved.RowVersion);

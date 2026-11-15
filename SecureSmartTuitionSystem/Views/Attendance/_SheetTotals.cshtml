@@ -1,0 +1,8 @@
+@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceSheetViewModel
+@using SecureSmartTuitionSystem.Models.Attendance
+<div class="attendance-totals" aria-label="Whole lesson attendance totals" aria-live="polite">
+    <span class="tutor-management-badge tutor-badge-success">Present <strong data-total="1">@Model.Students.Count(s=>s.Status==AttendanceStatus.Present)</strong></span>
+    <span class="tutor-management-badge tutor-badge-inactive">Absent <strong data-total="2">@Model.Students.Count(s=>s.Status==AttendanceStatus.Absent)</strong></span>
+    <span class="tutor-management-badge tutor-badge-pending">Late <strong data-total="3">@Model.Students.Count(s=>s.Status==AttendanceStatus.Late)</strong></span>
+    @if (!Model.SubmittedAtUtc.HasValue || Model.Students.Any(s=>s.Status==null)) { <span class="tutor-management-badge tutor-badge-inactive">Unrecorded <strong data-total="">@Model.Students.Count(s=>s.Status==null)</strong></span> }
+</div>

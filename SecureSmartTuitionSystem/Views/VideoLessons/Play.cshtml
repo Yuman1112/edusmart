@@ -46,10 +46,13 @@
             }
         </div>
     }
+    @if (!Model.IsStudent && row.IsExpired) {
+        <div class="alert alert-warning" role="status">The 30-day student viewing period has expired. Students cannot access this recording. Staff playback remains available; editing, replacing or restoring it does not extend the deadline.</div>
+    }
     <div class="video-layout">
         <section class="class-form-card video-player-card">
-            <div class="video-player-heading"><span class="video-subject">@row.Level · @row.Subject</span><span class="video-badge @(row.IsActive ? "is-active" : "is-inactive")">@(row.IsActive ? "Active" : "Inactive")</span></div>
-            <video id="lesson-video" controls playsinline preload="metadata" controlslist="nodownload" data-video-player data-access-url="@Url.Action("Access", new { id = row.Id, version = row.PlaybackVersion })" data-playback-version="@row.PlaybackVersion" data-progress-url="@(Model.IsStudent? Url.Action("Progress"):null)" data-video-id="@row.Id" data-resume="@row.Position.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-completed="@row.Watched.ToString().ToLowerInvariant()"><source src="@Url.Action("Media", new { id = row.Id, version = row.PlaybackVersion })" type="video/mp4" />Your browser does not support MP4 playback.</video>
+            <div class="video-player-heading"><span class="video-subject">@row.Level · @row.Subject</span><span class="video-badge @row.StatusClass">@row.StatusText</span></div>
+            <video id="lesson-video" controls playsinline preload="metadata" controlslist="nodownload" data-video-player data-expires-at="@(Model.IsStudent ? new DateTimeOffset(row.ExpiresAtUtc).ToUnixTimeMilliseconds().ToString() : "")" data-access-url="@Url.Action("Access", new { id = row.Id, version = row.PlaybackVersion })" data-playback-version="@row.PlaybackVersion" data-progress-url="@(Model.IsStudent? Url.Action("Progress"):null)" data-video-id="@row.Id" data-resume="@row.Position.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-completed="@row.Watched.ToString().ToLowerInvariant()"><source src="@Url.Action("Media", new { id = row.Id, version = row.PlaybackVersion })" type="video/mp4" />Your browser does not support MP4 playback.</video>
             <div class="alert alert-warning mt-3" data-video-player-error role="alert" hidden></div>
             <div class="video-actions video-playback-tools"><span data-video-playback-status role="status">@(row.Watched ? "Watched" : "Ready to play")</span><button type="button" class="outline-button" data-video-start-over>Start from beginning</button></div>
             @if (Model.IsStudent)
@@ -61,6 +64,7 @@
             {
                 <p class="video-description">@row.Description</p>
             }
+            <p class="video-note"><strong>Student viewing deadline:</strong> @row.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT · 30 days from the first upload.</p>
             <p class="video-note">Playback controls include play/pause, volume, seeking and full screen.</p>
         </section>
         <aside class="dashboard-card compact-class-card video-playlist">

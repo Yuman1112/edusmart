@@ -20,28 +20,33 @@ public sealed class VideoLessonService(ApplicationDbContext db)
     {
         var classes = Access.Classes(user).Select(c => c.ClassSessionId);
         var query = db.Set<RecordedLesson>().AsNoTracking().Where(x => classes.Contains(x.ClassSessionId));
-        return Staff(user) ? query : query.Where(x => x.IsActive);
+        return Staff(user) ? query : VideoAvailability.ForStudents(query, DateTime.UtcNow);
     }
     public IQueryable<RecordedLesson> Manage(ClaimsPrincipal user)
     {
         var classes = Access.Classes(user, true).Select(c => c.ClassSessionId); var id = Own(user);
         return db.Set<RecordedLesson>().Where(x => IsTutor(user) && x.UploadedByUserId == id && classes.Contains(x.ClassSessionId));
     }
-    public static IOrderedQueryable<RecordedLesson> Order(IQueryable<RecordedLesson> query, string sort) => sort switch
+    public static IOrderedQueryable<RecordedLesson> Order(IQueryable<RecordedLesson> query, string sort)
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-VideoAvailability.ViewingDays);
+        return sort switch
     {
         "date_asc" => query.OrderBy(x => x.RecordingDate).ThenBy(x => x.RecordedLessonId),
         "title_asc" => query.OrderBy(x => x.Title).ThenBy(x => x.RecordedLessonId),
         "title_desc" => query.OrderByDescending(x => x.Title).ThenBy(x => x.RecordedLessonId),
         "class_asc" => query.OrderBy(x => x.ClassSession.ClassCode).ThenBy(x => x.Title).ThenBy(x => x.RecordedLessonId),
         "class_desc" => query.OrderByDescending(x => x.ClassSession.ClassCode).ThenBy(x => x.Title).ThenBy(x => x.RecordedLessonId),
-        "status_asc" => query.OrderByDescending(x => x.IsActive).ThenByDescending(x => x.RecordingDate).ThenBy(x => x.RecordedLessonId),
-        "status_desc" => query.OrderBy(x => x.IsActive).ThenByDescending(x => x.RecordingDate).ThenBy(x => x.RecordedLessonId),
+        "status_asc" => query.OrderBy(x => !x.IsActive ? 2 : x.CreatedAtUtc <= cutoff ? 1 : 0).ThenByDescending(x => x.RecordingDate).ThenBy(x => x.RecordedLessonId),
+        "status_desc" => query.OrderByDescending(x => !x.IsActive ? 2 : x.CreatedAtUtc <= cutoff ? 1 : 0).ThenByDescending(x => x.RecordingDate).ThenBy(x => x.RecordedLessonId),
         _ => query.OrderByDescending(x => x.RecordingDate).ThenByDescending(x => x.RecordedLessonId)
     };
+    }
     private IQueryable<VideoRow> Rows(IQueryable<RecordedLesson> query, ClaimsPrincipal user)
     {
         var id = Own(user); var manage = Manage(user).Select(x => x.RecordedLessonId);
         var admin = user.IsInRole("Admin");
+        var cutoff = DateTime.UtcNow.AddDays(-VideoAvailability.ViewingDays);
         return query.Select(x => new VideoRow
         {
             Id = x.RecordedLessonId,
@@ -60,6 +65,7 @@ public sealed class VideoLessonService(ApplicationDbContext db)
             Date = x.RecordingDate,
             CreatedAtUtc = x.CreatedAtUtc,
             IsActive = x.IsActive,
+            IsExpired = x.CreatedAtUtc <= cutoff,
             CanManage = manage.Contains(x.RecordedLessonId),
             CanChangeState = admin || (!x.InactivatedByAdmin && manage.Contains(x.RecordedLessonId)),
             RowVersion = Convert.ToBase64String(x.RowVersion),
@@ -89,7 +95,14 @@ public sealed class VideoLessonService(ApplicationDbContext db)
         if (filter.SubjectId.HasValue) query = query.Where(x => x.ClassSession.SubjectId == filter.SubjectId);
         if (!string.IsNullOrWhiteSpace(filter.Search)) { var term = filter.Search.Trim(); query = query.Where(x => x.Title.Contains(term)); }
         if (!string.IsNullOrEmpty(filter.Month) && DateTime.TryParseExact(filter.Month + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var month)) { var end = month.AddMonths(1); query = query.Where(x => x.RecordingDate >= month && x.RecordingDate < end); }
-        if (model.IsStaff && filter.Status != "all") query = query.Where(x => x.IsActive == (filter.Status == "active"));
+        if (model.IsStaff && filter.Status != "all") {
+            var cutoff = DateTime.UtcNow.AddDays(-VideoAvailability.ViewingDays);
+            query = filter.Status switch {
+                "active" => query.Where(x => x.IsActive && x.CreatedAtUtc > cutoff),
+                "expired" => query.Where(x => x.IsActive && x.CreatedAtUtc <= cutoff),
+                _ => query.Where(x => !x.IsActive)
+            };
+        }
         query = ApplyWatchFilter(query, user, filter.Watch);
         model.Total = await query.CountAsync(); filter.Page = Math.Min(filter.Page, model.PageCount);
         model.Rows = await Rows(Order(query, filter.Sort).Skip((filter.Page - 1) * 25).Take(25), user).ToListAsync(); return model;

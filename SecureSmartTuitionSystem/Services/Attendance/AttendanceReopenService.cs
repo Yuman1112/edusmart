@@ -20,6 +20,12 @@ public sealed class AttendanceReopenService(ApplicationDbContext db)
             r.ClassSessionId == lesson.Class.ClassSessionId && r.OriginalDate == lesson.OriginalDate.Date && r.LessonDate == lesson.Date.Date &&
             r.StartTime == lesson.Start && r.EndTime == lesson.End && r.ChangeId == lesson.ChangeId && r.IsReplacement == lesson.Replacement)
         .Select(r => r.OpenUntilUtc).MaxAsync();
+    public Task<AttendanceReopenRequest?> ApprovedRequestAsync(LessonItem lesson) => db.Set<AttendanceReopenRequest>().AsNoTracking()
+        .Where(r => r.Decision == AttendanceReopenDecision.Approved && r.TutorUserId == lesson.Class.TutorUserId &&
+            r.ClassSessionId == lesson.Class.ClassSessionId && r.OriginalDate == lesson.OriginalDate.Date && r.LessonDate == lesson.Date.Date &&
+            r.StartTime == lesson.Start && r.EndTime == lesson.End && r.ChangeId == lesson.ChangeId && r.IsReplacement == lesson.Replacement &&
+            r.OpenUntilUtc > DateTime.UtcNow)
+        .OrderByDescending(r => r.OpenUntilUtc).ThenByDescending(r => r.AttendanceReopenRequestId).FirstOrDefaultAsync();
     private Task<bool> Submitted(LessonItem lesson) => db.Set<AttendanceLesson>().AnyAsync(x => x.ClassSessionId == lesson.Class.ClassSessionId &&
         x.OriginalDate == lesson.OriginalDate.Date && x.IsReplacement == lesson.Replacement && x.SubmittedAtUtc != null);
     private async Task<bool> Compatible(LessonItem lesson)
@@ -49,6 +55,43 @@ public sealed class AttendanceReopenService(ApplicationDbContext db)
     }
     public Task<List<AttendanceReopenRequest>> ListAsync(string userId,bool admin) => db.Set<AttendanceReopenRequest>().AsNoTracking()
         .Where(x=>admin || x.TutorUserId==userId).OrderByDescending(x=>x.RequestedAtUtc).Take(500).ToListAsync();
+    public async Task<Dictionary<int,int>> AttemptNumbersAsync(string userId, bool admin)
+    {
+        var items = await db.Set<AttendanceReopenRequest>().AsNoTracking()
+            .Where(r => admin || r.TutorUserId == userId)
+            .Select(r => new { r.AttendanceReopenRequestId, r.ClassSessionId, r.OriginalDate, r.IsReplacement, r.RequestedAtUtc }).ToListAsync();
+        return items.GroupBy(r => new { r.ClassSessionId, r.OriginalDate, r.IsReplacement })
+            .SelectMany(g => g.OrderBy(r => r.RequestedAtUtc).ThenBy(r => r.AttendanceReopenRequestId)
+                .Select((r,index) => new { Id = r.AttendanceReopenRequestId, Attempt = index + 1 }))
+            .ToDictionary(r => r.Id, r => r.Attempt);
+    }
+    public async Task<SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReopenReviewViewModel?> HistoryAsync(int id)
+    {
+        var current = await db.Set<AttendanceReopenRequest>().AsNoTracking().SingleOrDefaultAsync(r => r.AttendanceReopenRequestId == id);
+        if (current == null) return null;
+        var previous = await db.Set<AttendanceReopenRequest>().AsNoTracking()
+            .Where(r => r.ClassSessionId == current.ClassSessionId && r.OriginalDate == current.OriginalDate && r.IsReplacement == current.IsReplacement &&
+                (r.RequestedAtUtc < current.RequestedAtUtc || r.RequestedAtUtc == current.RequestedAtUtc && r.AttendanceReopenRequestId < id))
+            .OrderBy(r => r.RequestedAtUtc).ThenBy(r => r.AttendanceReopenRequestId).ToListAsync();
+        var submittedAt = await db.Set<AttendanceLesson>().AsNoTracking()
+            .Where(r => r.ClassSessionId == current.ClassSessionId && r.OriginalDate == current.OriginalDate && r.IsReplacement == current.IsReplacement)
+            .Select(r => r.SubmittedAtUtc).SingleOrDefaultAsync();
+        var now = DateTime.UtcNow;
+        var rows = previous.Select((r,index) => new SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReopenHistoryRow {
+            Attempt = index + 1, Request = r, Outcome = HistoryOutcome(r,submittedAt,now)
+        }).Reverse().ToList();
+        return new() { Attempt = previous.Count + 1, History = rows,
+            PreviousWindowMissed = previous.Any(r => r.Decision == AttendanceReopenDecision.Approved &&
+                r.OpenUntilUtc.HasValue && r.OpenUntilUtc.Value <= current.RequestedAtUtc &&
+                (!submittedAt.HasValue || submittedAt.Value > r.OpenUntilUtc.Value)) };
+    }
+    public static string HistoryOutcome(AttendanceReopenRequest request, DateTime? submittedAt, DateTime nowUtc)
+    {
+        if (request.Decision != AttendanceReopenDecision.Approved || !request.OpenUntilUtc.HasValue) return "";
+        if (submittedAt.HasValue && request.ReviewedAtUtc.HasValue && submittedAt.Value >= request.ReviewedAtUtc.Value && submittedAt.Value <= request.OpenUntilUtc.Value)
+            return "Submitted within window";
+        return nowUtc >= request.OpenUntilUtc.Value ? "Expired without final submission" : "Entry window open";
+    }
     public async Task<string?> ReviewAsync(int id,bool approve,string? remark,string? version,string adminId)
     {
         remark=remark?.Trim();

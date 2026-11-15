@@ -152,7 +152,9 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
             return BadRequest(new { message = "Choose a valid recording and status." });
 
         var error = await Service.StateAsync(User, id, rowVersion, active.Value);
-        var message = error ?? (active.Value
+        var expired = error == null && active.Value && await Service.Visible(User)
+            .AnyAsync(x => x.RecordedLessonId == id && x.CreatedAtUtc <= DateTime.UtcNow.AddDays(-VideoAvailability.ViewingDays));
+        var message = error ?? (expired ? "Recording restored for staff management. Its 30-day student viewing period has expired and has not been extended." : active.Value
             ? "Recorded lesson restored."
             : "Recorded lesson set to inactive. Students can no longer access it.");
         if (Request.Headers.Accept.ToString().Contains("application/json"))

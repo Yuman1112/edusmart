@@ -1,0 +1,18 @@
+@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceReopenReviewViewModel
+@using SecureSmartTuitionSystem.Models.Attendance
+<div data-history-loaded data-attempt="@Model.Attempt" data-history-count="@Model.History.Count" data-missed-window="@Model.PreviousWindowMissed.ToString().ToLowerInvariant()">
+    @if (Model.History.Count == 0) { <p class="text-muted small">No previous requests.</p> }
+    @foreach (var row in Model.History) { var request = row.Request;
+        <details class="attendance-history-item">
+            <summary><strong>Request #@row.Attempt</strong> <span class="tutor-management-badge @(request.Decision==AttendanceReopenDecision.Approved ? "tutor-badge-success" : request.Decision==AttendanceReopenDecision.Rejected ? "tutor-badge-inactive" : "tutor-badge-pending")">@request.Decision</span>
+                <span class="attendance-history-time">Requested: @request.RequestedAtUtc.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") MYT</span>
+                @if (request.ReviewedAtUtc.HasValue) { <span class="attendance-history-time">Reviewed: @request.ReviewedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") MYT</span> }
+                @if (request.OpenUntilUtc.HasValue) { <span class="attendance-history-time">Entry deadline: @request.OpenUntilUtc.Value.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") MYT</span> }
+                @if (!string.IsNullOrEmpty(row.Outcome)) { <span class="attendance-history-outcome">@row.Outcome</span> }
+            </summary>
+            <dl><dt>Reason for Request</dt><dd>@request.Reason</dd><dt>Tutor</dt><dd>@request.TutorName</dd>
+            @if (!string.IsNullOrWhiteSpace(request.ReviewRemark)) { <dt>Admin Review Notes</dt><dd>@request.ReviewRemark</dd> }
+            </dl>
+        </details>
+    }
+</div>

@@ -74,9 +74,9 @@
             {
                 <div>
                     <label for="video-status" class="form-label">Status</label><select id="video-status" name="Status" class="form-select">
-                        @foreach (var status in new[] { "active", "inactive", "all" })
+                        @foreach (var status in new[] { "active", "expired", "inactive", "all" })
                         {
-                            <option value="@status" selected="@(Model.Filter.Status == status)">@(status == "all" ? "All Statuses" : status == "active" ? "Active" : "Inactive")</option>
+                            <option value="@status" selected="@(Model.Filter.Status == status)">@(status == "all" ? "All Statuses" : status == "active" ? "Active" : status == "expired" ? "Expired" : "Inactive")</option>
                         }
                     </select>
                 </div>

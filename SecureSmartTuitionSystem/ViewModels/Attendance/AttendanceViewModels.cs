@@ -41,7 +41,11 @@ public sealed class AttendanceSheetViewModel
     public string State { get; set; } = "";
     public bool CanEdit { get; set; }
     public bool IsLateEntry { get; set; }
+    public bool UsesApprovedReopenReason { get; set; }
+    public DateTime? SubmittedAtUtc { get; set; }
+    public bool SubmittedLate { get; set; }
     public bool CanRequestReopen { get; set; }
+    [ValidateNever] public AttendanceReopenRequest? LatestReopenRequest { get; set; }
     public DateTime EditUntil { get; set; }
     [StringLength(500)] public string? LateSubmissionReason { get; set; }
     public List<AttendanceStudentRow> Students { get; set; } = [];

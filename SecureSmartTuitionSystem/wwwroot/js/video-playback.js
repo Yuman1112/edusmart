@@ -437,9 +437,25 @@
         const token = one('[data-video-progress-token] input')?.value;
         const status = one('[data-video-playback-status]');
         function playerError(text) { const node = one('[data-video-player-error]'); node.textContent = text; node.hidden = false; }
+        function stopPlayback(text) {
+            if (denied) return;
+            denied = true; video.pause(); video.removeAttribute('src');
+            video.querySelectorAll('source').forEach(n => n.remove()); video.load();
+            const startOver = one('[data-video-start-over]'); if (startOver) startOver.disabled = true;
+            playerError(text);
+        }
+        function checkExpiry() {
+            const expiresAt = Number(video.dataset.expiresAt || 0);
+            if (expiresAt > 0 && Date.now() >= expiresAt) {
+                stopPlayback('This recording has expired. The 30-day student viewing period has ended.');
+                return true;
+            }
+            return false;
+        }
         async function access() {
+            if (checkExpiry()) return;
             if (document.hidden || denied) return;
-            try { const response = await fetch(video.dataset.accessUrl, { headers, cache: 'no-store', signal: AbortSignal.timeout(12000) }); if ([401, 403, 404, 409].includes(response.status) || response.redirected) { denied = true; video.pause(); video.removeAttribute('src'); video.querySelectorAll('source').forEach(n => n.remove()); video.load(); playerError(response.status === 409 ? 'This video was replaced. Reload this lesson to watch the new recording.' : 'This recording is no longer available to your account. Return to the lesson list or sign in again.'); } }
+            try { const response = await fetch(video.dataset.accessUrl, { headers, cache: 'no-store', signal: AbortSignal.timeout(12000) }); if ([401, 403, 404, 409].includes(response.status) || response.redirected) { stopPlayback(response.status === 409 ? 'This video was replaced. Reload this lesson to watch the new recording.' : 'This recording may have expired or is no longer available to your account. Return to the lesson list or sign in again.'); } }
             catch { /* Media requests still enforce access; do not discard buffered playback on a transient network failure. */ }
         }
         function data(seconds) { return new URLSearchParams({ __RequestVerificationToken: token, Id: video.dataset.videoId, PlaybackVersion: video.dataset.playbackVersion, Position: String(Number.isFinite(video.currentTime) ? video.currentTime : 0), Played: String(Math.min(60, seconds)) }); }
@@ -456,6 +472,10 @@
         video.addEventListener('play', access); video.addEventListener('pause', saveProgress); video.addEventListener('ended', saveProgress);
         video.addEventListener('error', () => { if (!denied) playerError('The video could not be played. Check your connection. If the problem continues, ask the tutor to export an MP4 using H.264 video and AAC audio.'); });
         one('[data-video-start-over]').addEventListener('click', () => { video.currentTime = 0; last = 0; });
+        checkExpiry();
+        video.addEventListener("play", checkExpiry);
+        video.addEventListener("timeupdate", checkExpiry);
+        if (Number(video.dataset.expiresAt || 0) > 0) setInterval(checkExpiry, 1000);
         setInterval(saveProgress, 15000); setInterval(access, 20000);
         document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(); else access(); });
         window.addEventListener('pagehide', () => { if (token && pending > 0 && !denied) navigator.sendBeacon(video.dataset.progressUrl, data(pending)); });

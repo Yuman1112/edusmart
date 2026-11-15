@@ -1,25 +1,94 @@
 @model IReadOnlyList<SecureSmartTuitionSystem.Models.Attendance.AttendanceReopenRequest>
 @using SecureSmartTuitionSystem.Models.Attendance
-@{ ViewData["Title"]="Attendance Reopening Requests"; bool admin=User.IsInRole("Admin"); }
-@section Styles { <link rel="stylesheet" href="~/css/attendance.css" asp-append-version="true" /> }
-<div class="attendance-page">
-    <div class="page-header"><div><h1>Attendance Reopening Requests</h1><p>@(admin ? "Review overdue, unsubmitted lessons. Approval opens entry for 24 hours." : "Track your requests to record overdue attendance.")</p></div><a asp-controller="Attendance" asp-action="Index" class="outline-button">Back to Attendance</a></div>
-    @foreach(var key in new[]{"AttendanceReopenSuccess","AttendanceReopenError"}) { if(TempData[key] is string message){<div class="alert @(key.EndsWith("Error")?"alert-danger":"alert-success")" role="status">@message</div>} }
-    <div class="class-form-card">
-        <h2 class="h5">Requests</h2><p class="text-muted small">Latest 500 requests. Submitted attendance must use the existing correction workflow.</p>
-        @if(Model.Count==0){<p class="text-muted">No reopening requests yet.</p>}
-        else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>No.</th><th>Lesson</th><th>Tutor / Reason</th><th>Status</th><th>Review / Entry Deadline</th><th data-sortable="false">Actions</th></tr></thead><tbody>
-        @for(int i=0;i<Model.Count;i++){var row=Model[i];<tr>
-            <td>@(i+1)</td><td><strong>@row.ClassName</strong><br />@row.LessonDate.ToString("dd MMM yyyy")<br /><small>@row.StartTime.ToString("HH:mm")–@row.EndTime.ToString("HH:mm") · @(row.IsReplacement?"Replacement":"Regular")</small></td>
-            <td>@row.TutorName<br /><small>@row.Reason</small><br /><small class="text-muted">Requested @row.RequestedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</small></td>
-            <td><span class="tutor-management-badge @(row.Decision==AttendanceReopenDecision.Approved?"tutor-badge-success":row.Decision==AttendanceReopenDecision.Rejected?"tutor-badge-inactive":"tutor-badge-pending")">@row.Decision</span></td>
-            <td>@(row.ReviewRemark??"—") @if(row.OpenUntilUtc.HasValue){<br /><small>Entry until @row.OpenUntilUtc.Value.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</small>}</td>
-            <td>@if(admin && row.Decision==AttendanceReopenDecision.Pending){
-                <form asp-action="Review" method="post"><input type="hidden" name="id" value="@row.AttendanceReopenRequestId" /><input type="hidden" name="rowVersion" value="@Convert.ToBase64String(row.RowVersion)" />
-                <label class="visually-hidden" for="review-@row.AttendanceReopenRequestId">Review reason</label><textarea id="review-@row.AttendanceReopenRequestId" name="remark" class="form-control mb-2" maxlength="500" required placeholder="Explain your approval or rejection"></textarea>
-                <button type="submit" name="decision" value="reject" class="outline-button">Reject</button> <button type="submit" name="decision" value="approve" class="primary-button">Approve</button></form>
-            } else { <a asp-controller="Attendance" asp-action="Sheet" asp-route-classId="@row.ClassSessionId" asp-route-date="@row.LessonDate.ToString("yyyy-MM-dd")" asp-route-changeId="@row.ChangeId" asp-route-replacement="@row.IsReplacement" class="outline-button">Open Attendance</a> }</td>
-        </tr>}
-        </tbody></table></div> }
+@{ ViewData["Title"]="Attendance Reopening Requests"; bool admin=User.IsInRole("Admin"); var selectedStatus=ViewData["Status"] as string ?? "All"; var selectedAttempts=ViewData["Attempts"] as string ?? "All"; var attemptNumbers=ViewData["AttemptNumbers"] as Dictionary<int,int> ?? new(); }
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/attendance.css" asp-append-version="true" />
+}
+<div class="attendance-page attendance-unified-list attendance-reopen-page">
+    <div class="page-header">
+        <div><h1>Attendance Reopening Requests</h1><p>@(admin ? "Review requests to record overdue attendance." : "Track your requests to record overdue attendance.")</p></div>
+        <a asp-controller="Attendance" asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Attendance</a>
     </div>
+    @foreach(var key in new[]{"AttendanceReopenSuccess","AttendanceReopenError"}) {
+        if(TempData[key] is string message){<div class="alert @(key.EndsWith("Error")?"alert-danger":"alert-success")" role="status">@message</div>}
+    }
+    <section class="class-filter-card">
+        <div class="class-filter-heading"><div><h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Requests</h2><p>Filter by review status.</p></div></div>
+        <form asp-action="Index" method="get" id="reopen-filter-form" class="attendance-reopen-filter">
+            <div><label for="reopen-status" class="form-label">Status</label>
+            <select id="reopen-status" name="status" class="form-select">
+                @foreach(var status in new[]{"All","Pending","Approved","Rejected"}) { <option value="@status" selected="@(status==selectedStatus)">@(status=="All"?"All Statuses":status)</option> }
+            </select></div>
+            <div><label for="reopen-attempts" class="form-label">Attempts</label><select id="reopen-attempts" name="attempts" class="form-select">
+                @foreach(var attemptFilter in new[]{"All","First","Repeat"}) { <option value="@attemptFilter" selected="@(selectedAttempts==attemptFilter)">@(attemptFilter=="All" ? "All Attempts" : attemptFilter=="First" ? "First Request" : "Repeat Requests")</option> }
+            </select></div>
+            <noscript><button class="outline-button" type="submit">Apply Filter</button></noscript>
+        </form>
+    </section>
+    <section class="class-form-card attendance-unified-results">
+        <div class="attendance-roster-heading attendance-request-list-heading"><h2><i class="bi bi-clock-history" aria-hidden="true"></i> Requests</h2><span class="text-muted small">@Model.Count request(s)</span></div>
+        @if(Model.Count==0){<p class="attendance-result-summary">No requests match this status.</p>}
+        else {
+        <div class="table-responsive"><table class="table align-middle compact-class-table"><thead><tr><th scope="col" class="number-column column-number">No.</th><th>Lesson</th><th>Tutor</th><th>Attempt</th><th>Requested On</th><th>Status</th><th data-sortable="false">Actions</th></tr></thead><tbody>
+        @for(int i=0;i<Model.Count;i++) { var row=Model[i];
+            <tr>
+                <td class="number-column">@(i+1)</td>
+                <td><strong>@row.ClassName</strong><br /><small>@row.LessonDate.ToString("dd MMM yyyy") · @row.StartTime.ToString("hh:mm tt")–@row.EndTime.ToString("hh:mm tt")</small><br /><small class="text-muted">@(row.IsReplacement?"Replacement":"Regular")</small></td>
+                <td>@row.TutorName</td><td data-sort-value="@(attemptNumbers.GetValueOrDefault(row.AttendanceReopenRequestId,1))">Request #@attemptNumbers.GetValueOrDefault(row.AttendanceReopenRequestId,1)</td>
+                <td data-sort-value="@row.RequestedAtUtc.ToString("O")">@row.RequestedAtUtc.AddHours(8).ToString("dd MMM yyyy")<br /><small class="text-muted">@row.RequestedAtUtc.AddHours(8).ToString("hh:mm tt") MYT</small></td>
+                <td><span class="tutor-management-badge @(row.Decision==AttendanceReopenDecision.Approved?"tutor-badge-success":row.Decision==AttendanceReopenDecision.Rejected?"tutor-badge-inactive":"tutor-badge-pending")">@row.Decision</span></td>
+                <td>
+                    @if(admin) {
+                        <button type="button" class="btn btn-sm btn-outline-secondary class-details-button" data-reopen-review
+                            data-history-url="@Url.Action("History",new { id=row.AttendanceReopenRequestId })" data-requested="@row.RequestedAtUtc.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") MYT" data-id="@row.AttendanceReopenRequestId" data-version="@Convert.ToBase64String(row.RowVersion)"
+                            data-lesson="@row.ClassName" data-date="@row.LessonDate.ToString("dd MMM yyyy") · @row.StartTime.ToString("hh:mm tt")–@row.EndTime.ToString("hh:mm tt") MYT"
+                            data-tutor="@row.TutorName" data-reason="@row.Reason" data-status="@row.Decision"
+                            data-notes="@row.ReviewRemark" data-deadline="@(row.OpenUntilUtc?.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") + (row.OpenUntilUtc.HasValue?" MYT":""))">
+                            <i class="bi bi-eye" aria-hidden="true"></i> @(row.Decision==AttendanceReopenDecision.Pending?"Review":"Details")
+                        </button>
+                    } else {
+                        <a asp-controller="Attendance" asp-action="Sheet" asp-route-classId="@row.ClassSessionId" asp-route-date="@row.LessonDate.ToString("yyyy-MM-dd")" asp-route-changeId="@row.ChangeId" asp-route-replacement="@row.IsReplacement" class="outline-button">Open Attendance</a>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody></table></div>
+        }
+    </section>
 </div>
+@if(admin) {
+<div class="modal fade attendance-page" id="reopen-review-modal" tabindex="-1" aria-labelledby="reopen-review-title" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"><div class="modal-content">
+        <form asp-action="Review" method="post" id="reopen-review-form">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="reopen-review-title">Review Reopening Request</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <input type="hidden" name="id" id="reopen-review-id" /><input type="hidden" name="rowVersion" id="reopen-review-version" />
+                <div class="attendance-review-summary"><strong id="reopen-review-lesson"></strong><p id="reopen-review-date"></p><p>Tutor: <span id="reopen-review-tutor"></span></p><span id="reopen-review-status" class="tutor-management-badge"></span></div>
+                <div id="reopen-repeat-warning" class="alert alert-warning attendance-history-warning" role="status" hidden>A previous approved window expired without final submission.</div>
+                <div class="attendance-review-tabs" role="tablist" aria-label="Request information">
+                    <button type="button" role="tab" id="reopen-details-tab" aria-controls="reopen-details-panel" aria-selected="true" tabindex="0">Details</button>
+                    <button type="button" role="tab" id="reopen-history-tab" aria-controls="reopen-history-panel" aria-selected="false" tabindex="-1">History</button>
+                </div>
+                <p id="reopen-history-load-status" class="text-muted small" role="status" hidden></p>
+                <div id="reopen-details-panel" role="tabpanel" aria-labelledby="reopen-details-tab" tabindex="0">
+                    <dl class="attendance-current-meta attendance-request-metadata">
+                        <dt>Requested On</dt><dd id="reopen-review-requested"></dd>
+                        <dt>Attempt</dt><dd id="reopen-current-attempt"></dd>
+                    </dl>
+                <section class="attendance-current-section" aria-labelledby="reopen-reason-heading"><h3 id="reopen-reason-heading">Reason for Request</h3><p id="reopen-review-reason" class="attendance-preserve-text"></p></section>
+                <div id="reopen-existing-review" class="attendance-current-section" hidden><h3>Admin Review Notes</h3><p id="reopen-review-notes" class="attendance-preserve-text"></p><dl id="reopen-review-deadline-row" class="attendance-current-meta attendance-deadline-row" hidden><dt>Entry Deadline</dt><dd id="reopen-review-deadline"></dd></dl></div>
+                <div id="reopen-decision-fields" class="attendance-current-section"><label for="reopen-review-remark" class="form-label">Admin Review Notes <span class="text-danger">*</span></label><textarea id="reopen-review-remark" name="remark" class="form-control" rows="3" required maxlength="500" placeholder="Enter the reason for your decision"></textarea><p class="text-muted small mt-2">These notes are visible to the tutor. Approval allows attendance entry for 24 hours.</p></div>
+                </div>
+                <div id="reopen-history-panel" role="tabpanel" aria-labelledby="reopen-history-tab" tabindex="0" hidden>
+                    <p class="text-muted small">Previous requests · newest first</p>
+                    <section class="attendance-review-history" id="reopen-history-section" aria-label="Previous requests"><div id="reopen-history-content" aria-live="polite"></div></section>
+                    <button type="button" id="reopen-history-retry" class="outline-button" hidden>Retry Loading History</button>
+                </div>
+            </div>
+            <div class="modal-footer" id="reopen-review-footer" hidden><div id="reopen-decision-actions"><button type="submit" name="decision" value="reject" class="outline-button">Reject</button><button type="submit" name="decision" value="approve" class="primary-button">Approve</button></div></div>
+        </form>
+    </div></div>
+</div>
+}
+@section Scripts { <script src="~/js/attendance-reopen.js" asp-append-version="true"></script> }

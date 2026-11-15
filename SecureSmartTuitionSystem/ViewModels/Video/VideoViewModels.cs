@@ -7,7 +7,7 @@ public sealed class VideoFilter
     [Range(1, int.MaxValue)] public int? ClassId { get; set; }
     [Range(1, int.MaxValue)] public int? SubjectId { get; set; }
     [RegularExpression(@"^(20\d{2}|2100)-(0[1-9]|1[0-2])$")] public string? Month { get; set; }
-    [Required, RegularExpression("^(active|inactive|all)$")] public string Status { get; set; } = "active";
+    [Required, RegularExpression("^(active|inactive|expired|all)$")] public string Status { get; set; } = "active";
     [Required, RegularExpression("^(date_desc|date_asc|title_asc|title_desc|class_asc|class_desc|status_asc|status_desc)$")] public string Sort { get; set; } = "date_desc";
     [Required, RegularExpression("^(all|not|progress|watched)$")] public string Watch { get; set; } = "all";
     [Range(1, 100000)] public int Page { get; set; } = 1;
@@ -44,6 +44,10 @@ public sealed class VideoRow
     public DateTime Date { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public bool IsActive { get; set; }
+    public bool IsExpired { get; set; }
+    public DateTime ExpiresAtUtc => SecureSmartTuitionSystem.Services.Video.VideoAvailability.ExpiresAtUtc(CreatedAtUtc);
+    public string StatusText => !IsActive ? "Inactive" : IsExpired ? "Expired" : "Active";
+    public string StatusClass => !IsActive ? "is-inactive" : IsExpired ? "is-expired" : "is-active";
     public bool CanManage { get; set; }
     public bool CanChangeState { get; set; }
     public bool Watched { get; set; }

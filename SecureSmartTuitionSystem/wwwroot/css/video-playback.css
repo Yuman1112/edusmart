@@ -707,3 +707,21 @@
         justify-content: flex-end
     }
 }
+
+.video-badge.is-expired { background: #fff1cf; color: #946200; }
+
+/* Keep viewing deadlines inside their column, clear of duration and actions. */
+.video-page .video-results .compact-class-table { table-layout:fixed; min-width:1100px; width:100%; }
+.video-page .video-results .compact-class-table th:nth-child(1) { width:5%; }
+.video-page .video-results .compact-class-table th:nth-child(2) { width:25%; }
+.video-page .video-results .compact-class-table th:nth-child(3) { width:20%; }
+.video-page .video-results .compact-class-table th:nth-child(4) { width:22%; }
+.video-page .video-results .compact-class-table th:nth-child(5) { width:8%; }
+.video-page .video-results .compact-class-table th:nth-child(6) { width:8%; }
+.video-page .video-results .compact-class-table th:nth-child(7) { width:12%; }
+.video-page .video-results .compact-class-table .video-recorded-cell { white-space:normal; overflow-wrap:anywhere; }
+.video-page .video-results .video-access-deadline { line-height:1.5; margin-top:6px; }
+.video-page .video-results .video-access-deadline > span,
+.video-page .video-results .video-access-deadline > time { display:block; }
+.video-page .video-results .video-duration-cell { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.video-page .video-results .compact-class-table .video-actions { flex-wrap:nowrap; }

@@ -17,6 +17,7 @@
 }
 <div class="video-page">
     <div class="page-header"><div><h1>@ViewData["Title"]</h1><p>@(editing ? "Update the recording information or replace the video for this class." : "Share a recorded lesson with your assigned class.")</p></div><a href="@backUrl" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
+    <div class="alert alert-info">Students can view each recording for 30 days from its first successful upload. Editing, replacing or restoring a recording does not restart this period.</div>
     <div class="class-form-card tutor-create-card">
         <form asp-action="Save" asp-route-returnUrl="@listReturnUrl" method="post" enctype="multipart/form-data" data-video-form novalidate data-choices-url="@Url.Action("ClassChoices")" data-editing="@editing.ToString().ToLowerInvariant()">
             <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" />

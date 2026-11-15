@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoIndexModel
+@model SecureSmartTuitionSystem.ViewModels.Video.VideoIndexModel
 @{
     string Link(string sort, int page = 1) => Url.Action("Index", new { Model.Filter.ClassId, Model.Filter.SubjectId, Model.Filter.Search, Model.Filter.Month, Model.Filter.Status, Model.Filter.Watch, Sort = sort, Page = page })!;
     var listReturnUrl = Link(Model.Filter.Sort, Model.Filter.Page);
@@ -15,7 +15,7 @@
     {
         <div class="table-responsive">
             <table class="table compact-class-table align-middle" data-pagination="off">
-                <thead><tr><th scope="col">No.</th><th scope="col"><a href="@Link(Next("title"))" data-video-nav class="video-sort-link">Lesson <i class="bi @Icon("title")" aria-hidden="true"></i></a></th><th scope="col"><a href="@Link(Next("class"))" data-video-nav class="video-sort-link">Class / Subject <i class="bi @Icon("class")" aria-hidden="true"></i></a></th><th scope="col"><a href="@Link(Next("date"))" data-video-nav class="video-sort-link">Recorded (MYT) <i class="bi @Icon("date")" aria-hidden="true"></i></a></th><th scope="col">Duration</th><th scope="col"><a href="@Link(Next("status"))" data-video-nav class="video-sort-link">Status <i class="bi @Icon("status")" aria-hidden="true"></i></a></th><th scope="col">Actions</th></tr></thead>
+                <thead><tr><th scope="col">No.</th><th scope="col"><a href="@Link(Next("title"))" data-video-nav class="video-sort-link">Lesson <i class="bi @Icon("title")" aria-hidden="true"></i></a></th><th scope="col"><a href="@Link(Next("class"))" data-video-nav class="video-sort-link">Class / Subject <i class="bi @Icon("class")" aria-hidden="true"></i></a></th><th scope="col" class="video-recorded-column"><a href="@Link(Next("date"))" data-video-nav class="video-sort-link">Recorded (MYT) <i class="bi @Icon("date")" aria-hidden="true"></i></a></th><th scope="col" class="video-duration-column">Duration</th><th scope="col"><a href="@Link(Next("status"))" data-video-nav class="video-sort-link">Status <i class="bi @Icon("status")" aria-hidden="true"></i></a></th><th scope="col">Actions</th></tr></thead>
                 <tbody>
                     @{
                         int number = (Model.Filter.Page - 1) * 25;
@@ -27,9 +27,9 @@
                             <td>@number</td>
                             <td><strong>@row.Title</strong><small>@row.Tutor</small></td>
                             <td><strong>@row.ClassCode</strong><small>@row.Level · @row.Subject</small></td>
-                            <td>@row.Date.ToString("dd MMM yyyy")</td>
-                            <td>@row.DurationText</td>
-                            <td><span class="video-badge @(row.IsActive ? "is-active" : "is-inactive")">@(row.IsActive ? "Active" : "Inactive")</span></td>
+                            <td class="video-recorded-cell"><time datetime="@row.Date.ToString("yyyy-MM-dd")">@row.Date.ToString("dd MMM yyyy")</time><small class="video-access-deadline"><span>Student access until</span><time datetime="@row.ExpiresAtUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")">@row.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy, HH:mm") MYT</time></small></td>
+                            <td class="video-duration-cell">@row.DurationText</td>
+                            <td><span class="video-badge @row.StatusClass">@row.StatusText</span></td>
                             <td>
                                 <div class="video-actions">
                                     <a asp-action="Play" asp-route-id="@row.Id" class="btn btn-sm btn-outline-secondary class-details-button"><i class="bi bi-play-circle" aria-hidden="true"></i> Details</a>
@@ -95,6 +95,7 @@
                     <div class="video-card-content">
                         <span class="video-subject">@row.Level · @row.Subject</span>
                         <h3>@row.Title</h3><p>@row.ClassName</p>
+                        <p class="video-note">Available until @row.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</p>
                         <small>@row.Date.ToString("dd MMM yyyy") · @row.Tutor</small>
                         <div class="video-watch-state @(row.Watched ? "is-watched" : "")">
                             <i class="bi @(row.Watched ? "bi-check-circle" : row.Position > 0 ? "bi-clock" : "bi-circle")" aria-hidden="true"></i>

@@ -62,7 +62,7 @@
                         {
                             <td class="number-column">@recordNumber</td>
                         }
-                        <td>@if (row.SubmittedLate) { <span class="tutor-management-badge tutor-badge-pending">Late submission</span><br /> }@row.Date.ToString("dd MMM yyyy")<br /><small>@row.Start.ToString("HH:mm")–@row.End.ToString("HH:mm")<br />@(row.Replacement ? "Replacement" : "Regular")</small></td>
+                        <td>@if (row.SubmittedLate && (User.IsInRole("Admin") || User.IsInRole("Tutor"))) { <span class="tutor-management-badge tutor-badge-pending">Late submission</span><br /> }@row.Date.ToString("dd MMM yyyy")<br /><small>@row.Start.ToString("HH:mm")–@row.End.ToString("HH:mm")<br />@(row.Replacement ? "Replacement" : "Regular")</small></td>
                         <td>
                             <strong>@row.ClassCode</strong><br />@row.Tutor<br />@if (row.ScheduleChanged) {
                             <small class="text-danger">Schedule changed · check before reporting totals</small>
