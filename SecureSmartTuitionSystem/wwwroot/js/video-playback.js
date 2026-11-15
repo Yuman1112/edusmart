@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
     'use strict';
     const one = (s, root = document) => root.querySelector(s);
     const headers = { 'X-Requested-With': 'XMLHttpRequest' };
@@ -13,7 +13,7 @@
         const preview = one('[data-video-local]', form), drop = one('[data-video-drop]', form);
         const classes = one('[data-video-classes]', form);
         const editing = form.dataset.editing === 'true';
-        const original = ['Title', 'Description', 'RecordingDate'].map(k => (form.elements[k]?.value || '').trim());
+        const original = ['Title', 'Description'].map(k => (form.elements[k]?.value || '').trim());
         let busy = false, blob = '', choices = [];
         let replacementState = 'empty';
         function error(key, message) {
@@ -34,7 +34,7 @@
             const retryBlocked = started && (queue.some(x => x.state === 'unknown')
                 || !queue.some(x => x.state === 'ready' || x.state === 'failed'));
             const unchanged = editing && !file?.files.length
-                && original.every((v, i) => v === form.elements[['Title', 'Description', 'RecordingDate'][i]].value.trim());
+                && original.every((v, i) => v === form.elements[['Title', 'Description'][i]].value.trim());
             save.disabled = busy || pendingSelections > 0 || replacementBlocked() || retryBlocked || unchanged;
         }
         form.addEventListener('input', dirty);
@@ -249,17 +249,23 @@
             event.preventDefault(); if (busy || pendingSelections > 0 || replacementBlocked()) return;
             try {
                 let valid = true; summary(''); error('VideoFile', '');
-                const keys = [['ClassSessionId', 'Please select an assigned class.'], ['RecordingDate', 'Please choose the recording date.']];
+                const keys = [['ClassSessionId', 'Please select an assigned class.']];
                 if (editing) keys.push(['Title', 'Please enter a lesson title.']);
                 keys.forEach(([key, message]) => { const missing = !(key === 'ClassSessionId' ? classes : form.elements[key]).value.trim(); error(key, missing ? message : ''); valid = valid && !missing; });
                 const pending = queue.filter(x => x.state === 'ready' || x.state === 'failed');
                 if (!editing && (!pending.length || pending.some(x => !x.title.trim()))) { error('VideoFile', pending.length ? 'Enter a lesson title for every video.' : 'Add at least one video to upload.'); valid = false; }
-                for (const key of ['RecordingDate', 'Description', ...(editing ? ['Title'] : [])]) {
+                for (const key of ['Description', ...(editing ? ['Title'] : [])]) {
                     const input = form.elements[key];
                     if (input && !input.disabled && input.validity && !input.validity.valid) { error(key, input.validationMessage || 'Check this value.'); valid = false; }
                 }
                 if (!valid) { summary('Please check the highlighted fields and video titles before uploading.'); one('.input-validation-error', form)?.focus(); return; }
                 closePreview();
+                if (editing && file?.files.length) {
+                    busy = true; dirty();
+                    const selected = file.files[0];
+                    const accepted = await window.eduSmartVideoReplacement.confirm(form, selected);
+                    if (!accepted || file.files[0] !== selected) { busy = false; dirty(); return; }
+                }
                 busy = true; dirty();
                 const progress = one('[data-video-upload-progress]', form);
                 if (progress) { progress.hidden = false; one('progress', progress).value = 0; }
@@ -275,7 +281,7 @@
                     duplicateNotice.hidden = true;
                     // Keep shared values stable and send one file per request, within the existing server limit.
                     const shared = new FormData(form); shared.delete('VideoFile');
-                    ['ClassSessionId', 'RecordingDate', 'Description'].forEach(key => shared.set(key, form.elements[key].value));
+                    ['ClassSessionId', 'Description'].forEach(key => shared.set(key, form.elements[key].value));
                     form.querySelectorAll('select, textarea, input:not([type="hidden"])').forEach(x => { x.disabled = true; });
                     for (const item of pending) {
                         item.state = 'uploading'; item.message = 'Uploading…'; renderQueue();
@@ -296,7 +302,7 @@
             } catch (exception) {
                 if (editing && file) file.disabled = false;
                 console.error('Video upload could not continue.', exception);
-                summary('The uploader could not continue. Your selected files are still here. Check Recorded Lessons before retrying if an upload had started.');
+                summary(editing && exception.message ? exception.message : 'The uploader could not continue. Your selected files are still here. Check Recorded Lessons before retrying if an upload had started.');
                 if (busy) queue.filter(x => x.state === 'uploading').forEach(x => { x.state = 'unknown'; x.message = 'Upload status could not be confirmed. Check Recorded Lessons.'; });
                 busy = false;
                 const progress = one('[data-video-upload-progress]', form); if (progress) progress.hidden = true;
@@ -407,7 +413,7 @@
                         }
                     }
                 }
-                if (navigate) { if (writeHistory) history.pushState(null, '', clean); for (const element of filter.elements) if (element.name) element.value = clean.searchParams.get(element.name) ?? (element.name === 'Sort' ? 'date_desc' : element.name === 'Status' ? 'active' : element.name === 'Watch' ? 'all' : ''); }
+                if (navigate) { if (writeHistory) history.pushState(null, '', clean); for (const element of filter.elements) if (element.name) element.value = clean.searchParams.get(element.name) ?? (element.name === 'Sort' ? 'date_desc' : element.name === 'Status' ? 'all' : element.name === 'Watch' ? 'all' : ''); }
                 one('[data-video-refresh]').textContent = 'Updates automatically while visible.';
             } catch (e) { if (e.name !== 'AbortError') one('[data-video-refresh]').textContent = 'Updates paused. Check your connection or sign-in; the current list is retained.'; }
             finally { clearTimeout(timeout); if (ticket === serial) loading = false; }
@@ -441,7 +447,7 @@
             if (denied) return;
             denied = true; video.pause(); video.removeAttribute('src');
             video.querySelectorAll('source').forEach(n => n.remove()); video.load();
-            const startOver = one('[data-video-start-over]'); if (startOver) startOver.disabled = true;
+            document.querySelectorAll('[data-video-start-over], [data-video-resume]').forEach(button => { button.disabled = true; });
             playerError(text);
         }
         function checkExpiry() {
@@ -471,7 +477,12 @@
         video.addEventListener('seeking', () => { last = video.currentTime; }); video.addEventListener('seeked', () => { last = video.currentTime; });
         video.addEventListener('play', access); video.addEventListener('pause', saveProgress); video.addEventListener('ended', saveProgress);
         video.addEventListener('error', () => { if (!denied) playerError('The video could not be played. Check your connection. If the problem continues, ask the tutor to export an MP4 using H.264 video and AAC audio.'); });
-        one('[data-video-start-over]').addEventListener('click', () => { video.currentTime = 0; last = 0; });
+        one('[data-video-start-over]')?.addEventListener('click', () => { video.currentTime = 0; last = 0; });
+        one('[data-video-resume]')?.addEventListener('click', () => {
+            if (denied || checkExpiry()) return;
+            video.currentTime = Math.min(Number(video.dataset.resume) || 0, video.duration || Infinity);
+            video.play().catch(() => playerError('Press play on the video to continue.'));
+        });
         checkExpiry();
         video.addEventListener("play", checkExpiry);
         video.addEventListener("timeupdate", checkExpiry);

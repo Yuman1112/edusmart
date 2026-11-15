@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoForm
+@model SecureSmartTuitionSystem.ViewModels.Video.VideoForm
 @{
     bool editing = Model.Id > 0;
     ViewData["Title"] = editing ? "Edit Recorded Lesson" : "Upload Recorded Lesson";
@@ -19,8 +19,8 @@
     <div class="page-header"><div><h1>@ViewData["Title"]</h1><p>@(editing ? "Update the recording information or replace the video for this class." : "Share a recorded lesson with your assigned class.")</p></div><a href="@backUrl" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
     <div class="alert alert-info">Students can view each recording for 30 days from its first successful upload. Editing, replacing or restoring a recording does not restart this period.</div>
     <div class="class-form-card tutor-create-card">
-        <form asp-action="Save" asp-route-returnUrl="@listReturnUrl" method="post" enctype="multipart/form-data" data-video-form novalidate data-choices-url="@Url.Action("ClassChoices")" data-editing="@editing.ToString().ToLowerInvariant()">
-            <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" />
+        <form asp-action="Save" asp-route-returnUrl="@listReturnUrl" method="post" enctype="multipart/form-data" data-video-form novalidate data-choices-url="@Url.Action("ClassChoices")" data-editing="@editing.ToString().ToLowerInvariant()" data-video-replacement-info-url="@Url.Action("ReplacementInfo")" data-video-expiry="@(Model.CreatedAtUtc.HasValue ? new DateTimeOffset(SecureSmartTuitionSystem.Services.Video.VideoAvailability.ExpiresAtUtc(Model.CreatedAtUtc.Value)).ToUnixTimeMilliseconds().ToString() : "")" data-video-server-now="@(new DateTimeOffset(DateTime.SpecifyKind(Model.ServerNowUtc, DateTimeKind.Utc)).ToUnixTimeMilliseconds())">
+            <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" /><input name="ReplacementConfirmed" type="hidden" value="false" />
             <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
             <div class="text-danger" role="alert" data-video-form-error hidden></div>
             @if (!editing)
@@ -45,14 +45,13 @@
                     {
                         <div class="video-full"><label asp-for="Title" class="form-label">Lesson Title</label><input asp-for="Title" class="form-control" maxlength="150" placeholder="For example: Chapter 1 · Algebra revision" /><span asp-validation-for="Title" class="video-field-error"></span></div>
                     }
-                    <div><label asp-for="RecordingDate" class="form-label">Recording Date (MYT)</label><input asp-for="RecordingDate" asp-format="{0:yyyy-MM-dd}" type="date" min="2000-01-01" max="@SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today.ToString("yyyy-MM-dd")" class="form-control" /><span asp-validation-for="RecordingDate" class="video-field-error"></span></div>
                     <div class="video-full"><label asp-for="Description" class="form-label">Description (Optional)</label><textarea asp-for="Description" rows="4" maxlength="2000" class="form-control" placeholder="Topics covered or useful revision notes"></textarea><span asp-validation-for="Description" class="video-field-error"></span></div>
                 </div>
             </section>
             @if (!editing)
             {
                 <section class="class-form-section video-upload-section">
-                    <div class="video-upload-heading"><div><h2><i class="bi bi-film" aria-hidden="true"></i> Lesson Videos</h2><p class="video-note">Each video becomes a separate recorded lesson. Class, date and description are shared.</p></div><label class="outline-button video-file-picker"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Videos<input asp-for="VideoFile" type="file" multiple accept=".mp4,video/mp4" aria-label="Select MP4 videos" /></label></div>
+                    <div class="video-upload-heading"><div><h2><i class="bi bi-film" aria-hidden="true"></i> Lesson Videos</h2><p class="video-note">Each video becomes a separate recorded lesson. Class and description are shared. Upload time is recorded automatically for each successful upload.</p></div><label class="outline-button video-file-picker"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Videos<input asp-for="VideoFile" type="file" multiple accept=".mp4,video/mp4" aria-label="Select MP4 videos" /></label></div>
                     <div class="video-drop" data-video-drop>Drop MP4 videos here, or choose Add Videos.</div>
                     <p class="video-note" data-video-selection-status role="status" aria-live="polite"></p>
                     <div class="alert alert-warning alert-dismissible mb-0" data-video-duplicates hidden>
@@ -78,9 +77,19 @@
                 <section class="class-form-section video-upload-section">
                     <h2><i class="bi bi-film" aria-hidden="true"></i> Lesson Video</h2>
                     <p class="video-note">Current file: @Model.CurrentFileName</p>
+                    @if (Model.CreatedAtUtc.HasValue) {
+                        <p class="video-note">Uploaded on: @Model.CreatedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") MYT</p>
+                        <div class="alert @(DateTime.UtcNow >= SecureSmartTuitionSystem.Services.Video.VideoAvailability.ExpiresAtUtc(Model.CreatedAtUtc.Value).AddHours(-24) ? "alert-warning" : "alert-info")" data-video-expiry-notice role="status">
+                            <strong>Student access until: @SecureSmartTuitionSystem.Services.Video.VideoAvailability.ExpiresAtUtc(Model.CreatedAtUtc.Value).AddHours(8).ToString("dd MMM yyyy, hh:mm tt") MYT</strong>
+                            <p data-video-time-left class="mb-0">Replacing this video does not extend the deadline. If it has expired, students will still be unable to view it.</p>
+                        </div>
+                    }
                     @if (Model.CanReplaceVideo)
                     {
-                        <label asp-for="VideoFile" class="form-label">Replace Video (Optional)</label>
+                        <details class="video-replace-section" data-video-replace-section>
+                        <summary class="outline-button">Replace Video</summary>
+                        <div class="video-replace-content">
+                        <label asp-for="VideoFile" class="form-label">Choose corrected video (Optional)</label>
                         <input asp-for="VideoFile" type="file" class="form-control" accept=".mp4,video/mp4"
                                data-video-replacement-check-url="@Url.Action("CheckReplacement")"
                                aria-describedby="video-replace-help video-replacement-error video-replacement-status" />
@@ -97,7 +106,17 @@
                             </div>
                             <video class="video-local-preview" controls preload="metadata" data-video-local hidden></video>
                         </dialog>
-                        <p id="video-replace-help" class="video-note mt-2">One MP4 · Max. 200 MB. Replacing the file resets student watch progress for this lesson.</p>
+                        <p id="video-replace-help" class="video-note mt-2">One MP4 · Max. 200 MB. Replacing the file resets student watch progress. The viewing deadline stays unchanged.</p>
+                        <p class="video-note" data-video-selected-deadline hidden></p>
+                        <noscript><p class="text-danger">Enable JavaScript to review and confirm a video replacement. You can still save text changes.</p></noscript>
+                        </div></details>
+                        <dialog class="video-preview-dialog video-replace-confirm" data-video-replace-confirm aria-labelledby="video-replace-title">
+                            <h2 id="video-replace-title">Replace this video?</h2>
+                            <p>New file: <strong data-video-confirm-file></strong></p>
+                            <ul><li>Existing student viewing progress will reset.</li><li>The current video file will be replaced.</li><li>The original viewing deadline stays unchanged.</li></ul>
+                            <p data-video-confirm-deadline></p><p class="alert alert-info" data-video-confirm-time></p>
+                            <div class="video-actions"><button type="button" class="outline-button" data-video-confirm-cancel>Cancel</button><button type="button" class="primary-button" data-video-confirm-accept>Replace &amp; Save</button></div>
+                        </dialog>
                         <div data-video-upload-progress hidden><progress max="100" value="0" aria-label="Video upload progress"></progress><span role="status"></span></div>
                     }
                     else
@@ -112,5 +131,5 @@
     </div>
 </div>
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" /><script src="~/js/video-playback.js" asp-append-version="true"></script>
+    <partial name="_ValidationScriptsPartial" /><script src="~/js/video-replacement.js" asp-append-version="true"></script><script src="~/js/video-playback.js" asp-append-version="true"></script>
 }

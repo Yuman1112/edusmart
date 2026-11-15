@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoPlayModel
+@model SecureSmartTuitionSystem.ViewModels.Video.VideoPlayModel
 @{
     var row = Model.Lesson; ViewData["Title"] = row.Title;
 }
@@ -6,26 +6,10 @@
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/video-playback.css" asp-append-version="true" />
 }
-<div class="video-page">
+<div class="video-page video-detail-page">
     <div class="page-header">
         <div><h1>@row.Title</h1><p>@row.ClassCode · @row.ClassName</p></div><div class="video-actions">
-            @if (row.CanManage)
-            {
-                <a asp-action="Edit" asp-route-id="@row.Id" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit</a>
-            }
-            @if (row.CanChangeState)
-            {
-                <form asp-action="ChangeState" method="post">
-                    <input type="hidden" name="id" value="@row.Id" />
-                    <input type="hidden" name="rowVersion" value="@row.RowVersion" />
-                    <input type="hidden" name="active" value="@(row.IsActive ? "false" : "true")" />
-                    <button type="submit" class="outline-button">
-                        <i class="bi @(row.IsActive ? "bi-eye-slash" : "bi-arrow-counterclockwise")" aria-hidden="true"></i>
-                        @(row.IsActive ? "Set Inactive" : "Restore")
-                    </button>
-                </form>
-            }
-            <a asp-action="Index" asp-route-ClassId="@row.ClassId" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
+            <a href="@(Model.ReturnUrl ?? Url.Action("Index", new { ClassId = row.ClassId }))" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Recordings</a>
         </div>
     </div>
     @if (TempData["VideoSuccess"] is string success)
@@ -49,43 +33,102 @@
     @if (!Model.IsStudent && row.IsExpired) {
         <div class="alert alert-warning" role="status">The 30-day student viewing period has expired. Students cannot access this recording. Staff playback remains available; editing, replacing or restoring it does not extend the deadline.</div>
     }
-    <div class="video-layout">
+    <div class="video-watch-grid">
         <section class="class-form-card video-player-card">
-            <div class="video-player-heading"><span class="video-subject">@row.Level · @row.Subject</span><span class="video-badge @row.StatusClass">@row.StatusText</span></div>
-            <video id="lesson-video" controls playsinline preload="metadata" controlslist="nodownload" data-video-player data-expires-at="@(Model.IsStudent ? new DateTimeOffset(row.ExpiresAtUtc).ToUnixTimeMilliseconds().ToString() : "")" data-access-url="@Url.Action("Access", new { id = row.Id, version = row.PlaybackVersion })" data-playback-version="@row.PlaybackVersion" data-progress-url="@(Model.IsStudent? Url.Action("Progress"):null)" data-video-id="@row.Id" data-resume="@row.Position.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-completed="@row.Watched.ToString().ToLowerInvariant()"><source src="@Url.Action("Media", new { id = row.Id, version = row.PlaybackVersion })" type="video/mp4" />Your browser does not support MP4 playback.</video>
+            <video id="lesson-video" controls playsinline preload="metadata" controlslist="nodownload" data-video-player data-expires-at="@(Model.IsStudent ? new DateTimeOffset(row.ExpiresAtUtc).ToUnixTimeMilliseconds().ToString() : "")" data-access-url="@Url.Action("Access", new { id = row.Id, version = row.PlaybackVersion })" data-playback-version="@row.PlaybackVersion" data-progress-url="@(Model.IsStudent? Url.Action("Progress"):null)" data-video-id="@row.Id" data-resume="@((Model.IsStudent ? row.Position : 0).ToString(System.Globalization.CultureInfo.InvariantCulture))" data-completed="@row.Watched.ToString().ToLowerInvariant()"><source src="@Url.Action("Media", new { id = row.Id, version = row.PlaybackVersion })" type="video/mp4" />Your browser does not support MP4 playback.</video>
             <div class="alert alert-warning mt-3" data-video-player-error role="alert" hidden></div>
-            <div class="video-actions video-playback-tools"><span data-video-playback-status role="status">@(row.Watched ? "Watched" : "Ready to play")</span><button type="button" class="outline-button" data-video-start-over>Start from beginning</button></div>
             @if (Model.IsStudent)
             {
+                <div class="video-actions video-playback-tools">
+                    <span data-video-playback-status role="status">@(row.Watched ? "Watched" : row.Position > 0 ? $"In progress · Last position {row.PositionText}" : "Not started")</span>
+                    <div class="video-actions">
+                        @if (!row.Watched && row.Position > 0) { <button type="button" class="primary-button" data-video-resume>Resume at @row.PositionText</button> }
+                        <button type="button" class="outline-button" data-video-start-over>Start over</button>
+                    </div>
+                </div>
                 <form data-video-progress-token>@Html.AntiForgeryToken()</form>
+                <div class="video-meta"><span>@row.Tutor</span><span>Uploaded @row.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") MYT</span><span>@row.DurationText</span></div>
+                <p class="video-note"><strong>Available until:</strong> @row.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") MYT</p>
+                @if (!string.IsNullOrWhiteSpace(row.Description)) { <p class="video-description">@row.Description</p> }
             }
-            <div class="video-meta"><span><i class="bi bi-calendar3" aria-hidden="true"></i> @row.Date.ToString("dd MMM yyyy") MYT</span><span><i class="bi bi-person" aria-hidden="true"></i> @row.Tutor</span><span><i class="bi bi-clock" aria-hidden="true"></i> @row.DurationText</span></div>
-            @if (!string.IsNullOrWhiteSpace(row.Description))
-            {
-                <p class="video-description">@row.Description</p>
-            }
-            <p class="video-note"><strong>Student viewing deadline:</strong> @row.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT · 30 days from the first upload.</p>
-            <p class="video-note">Playback controls include play/pause, volume, seeking and full screen.</p>
+            else if (!string.IsNullOrWhiteSpace(row.Description)) { <p class="video-description">@row.Description</p> }
         </section>
-        <aside class="dashboard-card compact-class-card video-playlist">
-            <div class="dashboard-card-header"><h2><i class="bi bi-collection-play me-2" aria-hidden="true"></i> In This Class</h2></div>
-            <div class="video-playlist-items">
-                @foreach (var item in Model.Playlist)
-                {
-                    <a asp-action="Play" asp-route-id="@item.Id" class="video-playlist-link @(item.Id == row.Id ? "is-current" : "")" aria-current="@(item.Id == row.Id ? "page" : null)"><i class="bi @(item.Id == row.Id ? "bi-play-circle-fill" : "bi-play-circle")" aria-hidden="true"></i><div><strong>@item.Title</strong><small>@item.Date.ToString("dd MMM yyyy") · @item.DurationText @(item.Watched ? " · Watched" : "")</small></div></a>
+        @if (Model.IsStudent)
+        {
+            <aside class="dashboard-card compact-class-card video-playlist">
+                <div class="dashboard-card-header"><h2>Class Recordings</h2><span>@row.ClassCode</span></div>
+                <div class="video-playlist-items">
+                    @foreach(var item in Model.Playlist) {
+                        <a asp-action="Play" asp-route-id="@item.Id" asp-route-returnUrl="@Model.ReturnUrl" class="video-playlist-link @(item.Id == row.Id ? "is-current" : "")" aria-current="@(item.Id == row.Id ? "page" : null)"><i class="bi @(item.Id == row.Id ? "bi-play-circle-fill" : "bi-play-circle")" aria-hidden="true"></i><div><strong>@item.Title</strong><small>@(item.Id == row.Id ? "Now Playing · " : "")@item.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy") · @item.DurationText</small></div></a>
+                    }
+                    @if(Model.Playlist.Count == 0) { <p class="video-note p-3">No other available recordings.</p> }
+                    @if(Model.PlaylistLimited) { <p class="video-note p-3">Latest 100 recordings shown. <a href="@Model.ReturnUrl">View all recordings</a></p> }
+                </div>
+            </aside>
+        }
+        else
+        {
+            <aside class="class-form-card video-details-card">
+                <div class="video-details-heading"><h2>Video Details</h2><span class="video-badge @row.StatusClass">@row.StatusText</span></div>
+                    <dl class="video-detail-values">
+                        <dt>Class</dt><dd>@row.ClassCode · @row.ClassName</dd>
+                        <dt>Subject</dt><dd>@row.Level · @row.Subject</dd>
+                        <dt>Uploaded by</dt><dd>@row.Tutor</dd>
+                        <dt>Uploaded on</dt><dd>@row.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") MYT</dd>
+                        <dt>Duration</dt><dd>@row.DurationText</dd>
+                        <dt>Student access until</dt><dd>@row.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") MYT</dd>
+                    </dl>
+                <div class="video-actions video-details-actions">
+            @if (!Model.IsStudent && row.CanManage)
+            {
+                <a asp-action="Edit" asp-route-id="@row.Id" asp-route-returnUrl="@Model.ReturnUrl" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit</a>
+            }
+            @if (!Model.IsStudent && row.CanChangeState)
+            {
+                <div class="@(row.CanManage ? "dropdown" : "video-state-action")">
+                @if (row.CanManage) {
+                    <button type="button" class="outline-button dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">More</button>
                 }
-            </div>
-            @if (Model.Playlist.Count == 0)
-            {
-                <p class="video-note p-3">No active recordings in this class.</p>
+                <div class="@(row.CanManage ? "dropdown-menu dropdown-menu-end" : "video-state-action")">
+                <form asp-action="ChangeState" method="post" data-video-detail-state>
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    <input type="hidden" name="id" value="@row.Id" />
+                    <input type="hidden" name="rowVersion" value="@row.RowVersion" />
+                    <input type="hidden" name="active" value="@(row.IsActive ? "false" : "true")" />
+                    <button type="submit" class="@(row.CanManage ? "dropdown-item" : "outline-button")">
+                        <i class="bi @(row.IsActive ? "bi-eye-slash" : "bi-arrow-counterclockwise")" aria-hidden="true"></i>
+                        @(row.IsActive ? "Set Inactive" : "Restore")
+                    </button>
+                </form>
+                </div>
+                </div>
             }
-            @if (Model.PlaylistLimited)
-            {
-                <p class="video-note p-3">Latest 100 recordings shown. <a asp-action="Index" asp-route-ClassId="@row.ClassId">View all recordings</a></p>
-            }
-        </aside>
+
+                </div>
+            </aside>
+        }
     </div>
+    @if(Model.IsTutor && !Model.IsStudent)
+    {
+        <section class="dashboard-card compact-class-card video-viewing-card">
+            <div class="dashboard-card-header"><h2>Student Viewing</h2><span>Current enrolled students</span></div>
+            <div class="video-viewing-body">
+                    <form action="@Url.Action("Viewing")" method="get" data-video-viewing-form class="video-viewing-filters">
+                        <input type="hidden" name="id" value="@row.Id" /><input type="hidden" name="version" value="@row.PlaybackVersion" />
+                        <div><label for="viewing-search" class="form-label">Search student</label><input class="form-control" id="viewing-search" name="Search" maxlength="100" placeholder="Name or student ID" /></div>
+                        <div><label for="viewing-status" class="form-label">Watch status</label><select class="form-select" id="viewing-status" name="Status"><option value="all">All students</option><option value="watched">Watched</option><option value="progress">In progress</option><option value="not">Not started</option></select></div>
+                    </form>
+                    <div class="video-viewing-feedback">
+                        <p data-video-viewing-message class="video-note" role="status"></p>
+                        <button type="button" class="outline-button" data-video-viewing-retry hidden>Retry</button>
+                    </div>
+                    <div data-video-viewing-host></div>
+
+            </div>
+        </section>
+    }
 </div>
 @section Scripts {
     <script src="~/js/video-playback.js" asp-append-version="true"></script>
+    <script src="~/js/video-details.js" asp-append-version="true"></script>
 }

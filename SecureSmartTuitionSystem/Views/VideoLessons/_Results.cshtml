@@ -1,12 +1,12 @@
 @model SecureSmartTuitionSystem.ViewModels.Video.VideoIndexModel
 @{
-    string Link(string sort, int page = 1) => Url.Action("Index", new { Model.Filter.ClassId, Model.Filter.SubjectId, Model.Filter.Search, Model.Filter.Month, Model.Filter.Status, Model.Filter.Watch, Sort = sort, Page = page })!;
+    string Link(string sort, int page = 1) => Url.Action("Index", new { Model.Filter.TutorId, Model.Filter.ClassId, Model.Filter.SubjectId, Model.Filter.Search, Model.Filter.Month, Model.Filter.Status, Model.Filter.Watch, Sort = sort, Page = page })!;
     var listReturnUrl = Link(Model.Filter.Sort, Model.Filter.Page);
     string Next(string key) => Model.Filter.Sort == key + "_asc" ? key + "_desc" : key + "_asc";
     string Icon(string key) => Model.Filter.Sort == key + "_asc" ? "bi-arrow-up" : Model.Filter.Sort == key + "_desc" ? "bi-arrow-down" : "bi-arrow-down-up";
 }
 <div data-video-results class="dashboard-card compact-class-card video-results">
-    <div class="dashboard-card-header"><h2><i class="bi bi-play-circle me-2" aria-hidden="true"></i> @(Model.IsStaff ? "All Recorded Lessons" : "My Recorded Lessons")</h2><span>@Model.Total lesson(s)</span></div>
+    <div class="dashboard-card-header"><h2><i class="bi bi-play-circle me-2" aria-hidden="true"></i> @(Model.IsAdmin ? "All Recordings" : Model.IsStaff ? "Recorded Lessons" : "My Recordings")</h2><span>@Model.Total lesson(s)</span></div>
     @if (Model.Total == 0)
     {
         <div class="video-empty"><i class="bi bi-camera-video" aria-hidden="true"></i><h3>No recorded lessons found</h3><p>@(Model.IsTutor ? "Upload a recording for one of your assigned classes, or adjust the filters." : "Try another filter. Recordings appear here when your tutor uploads them and your class access is active.")</p></div>
@@ -14,25 +14,33 @@
     else if (Model.IsStaff)
     {
         <div class="table-responsive">
-            <table class="table compact-class-table align-middle" data-pagination="off">
-                <thead><tr><th scope="col">No.</th><th scope="col"><a href="@Link(Next("title"))" data-video-nav class="video-sort-link">Lesson <i class="bi @Icon("title")" aria-hidden="true"></i></a></th><th scope="col"><a href="@Link(Next("class"))" data-video-nav class="video-sort-link">Class / Subject <i class="bi @Icon("class")" aria-hidden="true"></i></a></th><th scope="col" class="video-recorded-column"><a href="@Link(Next("date"))" data-video-nav class="video-sort-link">Recorded (MYT) <i class="bi @Icon("date")" aria-hidden="true"></i></a></th><th scope="col" class="video-duration-column">Duration</th><th scope="col"><a href="@Link(Next("status"))" data-video-nav class="video-sort-link">Status <i class="bi @Icon("status")" aria-hidden="true"></i></a></th><th scope="col">Actions</th></tr></thead>
+            <table class="table compact-class-table align-middle video-library-table @(Model.IsAdmin ? "video-admin-table" : "video-tutor-table")" data-pagination="off">
+                <colgroup><col class="vl-number" /><col class="vl-lesson" /><col class="vl-class" />@if(Model.IsAdmin) { <col class="vl-tutor" /> }<col class="vl-date" /><col class="vl-duration" /><col class="vl-access" /><col class="vl-status" /><col class="vl-actions" /></colgroup>
+                <thead><tr><th scope="col">No.</th>
+                    <th scope="col"><a href="@Link(Next("title"))" data-video-nav class="video-sort-link">Lesson <i class="bi @Icon("title")" aria-hidden="true"></i></a></th>
+                    <th scope="col"><a href="@Link(Next("class"))" data-video-nav class="video-sort-link">Class <i class="bi @Icon("class")" aria-hidden="true"></i></a></th>
+                    @if(Model.IsAdmin) { <th scope="col">Uploaded by</th> }
+                    <th scope="col"><a href="@Link(Next("date"))" data-video-nav class="video-sort-link">Uploaded on (MYT) <i class="bi @Icon("date")" aria-hidden="true"></i></a></th>
+                    <th scope="col">Duration</th><th scope="col">Access until (MYT)</th>
+                    <th scope="col"><a href="@Link(Next("status"))" data-video-nav class="video-sort-link">Status <i class="bi @Icon("status")" aria-hidden="true"></i></a></th>
+                    <th scope="col">Actions</th>
+                </tr></thead>
                 <tbody>
-                    @{
-                        int number = (Model.Filter.Page - 1) * 25;
-                    }
+                    @{ int number = (Model.Filter.Page - 1) * 25; }
                     @foreach (var row in Model.Rows)
                     {
                         number++;
                         <tr>
-                            <td>@number</td>
-                            <td><strong>@row.Title</strong><small>@row.Tutor</small></td>
+                            <td>@number</td><td><strong>@row.Title</strong></td>
                             <td><strong>@row.ClassCode</strong><small>@row.Level · @row.Subject</small></td>
-                            <td class="video-recorded-cell"><time datetime="@row.Date.ToString("yyyy-MM-dd")">@row.Date.ToString("dd MMM yyyy")</time><small class="video-access-deadline"><span>Student access until</span><time datetime="@row.ExpiresAtUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")">@row.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy, HH:mm") MYT</time></small></td>
+                            @if(Model.IsAdmin) { <td>@row.Tutor</td> }
+                            <td class="video-recorded-cell"><time datetime="@row.CreatedAtUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")">@row.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy")<small>@row.CreatedAtUtc.AddHours(8).ToString("hh:mm tt")</small></time></td>
                             <td class="video-duration-cell">@row.DurationText</td>
+                            <td class="video-access-cell"><time datetime="@row.ExpiresAtUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")">@row.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy")<small>@row.ExpiresAtUtc.AddHours(8).ToString("hh:mm tt")</small></time></td>
                             <td><span class="video-badge @row.StatusClass">@row.StatusText</span></td>
                             <td>
                                 <div class="video-actions">
-                                    <a asp-action="Play" asp-route-id="@row.Id" class="btn btn-sm btn-outline-secondary class-details-button"><i class="bi bi-play-circle" aria-hidden="true"></i> Details</a>
+                                    <a asp-action="Play" asp-route-id="@row.Id" asp-route-returnUrl="@listReturnUrl" class="btn btn-sm btn-outline-secondary class-details-button"><i class="bi bi-play-circle" aria-hidden="true"></i> View</a>
                                     @if (row.CanManage || row.CanChangeState)
                                     {
                                         <div class="dropdown">
@@ -79,7 +87,7 @@
             @foreach (var row in Model.Rows)
             {
                 <article class="video-lesson-card">
-                    <a asp-action="Play" asp-route-id="@row.Id"
+                    <a asp-action="Play" asp-route-id="@row.Id" asp-route-returnUrl="@listReturnUrl"
                        class="video-card-top video-student-poster"
                        aria-label="@($"Play {row.Title}")">
                         <canvas width="480" height="270"
@@ -93,10 +101,10 @@
                         <span class="video-duration">@row.DurationText</span>
                     </a>
                     <div class="video-card-content">
-                        <span class="video-subject">@row.Level · @row.Subject</span>
-                        <h3>@row.Title</h3><p>@row.ClassName</p>
+                        <h3>@row.Title</h3>
+                        @if (!Model.Filter.ClassId.HasValue) { <p class="video-note">@row.ClassCode · @row.Subject</p> }
                         <p class="video-note">Available until @row.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</p>
-                        <small>@row.Date.ToString("dd MMM yyyy") · @row.Tutor</small>
+                        <small>Uploaded @row.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy") · @row.Tutor</small>
                         <div class="video-watch-state @(row.Watched ? "is-watched" : "")">
                             <i class="bi @(row.Watched ? "bi-check-circle" : row.Position > 0 ? "bi-clock" : "bi-circle")" aria-hidden="true"></i>
                             @if (row.Watched)
@@ -119,7 +127,7 @@
                             <div class="video-position-track" role="progressbar" aria-label="Playback position" aria-valuenow="@row.PositionPercent.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" aria-valuemin="0" aria-valuemax="100"><span style="width:@(row.PositionPercent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></span></div>
                         }
                     </div>
-                    <div class="video-card-footer"><a asp-action="Play" asp-route-id="@row.Id" class="@(row.WatchState == "progress" ? "primary-button" : "outline-button")"><i class="bi @(row.Watched ? "bi-arrow-counterclockwise" : "bi-play-fill")" aria-hidden="true"></i> @(row.Watched ? "Watch Again" : row.Position > 0 ? "Continue Watching" : "Play Lesson")</a></div>
+                    <div class="video-card-footer"><a asp-action="Play" asp-route-id="@row.Id" asp-route-returnUrl="@listReturnUrl" class="@(row.WatchState == "progress" ? "primary-button" : "outline-button")"><i class="bi @(row.Watched ? "bi-arrow-counterclockwise" : "bi-play-fill")" aria-hidden="true"></i> @(row.Watched ? "Watch Again" : row.Position > 0 ? "Continue Watching" : "Play Lesson")</a></div>
                 </article>
             }
         </div>

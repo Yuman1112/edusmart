@@ -1,0 +1,32 @@
+@model SecureSmartTuitionSystem.ViewModels.Video.VideoViewingModel
+<div data-video-viewing-results>
+    <div class="video-viewing-totals" aria-label="Current roster viewing totals" data-video-viewing-part="totals">
+        <span><strong>@Model.Eligible</strong> students</span>
+        <span><strong>@Model.Watched</strong> Watched</span>
+        <span><strong>@Model.InProgress</strong> In progress</span>
+        <span><strong>@Model.NotStarted</strong> Not started</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table compact-class-table video-viewing-table" data-pagination="off">
+            <thead><tr><th scope="col">No.</th><th scope="col">Student</th><th scope="col">Watch status</th><th scope="col">Last activity (MYT)</th></tr></thead>
+            <tbody data-video-viewing-part="rows">
+                @{ int number = (Model.Filter.Page - 1) * 25; }
+                @foreach (var row in Model.Rows) {
+                    number++;
+                    <tr><td>@number</td><td><strong>@row.Name</strong><small>@row.StudentId</small></td><td><span class="video-badge @(row.Watched ? "is-active" : row.State == "progress" ? "is-inactive" : "is-not-started")">@(row.Watched ? "Watched" : row.State == "progress" ? "In progress" : "Not started")</span></td><td>@(row.LastActivityUtc.HasValue ? row.LastActivityUtc.Value.AddHours(8).ToString("dd MMM yyyy, hh:mm tt") : "—")</td></tr>
+                }
+                @if (Model.Rows.Count == 0) { <tr><td colspan="4" class="video-empty">@(Model.Eligible == 0 ? "No current enrolled students eligible for this class." : "No students match these filters.")</td></tr> }
+            </tbody>
+        </table>
+    </div>
+    <nav class="video-pagination" aria-label="Student viewing pages" data-video-viewing-part="pagination">
+        <span>@(Model.Total == 0 ? 0 : (Model.Filter.Page - 1) * 25 + 1)–@Math.Min(Model.Filter.Page * 25, Model.Total) of @Model.Total · 25 per page</span>
+        <div class="video-actions">
+            @foreach (var item in new[] { (Text: "First", Page: 1, Off: Model.Filter.Page == 1), (Text: "Previous", Page: Model.Filter.Page - 1, Off: Model.Filter.Page == 1), (Text: Model.Filter.Page.ToString(), Page: Model.Filter.Page, Off: true), (Text: "Next", Page: Model.Filter.Page + 1, Off: Model.Filter.Page == Model.PageCount), (Text: "Last", Page: Model.PageCount, Off: Model.Filter.Page == Model.PageCount) }) {
+                if (item.Off) { <span class="video-page-number" aria-disabled="true">@item.Text</span> }
+                else { <button type="button" class="video-page-number" data-video-viewing-page="@item.Page">@item.Text</button> }
+            }
+        </div>
+    </nav>
+    <p class="video-note"><span class="video-viewing-updated" data-video-viewing-updated>Updated @Model.UpdatedAtUtc.AddHours(8).ToString("hh:mm:ss tt") MYT</span></p>
+</div>

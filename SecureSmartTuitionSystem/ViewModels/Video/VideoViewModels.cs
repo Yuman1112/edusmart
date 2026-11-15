@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace SecureSmartTuitionSystem.ViewModels.Video;
 public sealed class VideoFilter
 {
+    [StringLength(450)] public string? TutorId { get; set; }
+    public bool All { get; set; }
     [StringLength(100)] public string? Search { get; set; }
     [Range(1, int.MaxValue)] public int? ClassId { get; set; }
     [Range(1, int.MaxValue)] public int? SubjectId { get; set; }
     [RegularExpression(@"^(20\d{2}|2100)-(0[1-9]|1[0-2])$")] public string? Month { get; set; }
-    [Required, RegularExpression("^(active|inactive|expired|all)$")] public string Status { get; set; } = "active";
+    [Required, RegularExpression("^(active|inactive|expired|all)$")] public string Status { get; set; } = "all";
     [Required, RegularExpression("^(date_desc|date_asc|title_asc|title_desc|class_asc|class_desc|status_asc|status_desc)$")] public string Sort { get; set; } = "date_desc";
     [Required, RegularExpression("^(all|not|progress|watched)$")] public string Watch { get; set; } = "all";
     [Range(1, 100000)] public int Page { get; set; } = 1;
@@ -18,7 +20,9 @@ public sealed class VideoForm
     [Required(ErrorMessage = "Please select an assigned class."), Range(1, int.MaxValue)] public int? ClassSessionId { get; set; }
     [Required(ErrorMessage = "Please enter a lesson title."), StringLength(150)] public string Title { get; set; } = "";
     [StringLength(2000)] public string? Description { get; set; }
-    [Required(ErrorMessage = "Please select the recording date.")] public DateTime? RecordingDate { get; set; }
+    public bool ReplacementConfirmed { get; set; }
+    public DateTime? CreatedAtUtc { get; set; }
+    public DateTime ServerNowUtc { get; set; } = DateTime.UtcNow;
     public IFormFile? VideoFile { get; set; }
     [StringLength(100)] public string? RowVersion { get; set; }
     public List<SelectListItem> Classes { get; set; } = [];
@@ -60,6 +64,8 @@ public sealed class VideoRow
 }
 public sealed class VideoIndexModel
 {
+    public bool IsAdmin { get; set; }
+    public List<SelectListItem> Tutors { get; set; } = [];
     public VideoFilter Filter { get; set; } = new();
     public bool IsStaff { get; set; }
     public bool IsTutor { get; set; }
@@ -71,10 +77,54 @@ public sealed class VideoIndexModel
 }
 public sealed class VideoPlayModel
 {
+    public bool IsTutor { get; set; }
+    public string? ReturnUrl { get; set; }
     public VideoRow Lesson { get; set; } = new();
     public List<VideoRow> Playlist { get; set; } = [];
     public bool PlaylistLimited { get; set; }
     public bool IsStudent { get; set; }
+}
+public sealed class VideoClassModel
+{
+    public bool IsTutor { get; set; }
+    public bool IsAdmin { get; set; }
+    public List<VideoClassRow> Classes { get; set; } = [];
+}
+public sealed class VideoClassRow
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Subject { get; set; } = "";
+    public int Recordings { get; set; }
+}
+public sealed class VideoViewingFilter
+{
+    [StringLength(100)] public string? Search { get; set; }
+    [Required, RegularExpression("^(all|not|progress|watched)$")] public string Status { get; set; } = "all";
+    [Range(1, 100000)] public int Page { get; set; } = 1;
+}
+public sealed class VideoViewingRow
+{
+    public string StudentId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public double Position { get; set; }
+    public double Played { get; set; }
+    public bool Watched { get; set; }
+    public DateTime? LastActivityUtc { get; set; }
+    public string State => Watched ? "watched" : Position > 0 || Played > 0 ? "progress" : "not";
+}
+public sealed class VideoViewingModel
+{
+    public VideoViewingFilter Filter { get; set; } = new();
+    public int Eligible { get; set; }
+    public int Watched { get; set; }
+    public int InProgress { get; set; }
+    public int NotStarted => Eligible - Watched - InProgress;
+    public int Total { get; set; }
+    public int PageCount => Math.Max(1, (Total + 24) / 25);
+    public DateTime UpdatedAtUtc { get; set; }
+    public List<VideoViewingRow> Rows { get; set; } = [];
 }
 public sealed class VideoProgressForm
 {

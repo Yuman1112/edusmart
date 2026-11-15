@@ -1,10 +1,11 @@
-﻿using System.Data;
+using System.Data;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Video;
+using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Services.Learning;
 using SecureSmartTuitionSystem.Services.Enrollment;
 using SecureSmartTuitionSystem.ViewModels.Video;
@@ -12,6 +13,69 @@ namespace SecureSmartTuitionSystem.Services.Video;
 
 public sealed class VideoLessonService(ApplicationDbContext db)
 {
+    public async Task<VideoClassModel> ClassesAsync(ClaimsPrincipal user)
+    {
+        var videos = Visible(user);
+        return new VideoClassModel {
+            IsTutor = IsTutor(user), IsAdmin = user.IsInRole("Admin"),
+            Classes = await Access.Classes(user).OrderBy(c => c.ClassCode).Select(c => new VideoClassRow {
+                Id = c.ClassSessionId, Code = c.ClassCode, Name = c.ClassName ?? "",
+                Subject = c.Subject.AcademicLevel + " · " + c.Subject.SubjectName,
+                Recordings = videos.Count(v => v.ClassSessionId == c.ClassSessionId)
+            }).ToListAsync()
+        };
+    }
+
+    // Use the current academic roster, not a historical obligation or attendance measure.
+    // Match student video class access, then de-duplicate students before joining progress.
+    public IQueryable<VideoViewingRow> ViewingRows(int classId, int videoId, DateTime today)
+    {
+        return db.StudentProfiles.AsNoTracking().Where(s => s.IsActive && s.ApplicationUserId != null
+            && db.StudentEnrollments.Any(e => e.StudentProfileId == s.StudentProfileId
+                && e.ClassSessionId == classId && e.StartDate <= today && e.StartDate.Year == today.Year
+                && (e.Status == StudentEnrollmentStatus.Active || e.Status == StudentEnrollmentStatus.PendingDrop)
+                && (!e.DropEffectiveDate.HasValue || e.DropEffectiveDate > today)
+                && (!e.EndedAt.HasValue || e.EndedAt > today)))
+            .Select(s => new VideoViewingRow {
+                StudentId = s.StudentNumber, Name = s.FullName,
+                Position = db.VideoWatchProgress.Where(p => p.RecordedLessonId == videoId && p.StudentUserId == s.ApplicationUserId).Select(p => (double?)p.PositionSeconds).FirstOrDefault() ?? 0,
+                Played = db.VideoWatchProgress.Where(p => p.RecordedLessonId == videoId && p.StudentUserId == s.ApplicationUserId).Select(p => (double?)p.WatchedSeconds).FirstOrDefault() ?? 0,
+                Watched = db.VideoWatchProgress.Any(p => p.RecordedLessonId == videoId && p.StudentUserId == s.ApplicationUserId && p.CompletedAtUtc != null),
+                LastActivityUtc = db.VideoWatchProgress.Where(p => p.RecordedLessonId == videoId && p.StudentUserId == s.ApplicationUserId && (p.PositionSeconds > 0 || p.WatchedSeconds > 0 || p.CompletedAtUtc != null)).Select(p => (DateTime?)p.UpdatedAtUtc).FirstOrDefault()
+            });
+    }
+
+    public async Task<VideoViewingModel?> ViewingAsync(ClaimsPrincipal user, int id, string? version, VideoViewingFilter filter)
+    {
+        if (!IsTutor(user)) return null;
+        var lesson = await Visible(user).Where(v => v.RecordedLessonId == id && v.StorageKey == version)
+            .Select(v => new { v.ClassSessionId, v.ClassSession.Status, v.ClassSession.StartDate, v.ClassSession.EndDate }).SingleOrDefaultAsync();
+        if (lesson == null) return null;
+        var today = ClassScheduleService.Today;
+        var query = ViewingRows(lesson.ClassSessionId, id, today);
+        if (lesson.Status != ClassSessionStatus.Active || lesson.StartDate > today || lesson.EndDate < today)
+            query = query.Where(s => false);
+        var model = new VideoViewingModel { Filter = filter, UpdatedAtUtc = DateTime.UtcNow };
+        var totals = await query.GroupBy(s => 1).Select(g => new {
+            Eligible = g.Count(), Watched = g.Count(s => s.Watched),
+            InProgress = g.Count(s => !s.Watched && (s.Position > 0 || s.Played > 0))
+        }).SingleOrDefaultAsync();
+        model.Eligible = totals?.Eligible ?? 0;
+        model.Watched = totals?.Watched ?? 0;
+        model.InProgress = totals?.InProgress ?? 0;
+        if (!string.IsNullOrWhiteSpace(filter.Search)) {
+            var term = filter.Search.Trim(); query = query.Where(s => s.Name.Contains(term) || s.StudentId.Contains(term));
+        }
+        query = filter.Status switch {
+            "watched" => query.Where(s => s.Watched),
+            "progress" => query.Where(s => !s.Watched && (s.Position > 0 || s.Played > 0)),
+            "not" => query.Where(s => !s.Watched && s.Position <= 0 && s.Played <= 0),
+            _ => query
+        };
+        model.Total = await query.CountAsync(); filter.Page = Math.Min(filter.Page, model.PageCount);
+        model.Rows = await query.OrderBy(s => s.Name).ThenBy(s => s.StudentId).Skip((filter.Page - 1) * 25).Take(25).ToListAsync();
+        return model;
+    }
     private LearningMaterialService Access => new(db);
     public static bool IsTutor(ClaimsPrincipal user) => LearningMaterialService.IsTutor(user);
     public static bool Staff(ClaimsPrincipal user) => user.IsInRole("Admin") || IsTutor(user);
@@ -32,14 +96,14 @@ public sealed class VideoLessonService(ApplicationDbContext db)
         var cutoff = DateTime.UtcNow.AddDays(-VideoAvailability.ViewingDays);
         return sort switch
     {
-        "date_asc" => query.OrderBy(x => x.RecordingDate).ThenBy(x => x.RecordedLessonId),
+        "date_asc" => query.OrderBy(x => x.CreatedAtUtc).ThenBy(x => x.RecordedLessonId),
         "title_asc" => query.OrderBy(x => x.Title).ThenBy(x => x.RecordedLessonId),
         "title_desc" => query.OrderByDescending(x => x.Title).ThenBy(x => x.RecordedLessonId),
         "class_asc" => query.OrderBy(x => x.ClassSession.ClassCode).ThenBy(x => x.Title).ThenBy(x => x.RecordedLessonId),
         "class_desc" => query.OrderByDescending(x => x.ClassSession.ClassCode).ThenBy(x => x.Title).ThenBy(x => x.RecordedLessonId),
-        "status_asc" => query.OrderBy(x => !x.IsActive ? 2 : x.CreatedAtUtc <= cutoff ? 1 : 0).ThenByDescending(x => x.RecordingDate).ThenBy(x => x.RecordedLessonId),
-        "status_desc" => query.OrderByDescending(x => !x.IsActive ? 2 : x.CreatedAtUtc <= cutoff ? 1 : 0).ThenByDescending(x => x.RecordingDate).ThenBy(x => x.RecordedLessonId),
-        _ => query.OrderByDescending(x => x.RecordingDate).ThenByDescending(x => x.RecordedLessonId)
+        "status_asc" => query.OrderBy(x => !x.IsActive ? 2 : x.CreatedAtUtc <= cutoff ? 1 : 0).ThenByDescending(x => x.CreatedAtUtc).ThenBy(x => x.RecordedLessonId),
+        "status_desc" => query.OrderByDescending(x => !x.IsActive ? 2 : x.CreatedAtUtc <= cutoff ? 1 : 0).ThenByDescending(x => x.CreatedAtUtc).ThenBy(x => x.RecordedLessonId),
+        _ => query.OrderByDescending(x => x.CreatedAtUtc).ThenByDescending(x => x.RecordedLessonId)
     };
     }
     private IQueryable<VideoRow> Rows(IQueryable<RecordedLesson> query, ClaimsPrincipal user)
@@ -62,7 +126,7 @@ public sealed class VideoLessonService(ApplicationDbContext db)
             PlaybackVersion = x.StorageKey,
             FileSize = x.FileSize,
             Duration = x.DurationSeconds,
-            Date = x.RecordingDate,
+            Date = x.CreatedAtUtc.AddHours(8),
             CreatedAtUtc = x.CreatedAtUtc,
             IsActive = x.IsActive,
             IsExpired = x.CreatedAtUtc <= cutoff,
@@ -86,15 +150,23 @@ public sealed class VideoLessonService(ApplicationDbContext db)
             _ => query
         };
     }
+    public static IQueryable<RecordedLesson> UploadedInMonth(IQueryable<RecordedLesson> query, DateTime month)
+    {
+        var startUtc = DateTime.SpecifyKind(new DateTime(month.Year, month.Month, 1).AddHours(-8), DateTimeKind.Utc);
+        var endUtc = DateTime.SpecifyKind(new DateTime(month.Year, month.Month, 1).AddMonths(1).AddHours(-8), DateTimeKind.Utc);
+        return query.Where(x => x.CreatedAtUtc >= startUtc && x.CreatedAtUtc < endUtc);
+    }
     public async Task<VideoIndexModel> IndexAsync(ClaimsPrincipal user, VideoFilter filter)
     {
-        var model = new VideoIndexModel { Filter = filter, IsStaff = Staff(user), IsTutor = IsTutor(user), Classes = await Access.ChoicesAsync(user, false) };
+        var model = new VideoIndexModel { Filter = filter, IsStaff = Staff(user), IsTutor = IsTutor(user), IsAdmin = user.IsInRole("Admin"), Classes = await Access.ChoicesAsync(user, false) };
+        if (model.IsAdmin) model.Tutors = await Visible(user).Select(v => new { v.UploadedByUserId, v.UploadedByUser.FullName }).Distinct().OrderBy(v => v.FullName).Select(v => new SelectListItem { Value = v.UploadedByUserId, Text = v.FullName ?? "Tutor" }).ToListAsync();
         model.Subjects = await Access.Classes(user).Select(c => new { c.SubjectId, c.Subject.SubjectName }).Distinct().OrderBy(x => x.SubjectName).Select(x => new SelectListItem { Value = x.SubjectId.ToString(), Text = x.SubjectName }).ToListAsync();
         var query = Visible(user);
+        if (model.IsAdmin && !string.IsNullOrWhiteSpace(filter.TutorId)) query = query.Where(x => x.UploadedByUserId == filter.TutorId);
         if (filter.ClassId.HasValue) query = query.Where(x => x.ClassSessionId == filter.ClassId);
         if (filter.SubjectId.HasValue) query = query.Where(x => x.ClassSession.SubjectId == filter.SubjectId);
         if (!string.IsNullOrWhiteSpace(filter.Search)) { var term = filter.Search.Trim(); query = query.Where(x => x.Title.Contains(term)); }
-        if (!string.IsNullOrEmpty(filter.Month) && DateTime.TryParseExact(filter.Month + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var month)) { var end = month.AddMonths(1); query = query.Where(x => x.RecordingDate >= month && x.RecordingDate < end); }
+        if (!string.IsNullOrEmpty(filter.Month) && DateTime.TryParseExact(filter.Month + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var month)) query = UploadedInMonth(query, month);
         if (model.IsStaff && filter.Status != "all") {
             var cutoff = DateTime.UtcNow.AddDays(-VideoAvailability.ViewingDays);
             query = filter.Status switch {
@@ -110,14 +182,15 @@ public sealed class VideoLessonService(ApplicationDbContext db)
     public async Task<VideoPlayModel?> PlayAsync(ClaimsPrincipal user, int id)
     {
         var row = await Rows(Visible(user).Where(x => x.RecordedLessonId == id), user).SingleOrDefaultAsync(); if (row == null) return null;
+        if (Staff(user)) return new VideoPlayModel { Lesson = row, IsTutor = IsTutor(user) };
         var playlist = Visible(user).Where(x => x.ClassSessionId == row.ClassId && x.IsActive);
         return new VideoPlayModel { Lesson = row, IsStudent = user.IsInRole("Student") && !Staff(user), PlaylistLimited = await playlist.CountAsync() > 100, Playlist = await Rows(Order(playlist, "date_desc").Take(100), user).ToListAsync() };
     }
     public async Task<VideoForm?> FormAsync(ClaimsPrincipal user, int id)
     {
         VideoForm? form;
-        if (id == 0) form = new() { RecordingDate = ClassScheduleService.Today };
-        else form = await Manage(user).AsNoTracking().Where(x => x.RecordedLessonId == id).Select(x => new VideoForm { Id = x.RecordedLessonId, ClassSessionId = x.ClassSessionId, Title = x.Title, Description = x.Description, RecordingDate = x.RecordingDate, RowVersion = Convert.ToBase64String(x.RowVersion), CurrentFileName = x.OriginalFileName, CanReplaceVideo = !x.InactivatedByAdmin }).SingleOrDefaultAsync();
+        if (id == 0) form = new();
+        else form = await Manage(user).AsNoTracking().Where(x => x.RecordedLessonId == id).Select(x => new VideoForm { Id = x.RecordedLessonId, ClassSessionId = x.ClassSessionId, Title = x.Title, Description = x.Description, CreatedAtUtc = x.CreatedAtUtc, RowVersion = Convert.ToBase64String(x.RowVersion), CurrentFileName = x.OriginalFileName, CanReplaceVideo = !x.InactivatedByAdmin }).SingleOrDefaultAsync();
         if (form != null) await PopulateAsync(user, form); return form;
     }
     public async Task PopulateAsync(ClaimsPrincipal user, VideoForm form)
@@ -128,12 +201,12 @@ public sealed class VideoLessonService(ApplicationDbContext db)
     public static string? Validate(VideoForm form, DateTime today)
     {
         if (string.IsNullOrWhiteSpace(form.Title)) return "Please enter a lesson title.";
-        if (!form.RecordingDate.HasValue || form.RecordingDate.Value.Date < new DateTime(2000, 1, 1) || form.RecordingDate.Value.Date > today.Date) return "Choose a recording date from 2000 up to today (MYT).";
         return null;
     }
     public async Task<(int Id, string? Error, string? PreviousKey)> SaveAsync(ClaimsPrincipal user, VideoForm form, (string Key, long Size, double Duration)? file)
     {
         var error = Validate(form, ClassScheduleService.Today); if (error != null) return (0, error, null);
+        if (form.Id > 0 && file.HasValue && !form.ReplacementConfirmed) return (0, "Confirm the replacement before saving.", null);
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         RecordedLesson lesson;
         string? previousKey = null;
@@ -141,11 +214,10 @@ public sealed class VideoLessonService(ApplicationDbContext db)
         {
             var cls = await Access.Classes(user, true).Where(c => c.ClassSessionId == form.ClassSessionId).Select(c => new { c.ClassSessionId, c.StartDate, c.EndDate }).SingleOrDefaultAsync();
             if (!IsTutor(user) || cls == null) return (0, "This assigned class is no longer available. Choose another class.", null);
-            if (cls.StartDate.HasValue && form.RecordingDate!.Value.Date < cls.StartDate.Value.Date || cls.EndDate.HasValue && form.RecordingDate!.Value.Date > cls.EndDate.Value.Date) return (0, "The recording date must fall within the class date range.", null);
             if (form.Id == 0)
             {
                 if (file == null) return (0, "Please select an MP4 video.", null);
-                lesson = new() { ClassSessionId = cls.ClassSessionId, UploadedByUserId = Own(user), CreatedAtUtc = DateTime.UtcNow };
+                lesson = new() { ClassSessionId = cls.ClassSessionId, UploadedByUserId = Own(user), CreatedAtUtc = DateTime.UtcNow, RecordingDate = ClassScheduleService.Today };
                 db.Add(lesson);
             }
             else
@@ -155,7 +227,7 @@ public sealed class VideoLessonService(ApplicationDbContext db)
                 if (lesson.ClassSessionId != form.ClassSessionId) return (0, "The recording class cannot be changed.", null);
                 if (!AssessmentRules.Version(lesson.RowVersion, form.RowVersion)) return (0, "This recording changed. Reload before saving.", null);
                 if (file.HasValue && lesson.InactivatedByAdmin) return (0, "Only an administrator can restore this recording before it can be replaced.", null);
-                if (!file.HasValue && lesson.Title == form.Title.Trim() && lesson.Description == (string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim()) && lesson.RecordingDate == form.RecordingDate!.Value.Date) return (0, "No changes to save.", null);
+                if (!file.HasValue && lesson.Title == form.Title.Trim() && lesson.Description == (string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim())) return (0, "No changes to save.", null);
             }
             if (file is { } uploaded)
             {
@@ -170,7 +242,7 @@ public sealed class VideoLessonService(ApplicationDbContext db)
                 lesson.FileSize = uploaded.Size;
                 lesson.DurationSeconds = uploaded.Duration;
             }
-            lesson.Title = form.Title.Trim(); lesson.Description = string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim(); lesson.RecordingDate = form.RecordingDate!.Value.Date; lesson.UpdatedAtUtc = DateTime.UtcNow;
+            lesson.Title = form.Title.Trim(); lesson.Description = string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim(); lesson.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync();
         }
         catch (Exception e) when (e is DbUpdateException or SqlException) { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return (0, "The recording could not be saved. Reload and try again.", null); }

@@ -1,0 +1,31 @@
+@model SecureSmartTuitionSystem.ViewModels.Video.VideoClassModel
+@{ ViewData["Title"] = Model.IsTutor || Model.IsAdmin ? "Video Playback Vault" : "Recorded Lessons"; }
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/video-playback.css" asp-append-version="true" />
+}
+<div class="video-page">
+    <div class="page-header">
+        <div><h1>@ViewData["Title"]</h1><p>Choose a class to view its recordings.</p></div>
+        <div class="video-actions">
+            @if (Model.IsAdmin) { <a asp-action="Index" asp-route-All="true" class="outline-button">All Recordings</a> }
+            @if (Model.IsTutor) { <a asp-action="Create" class="primary-button"><i class="bi bi-upload" aria-hidden="true"></i> Upload Lesson</a> }
+        </div>
+    </div>
+    <section class="dashboard-card compact-class-card">
+        <div class="dashboard-card-header"><h2><i class="bi bi-collection-play me-2" aria-hidden="true"></i> @(Model.IsAdmin ? "Classes" : "My Classes")</h2><span>@Model.Classes.Count class(es)</span></div>
+        <div class="video-class-search"><label for="video-class-search" class="form-label">Find a class</label><input id="video-class-search" class="form-control" type="search" placeholder="Class code, name or subject" data-video-class-search /></div>
+        <div class="video-class-grid">
+            @foreach (var row in Model.Classes) {
+                <article class="video-class-card" data-video-class-card>
+                    <span class="video-subject">@row.Subject</span>
+                    <h2>@row.Code</h2><p>@row.Name</p>
+                    <p class="video-note">@row.Recordings recording(s)@(Model.IsTutor || Model.IsAdmin ? " · all statuses" : " available")</p>
+                    <a asp-action="Index" asp-route-ClassId="@row.Id" class="outline-button">View Recordings <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                </article>
+            }
+        </div>
+        <p class="video-empty" data-video-class-empty hidden="@(Model.Classes.Count > 0)">No matching classes available.</p>
+    </section>
+</div>
+@section Scripts { <script src="~/js/video-details.js" asp-append-version="true"></script> }

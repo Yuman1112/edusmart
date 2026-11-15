@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoIndexModel
+@model SecureSmartTuitionSystem.ViewModels.Video.VideoIndexModel
 @{
     ViewData["Title"] = Model.IsStaff ? "Video Playback Vault" : "Recorded Lessons";
 }
@@ -23,81 +23,41 @@
         <div class="alert alert-warning" role="alert">@warning</div>
     }
     <div class="class-filter-card">
-        <div class="class-filter-heading"><div><h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Recorded Lessons</h2><p>The lesson list updates automatically while visible.</p></div></div>
-        <form asp-action="Index" method="get" class="video-filters" data-video-filter>
+        <form asp-action="Index" method="get" class="video-filters video-expanded-filters" data-video-filter>
+            <div class="video-filter-row">
             <div><label for="video-search" class="form-label">Search title</label><input id="video-search" name="Search" value="@Model.Filter.Search" placeholder="Search recorded lessons" maxlength="100" class="form-control" /></div>
-            <div>
-                <label for="video-class" class="form-label">Class</label><select id="video-class" name="ClassId" class="form-select">
-                    <option value="">All Available Classes</option>@foreach(var c in Model.Classes){
-                    <option value="@c.Value" selected="@(Model.Filter.ClassId?.ToString() == c.Value)">@c.Text</option>
-                                        }
-                </select>
+            <div><label for="video-class" class="form-label">Class</label><select id="video-class" name="ClassId" class="form-select">
+                <option value="">@(Model.IsTutor ? "All Assigned Classes" : "All Classes")</option>
+                @foreach (var c in Model.Classes) { <option value="@c.Value" selected="@(Model.Filter.ClassId?.ToString() == c.Value)">@c.Text</option> }
+            </select></div>
+            @if (Model.IsAdmin) {
+                <div><label for="video-tutor" class="form-label">Tutor</label><select id="video-tutor" name="TutorId" class="form-select"><option value="">All Tutors</option>
+                    @foreach (var tutor in Model.Tutors) { <option value="@tutor.Value" selected="@(Model.Filter.TutorId == tutor.Value)">@tutor.Text</option> }
+                </select></div>
+            }
+            @if (!Model.IsAdmin && Model.IsStaff) {
+                <div><label for="video-status" class="form-label">Status</label><select id="video-status" name="Status" class="form-select">
+                    @foreach (var status in new[] { "all", "active", "inactive", "expired" }) { <option value="@status" selected="@(Model.Filter.Status == status)">@(status == "all" ? "All Statuses" : status == "active" ? "Active" : status == "inactive" ? "Inactive" : "Expired")</option> }
+                </select></div>
+            } else if (!Model.IsAdmin) {
+                <div><label for="video-watch" class="form-label">Watch status</label><select id="video-watch" name="Watch" class="form-select">
+                    @foreach (var item in new Dictionary<string,string>{{"all","All Videos"},{"not","Not started"},{"progress","In progress"},{"watched","Watched"}}) { <option value="@item.Key" selected="@(Model.Filter.Watch == item.Key)">@item.Value</option> }
+                </select></div>
+            }
             </div>
-            @if (!Model.IsStaff)
-            {
-                <div>
-                    <label for="video-watch" class="form-label">Watch status</label><select id="video-watch" name="Watch" class="form-select">
-                        <option value="all" selected="@(Model.Filter.Watch == "all")">All Videos</option>
-                        <option value="not" selected="@(Model.Filter.Watch == "not")">Not watched</option>
-                        <option value="progress" selected="@(Model.Filter.Watch == "progress")">In progress</option>
-                        <option value="watched" selected="@(Model.Filter.Watch == "watched")">Watched</option>
-                    </select>
-                </div>
-            }
-            @if (!Model.IsStaff)
-            {
-                <details class="video-more-filters" open="@(Model.Filter.SubjectId.HasValue || !string.IsNullOrEmpty(Model.Filter.Month))">
-                    <summary>More filters</summary><div class="video-student-extra">
-                        <div><label for="student-video-subject" class="form-label">Subject</label><select id="student-video-subject" name="SubjectId" class="form-select"><option value="">All Subjects</option>@foreach(var c in Model.Subjects){
-                        <option value="@c.Value" selected="@(Model.Filter.SubjectId?.ToString() == c.Value)">@c.Text</option>
+            <div class="video-filter-row @(Model.IsAdmin ? "video-filter-row-four" : "")">
+                    <div><label for="video-subject" class="form-label">Subject</label><select id="video-subject" name="SubjectId" class="form-select"><option value="">All Subjects</option>@foreach(var subject in Model.Subjects) { <option value="@subject.Value" selected="@(Model.Filter.SubjectId?.ToString() == subject.Value)">@subject.Text</option> }</select></div>
+                    <div><label for="video-month" class="form-label">Upload month (MYT)</label><input id="video-month" name="Month" type="month" value="@Model.Filter.Month" min="2000-01" max="2100-12" class="form-control" /></div>
+                    @if (Model.IsAdmin) {
+                <div><label for="video-status" class="form-label">Status</label><select id="video-status" name="Status" class="form-select">
+                    @foreach (var status in new[] { "all", "active", "inactive", "expired" }) { <option value="@status" selected="@(Model.Filter.Status == status)">@(status == "all" ? "All Statuses" : status == "active" ? "Active" : status == "inactive" ? "Inactive" : "Expired")</option> }
+                </select></div>
                     }
-</select></div>
-                    <div><label for="student-video-month" class="form-label">Recording Month</label><input id="student-video-month" type="month" name="Month" value="@Model.Filter.Month" min="2000-01" max="2100-12" class="form-control" /></div>
-                    <div><label for="student-video-sort" class="form-label">Sort by</label><select id="student-video-sort" name="Sort" class="form-select">@foreach(var item in new Dictionary<string,string>{{"date_desc","Recorded: newest first"},{"date_asc","Recorded: oldest first"},{"title_asc","Title: A–Z"},{"title_desc","Title: Z–A"},{"class_asc","Class: A–Z"},{"class_desc","Class: Z–A"}}){
-                    <option value="@item.Key" selected="@(Model.Filter.Sort == item.Key)">@item.Value</option>
-                                        }
-</select></div>
-                </div>
-            </details>
-                        }
-            @if (Model.IsStaff)
-            {
-                <div>
-                    <label for="video-subject" class="form-label">Subject</label><select id="video-subject" name="SubjectId" class="form-select">
-                        <option value="">All Subjects</option>@foreach(var c in Model.Subjects){
-                        <option value="@c.Value" selected="@(Model.Filter.SubjectId?.ToString() == c.Value)">@c.Text</option>
-                    }
-                </select>
+                    <div><label for="video-sort" class="form-label">Sort by</label><select id="video-sort" name="Sort" class="form-select">
+                        @foreach(var item in new Dictionary<string,string>{{"date_desc","Uploaded: newest first"},{"date_asc","Uploaded: oldest first"},{"title_asc","Title: A–Z"},{"title_desc","Title: Z–A"},{"class_asc","Class: A–Z"},{"class_desc","Class: Z–A"}}) { <option value="@item.Key" selected="@(Model.Filter.Sort == item.Key)">@item.Value</option> }
+                        @if (Model.IsStaff) { <option value="status_asc" selected="@(Model.Filter.Sort == "status_asc")">Status: active first</option><option value="status_desc" selected="@(Model.Filter.Sort == "status_desc")">Status: inactive first</option> }
+                    </select></div>
             </div>
-            <div><label for="video-month" class="form-label">Recording Month</label><input id="video-month" type="month" name="Month" value="@Model.Filter.Month" min="2000-01" max="2100-12" class="form-control" /></div>
-            @if (Model.IsStaff)
-            {
-                <div>
-                    <label for="video-status" class="form-label">Status</label><select id="video-status" name="Status" class="form-select">
-                        @foreach (var status in new[] { "active", "expired", "inactive", "all" })
-                        {
-                            <option value="@status" selected="@(Model.Filter.Status == status)">@(status == "all" ? "All Statuses" : status == "active" ? "Active" : status == "expired" ? "Expired" : "Inactive")</option>
-                        }
-                    </select>
-                </div>
-            }
-                        }
-            @if (Model.IsStaff)
-            {
-                <div>
-                    <label for="video-sort" class="form-label">Sort by</label><select id="video-sort" name="Sort" class="form-select">
-                        @foreach (var item in new Dictionary<string, string> { { "date_desc", "Recorded: newest first" }, { "date_asc", "Recorded: oldest first" }, { "title_asc", "Title: A–Z" }, { "title_desc", "Title: Z–A" }, { "class_asc", "Class: A–Z" }, { "class_desc", "Class: Z–A" } })
-                        {
-                            <option value="@item.Key" selected="@(Model.Filter.Sort == item.Key)">@item.Value</option>
-                        }
-                        @if (Model.IsStaff)
-                        {
-                            <option value="status_asc" selected="@(Model.Filter.Sort == "status_asc")">Status: active first</option>
-                            <option value="status_desc" selected="@(Model.Filter.Sort == "status_desc")">Status: inactive first</option>
-                        }
-                    </select>
-                </div>
-            }
             <noscript><button type="submit" class="primary-button">View Lessons</button></noscript>
         </form>
     </div>

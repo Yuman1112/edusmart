@@ -76,8 +76,8 @@
     }
 
     .video-badge.is-inactive {
-        background: #fff0d2;
-        color: #9b6400
+        background: #edf1f5;
+        color: #60748b
     }
 
 .video-pagination {
@@ -725,3 +725,132 @@
 .video-page .video-results .video-access-deadline > time { display:block; }
 .video-page .video-results .video-duration-cell { white-space:nowrap; font-variant-numeric:tabular-nums; }
 .video-page .video-results .compact-class-table .video-actions { flex-wrap:nowrap; }
+
+/* Role-specific pages share the existing portal typography, cards and buttons. */
+.video-detail-page { max-width: 1450px; }
+.video-admin-filters { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.video-watch-grid { display: grid; grid-template-columns: minmax(0,2fr) minmax(300px,1fr); gap: 22px; align-items: start; }
+.video-watch-grid > .class-form-card { margin: 0; }
+.video-watch-grid .video-player-card > video { max-height: none; }
+.video-watch-grid .video-description { margin-bottom: 0; font-size: .9rem; }
+.video-details-card { min-width: 0; }
+.video-details-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+.video-details-heading h2 { font-size: 1.08rem; margin: 0; font-weight: 700; }
+.video-details-card .video-detail-values { grid-template-columns: minmax(105px,.85fr) minmax(0,1.2fr); font-size: .85rem; }
+.video-details-card .video-detail-values dt, .video-details-card .video-detail-values dd { background: none; padding: 10px 0; }
+.video-details-card .video-detail-values dt { padding-right: 12px; }
+.video-details-actions { margin-top: 24px; }
+.video-viewing-card { margin-top: 24px; }
+.video-viewing-body { padding: 22px 24px; }
+.video-viewing-body > .video-note:first-child { margin-top: 0; }
+.video-page .video-results .compact-class-table.video-library-table th:nth-child(n) { width: auto; }
+.video-page .video-results .video-library-table td { white-space: normal; overflow-wrap: anywhere; }
+.video-library-table col.vl-lesson { width: 28%; }
+.video-library-table col.vl-class { width: 16%; }
+.video-library-table col.vl-date { width: 13%; }
+.video-library-table col.vl-duration { width: 8%; }
+.video-library-table col.vl-access { width: 15%; }
+.video-library-table col.vl-status { width: 8%; }
+.video-library-table col.vl-actions { width: 12%; }
+.video-admin-table col.vl-lesson { width: 24%; }
+.video-admin-table col.vl-class { width: 12%; }
+.video-admin-table col.vl-tutor { width: 12%; }
+.video-admin-table col.vl-date { width: 12%; }
+.video-admin-table col.vl-duration { width: 7%; }
+.video-admin-table col.vl-access { width: 13%; }
+.video-admin-table col.vl-status { width: 8%; }
+.video-admin-table col.vl-actions { width: 12%; }
+.video-library-lesson { display: flex; align-items: center; gap: 12px; }
+.video-library-lesson canvas { width: 76px; height: 43px; flex-shrink: 0; border-radius: 6px; background: #e9f5f7; }
+.video-library-lesson strong { min-width: 0; overflow-wrap: anywhere; }
+.video-page .video-results .video-library-table .video-duration-cell { white-space: nowrap; }
+.video-access-cell small { white-space: nowrap; }
+@media(max-width:1100px) { .video-admin-filters { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:900px) {
+    .video-watch-grid { grid-template-columns: minmax(0,1fr); }
+    .video-watch-grid .video-playlist-items { max-height: 350px; }
+}
+@media(max-width:600px) {
+    .video-admin-filters { grid-template-columns: 1fr; }
+    .video-viewing-body { padding: 16px; }
+}
+.video-detail-page .dropdown-menu { border: 1px solid var(--border,#cce3e8); border-radius: 10px; padding: 6px; }
+.video-detail-page .dropdown-item { padding: 10px 14px; color: var(--navy,#073b65); }
+.video-detail-layout { display: grid; gap: 22px; }
+.video-detail-page .video-player-card { margin: 0; }
+.video-detail-page .video-player-card > video { max-height: 65vh; object-fit: contain; }
+.video-detail-tabs { display: flex; gap: 22px; margin-top: 26px; border-bottom: 1px solid var(--border,#cce3e8); overflow-x: auto; }
+.video-detail-tabs button { flex-shrink: 0; padding: 14px 4px; background: transparent; border: 0; border-bottom: 3px solid transparent; color: var(--muted,#68839a); font: inherit; font-weight: 600; }
+.video-detail-tabs button[aria-selected="true"] { color: var(--teal,#009bac); border-bottom-color: var(--teal,#009bac); }
+.video-detail-tabs button:focus-visible, .video-page-number:focus-visible { outline: 2px solid var(--teal,#009bac); outline-offset: -2px; }
+.video-tab-panel { padding-top: 24px; }
+.video-tab-panel h2 { font-size: 1.05rem; font-weight: 700; margin-bottom: 16px; }
+.video-tab-panel .video-description { margin: 0 0 24px; }
+.video-detail-values { display: grid; grid-template-columns: 190px minmax(0,1fr); gap: 0; margin: 0; font-size: .9rem; }
+.video-detail-values dt, .video-detail-values dd { padding: 12px 14px; border-bottom: 1px solid #e2eef1; margin: 0; overflow-wrap: anywhere; }
+.video-detail-values dt { font-weight: 600; background: #f4fafb; }
+.video-other-recordings { overflow: hidden; }
+.video-other-recordings summary { cursor: pointer; padding: 20px 24px; font-weight: 700; }
+.video-other-recordings[open] summary { border-bottom: 1px solid var(--border,#cce3e8); }
+.video-other-recordings .video-playlist-items { max-height: 350px; }
+.video-viewing-filters { display: grid; grid-template-columns: minmax(180px,2fr) minmax(160px,1fr); align-items: end; gap: 16px; }
+.video-viewing-totals { display: flex; flex-wrap: wrap; gap: 14px 28px; padding: 16px 0; font-size: .9rem; }
+.video-viewing-totals strong { color: var(--navy,#073b65); }
+.video-viewing-table { width: 100%; min-width: 650px; table-layout: fixed; }
+.video-viewing-table th:nth-child(1) { width: 8%; }
+.video-viewing-table th:nth-child(2) { width: 34%; }
+.video-viewing-table th:nth-child(3) { width: 23%; }
+.video-viewing-table th:nth-child(4) { width: 35%; }
+.video-viewing-table td { white-space: normal; overflow-wrap: anywhere; }
+.video-viewing-table small { display: block; color: var(--muted,#68839a); margin-top: 4px; }
+.video-badge.is-not-started { background: #f0f4f8; color: #60748b; }
+.video-tab-panel .video-page-number { background: white; color: inherit; }
+.video-back-classes { display: inline-flex; gap: 8px; margin-bottom: 20px; color: var(--teal-dark,#007c8c); text-decoration: none; font-size: .9rem; }
+.video-class-search { padding: 22px 24px 0; max-width: 560px; }
+.video-class-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 22px; padding: 24px; }
+.video-class-card { border: 1px solid var(--border,#cce3e8); border-radius: 12px; padding: 22px; display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.video-class-card h2 { font-size: 1.15rem; margin: 18px 0 6px; font-weight: 700; }
+.video-class-card p { overflow-wrap: anywhere; }
+.video-class-card > a { margin-top: auto; }
+@media(max-width:1000px) { .video-class-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) {
+    .video-class-grid, .video-viewing-filters { grid-template-columns: 1fr; }
+    .video-class-grid, .video-class-search { padding: 16px; }
+    .video-detail-values { grid-template-columns: 1fr; }
+    .video-detail-values dt { padding-bottom: 6px; border: 0; background: none; }
+    .video-detail-values dd { padding-top: 0; }
+    .video-detail-tabs { gap: 12px; }
+}
+
+/* Keep the two-column preview proportional after shared player rules. */
+.video-watch-grid .video-player-card > video { max-height: none; }
+
+.video-viewing-table .video-badge.is-inactive { background: #fff0d2; color: #946200; }
+.video-viewing-feedback { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 12px; height: 52px; }
+.video-viewing-feedback .video-note { margin: 0; max-height: 100%; overflow-y: auto; line-height: 1.45; }
+.video-viewing-updated { display: inline-block; width: 15em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media(max-width:600px) { .video-viewing-feedback { height: 80px; } }
+
+/* Numbered staff lists; thumbnails remain exclusive to student cards. */
+.video-library-table col.vl-number { width: 5%; }
+.video-library-table col.vl-lesson { width: 23%; }
+.video-admin-table col.vl-number { width: 5%; }
+.video-admin-table col.vl-lesson { width: 19%; }
+.video-replace-section > summary { display: inline-flex; cursor: pointer; }
+.video-replace-content { margin-top: 20px; }
+.video-replace-confirm { max-width: 620px; }
+.video-replace-confirm h2 { font-size: 1.2rem; margin: 0 0 20px; }
+.video-replace-confirm .video-actions { justify-content: flex-end; margin-top: 24px; }
+.video-replace-confirm strong, .video-replace-confirm p { overflow-wrap: anywhere; }
+
+/* All role filters remain visible, matching the other completed modules. */
+.video-page .video-expanded-filters { display: flex; flex-direction: column; gap: 18px; }
+.video-filter-row { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 18px; }
+.video-filter-row-four { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.video-filter-row > div { min-width: 0; }
+@media(max-width:1000px) {
+    .video-filter-row, .video-filter-row-four { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:600px) {
+    .video-filter-row, .video-filter-row-four { grid-template-columns: minmax(0,1fr); }
+}

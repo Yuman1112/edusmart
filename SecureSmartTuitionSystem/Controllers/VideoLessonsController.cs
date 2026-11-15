@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
@@ -23,9 +23,12 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
         if (!policy.Contains("media-src", StringComparison.OrdinalIgnoreCase)) Response.Headers.ContentSecurityPolicy = policy.TrimEnd(';') + "; media-src 'self' blob:";
     }
     [HttpGet]
+    public IActionResult Classes() => RedirectToAction(nameof(Index));
+    [HttpGet]
     public async Task<IActionResult> Index(VideoFilter filter, bool fragment = false)
     {
         if (!ModelState.IsValid) return BadRequest("Choose valid video filters.");
+        if (filter.ClassId.HasValue && !await new LearningMaterialService(db).Classes(User).AnyAsync(c => c.ClassSessionId == filter.ClassId)) return NotFound();
         var model = await Service.IndexAsync(User, filter); return fragment ? PartialView("_Results", model) : View(model);
     }
     [HttpGet, Authorize(Roles = "Tutor")]
@@ -81,8 +84,22 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
             return StatusCode(503);
         }
     }
+    [HttpGet, Authorize(Roles = "Tutor")]
+    public async Task<IActionResult> ReplacementInfo(int id, string? rowVersion)
+    {
+        if (!VideoLessonService.IsTutor(User)) return Forbid();
+        var current = await Service.Manage(User).AsNoTracking()
+            .Where(x => x.RecordedLessonId == id && !x.InactivatedByAdmin)
+            .Select(x => new { x.CreatedAtUtc, x.RowVersion }).SingleOrDefaultAsync();
+        if (current == null) return NotFound();
+        if (!AssessmentRules.Version(current.RowVersion, rowVersion)) return Conflict();
+        return Json(new {
+            expiresAt = new DateTimeOffset(VideoAvailability.ExpiresAtUtc(current.CreatedAtUtc)).ToUnixTimeMilliseconds(),
+            serverNow = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        });
+    }
     [HttpPost, Authorize(Roles = "Tutor"), RequestSizeLimit(VideoFileStore.RequestBytes), RequestFormLimits(MultipartBodyLengthLimit = VideoFileStore.RequestBytes)]
-    public async Task<IActionResult> Save(VideoForm form, CancellationToken ct)
+    public async Task<IActionResult> Save(VideoForm form, CancellationToken ct, string? returnUrl = null)
     {
         if (!VideoLessonService.IsTutor(User)) return Forbid();
         var error = VideoLessonService.Validate(form, Services.Enrollment.ClassScheduleService.Today);
@@ -90,7 +107,9 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
             ModelState.AddModelError(nameof(form.VideoFile), form.Id > 0
                 ? "Choose one MP4 to replace this recording."
                 : "Upload videos using the batch uploader. Reload the page and enable JavaScript, then select your videos again.");
-        if (error != null) ModelState.AddModelError(nameof(form.RecordingDate), error);
+        if (error != null) ModelState.AddModelError(nameof(form.Title), error);
+        if (form.Id > 0 && form.VideoFile != null && !form.ReplacementConfirmed)
+            ModelState.AddModelError(nameof(form.VideoFile), "Confirm the replacement and its unchanged viewing deadline before saving.");
         if (form.Id == 0 && form.VideoFile == null) ModelState.AddModelError(nameof(form.VideoFile), "Please select an MP4 video.");
         (string Key, long Size, double Duration)? file = null;
         bool discardStagedFile = true;
@@ -122,8 +141,17 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
                     if (result.PreviousKey != null) Store.Remove(result.PreviousKey);
                     TempData["VideoSuccess"] = form.Id == 0 ? "Recorded lesson uploaded successfully."
                         : file.HasValue ? "Video replaced successfully. Student watch progress has been reset." : "Recorded lesson updated successfully.";
-                    if (Request.Headers.Accept.ToString().Contains("application/json")) return Json(new { url = Url.Action("Play", new { id = result.Id }) });
-                    return RedirectToAction(nameof(Play), new { id = result.Id });
+                    if (form.Id > 0 && file.HasValue) {
+                        var created = await Service.Visible(User).Where(x => x.RecordedLessonId == result.Id).Select(x => (DateTime?)x.CreatedAtUtc).SingleOrDefaultAsync(ct);
+                        if (created.HasValue) {
+                            var until = VideoAvailability.ExpiresAtUtc(created.Value);
+                            var expired = DateTime.UtcNow >= until;
+                            TempData.Remove("VideoSuccess");
+                            TempData[expired ? "VideoWarning" : "VideoSuccess"] = $"Video replaced. Student viewing progress has been reset. Access deadline remains {until.AddHours(8):dd MMM yyyy, hh:mm tt} MYT." + (expired ? " This deadline has passed; students still cannot view this recording." : "");
+                        }
+                    }
+                    if (Request.Headers.Accept.ToString().Contains("application/json")) return Json(new { url = Url.Action("Play", new { id = result.Id, returnUrl }) });
+                    return RedirectToAction(nameof(Play), new { id = result.Id, returnUrl });
                 }
                 ModelState.AddModelError("", result.Error);
             }
@@ -142,11 +170,13 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
             if (saved == null) return NotFound();
             form.CurrentFileName = saved.CurrentFileName;
             form.CanReplaceVideo = saved.CanReplaceVideo;
+            form.CreatedAtUtc = saved.CreatedAtUtc;
+            form.ServerNowUtc = DateTime.UtcNow;
         }
         AllowLocalPreview(); await Service.PopulateAsync(User, form); return View("Form", form);
     }
     [HttpPost, Authorize(Roles = "Admin,Tutor")]
-    public async Task<IActionResult> ChangeState(int id, string? rowVersion, bool? active)
+    public async Task<IActionResult> ChangeState(int id, string? rowVersion, bool? active, string? returnUrl)
     {
         if (!ModelState.IsValid || id <= 0 || active is null)
             return BadRequest(new { message = "Choose a valid recording and status." });
@@ -161,15 +191,27 @@ public sealed class VideoLessonsController(ApplicationDbContext db, IWebHostEnvi
             return StatusCode(error == null ? 200 : 409, new { ok = error == null, message });
 
         TempData[error == null ? "VideoSuccess" : "VideoWarning"] = message;
-        return RedirectToAction(nameof(Play), new { id });
+        return RedirectToAction(nameof(Play), new { id, returnUrl });
     }
     [HttpGet]
-    public async Task<IActionResult> Play(int id)
+    public async Task<IActionResult> Play(int id, string? returnUrl)
     {
         var model = await Service.PlayAsync(User, id);
-        if (model != null) return View(model);
+        if (model != null) {
+            var listUrl = Url.Action(nameof(Index));
+            model.ReturnUrl = Url.IsLocalUrl(returnUrl) && string.Equals(returnUrl!.Split('?', 2)[0], listUrl, StringComparison.Ordinal)
+                ? returnUrl : Url.Action(nameof(Index), new { ClassId = model.Lesson.ClassId });
+            return View(model);
+        }
         Response.StatusCode = 404;
         return View("Unavailable");
+    }
+    [HttpGet, Authorize(Roles = "Tutor")]
+    public async Task<IActionResult> Viewing(int id, string? version, VideoViewingFilter filter)
+    {
+        if (!ModelState.IsValid || id <= 0 || string.IsNullOrEmpty(version)) return BadRequest();
+        var model = await Service.ViewingAsync(User, id, version, filter);
+        return model == null ? NotFound() : PartialView("_StudentViewing", model);
     }
     [HttpGet]
     public async Task<IActionResult> Access(int id, string? version)
