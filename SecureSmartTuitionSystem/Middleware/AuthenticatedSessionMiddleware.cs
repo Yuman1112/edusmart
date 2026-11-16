@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity;
 using SecureSmartTuitionSystem.Models.Identity;
 using SecureSmartTuitionSystem.Models.Security;
 using SecureSmartTuitionSystem.Services.Security;
-using System.Globalization;
 using System.Security.Claims;
 
 namespace SecureSmartTuitionSystem.Middleware;
@@ -11,19 +10,29 @@ namespace SecureSmartTuitionSystem.Middleware;
 public sealed class AuthenticatedSessionMiddleware
 {
     private readonly RequestDelegate _next;
-    private static readonly TimeSpan IdleLimit = TimeSpan.FromMinutes(30);
     public AuthenticatedSessionMiddleware(RequestDelegate next) => _next = next;
-
-    public async Task InvokeAsync(HttpContext context, UserManager<ApplicationUser> users,
-        SecurityEventService events)
+    public async Task InvokeAsync(HttpContext context, UserManager<ApplicationUser> users, SecurityEventService events)
     {
         if (context.User.Identity?.IsAuthenticated == true)
         {
+            var ticket = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
             var user = await users.GetUserAsync(context.User);
             var now = DateTimeOffset.UtcNow;
-            string? activity = context.User.FindFirstValue("EduSmart.LastActivityUtc");
-            bool timedOut = !long.TryParse(activity, out long last) ||
-                now.ToUnixTimeSeconds() - last >= (long)IdleLimit.TotalSeconds;
+            var props = ticket.Properties;
+            string? id = null;
+            if (props != null) props.Items.TryGetValue(IdleSessionState.TicketKey, out id);
+            bool created = false;
+            // Upgrade an existing, still-valid login once. An unknown existing ID
+            // is never resurrected from its cookie after expiration or restart.
+            if (id == null && props != null && long.TryParse(context.User.FindFirstValue("EduSmart.LastActivityUtc"), out var seconds)
+                && seconds <= now.ToUnixTimeSeconds() && now.ToUnixTimeSeconds() - seconds < 1800)
+            {
+                id = IdleSessionState.Create(DateTimeOffset.FromUnixTimeSeconds(seconds));
+                props.Items[IdleSessionState.TicketKey] = id;
+                created = true;
+            }
+            var state = id == null ? null : IdleSessionState.Find(id);
+            bool timedOut = state == null || !state.Check(now, false);
             if (user == null || !user.IsActive || user.MustChangePassword || timedOut)
             {
                 await events.RecordAsync(context, "SessionTerminated", SecuritySeverity.Information,
@@ -31,41 +40,29 @@ public sealed class AuthenticatedSessionMiddleware
                 context.Session.Clear();
                 await context.SignOutAsync(IdentityConstants.ApplicationScheme);
                 context.Response.Cookies.Delete(".EduSmart.Session");
-                if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                if (context.Request.Path.StartsWithSegments("/Session") || context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                else context.Response.Redirect(context.Request.PathBase + "/Identity/Account/Login?reason=expired");
+                else context.Response.Redirect(context.Request.PathBase + "/Identity/Account/Login?reason=" + (timedOut ? "expired" : "access"));
                 return;
             }
-            // Background polling does not keep an otherwise idle login alive.
-            bool background = (context.Request.Path.StartsWithSegments("/Tutor/Students") && context.Request.Query["fragment"] == "true" && context.Request.Query["live"] == "true") || context.Request.Path.StartsWithSegments("/Messages/UnreadCounts") ||
-                context.Request.Path.StartsWithSegments("/Messages/ReadStatuses") ||
-                context.Request.Path.StartsWithSegments("/Messages/MarkRead") ||
-                context.Request.Path.StartsWithSegments("/Security/AlertCount") ||
-                context.Request.Path.StartsWithSegments("/LearningMaterials/ClassChoices") ||
-                context.Request.Path.StartsWithSegments("/ClassSessions/TutorSchedulingOptions") ||
-                context.Request.Path.StartsWithSegments("/TutorManagement/EmailChangeStatus") ||
-                context.Request.Path.StartsWithSegments("/Tutor/EmailChangeOutcome") ||
-                (context.Request.Query["fragment"] == "true" &&
-                    (context.Request.Path.StartsWithSegments("/Assessments") ||
-                     context.Request.Path.StartsWithSegments("/LearningMaterials") ||
-                     context.Request.Path.StartsWithSegments("/Attendance"))) ||
-                context.Request.Path.StartsWithSegments("/VideoLessons/ClassChoices") ||
-                context.Request.Path.StartsWithSegments("/VideoLessons/Access") ||
-                context.Request.Path.StartsWithSegments("/VideoLessons/Progress") ||
-                (context.Request.Path.StartsWithSegments("/VideoLessons") && context.Request.Query["fragment"] == "true");
-            if (!background && now.ToUnixTimeSeconds() - last >= 60)
+            context.Items[IdleSessionState.TicketKey] = id;
+            bool navigation = context.Request.Headers["Sec-Fetch-Mode"] == "navigate" &&
+                context.Request.Headers["Sec-Fetch-User"] == "?1";
+            if (navigation && !state!.Check(now, true))
             {
-                var result = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
-                if (result.Principal?.Identity is ClaimsIdentity identity && result.Properties != null)
-                {
-                    foreach (var claim in identity.FindAll("EduSmart.LastActivityUtc").ToList()) identity.RemoveClaim(claim);
-                    identity.AddClaim(new Claim("EduSmart.LastActivityUtc", now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)));
-                    await context.SignInAsync(IdentityConstants.ApplicationScheme, result.Principal, result.Properties);
-                    context.User = result.Principal;
-                }
+                context.Response.Redirect(context.Request.PathBase + "/Identity/Account/Login?reason=expired");
+                return;
             }
+            if (navigation && props != null)
+            {
+                props.IssuedUtc = now;
+                props.ExpiresUtc = now + IdleSessionState.Limit;
+            }
+            // Only deliberate activity renews the timer. Polls, media ranges and
+            // all other background requests cannot keep a login alive.
+            if ((created || navigation) && ticket.Principal != null && props != null)
+                await context.SignInAsync(IdentityConstants.ApplicationScheme, ticket.Principal, props);
         }
         await _next(context);
     }
 }
-

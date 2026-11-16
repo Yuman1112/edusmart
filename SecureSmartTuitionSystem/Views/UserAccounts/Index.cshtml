@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.Controllers.UserAccountsController.AccountList
+@model SecureSmartTuitionSystem.Controllers.UserAccountsController.AccountList
 
 @{
     ViewData["Title"] = "User Accounts";
@@ -8,8 +8,10 @@
     <link rel="stylesheet"
           href="~/css/class-sessions.css"
           asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/user-accounts.css" asp-append-version="true" />
 }
 
+<div class="user-accounts-page">
 <!-- Page Header -->
 <div class="page-header">
     <div>
@@ -44,13 +46,13 @@
 }
 
 <!-- Search and Filter -->
-<div class="class-form-card mb-4">
+<div class="class-filter-card">
     <form method="get"
           asp-controller="UserAccounts"
           asp-action="Index"
-          class="row g-3 align-items-end">
+          class="account-filter-grid">
 
-        <div class="col-md-6">
+        <div class="account-search-field">
             <label for="account-search"
                    class="form-label">
                 Search accounts
@@ -63,7 +65,7 @@
                    placeholder="User ID, name or email" />
         </div>
 
-        <div class="col-md-3">
+        <div class="account-filter-field">
             <label for="account-role"
                    class="form-label">
                 Role
@@ -91,7 +93,7 @@
             </select>
         </div>
 
-        <div class="col-md-3">
+        <div class="account-filter-field">
             <button type="submit"
                     class="primary-button">
                 Search
@@ -101,13 +103,15 @@
 </div>
 
 <!-- Accounts Table -->
-<div class="class-form-card">
-
-    <h2 class="h5">Accounts (@Model.Total)</h2>
+<section class="dashboard-card compact-class-card account-results">
+    <div class="dashboard-card-header">
+        <h2><i class="bi bi-people" aria-hidden="true"></i> Accounts</h2>
+        <span class="account-count">@Model.Total account(s)</span>
+    </div>
 
     @if (Model.Rows.Count == 0)
     {
-        <p class="text-muted">
+        <p class="account-empty">
             No accounts match these filters.
         </p>
     }
@@ -115,11 +119,12 @@
     {
         <div class="table-responsive">
 
-            <table class="table align-middle"
+            <table class="table align-middle account-table"
                    data-pagination="off">
 
                 <thead>
                     <tr>
+                        <th scope="col" data-sort="off">No.</th>
                         <th scope="col">User ID</th>
                         <th scope="col">Name</th>
                         <th scope="col">Email</th>
@@ -130,10 +135,13 @@
                 </thead>
 
                 <tbody>
+                    @{ var rowNumber = (Model.Page - 1) * 25; }
                     @foreach (var account in Model.Rows)
                     {
+                        rowNumber++;
                         <tr>
-                            <td>@account.UserId</td>
+                            <td>@rowNumber</td>
+                            <td class="account-user-id">@account.UserId</td>
 
                             <td>@account.Name</td>
 
@@ -145,19 +153,19 @@
                             <td>
                                 @if (!account.Active)
                                 {
-                                    <span class="badge bg-secondary">
+                                    <span class="account-status account-status-inactive">
                                         Inactive
                                     </span>
                                 }
                                 else if (account.SetupPending)
                                 {
-                                    <span class="badge bg-warning text-dark">
+                                    <span class="account-status account-status-pending">
                                         Setup pending
                                     </span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-success">
+                                    <span class="account-status account-status-active">
                                         Active
                                     </span>
                                 }
@@ -176,6 +184,10 @@
                                     }
                                     else
                                     {
+                                        @if (account.Id == Model.CurrentAccountId)
+                                        {
+                                            <span class="account-current">Current account</span>
+                                        }
                                         <!-- Deactivate / Reactivate -->
                                         @if (account.Id != Model.CurrentAccountId)
                                         {
@@ -229,7 +241,7 @@
     @if (Model.PageCount > 1)
     {
         <nav aria-label="Account pages"
-             class="d-flex flex-wrap align-items-center gap-2">
+             class="table-pagination">
 
             @if (Model.Page > 1)
             {
@@ -238,7 +250,7 @@
                    asp-route-search="@Model.Search"
                    asp-route-role="@Model.Role"
                    asp-route-page="@(Model.Page - 1)"
-                   class="outline-button">
+                   class="table-page-button">
                     Previous
                 </a>
             }
@@ -254,11 +266,12 @@
                    asp-route-search="@Model.Search"
                    asp-route-role="@Model.Role"
                    asp-route-page="@(Model.Page + 1)"
-                   class="outline-button">
+                   class="table-page-button">
                     Next
                 </a>
             }
 
         </nav>
     }
+</section>
 </div>

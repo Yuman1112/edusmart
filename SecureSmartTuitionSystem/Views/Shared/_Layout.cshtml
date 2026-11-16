@@ -1066,6 +1066,11 @@
     <script src="~/js/live-filters.js" asp-append-version="true"></script>
     <script src="~/js/table-pagination.js" asp-append-version="true"></script>
 
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <partial name="_IdleSession" />
+    }
+
     @await RenderSectionAsync(
     "Scripts",
         required: false)

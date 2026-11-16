@@ -254,7 +254,10 @@ builder.Services.AddRateLimiter(options =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 3, Window = TimeSpan.FromMinutes(15), QueueLimit = 0, AutoReplenishment = true }));
 
-    foreach (var policy in new[] { ("LoginPolicy", 5), ("PublicFormPolicy", 20), ("ChatbotPolicy", 6), ("PaymentPolicy", 10) })
+    // Displaying Login never consumes a sign-in attempt. POST remains limited.
+    options.AddPolicy<string, LoginRateLimitPolicy>("LoginPolicy");
+
+    foreach (var policy in new[] { ("PublicFormPolicy", 20), ("ChatbotPolicy", 6), ("PaymentPolicy", 10) })
     {
         int permits = policy.Item2;
         options.AddPolicy(policy.Item1, context => RateLimitPartition.GetFixedWindowLimiter(
@@ -424,9 +427,7 @@ for (int attempt = 1; attempt <= maxInitializationAttempts; attempt++)
     {
         var roleTimer = System.Diagnostics.Stopwatch.StartNew();
 
-        await DbInitializer.SeedRolesAsync(
-            app.Services,
-            seedBasicAccounts: app.Environment.IsDevelopment());
+        await DbInitializer.SeedRolesAsync(app.Services);
 
         roleTimer.Stop();
 
@@ -436,13 +437,12 @@ for (int attempt = 1; attempt <= maxInitializationAttempts; attempt++)
 
         var tutorTimer = System.Diagnostics.Stopwatch.StartNew();
 
-        if (app.Environment.IsDevelopment())
-            await DbInitializer.SeedEnrollmentTestTutorAsync(app.Services, app.Configuration);
+        await DbInitializer.BootstrapAdminAsync(app.Services, app.Configuration);
 
         tutorTimer.Stop();
 
         app.Logger.LogWarning(
-            "PERFORMANCE: SeedEnrollmentTestTutorAsync took {ElapsedMs} ms.",
+            "PERFORMANCE: BootstrapAdminAsync took {ElapsedMs} ms.",
             tutorTimer.ElapsedMilliseconds);
 
         initializationTimer.Stop();
@@ -623,4 +623,6 @@ app.MapRazorPages();
  */
 
 app.Run();
+
+
 

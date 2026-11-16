@@ -15,6 +15,13 @@ namespace SecureSmartTuitionSystem.ViewModels.Student
             = string.Empty;
 
         public int ActiveClassCount { get; set; }
+        public DateTime Today { get; set; }
+        public DateTime? NextStartDate { get; set; }
+        public int TodayClassCount => TodayLessons.Count(x => !x.Cancelled);
+        public int AssessmentsDueCount { get; set; }
+        public List<SecureSmartTuitionSystem.ViewModels.Enrollment.LessonItem> TodayLessons { get; set; } = new();
+        public List<StudentDashboardAssessment> UpcomingAssessments { get; set; } = new();
+
 
         public List<StudentDashboardClassViewModel>
             Classes
@@ -24,6 +31,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Student
 
     public class StudentDashboardClassViewModel
     {
+        public int ClassSessionId { get; set; }
         public string ClassCode { get; set; }
             = string.Empty;
 
@@ -41,5 +49,15 @@ namespace SecureSmartTuitionSystem.ViewModels.Student
 
         public string EndTime { get; set; }
             = string.Empty;
+    }
+}
+namespace SecureSmartTuitionSystem.ViewModels.Student
+{
+    public sealed class StudentDashboardAssessment
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Subject { get; set; } = "";
+        public DateTime DueAtMyt { get; set; }
     }
 }

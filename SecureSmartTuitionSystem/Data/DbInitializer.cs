@@ -1,448 +1,108 @@
-﻿using Microsoft.AspNetCore.Identity;
+using System.Data;
+using System.Text;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Models;
 using SecureSmartTuitionSystem.Models.Identity;
+using SecureSmartTuitionSystem.Services.Authentication;
 
-namespace SecureSmartTuitionSystem.Data
+namespace SecureSmartTuitionSystem.Data;
+
+public static class DbInitializer
 {
-    public static class DbInitializer
+    private const string AdminName = "AD00001";
+    private const string AdminEmail = "edusmart2627@gmail.com";
+
+    public static async Task SeedRolesAsync(IServiceProvider services)
     {
-        private const string InitialPassword = "Password123!";
-        private const string AdminUserName = "AD00001";
-        private const string AdminEmail = "admin@gmail.com";
-        private const string TutorUserName = "TU00001";
-        private const string TutorEmail = "tutor@gmail.com";
-        private const string ParentUserName = "PA00001";
-        private const string ParentEmail = "parent@gmail.com";
-        private const string StudentUserName = "ST00001";
-        private const string StudentEmail = "student@gmail.com";
+        using var scope = services.CreateScope();
+        var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        foreach (string name in new[] { "Admin", "Tutor", "Parent", "Student" })
+            if (!await roles.RoleExistsAsync(name))
+                Ensure(await roles.CreateAsync(new IdentityRole(name)));
+    }
 
-        public static async Task SeedRolesAsync(
-            IServiceProvider serviceProvider,
-            bool seedBasicAccounts = false)
+    public static async Task BootstrapAdminAsync(IServiceProvider services, IConfiguration config)
+    {
+        // Explicit first-deployment switch; no demo accounts or shared passwords.
+        if (!config.GetValue<bool>("BootstrapAdmin:Enabled")) return;
+        using var scope = services.CreateScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("BootstrapAdmin");
+        ApplicationUser admin;
+        await using (var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable))
         {
-            using IServiceScope scope = serviceProvider.CreateScope();
-
-            RoleManager<IdentityRole> roleManager =
-                scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-            UserManager<ApplicationUser> userManager =
-                scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            ApplicationDbContext context =
-                scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-            await CreateRolesAsync(roleManager);
-
-            if (!seedBasicAccounts)
+            var admins = await users.GetUsersInRoleAsync("Admin");
+            if (admins.Count > 0)
             {
-                return;
+                var pending = admins.SingleOrDefault(user => user.UserName == AdminName
+                    && string.Equals(user.Email, AdminEmail, StringComparison.OrdinalIgnoreCase)
+                    && user.IsActive && user.MustChangePassword && user.PasswordHash == null);
+                if (admins.Count != 1 || pending == null)
+                {
+                    logger.LogInformation("Bootstrap skipped: an administrator already exists.");
+                    return;
+                }
+                admin = pending;
             }
-
-            await SeedBasicAccountsAsync(userManager);
-            await SeedAdminProfileAsync(context, userManager);
-            await SeedTutorProfileAsync(context, userManager);
-            await SeedParentProfileAsync(context, userManager);
-            await SeedStudentProfileAsync(context, userManager);
-        }
-
-        public static async Task SeedEnrollmentTestTutorAsync(
-    IServiceProvider serviceProvider,
-    IConfiguration configuration)
-        {
-            if (!configuration.GetValue<bool>("Testing:SeedTutor"))
+            else
             {
-                return;
+                if (await db.Users.AnyAsync())
+                    throw new InvalidOperationException("First-admin bootstrap requires an empty account database. Existing accounts were not changed.");
+                _ = PublicOrigin(config);
+                admin = new ApplicationUser
+                {
+                    UserName = AdminName, Email = AdminEmail, FullName = "EduSmart Administrator",
+                    IsActive = true, LockoutEnabled = true, EmailConfirmed = false,
+                    MustChangePassword = true, TwoFactorEnabled = true
+                };
+                Ensure(await users.CreateAsync(admin));
+                Ensure(await users.AddToRoleAsync(admin, "Admin"));
+                db.AdminProfiles.Add(new AdminProfile
+                {
+                    ApplicationUserId = admin.Id, FullName = admin.FullName,
+                    Position = "Administrator", CreatedAt = DateTime.UtcNow
+                });
+                await db.SaveChangesAsync();
             }
-
-            using IServiceScope scope = serviceProvider.CreateScope();
-
-            var userManager = scope.ServiceProvider
-                .GetRequiredService<UserManager<ApplicationUser>>();
-
-            var context = scope.ServiceProvider
-                .GetRequiredService<ApplicationDbContext>();
-
-            var tutor = await userManager.FindByNameAsync(TutorUserName);
-
-            if (tutor != null)
-            {
-                return;
-            }
-
-            if (await userManager.FindByEmailAsync(TutorEmail) != null)
-            {
-                throw new InvalidOperationException(
-                    "The test tutor email is already used by another account.");
-            }
-
-            await using var transaction =
-                await context.Database.BeginTransactionAsync();
-
-            tutor = new ApplicationUser
-            {
-                UserName = TutorUserName,
-                Email = TutorEmail,
-                FullName = "Test Tutor",
-                IsActive = true,
-                EmailConfirmed = false,
-                MustChangePassword = true,
-                LockoutEnabled = true,
-                TwoFactorEnabled = true
-            };
-
-            // Used for class assignment; no login password is created.
-            EnsureIdentitySucceeded(
-                await userManager.CreateAsync(tutor),
-                "Unable to create the test tutor.");
-
-            EnsureIdentitySucceeded(
-                await userManager.AddToRoleAsync(tutor, "Tutor"),
-                "Unable to assign the Tutor role.");
-
-            await SeedTutorProfileAsync(context, userManager);
-
             await transaction.CommitAsync();
         }
-
-        private static async Task CreateRolesAsync(
-            RoleManager<IdentityRole> roleManager)
+        try
         {
-            string[] roleNames = { "Admin", "Tutor", "Parent", "Student" };
-
-            foreach (string roleName in roleNames)
-            {
-                if (await roleManager.RoleExistsAsync(roleName))
+            string token = await users.GeneratePasswordResetTokenAsync(admin);
+            string url = QueryHelpers.AddQueryString(PublicOrigin(config) + "/Identity/Account/SetupPassword",
+                new Dictionary<string, string?>
                 {
-                    continue;
-                }
-
-                IdentityResult result = await roleManager.CreateAsync(
-                    new IdentityRole(roleName));
-
-                EnsureIdentitySucceeded(
-                    result,
-                    $"Unable to create the {roleName} role.");
-            }
-        }
-
-        private static async Task SeedBasicAccountsAsync(
-            UserManager<ApplicationUser> userManager)
-        {
-            await CreateBasicAccountAsync(
-                userManager, AdminUserName, AdminEmail,
-                "System Administrator", "Admin");
-            await CreateBasicAccountAsync(
-                userManager, TutorUserName, TutorEmail,
-                "Test Tutor", "Tutor");
-            await CreateBasicAccountAsync(
-                userManager, ParentUserName, ParentEmail,
-                "Test Parent", "Parent");
-            await CreateBasicAccountAsync(
-                userManager, StudentUserName, StudentEmail,
-                "Test Student", "Student");
-        }
-
-
-        private static async Task<ApplicationUser> CreateBasicAccountAsync(
-            UserManager<ApplicationUser> userManager,
-            string userName,
-            string email,
-            string fullName,
-            string roleName)
-        {
-            ApplicationUser? user =
-                await userManager.FindByNameAsync(userName);
-
-            if (user == null)
-            {
-                ApplicationUser? emailOwner =
-                    await userManager.FindByEmailAsync(email);
-
-                if (emailOwner != null)
-                {
-                    throw new InvalidOperationException(
-                        $"Cannot create {userName}. The email {email} " +
-                        "is already used by another account.");
-                }
-
-                user = new ApplicationUser
-                {
-                    UserName = userName,
-                    Email = email,
-                    FullName = fullName,
-                    IsActive = true,
-                    LockoutEnabled = true,
-                    EmailConfirmed = false,
-                    MustChangePassword = false,
-                    TwoFactorEnabled = true
-                };
-
-                IdentityResult createResult =
-                    await userManager.CreateAsync(
-                        user,
-                        InitialPassword);
-
-                EnsureIdentitySucceeded(
-                    createResult,
-                    $"Unable to create demo account {userName}.");
-            }
-
-            // Existing accounts must not be overwritten by seeding.
-            // Preserve Email, FullName, IsActive and MustChangePassword.
-
-            if (!await userManager.IsInRoleAsync(user, roleName))
-            {
-                IdentityResult roleResult =
-                    await userManager.AddToRoleAsync(user, roleName);
-
-                EnsureIdentitySucceeded(
-                    roleResult,
-                    $"Unable to assign the {roleName} role to {userName}.");
-            }
-
-            return user;
-        }
-
-
-
-        private static async Task SeedAdminProfileAsync(
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
-        {
-            ApplicationUser? user =
-                await userManager.FindByNameAsync(AdminUserName);
-
-            if (user == null)
-                return;
-
-            AdminProfile? profile = await context.AdminProfiles
-                .FirstOrDefaultAsync(
-                    x => x.ApplicationUserId == user.Id);
-
-            // Only create the profile if it does not exist.
-            // Do not overwrite existing Admin Profile information.
-            if (profile != null)
-                return;
-
-            context.AdminProfiles.Add(new AdminProfile
-            {
-                ApplicationUserId = user.Id,
-                FullName = user.FullName ?? "System Administrator",
-                Position = "Administrator",
-                CreatedAt = DateTime.UtcNow
-            });
-
-            await context.SaveChangesAsync();
-        }
-
-        private static async Task SeedTutorProfileAsync(
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
-        {
-            ApplicationUser? user =
-                await userManager.FindByNameAsync(TutorUserName);
-            if (user == null) return;
-
-            TutorProfile? profile = await context.TutorProfiles
-                .FirstOrDefaultAsync(x => x.ApplicationUserId == user.Id);
-
-            if (profile == null)
-            {
-                context.TutorProfiles.Add(new TutorProfile
-                {
-                    ApplicationUserId = user.Id,
-                    FullName = user.FullName ?? "Test Tutor",
-                    Qualification = "Bachelor's Degree",
-                    TeachingExperience = "3 years teaching experience",
-                    AreaOfExpertise = "Mathematics",
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
+                    ["userId"] = admin.Id,
+                    ["token"] = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token))
                 });
-                await context.SaveChangesAsync();
-                return;
-            }
-
-            bool changed = false;
-            string fullName = user.FullName ?? "Test Tutor";
-
-            if (profile.FullName != fullName)
-            {
-                profile.FullName = fullName;
-                changed = true;
-            }
-
-            if (!profile.IsActive)
-            {
-                profile.IsActive = true;
-                changed = true;
-            }
-
-            if (changed) await context.SaveChangesAsync();
+            await scope.ServiceProvider.GetRequiredService<IAdminAccountSetupEmailService>()
+                .SendAsync(AdminEmail, admin.FullName ?? "", AdminName, url);
+            logger.LogInformation("First administrator setup email sent. Disable BootstrapAdmin:Enabled after setup.");
         }
-
-        private static async Task SeedParentProfileAsync(
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
+        catch (Exception exception)
         {
-            ApplicationUser? user =
-                await userManager.FindByNameAsync(ParentUserName);
-            if (user == null) return;
-
-            ParentProfile? profile = await context.ParentProfiles
-                .FirstOrDefaultAsync(x => x.ApplicationUserId == user.Id);
-
-            if (profile == null)
-            {
-                context.ParentProfiles.Add(new ParentProfile
-                {
-                    ApplicationUserId = user.Id,
-                    FullName = user.FullName ?? "Test Parent",
-                    IdentificationNumber = "000000-00-1234",
-                    IdentificationLast4 = "1234",
-                    CreatedAt = DateTime.UtcNow
-                });
-                await context.SaveChangesAsync();
-                return;
-            }
-
-            string fullName = user.FullName ?? "Test Parent";
-            if (profile.FullName != fullName)
-            {
-                profile.FullName = fullName;
-                await context.SaveChangesAsync();
-            }
+            // Never log tokens, URLs, credentials or SMTP exception messages.
+            logger.LogWarning("First administrator setup email failed ({ErrorType}). Configure email and public URL, then restart with bootstrap enabled to retry. The account remains pending.", exception.GetType().Name);
         }
+    }
 
-        private static async Task SeedStudentProfileAsync(
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
-        {
-            ApplicationUser? user =
-                await userManager.FindByNameAsync(
-                    StudentUserName);
+    private static string PublicOrigin(IConfiguration config)
+    {
+        if (!Uri.TryCreate(config["App:PublicBaseUrl"], UriKind.Absolute, out var uri)
+            || uri.Scheme != Uri.UriSchemeHttps || uri.IsLoopback
+            || !string.IsNullOrEmpty(uri.UserInfo) || uri.AbsolutePath != "/"
+            || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+            throw new InvalidOperationException("App:PublicBaseUrl must be a public HTTPS origin.");
+        return uri.GetLeftPart(UriPartial.Authority);
+    }
 
-            if (user == null)
-            {
-                return;
-            }
-
-            StudentProfile? studentProfile =
-                await context.StudentProfiles
-                    .FirstOrDefaultAsync(
-                        student =>
-                            student.ApplicationUserId ==
-                                user.Id);
-
-            ApplicationUser? parentUser =
-                await userManager.FindByNameAsync(
-                    ParentUserName);
-
-            if (parentUser == null)
-            {
-                return;
-            }
-
-            ParentProfile? parent =
-                await context.ParentProfiles
-                    .FirstOrDefaultAsync(
-                        profile =>
-                            profile.ApplicationUserId ==
-                                parentUser.Id);
-
-            if (parent == null)
-            {
-                return;
-            }
-
-            if (studentProfile == null)
-            {
-                studentProfile =
-                    new StudentProfile
-                    {
-                        ApplicationUserId =
-                            user.Id,
-
-                        StudentNumber =
-                            StudentUserName,
-
-                        FullName =
-                            user.FullName
-                            ?? "Test Student",
-
-                        IdentificationNumber =
-                            "090101-10-1234",
-
-                        DateOfBirth =
-                            new DateTime(2009, 1, 1),
-
-                        Gender =
-                            "Female",
-
-                        School =
-                            "Test School",
-
-                        AcademicLevel =
-                            "Form 5",
-
-                        IsActive =
-                            true,
-
-                        CreatedAt =
-                            DateTime.UtcNow
-                    };
-
-                context.StudentProfiles.Add(
-                    studentProfile);
-
-                await context.SaveChangesAsync();
-            }
-
-            bool linkExists =
-                await context.ParentStudents
-                    .AnyAsync(link =>
-                        link.ParentProfileId ==
-                            parent.ParentProfileId &&
-                        link.StudentProfileId ==
-                            studentProfile.StudentProfileId);
-
-            if (!linkExists)
-            {
-                context.ParentStudents.Add(
-                    new ParentStudent
-                    {
-                        ParentProfileId =
-                            parent.ParentProfileId,
-
-                        StudentProfileId =
-                            studentProfile.StudentProfileId,
-
-                        Relationship =
-                            "Parent",
-
-                        IsPrimaryGuardian =
-                            true,
-
-                        IsActive =
-                            true,
-
-                        LinkedAt =
-                            DateTime.UtcNow
-                    });
-
-                await context.SaveChangesAsync();
-            }
-        }
-
-        private static void EnsureIdentitySucceeded(
-            IdentityResult result,
-            string errorMessage)
-        {
-            if (result.Succeeded) return;
-
-            string errors = string.Join(
-                "; ",
-                result.Errors.Select(error => error.Description));
-
-            throw new InvalidOperationException($"{errorMessage} {errors}");
-        }
+    private static void Ensure(IdentityResult result)
+    {
+        if (!result.Succeeded)
+            throw new InvalidOperationException("Account initialization failed: "
+                + string.Join(", ", result.Errors.Select(error => error.Code)));
     }
 }

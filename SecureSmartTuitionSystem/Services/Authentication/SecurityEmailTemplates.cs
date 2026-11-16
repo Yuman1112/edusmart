@@ -121,6 +121,56 @@ public static class SecurityEmailTemplates
             """);
     }
 
+    public static string AdminAccountSetup(string adminName, string adminUserId, string setupUrl)
+    {
+        string safeName = WebUtility.HtmlEncode(adminName);
+        string safeUserId = WebUtility.HtmlEncode(adminUserId);
+        string safeUrl = WebUtility.HtmlEncode(setupUrl);
+
+        return Layout("Set up your administrator account", $$"""
+            <p>Hello {{safeName}},</p>
+
+            <p>An administrator account has been created for you in EduSmart.</p>
+
+            <div style="padding:18px 20px;background:#f0fbfc;
+                        border:1px solid #cce9ed;border-radius:10px;margin:24px 0;">
+                <p style="font-size:12px;font-weight:bold;color:#0097a7;margin:0 0 6px;">
+                    YOUR ADMIN ID
+                </p>
+                <p style="font-size:20px;font-weight:bold;color:#07356b;margin:0;">
+                    {{safeUserId}}
+                </p>
+            </div>
+
+            <p>Click the button below to create your password and activate your login access.</p>
+
+            <p style="text-align:center;margin:30px 0;">
+                <a href="{{safeUrl}}"
+                   style="display:inline-block;background:#0799a4;
+                          color:#ffffff;padding:13px 25px;
+                          text-decoration:none;border-radius:7px;font-weight:bold;">
+                    Set Up My Account
+                </a>
+            </p>
+
+            <p>This setup link is valid for a limited time. If it expires,
+               contact your administrator or EduSmart support to request a new setup email.</p>
+
+            <p>If you did not expect this invitation, please ignore this email
+               and contact EduSmart support.</p>
+
+            <p style="font-size:12px;margin-top:25px;">
+                If the button does not work, copy this address into your browser:
+            </p>
+            <p style="font-size:12px;overflow-wrap:anywhere;word-break:break-all;">
+                <a href="{{safeUrl}}" style="color:#0799a4;">{{safeUrl}}</a>
+            </p>
+            <p style="font-size:12px;color:#556;margin-top:25px;">
+                This is an automated account notification from EduSmart.
+            </p>
+            """);
+    }
+
     public static string ForgotPassword(string resetUrl)
     {
         string safeUrl = WebUtility.HtmlEncode(resetUrl);

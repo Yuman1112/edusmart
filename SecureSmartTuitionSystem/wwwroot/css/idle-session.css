@@ -1,0 +1,7 @@
+#idle-session-modal .modal-header { color: #083562; background: #effbfc; padding: 1.5rem 1.5rem 1rem !important; border-radius: 1rem 1rem 0 0; }
+#idle-session-modal .modal-body { padding: 1.5rem; color: #173b57; }
+#idle-session-modal .modal-footer { padding: 0 1.5rem 1.5rem; }
+#idle-session-modal .btn { border-radius: .65rem; padding: .65rem 1rem; }
+#idle-session-modal .btn-primary { background: #0097a7; border-color: #0097a7; }
+#idle-session-modal .btn-primary:hover { background: #007c8b; border-color: #007c8b; }
+#idle-session-modal .btn:focus-visible { outline: 3px solid #057382; outline-offset: 3px; box-shadow: none; }

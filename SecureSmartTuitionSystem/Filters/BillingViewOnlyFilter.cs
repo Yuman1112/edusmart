@@ -13,7 +13,7 @@ public sealed class BillingViewOnlyFilter(MonthlyBillingService billing) : IAsyn
             (!context.HttpContext.User.IsInRole("Parent") && !context.HttpContext.User.IsInRole("Student"))) { await next(); return; }
         // Reading, payment, account access, support, read markers and withdrawals
         // stay available. Do not lock a debtor out of the route needed to settle.
-        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Payments", "MonthlyBilling", "Messages", "Faq", "NotificationCenter", "Announcements", "EnrollmentExits", "Home" };
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Payments", "MonthlyBilling", "Messages", "Faq", "NotificationCenter", "Announcements", "EnrollmentExits", "Home", "Session" };
         if (!allowed.Contains(action.ControllerName) && await billing.HasRestrictionAsync(context.HttpContext.User,context.HttpContext.RequestAborted))
         {
             if (context.Controller is Controller controller) controller.TempData["ErrorMessage"]="An overdue monthly tuition bill restricts new enrollment and academic changes. You can still view records, pay, withdraw and contact the centre.";

@@ -1,44 +1,90 @@
 @model SecureSmartTuitionSystem.ViewModels.Student.StudentDashboardViewModel
+@using System.Globalization
 @{
     ViewData["Title"] = "Student Dashboard";
     Layout = "/Views/Shared/_Layout.cshtml";
+    var culture = CultureInfo.InvariantCulture;
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/learner-dashboard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/student-dashboard.css" asp-append-version="true" />
 }
-<div class="learner-dashboard">
+<div class="learner-dashboard student-dashboard">
     <header class="learner-welcome">
         <div>
-            <span class="learner-eyebrow">MY LEARNING SPACE</span>
             <h1>Hello, @Model.StudentName</h1>
-            <p>Your classes and learning essentials, in one place.</p>
-            <div class="learner-identity"><span>@Model.StudentUserName</span><span>@Model.AcademicLevel</span>@if (!string.IsNullOrWhiteSpace(Model.School)) {
-            <span>@Model.School</span>
-                        }
-</div>
+            <p>Ready for your next lesson?</p>
+            <div class="learner-identity"><span>@Model.StudentUserName</span><span>@culture.TextInfo.ToTitleCase(Model.AcademicLevel.ToLowerInvariant())</span></div>
         </div>
         <a asp-controller="LearningClasses" asp-action="Index" class="learner-button"><i class="bi bi-calendar-week" aria-hidden="true"></i> My Class Schedule <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
     </header>
-    <div class="learner-content-grid">
-        <section class="learner-panel">
-            <div class="learner-section-heading"><div><h2>My Classes</h2><p>Your currently accessible classes.</p></div><span class="learner-count">@Model.ActiveClassCount active</span></div>
-            @if (Model.Classes.Count == 0)
-            {
-                <div class="learner-empty"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><h3>Your classes will appear here</h3><p>No classes are currently open. Class access starts on your enrollment start date.</p><a asp-controller="LearningClasses" asp-action="Index" class="learner-text-link">View enrollment &amp; schedules <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
-            }
-            else
-            {
-                <div class="learner-class-list">
-                    @foreach (var item in Model.Classes)
+    <section class="student-summary" aria-label="Learning overview">
+        <div class="student-stat"><span class="learner-row-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></span><div><h2>Active Classes</h2><strong>@Model.ActiveClassCount</strong></div></div>
+        <div class="student-stat"><span class="learner-row-icon"><i class="bi bi-calendar-event" aria-hidden="true"></i></span><div><h2>Classes Today</h2><strong>@Model.TodayClassCount</strong></div></div>
+        <div class="student-stat"><span class="learner-row-icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span><div><h2>Assessments Due</h2><strong>@Model.AssessmentsDueCount</strong></div></div>
+    </section>
+    <div class="student-content-grid">
+        <div class="student-column">
+            <section class="learner-panel" aria-labelledby="today-classes-title">
+                <div class="learner-section-heading"><div><h2 id="today-classes-title">Today’s Classes</h2><p>@Model.Today.ToString("dddd, dd MMMM yyyy", culture) · MYT</p></div><a asp-controller="LearningClasses" asp-action="Index" asp-route-mode="today" class="learner-text-link">View schedule <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                @if (Model.TodayLessons.Count == 0)
+                {
+                    <div class="learner-empty"><i class="bi bi-calendar-check" aria-hidden="true"></i><h3>No classes today</h3><p>Check your schedule for upcoming lessons.</p></div>
+                }
+                else
+                {
+                    @foreach (var lesson in Model.TodayLessons)
                     {
-                        <article class="learner-class-row"><div class="learner-row-icon"><i class="bi bi-book" aria-hidden="true"></i></div><div class="learner-row-content"><h3>@item.SubjectName</h3><p>@item.ClassName</p><span class="learner-schedule"><i class="bi bi-clock" aria-hidden="true"></i> @item.Day · @item.StartTime–@item.EndTime</span></div><span class="learner-code">@item.ClassCode</span></article>
+                        <article class="student-lesson @(lesson.Cancelled ? "student-lesson-cancelled" : "")">
+                            <span class="learner-row-icon"><i class="bi bi-book" aria-hidden="true"></i></span>
+                            <div class="student-row-copy"><h3>@lesson.Class.Subject.SubjectName</h3><p>@lesson.Class.ClassName</p><span class="learner-schedule"><i class="bi bi-clock" aria-hidden="true"></i> @lesson.Start.ToString("hh:mm tt", culture)–@lesson.End.ToString("hh:mm tt", culture)</span></div>
+                            <div class="student-lesson-actions"><span class="student-status @(lesson.Cancelled ? "student-status-cancelled" : lesson.Replacement ? "student-status-replacement" : "")">@lesson.Status</span>
+                                <a asp-controller="LearningClasses" asp-action="Details" asp-route-id="@lesson.Class.ClassSessionId" asp-route-date="@lesson.Date.ToString("yyyy-MM-dd", culture)" asp-route-changeId="@lesson.ChangeId" asp-route-replacement="@lesson.Replacement" class="student-small-button">View lesson</a>
+                            </div>
+                        </article>
                     }
+                }
+            </section>
+            <section class="learner-panel" aria-labelledby="my-classes-title">
+                <div class="learner-section-heading"><div><h2 id="my-classes-title">My Classes <span class="learner-count">@Model.ActiveClassCount active</span></h2></div><a asp-controller="LearningClasses" asp-action="Index" class="learner-text-link">View all <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                @if (Model.Classes.Count == 0)
+                {
+                    <div class="learner-empty"><i class="bi bi-journal-bookmark" aria-hidden="true"></i><h3>@(Model.NextStartDate.HasValue ? "Your classes have not started yet" : "No active classes yet")</h3><p>@(Model.NextStartDate.HasValue ? $"Your next enrollment starts on {Model.NextStartDate.Value.ToString("dd MMM yyyy", culture)}. Lessons become available when class access opens." : "View your enrollment and schedule for class availability.")</p><a asp-controller="LearningClasses" asp-action="Index" class="learner-text-link">View enrollment &amp; schedules <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                }
+                else
+                {
+                    @foreach (var item in Model.Classes.Take(5))
+                    {
+                        <article class="student-class"><span class="learner-row-icon"><i class="bi bi-journal-bookmark" aria-hidden="true"></i></span><div class="student-row-copy"><h3>@item.SubjectName</h3><p>@item.ClassName <span class="student-class-code">· @item.ClassCode</span></p><span class="learner-schedule">@item.Day · @item.StartTime–@item.EndTime</span></div><a asp-controller="LearningMaterials" asp-action="Index" asp-route-ClassId="@item.ClassSessionId" class="learner-text-link" aria-label="View materials for @item.ClassName">Materials <i class="bi bi-arrow-right" aria-hidden="true"></i></a></article>
+                    }
+                    @if (Model.Classes.Count > 5) { <p class="student-more">Showing 5 of @Model.ActiveClassCount classes. Open View all for your full schedule.</p> }
+                }
+            </section>
+        </div>
+        <div class="student-column">
+            <section class="learner-panel" aria-labelledby="assessments-title">
+                <div class="learner-section-heading"><div><h2 id="assessments-title">Assessments</h2></div><a asp-controller="Assessments" asp-action="Index" class="learner-text-link">View all <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                @if (Model.UpcomingAssessments.Count == 0)
+                {
+                    <div class="learner-empty"><i class="bi bi-clipboard-check" aria-hidden="true"></i><h3>You’re all caught up</h3><p>No assessments waiting for submission.</p></div>
+                }
+                else
+                {
+                    @foreach (var item in Model.UpcomingAssessments)
+                    {
+                        <a asp-controller="Assessments" asp-action="Details" asp-route-id="@item.Id" class="student-assessment"><span class="learner-row-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span><div class="student-row-copy"><h3>@item.Title</h3><p>@item.Subject</p><span class="student-due"><i class="bi bi-calendar-event" aria-hidden="true"></i> Due @item.DueAtMyt.ToString("dd MMM, h:mm tt", culture) MYT</span><span class="student-status student-status-replacement">Not submitted</span></div><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+                    }
+                }
+            </section>
+            <section class="learner-panel student-shortcuts" aria-labelledby="learning-shortcuts-title">
+                <div class="learner-section-heading"><h2 id="learning-shortcuts-title">Quick access</h2></div>
+                <div class="student-quick-grid">
+                <a asp-controller="LearningMaterials" asp-action="Index" class="student-shortcut"><span class="learner-row-icon"><i class="bi bi-folder2-open" aria-hidden="true"></i></span><div><h3>Learning Materials</h3></div></a>
+                <a asp-controller="VideoLessons" asp-action="Index" class="student-shortcut"><span class="learner-row-icon"><i class="bi bi-play-btn" aria-hidden="true"></i></span><div><h3>Video Playback</h3></div></a>
+                <a asp-controller="Attendance" asp-action="Report" class="student-shortcut"><span class="learner-row-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></span><div><h3>My Attendance</h3></div></a>
+                <a asp-controller="Announcements" asp-action="Index" class="student-shortcut"><span class="learner-row-icon"><i class="bi bi-megaphone" aria-hidden="true"></i></span><div><h3>Announcements</h3></div></a>
                 </div>
-            }
-        </section>
-        <aside class="learner-shortcuts" aria-label="Student shortcuts">
-            <a asp-controller="Attendance" asp-action="Report" class="learner-shortcut"><span class="learner-shortcut-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></span><h2>My Attendance</h2><p>View your records and request a correction when needed.</p><span class="learner-text-link">View attendance <i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
-            <a asp-controller="Announcements" asp-action="Index" class="learner-shortcut"><span class="learner-shortcut-icon"><i class="bi bi-megaphone" aria-hidden="true"></i></span><h2>Announcements</h2><p>Read the latest updates from your tuition centre.</p><span class="learner-text-link">Read updates <i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
-        </aside>
+            </section>
+        </div>
     </div>
 </div>

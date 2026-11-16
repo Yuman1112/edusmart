@@ -47,6 +47,11 @@
             </p>
         </div>
 
+        @if (Request.Query["reason"] == "expired")
+        {
+            <div class="alert alert-warning" role="alert"><strong>Session expired.</strong> Your session ended after inactivity. Please sign in again.</div>
+        }
+
         @* 2FA Enable / Disable success *@
         @if (!string.IsNullOrWhiteSpace(authSuccess))
         {

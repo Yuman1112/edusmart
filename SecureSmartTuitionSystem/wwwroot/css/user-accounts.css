@@ -1,0 +1,46 @@
+/* Scoped to account management; shared navigation and other modules are unchanged. */
+.user-accounts-page { max-width:1450px; margin:0 auto; color:var(--navy); }
+.user-accounts-page .page-header { gap:20px; }
+.user-accounts-page .page-header > div { min-width:0; }
+.user-accounts-page .page-header > a { flex-shrink:0; }
+.account-filter-grid { display:grid; grid-template-columns:minmax(0,2fr) minmax(180px,1fr) auto; align-items:end; gap:18px; }
+.account-filter-grid > div { min-width:0; }
+.user-accounts-page .form-label { color:var(--navy); font-weight:700; margin-bottom:7px; }
+.user-accounts-page .form-control,.user-accounts-page .form-select { min-height:44px; border:1px solid var(--border); border-radius:9px; color:var(--navy); background-color:#fff; }
+.edusmart-ui main .user-accounts-page .form-control:focus,
+.edusmart-ui main .user-accounts-page .form-select:focus { outline:none; border-color:var(--teal); box-shadow:0 0 0 .2rem rgba(7,152,164,.12); }
+.edusmart-ui main .user-accounts-page .form-control.input-validation-error { border-color:#dc3545; }
+.edusmart-ui main .user-accounts-page .form-control.input-validation-error:focus { box-shadow:0 0 0 .2rem rgba(220,53,69,.12); }
+.account-results { margin-top:24px; }
+.account-results .dashboard-card-header h2 { display:flex; align-items:center; gap:9px; margin:0; }
+.account-results .dashboard-card-header h2 i { color:var(--teal); }
+.account-count,.account-current { color:var(--muted); font-size:.85rem; }
+.account-table { width:100%; min-width:900px; margin:0; }
+.account-table th,.account-table td { padding:14px 16px; border-color:var(--border); vertical-align:middle; }
+.account-table thead th { background:#f5fbfc; color:var(--navy); font-size:.78rem; text-transform:uppercase; white-space:nowrap; }
+.account-table th:first-child { width:60px; }
+.account-table th:nth-child(2) { width:115px; }
+.account-table th:nth-child(5) { width:100px; }
+.account-table th:nth-child(6) { width:130px; }
+.account-table th:last-child { width:205px; }
+.account-table td:nth-child(3),.account-table td:nth-child(4) { overflow-wrap:anywhere; }
+.account-table .account-user-id { font-weight:700; white-space:nowrap; }
+.account-table tbody tr:last-child td { border-bottom:0; }
+.account-table tbody tr { background:#fff; }
+.account-table .outline-button { min-height:34px; padding:6px 10px; font-size:.82rem; }
+.account-status { display:inline-flex; padding:5px 10px; border-radius:999px; font-size:.8rem; font-weight:700; white-space:nowrap; }
+.account-status-active { background:#d1fae5; color:#047857; }
+.account-status-inactive { background:#f1f5f9; color:#64748b; }
+.account-status-pending { background:#fff1cc; color:#946200; }
+.account-empty { margin:0; padding:30px 24px; color:var(--muted); }
+.user-accounts-page.account-form-page { max-width:1100px; }
+.user-accounts-page .class-form-card { max-width:none; margin:0; }
+.account-section-title { font-size:1.08rem; font-weight:750; margin:0 0 10px; }
+.account-form-note { margin:0 0 24px; padding:12px 15px; border-radius:9px; background:#f2fafb; color:var(--muted); font-size:.9rem; }
+.user-accounts-page .validation-summary-valid { display:none; }
+.user-accounts-page .class-form-actions { flex-wrap:wrap; }
+@media(max-width:767px) {
+    .account-filter-grid { grid-template-columns:minmax(0,1fr); gap:14px; }
+    .account-filter-grid .primary-button { width:100%; justify-content:center; }
+    .user-accounts-page .page-header { flex-wrap:wrap; }
+}

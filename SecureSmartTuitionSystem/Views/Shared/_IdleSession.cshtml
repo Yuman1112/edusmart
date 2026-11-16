@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="~/css/idle-session.css" asp-append-version="true" />
+<div id="idle-session" data-status-url="@Url.Action("Status", "Session")"
+     data-activity-url="@Url.Action("Activity", "Session")"
+     data-login-url="@Url.Content("~/Identity/Account/Login?reason=expired")">
+    @Html.AntiForgeryToken()
+    <div class="modal fade" id="idle-session-modal" tabindex="-1" aria-labelledby="idle-session-title" aria-describedby="idle-session-description" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0"><h2 class="modal-title fs-5" id="idle-session-title">Your session is about to expire</h2></div>
+            <div class="modal-body"><p id="idle-session-description">You have been inactive for a while. Continue your session to stay signed in.</p>
+                <p class="mb-0 text-secondary">Signing out in <strong id="idle-session-countdown">02:00</strong></p>
+                <p id="idle-session-error" class="text-danger mt-3 mb-0" role="alert" hidden>Unable to verify your session. Check your connection and try again.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <form method="post" action="@Url.Content("~/Identity/Account/Logout")">@Html.AntiForgeryToken()<button class="btn btn-outline-secondary" type="submit">Sign out</button></form>
+                <button id="idle-session-continue" class="btn btn-primary" type="button">Continue session</button>
+            </div>
+        </div></div>
+    </div>
+</div>
+<script src="~/js/idle-session.js" asp-append-version="true"></script>

@@ -64,12 +64,8 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
         {
             ReturnUrl = returnUrl;
 
-            if (reason == "expired")
-            {
-                ModelState.AddModelError(
-                    string.Empty,
-                    "Your session expired. Please sign in again.");
-            }
+            // Expiry is informational and displayed once by Login.cshtml.
+            // Keep ModelState for actual sign-in validation failures.
 
             if (TempData["TwoFactorSuccess"] is string message)
             {

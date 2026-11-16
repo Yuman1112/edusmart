@@ -1,0 +1,12 @@
+.account-profile-page { max-width: 1240px; margin: 0 auto; }
+.account-profile-page .class-details-title h2 { overflow-wrap: anywhere; }
+.account-profile-page .profile-role { padding: 6px 14px; border-radius: 999px; color: #007582; background: #e5f8f9; font-size: .8rem; font-weight: 700; }
+.account-profile-page .class-detail-item strong { overflow-wrap: anywhere; }
+.account-profile-page .profile-address { white-space: pre-line; }
+.account-profile-page .profile-edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.account-profile-page .profile-field { min-width: 0; }
+.account-profile-page .profile-wide { grid-column: 1 / -1; }
+.account-profile-page .form-control { border: 1px solid #cce1e8; border-radius: 9px; background: #fff; padding: 12px 14px; color: #073563; }
+.account-profile-page .form-control:focus { border-color: #008c9c; box-shadow: 0 0 0 3px #008c9c20; outline: none; }
+.account-profile-page .form-label { color: #073563; font-weight: 600; }
+@media (max-width: 575.98px) { .account-profile-page .profile-edit-grid { grid-template-columns: 1fr; } .account-profile-page .class-detail-header-actions { width: 100%; flex-wrap: wrap; } }

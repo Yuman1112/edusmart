@@ -1,0 +1,61 @@
+.student-dashboard .learner-welcome { border-bottom: 0; margin-bottom: 24px; padding-bottom: 0; }
+.student-dashboard .student-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; margin-bottom: 24px; }
+.student-dashboard .student-stat { display:flex; align-items:center; gap:18px; padding:22px 24px; background:#fff; border:1px solid var(--learner-border); border-radius:14px; }
+.student-dashboard .student-stat .learner-row-icon { width:52px; height:52px; font-size:1.6rem; }
+.student-dashboard .student-stat h2 { font-size:.9rem; font-weight:600; margin:0 0 5px; }
+.student-dashboard .student-stat strong { display:block; font-size:1.85rem; line-height:1.15; }
+.student-dashboard .student-stat p { margin:6px 0 0; color:var(--learner-muted); font-size:.75rem; }
+.student-dashboard .student-content-grid { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:24px; align-items:start; }
+.student-dashboard .student-column { display:grid; gap:24px; min-width:0; }
+.student-dashboard .learner-section-heading { align-items:start; margin-bottom:18px; }
+.student-dashboard .learner-section-heading h2 .learner-count { display:inline-block; vertical-align:middle; margin-left:6px; }
+.student-dashboard .learner-text-link { flex-shrink:0; font-size:.8rem; }
+.student-dashboard .student-lesson,.student-dashboard .student-class { display:flex; gap:14px; align-items:center; padding:20px 0; border-top:1px solid var(--learner-border); }
+.student-dashboard .student-row-copy { min-width:0; flex:1; }
+.student-dashboard h3 { margin:0; font-size:.95rem; font-weight:700; color:var(--learner-navy); overflow-wrap:anywhere; }
+.student-dashboard .student-row-copy p,.student-dashboard .student-shortcut p { margin:5px 0 8px; color:var(--learner-muted); font-size:.8rem; line-height:1.5; overflow-wrap:anywhere; }
+.student-dashboard .student-class-code { font-size:.73rem; }
+.student-dashboard .learner-schedule { font-size:.78rem; }
+.student-dashboard .student-lesson-actions { display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+.student-dashboard .student-status { display:inline-block; width:fit-content; padding:4px 9px; border-radius:6px; background:#e8f4fb; color:#075778; font-size:.72rem; font-weight:650; }
+.student-dashboard .student-status-replacement { background:#fff3d4; color:#805100; }
+.student-dashboard .student-status-cancelled { background:#fcebea; color:#9d3131; }
+.student-dashboard .student-small-button { padding:7px 11px; border-radius:8px; background:var(--learner-teal); color:#fff; text-decoration:none; font-size:.78rem; font-weight:600; white-space:nowrap; }
+.student-dashboard .student-small-button:hover { background:#007887; }
+.student-dashboard .student-assessment,.student-dashboard .student-shortcut { display:flex; gap:14px; align-items:center; padding:18px 0; border-top:1px solid var(--learner-border); text-decoration:none; color:var(--learner-navy); }
+.student-dashboard .student-assessment:hover h3,.student-dashboard .student-shortcut:hover h3 { color:var(--learner-teal); text-decoration:underline; }
+.student-dashboard .student-assessment .student-row-copy .student-status { margin-top:9px; }
+.student-dashboard .student-due { display:block; color:var(--learner-muted); font-size:.76rem; line-height:1.6; }
+.student-dashboard .student-shortcut > div { flex:1; min-width:0; }
+.student-dashboard .student-shortcut p { margin-bottom:0; }
+.student-dashboard .student-shortcut:last-child,.student-dashboard .student-class:last-child,.student-dashboard .student-lesson:last-child,.student-dashboard .student-assessment:last-child { padding-bottom:0; }
+.student-dashboard .student-more { color:var(--learner-muted); font-size:.8rem; margin:16px 0 0; }
+.student-dashboard a:focus-visible { outline:3px solid var(--learner-teal); outline-offset:4px; border-radius:6px; }
+@media(max-width:991.98px){ .student-dashboard .student-content-grid { grid-template-columns:1fr; } .student-dashboard .student-stat { padding:18px; gap:12px; } }
+@media(max-width:575.98px){ .student-dashboard .student-summary { grid-template-columns:1fr; gap:12px; } .student-dashboard .student-stat { padding:16px 20px; } .student-dashboard .learner-section-heading { flex-wrap:wrap; } .student-dashboard .student-lesson,.student-dashboard .student-class { flex-wrap:wrap; align-items:flex-start; } .student-dashboard .student-lesson-actions { width:100%; flex-direction:row; justify-content:space-between; align-items:center; padding-left:56px; } .student-dashboard .student-class > .learner-text-link { margin-left:56px; } }
+
+/* Simplified student overview; retain the existing white card design. */
+.student-dashboard .learner-identity { gap: 0; }
+.student-dashboard .learner-identity > span { padding: 0; border: 0; background: transparent; color: var(--learner-muted); font-weight: 500; }
+.student-dashboard .learner-identity > span + span::before { content: "|"; margin: 0 12px; color: #b4cdd3; }
+.student-dashboard .student-stat { padding: 18px 22px; }
+.student-dashboard .student-stat .learner-row-icon { width: 46px; height: 46px; font-size: 1.35rem; }
+.student-dashboard .student-stat strong { font-size: 1.65rem; }
+.student-dashboard .student-content-grid { align-items: stretch; }
+.student-dashboard .student-column { display: contents; }
+.student-dashboard .student-column:first-child > section:first-child { grid-area: 1 / 1; }
+.student-dashboard .student-column:first-child > section:nth-child(2) { grid-area: 2 / 1; }
+.student-dashboard .student-column:nth-child(2) > section:first-child { grid-area: 1 / 2; }
+.student-dashboard .student-column:nth-child(2) > section:nth-child(2) { grid-area: 2 / 2; }
+.student-dashboard .student-quick-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.student-dashboard .student-quick-grid .student-shortcut { padding: 14px 12px; border: 1px solid var(--learner-border); border-radius: 10px; gap: 10px; }
+.student-dashboard .student-quick-grid .student-shortcut:hover { border-color: #74bcc5; background: #f5fbfc; }
+.student-dashboard .student-quick-grid .learner-row-icon { width: 32px; height: 32px; border-radius: 8px; }
+.student-dashboard .student-quick-grid h3 { font-size: .82rem; line-height: 1.45; }
+@media (max-width: 991.98px) {
+ .student-dashboard .student-column:first-child > section:first-child { grid-area: 1 / 1; }
+ .student-dashboard .student-column:nth-child(2) > section:first-child { grid-area: 2 / 1; }
+ .student-dashboard .student-column:first-child > section:nth-child(2) { grid-area: 3 / 1; }
+ .student-dashboard .student-column:nth-child(2) > section:nth-child(2) { grid-area: 4 / 1; }
+}
+@media (max-width: 380px) { .student-dashboard .student-quick-grid { grid-template-columns: 1fr; } }

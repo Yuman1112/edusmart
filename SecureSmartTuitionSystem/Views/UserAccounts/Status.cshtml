@@ -1,11 +1,13 @@
-﻿@model SecureSmartTuitionSystem.Controllers.UserAccountsController.AccountRow
+@model SecureSmartTuitionSystem.Controllers.UserAccountsController.AccountRow
 @{
     ViewData["Title"] = Model.Active ? "Deactivate Account" : "Reactivate Account";
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/user-accounts.css" asp-append-version="true" />
 }
-<div class="page-header"><div><h1>@ViewData["Title"]</h1><p>@Model.UserId · @Model.Name · @Model.Role</p></div></div>
+<div class="user-accounts-page account-form-page">
+<div class="page-header"><div><h1>@ViewData["Title"]</h1><p>@Model.UserId · @Model.Name · @Model.Role</p></div><a asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Accounts</a></div>
 <div class="class-form-card">
     <p>@(Model.Active ? "This account will lose sign-in access. Existing sessions will end on their next request." : "This account will be allowed to sign in again once account setup is complete.")</p>
     <form asp-action="Status" asp-route-id="@Model.Id" method="post">
@@ -16,4 +18,6 @@
             <button class="primary-button" type="submit">@ViewData["Title"]</button>
         </div>
     </form>
+</div>
+
 </div>

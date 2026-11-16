@@ -1,111 +1,93 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Identity.AccountProfileModel
+@model SecureSmartTuitionSystem.ViewModels.Identity.AccountProfileModel
 @{
     var editing = ViewData["Editing"] is true;
     ViewData["Title"] = editing ? "Edit Profile" : "My Profile";
+    var dashboard = Model.Role == "Student" ? "Student" : Model.Role == "Parent" ? "Parent" : "Admin";
+    string Display(string? value) => string.IsNullOrWhiteSpace(value) ? "Not provided" : value;
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/account-profile.css" asp-append-version="true" />
 }
-<div class="page-header">
-    <div><h1>@ViewData["Title"]</h1><p>@(editing ? "Update your profile information." : "View your EduSmart account information.")</p></div>
-
-    @if (!editing)
-    {
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <a asp-action="EditProfile"
-               class="primary-button">
-                <i class="bi bi-pencil-square"
-                   aria-hidden="true"></i>
-                Edit Profile
-            </a>
-
-            <a asp-area=""
-               asp-controller="AccountSettings"
-               asp-action="TwoFactor"
-               class="outline-button">
-                <i class="bi bi-shield-lock"
-                   aria-hidden="true"></i>
-                2FA Settings
-            </a>
+<div class="account-profile-page">
+    <div class="page-header">
+        <div><h1>@ViewData["Title"]</h1><p>@(editing ? "Update your personal information." : "View your personal and account information.")</p></div>
+        <div class="class-detail-header-actions">
+            @if (!editing)
+            {
+                <a asp-action="EditProfile" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</a>
+                <a asp-area="" asp-controller="AccountSettings" asp-action="TwoFactor" class="outline-button"><i class="bi bi-shield-lock" aria-hidden="true"></i> 2FA Settings</a>
+            }
+            <a asp-controller="@dashboard" asp-action="@(editing ? "MyProfile" : "Index")" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
         </div>
+    </div>
+    @if (TempData["ProfileSaved"] is string message)
+    {
+        <div class="alert alert-success" role="status" data-success-timeout="5000">@message</div>
     }
-
-</div>
-@if (TempData["ProfileSaved"] is string message)
-{
-    <div class="alert alert-success" role="status" data-success-timeout="5000">@message</div>
-}
-<div class="class-form-card">
-    <dl class="row">
-        <dt class="col-sm-3">User ID</dt>
-        <dd class="col-sm-9">@Model.UserId</dd>
-        <dt class="col-sm-3">Role</dt>
-        <dd class="col-sm-9">@Model.Role</dd>
-        <dt class="col-sm-3">Email address</dt>
-        <dd class="col-sm-9">@(Model.Email ?? "—")</dd>
-        @if (Model.Detail is not null)
-        {
-            <dt class="col-sm-3">@(Model.Role == "Admin" ? "Position" : "Academic level")</dt>
-            <dd class="col-sm-9">@Model.Detail</dd>
-        }
-        @if (!editing)
-        {
-            <dt class="col-sm-3">Full name</dt>
-            <dd class="col-sm-9">@Model.FullName</dd>
-            @if (Model.Role == "Student")
-            {
-                <dt class="col-sm-3">School</dt>
-                <dd class="col-sm-9">@(Model.School ?? "—")</dd>
-            }
-            @if (Model.Role is "Admin" or "Parent")
-            {
-                <dt class="col-sm-3">Phone number</dt>
-                <dd class="col-sm-9">@(Model.PhoneNumber ?? "—")</dd>
-            }
-            @if (Model.Role == "Parent")
-            {
-                <dt class="col-sm-3">Address</dt>
-                <dd class="col-sm-9">@(Model.Address ?? "—")</dd>
-            }
-        }
-    </dl>
-@if (editing)
-{
-        <form asp-action="EditProfile" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-            <div class="mb-3">
-                <label asp-for="FullName" class="form-label">Full Name</label>
-                <input asp-for="FullName" class="form-control" />
-                <span asp-validation-for="FullName" class="text-danger"></span>
+    <div class="class-details-card">
+        <div class="class-details-title"><h2>@Model.UserId - @Model.FullName</h2><span class="profile-role">@Model.Role</span></div>
+        <section class="class-details-section">
+            <h3><i class="bi bi-person-badge" aria-hidden="true"></i> Account Information</h3>
+            <div class="class-details-grid">
+                <div class="class-detail-item"><span>User ID</span><strong>@Model.UserId</strong></div>
+                <div class="class-detail-item"><span>Role</span><strong>@Model.Role</strong></div>
+                <div class="class-detail-item"><span>Email Address</span><strong>@Display(Model.Email)</strong></div>
+                @if (Model.Role is "Admin" or "Student")
+                {
+                    <div class="class-detail-item"><span>@(Model.Role == "Admin" ? "Position" : "Academic Level")</span><strong>@Display(Model.Detail)</strong></div>
+                }
             </div>
-            @if (Model.Role == "Student")
+        </section>
+        <section class="class-details-section">
+            <h3><i class="bi bi-person-vcard" aria-hidden="true"></i> Personal Information</h3>
+            @if (editing)
             {
-                <div class="mb-3">
-                    <label asp-for="School" class="form-label"></label>
-                    <input asp-for="School" class="form-control" />
-                    <span asp-validation-for="School" class="text-danger"></span>
-                </div>
+                <form asp-action="EditProfile" method="post" asp-antiforgery="true">
+                    <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+                    <div class="profile-edit-grid">
+                        <div class="profile-field">
+                            <label asp-for="FullName" class="form-label">Full Name</label>
+                            <input asp-for="FullName" class="form-control" autocomplete="name" />
+                            <span asp-validation-for="FullName" class="text-danger"></span>
+                        </div>
+                        @if (Model.Role == "Student")
+                        {
+                            <div class="profile-field"><label asp-for="School" class="form-label">School</label><input asp-for="School" class="form-control" /><span asp-validation-for="School" class="text-danger"></span></div>
+                        }
+                        else
+                        {
+                            <div class="profile-field"><label asp-for="PhoneNumber" class="form-label">Phone Number (Optional)</label><input asp-for="PhoneNumber" class="form-control" autocomplete="tel" /><span asp-validation-for="PhoneNumber" class="text-danger"></span></div>
+                            @if (Model.Role == "Parent")
+                            {
+                                <div class="profile-field profile-wide"><label asp-for="Address" class="form-label">Address (Optional)</label><textarea asp-for="Address" class="form-control" rows="3" autocomplete="street-address"></textarea><span asp-validation-for="Address" class="text-danger"></span></div>
+                            }
+                        }
+                    </div>
+                    <div class="class-form-actions"><a asp-action="MyProfile" class="outline-button">Cancel</a><button type="submit" class="primary-button">Save Changes</button></div>
+                </form>
             }
             else
             {
-                <div class="mb-3">
-                    <label asp-for="PhoneNumber" class="form-label">Phone Number (Optional)</label>
-                    <input asp-for="PhoneNumber" class="form-control" />
-                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                <div class="class-details-grid">
+                    <div class="class-detail-item"><span>Full Name</span><strong>@Model.FullName</strong></div>
+                    @if (Model.Role == "Student")
+                    {
+                        <div class="class-detail-item"><span>School</span><strong>@Display(Model.School)</strong></div>
+                    }
+                    else
+                    {
+                        <div class="class-detail-item"><span>Phone Number</span><strong>@Display(Model.PhoneNumber)</strong></div>
+                        @if (Model.Role == "Parent")
+                        {
+                            <div class="class-detail-item class-detail-wide"><span>Address</span><strong class="profile-address">@Display(Model.Address)</strong></div>
+                        }
+                    }
                 </div>
-                @if (Model.Role == "Parent")
-                {
-                    <div class="mb-3">
-                        <label asp-for="Address" class="form-label">Address (Optional)</label>
-                        <textarea asp-for="Address" class="form-control" rows="3"></textarea>
-                        <span asp-validation-for="Address" class="text-danger"></span>
-                    </div>
-                }
             }
-            <div class="class-form-actions"><a asp-action="MyProfile" class="outline-button">Cancel</a><button type="submit" class="primary-button">Save Changes</button></div>
-        </form>
-}
-    }
+        </section>
+    </div>
+</div>
 @section Scripts {
-        <partial name="_ValidationScriptsPartial" />
+    <partial name="_ValidationScriptsPartial" />
 }
