@@ -10,3 +10,5 @@
 .account-profile-page .form-control:focus { border-color: #008c9c; box-shadow: 0 0 0 3px #008c9c20; outline: none; }
 .account-profile-page .form-label { color: #073563; font-weight: 600; }
 @media (max-width: 575.98px) { .account-profile-page .profile-edit-grid { grid-template-columns: 1fr; } .account-profile-page .class-detail-header-actions { width: 100%; flex-wrap: wrap; } }
+
+.account-profile-page .profile-email-link { width: fit-content; font-size: .8rem; padding: 7px 12px; }

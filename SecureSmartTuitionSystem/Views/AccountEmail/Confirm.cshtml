@@ -1,0 +1,13 @@
+@model SecureSmartTuitionSystem.Controllers.AccountEmailController.ConfirmationModel
+@{ ViewData["Title"] = "Verify Email"; }
+@section Styles { <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" /> }
+<div class="login-page"><div class="login-card">
+    <a asp-controller="Home" asp-action="Index" class="login-logo-link"><img src="~/images/logo.png" class="login-logo" alt="EduSmart" /></a>
+    <div class="login-heading"><h1>@(Model.Success ? "Email Updated" : "Verify Email")</h1><p>@Model.Message</p></div>
+    @if (Model.CanConfirm)
+    {
+        <p class="text-break">New email: <strong>@Model.NewEmail</strong></p>
+        <form asp-controller="AccountEmail" asp-action="Complete" method="post" asp-antiforgery="true"><input type="hidden" name="token" value="@Model.Token" /><button class="login-button" type="submit">Confirm New Email</button></form>
+    }
+    else { <a asp-area="Identity" asp-page="/Account/Login" class="login-button text-decoration-none">Go to login</a> }
+</div></div>

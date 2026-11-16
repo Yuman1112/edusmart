@@ -39,12 +39,13 @@
                     <label asp-for="Email" class="form-label">Email Address</label>
                     <input asp-for="Email"
                            type="email"
-                           class="form-control"
+                           class="form-control tutor-readonly-field" readonly aria-readonly="true"
                            maxlength="254"
                            autocomplete="email" />
 
                     <span asp-validation-for="Email"
                           class="text-danger"></span>
+                    <a asp-controller="AccountEmail" asp-action="Index" class="outline-button mt-2">@(string.IsNullOrWhiteSpace(Model.Email) ? "Add Email" : "Change Email")</a>
                 </div>
                 
                 <div class="col-12 col-md-6">

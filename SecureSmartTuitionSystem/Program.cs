@@ -314,6 +314,9 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     EmailLoginChallenge>();
 builder.Services.AddScoped<EmailOtpRecipientResolver>();
+builder.Services.AddScoped<IEmailOtpRecipientResolver>(sp => sp.GetRequiredService<EmailOtpRecipientResolver>());
+builder.Services.AddScoped<AccountEmailLinks>();
+builder.Services.AddScoped<AccountEmailService>();
 
 builder.Services.AddScoped<
     AccountSecurityMail>();

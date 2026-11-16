@@ -213,6 +213,14 @@ namespace SecureSmartTuitionSystem.Data
             ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+            builder.Entity<EmailChangeRequest>(entity =>
+            {
+                entity.ToTable("EmailChangeRequests");
+                entity.HasKey(x => x.Id);
+                entity.HasIndex(x => new { x.UserId, x.RequestedAtUtc });
+                entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            });
+
 
             builder.ConfigureAttendance();
             builder.ConfigureLearningMaterials();

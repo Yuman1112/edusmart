@@ -1,0 +1,43 @@
+@model SecureSmartTuitionSystem.Controllers.AccountEmailController.PageModel
+@using SecureSmartTuitionSystem.Models.Identity
+@{
+    ViewData["Title"] = string.IsNullOrWhiteSpace(Model.CurrentEmail) ? "Add Email" : "Change Email";
+    var pending = Model.Pending;
+    bool expired = pending != null && pending.ExpiresAtUtc <= DateTime.UtcNow;
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/account-profile.css" asp-append-version="true" />
+}
+<div class="account-profile-page">
+    <div class="page-header"><div><h1>@ViewData["Title"]</h1><p>Verify your identity and new address before updating your account email.</p></div><a asp-controller="@Model.ProfileController" asp-action="MyProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
+    @if (TempData["EmailSuccess"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+    @if (TempData["EmailError"] is string error) { <div class="alert alert-warning" role="alert">@error</div> }
+    <div class="class-details-card">
+        <div class="class-details-title"><h2>@Model.UserName</h2></div>
+        <section class="class-details-section"><h3>Current Email</h3><p>@(string.IsNullOrWhiteSpace(Model.CurrentEmail) ? "No personal email. Eligible verification messages are delivered to your verified primary guardian." : Model.CurrentEmail)</p></section>
+        @if (pending != null)
+        {
+            <section class="class-details-section"><h3>@(expired ? "Request expired" : pending.Status == EmailChangeStatus.VerifyCurrent ? "Step 1 · Verify your current contact" : "Step 2 · Verify your new email")</h3>
+                <p>New email: <strong>@pending.NewEmail</strong></p><p class="text-muted">Request expires @pending.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy, h:mm tt") MYT.</p>
+                @if (!expired && pending.Status == EmailChangeStatus.VerifyCurrent)
+                {
+                    <p>Enter the code sent to your current verified email or primary guardian. The code expires in 10 minutes.</p>
+                    <form asp-action="VerifyCurrent" method="post" asp-antiforgery="true"><input type="hidden" name="requestId" value="@pending.Id" /><label for="currentEmailCode" class="form-label">Verification Code</label><input id="currentEmailCode" name="code" class="form-control" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required /><button class="primary-button mt-3" type="submit">Verify code</button></form>
+                }
+                else if (!expired) { <p>Open the verification email sent to your new address. Your current account email remains unchanged until confirmation.</p> }
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    @if (!expired) { <form asp-action="Resend" method="post" asp-antiforgery="true"><input type="hidden" name="requestId" value="@pending.Id" /><button class="outline-button" type="submit">Resend Verification</button></form> }
+                    <form asp-action="Cancel" method="post" asp-antiforgery="true"><input type="hidden" name="requestId" value="@pending.Id" /><button class="outline-button" type="submit">Cancel Request</button></form>
+                </div>
+            </section>
+        }
+        <section class="class-details-section"><h3>@(pending == null ? "Start email verification" : "Start a replacement request")</h3>
+            <form asp-action="Start" method="post" asp-antiforgery="true">
+                <div class="profile-edit-grid"><div class="profile-field"><label for="newAccountEmail" class="form-label">New Email Address</label><input id="newAccountEmail" name="NewEmail" type="email" maxlength="254" autocomplete="email" class="form-control" required /></div><div class="profile-field"><label for="accountPassword" class="form-label">Current Password</label><input id="accountPassword" name="Password" type="password" maxlength="128" autocomplete="current-password" class="form-control" required /></div></div>
+                <p class="text-muted mt-3">Your password, 2FA setting and parent/student links will not change. A new request replaces earlier pending email requests.</p>
+                <div class="class-form-actions"><button class="primary-button" type="submit">Send verification code</button></div>
+            </form>
+        </section>
+    </div>
+</div>

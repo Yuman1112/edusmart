@@ -1,0 +1,9 @@
+using System.Net;
+namespace SecureSmartTuitionSystem.Services.Authentication;
+public static partial class SecurityEmailTemplates
+{
+    public static string CurrentEmailCode(string code, string userName, string newEmail) => Layout("Confirm your email change", $"<p>A request was made to change the email for <strong>{WebUtility.HtmlEncode(userName)}</strong> to {WebUtility.HtmlEncode(newEmail)}.</p><p>Your verification code is <strong>{WebUtility.HtmlEncode(code)}</strong>.</p><p>This code expires in 10 minutes. Do not share it. If you did not request this change, do not approve it.</p>");
+    public static string NewEmailVerification(string url, string userName) => Layout("Verify your new email", $"<p>Verify this address for your EduSmart account <strong>{WebUtility.HtmlEncode(userName)}</strong>.</p><p><a href=\"{WebUtility.HtmlEncode(url)}\">Verify new email</a></p><p>The request expires after two hours. Your current email remains in place until you confirm.</p>");
+    public static string EmailChangeNotice(string userName) => Layout("Account email updated", $"<p>The email address for account <strong>{WebUtility.HtmlEncode(userName)}</strong> has been updated. Existing sessions must sign in again.</p><p>If this was unexpected, contact the tuition centre immediately. The account's password and guardian relationships have not been changed.</p>");
+    public static string RecoveryEmail(string url, string userName, bool guardian) => Layout("Reset your password", $"<p>{(guardian ? "A password reset was requested for the student account" : "A password reset was requested for account")} <strong>{WebUtility.HtmlEncode(userName)}</strong>.</p><p><a href=\"{WebUtility.HtmlEncode(url)}\">Reset password</a></p><p>This link expires after one hour and can be used only while the account and its recovery contact remain valid. If you did not request it, ignore this message.</p>");
+}

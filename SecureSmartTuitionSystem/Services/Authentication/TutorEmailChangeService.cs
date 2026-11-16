@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
@@ -108,6 +108,10 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                 return "This email is already used by another account. "
                     + "Please use a different email for the Tutor.";
             }
+
+            await _db.Set<EmailChangeRequest>().Where(r => r.UserId == tutor.Id &&
+                (r.Status == EmailChangeStatus.VerifyCurrent || r.Status == EmailChangeStatus.VerifyNew))
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, EmailChangeStatus.Cancelled));
 
             DateTime now = DateTime.UtcNow;
 

@@ -1,9 +1,9 @@
-﻿
+
 using System.Net;
 
 namespace SecureSmartTuitionSystem.Services.Authentication;
 
-public static class SecurityEmailTemplates
+public static partial class SecurityEmailTemplates
 {
     private static string Layout(string title, string content)
     {

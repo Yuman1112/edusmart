@@ -14,7 +14,8 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account;
 [EnableRateLimiting("PasswordResetPolicy")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class ForgotPasswordModel(UserManager<ApplicationUser> users, AccountSecurityMail mail,
-    IConfiguration configuration, IWebHostEnvironment environment, ILogger<ForgotPasswordModel> logger) : PageModel
+    IConfiguration configuration, IWebHostEnvironment environment, ILogger<ForgotPasswordModel> logger,
+    IEmailOtpRecipientResolver recipients, AccountEmailLinks links) : PageModel
 {
     [BindProperty, Required, EmailAddress, StringLength(256)]
     public string Email { get; set; } = "";
@@ -30,17 +31,26 @@ public sealed class ForgotPasswordModel(UserManager<ApplicationUser> users, Acco
         if (!ModelState.IsValid) return Page();
 
         var normalized = users.NormalizeEmail(Email.Trim());
-        var accounts = users.Users.Where(u => u.NormalizedEmail == normalized && u.IsActive && !u.MustChangePassword);
+        ApplicationUser? user = null;
+        EmailOtpRecipient? recipient = null;
         if (!string.IsNullOrWhiteSpace(UserId))
         {
-            var name = users.NormalizeName(UserId.Trim());
-            accounts = accounts.Where(u => u.NormalizedUserName == name);
+            // A guardian address alone must never select one of their children.
+            user = await users.FindByNameAsync(UserId.Trim());
+            if (user != null) recipient = await recipients.ResolveAsync(user, true, HttpContext.RequestAborted);
+            if (recipient == null || users.NormalizeEmail(recipient.Address) != normalized) user = null;
         }
-
-        var matches = await accounts.Take(2).ToListAsync(HttpContext.RequestAborted);
-        if (matches.Count == 1 && await users.HasPasswordAsync(matches[0]))
+        else
         {
-            var user = matches[0];
+            var matches = await users.Users.Where(u => u.NormalizedEmail == normalized && u.IsActive && !u.MustChangePassword)
+                .Take(2).ToListAsync(HttpContext.RequestAborted);
+            if (matches.Count == 1)
+            {
+                user = matches[0]; recipient = await recipients.ResolveAsync(user, true, HttpContext.RequestAborted);
+            }
+        }
+        if (user != null && recipient != null && user.IsActive && !user.MustChangePassword && await users.HasPasswordAsync(user))
+        {
             var origin = configuration["App:PublicBaseUrl"];
             if (string.IsNullOrWhiteSpace(origin) && environment.IsDevelopment())
                 origin = "https://localhost:7086";
@@ -49,17 +59,18 @@ public sealed class ForgotPasswordModel(UserManager<ApplicationUser> users, Acco
                 && string.IsNullOrEmpty(baseUri.UserInfo) && baseUri.AbsolutePath == "/"
                 && string.IsNullOrEmpty(baseUri.Query) && string.IsNullOrEmpty(baseUri.Fragment))
             {
-                var code = await users.GeneratePasswordResetTokenAsync(user);
+                var identityCode = await users.GeneratePasswordResetTokenAsync(user);
+                var code = links.ProtectRecovery(new(user.Id, identityCode, EmailChangeRules.RecipientHash(recipient)));
                 var path = Url.Page("./ResetPassword", new { account = user.Id, code });
                 if (path != null)
                 {
                     try
                     {
                         await mail.SendAsync(
-                            user.Email!,
+                            recipient.Address,
                             "EduSmart - Reset Your Password",
-                            SecurityEmailTemplates.ForgotPassword(
-                                new Uri(baseUri, path).AbsoluteUri),
+                            SecurityEmailTemplates.RecoveryEmail(
+                                new Uri(baseUri, path).AbsoluteUri, user.UserName ?? "", recipient.GuardianLinkId.HasValue),
                             HttpContext.RequestAborted,
                             isHtml: true);
                     }

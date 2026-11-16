@@ -11,9 +11,14 @@ public sealed record EmailOtpRecipient(
     string? GuardianUserId = null,
     string? GuardianSecurityStamp = null);
 
+public interface IEmailOtpRecipientResolver
+{
+    Task<EmailOtpRecipient?> ResolveAsync(ApplicationUser user, bool requireVerifiedOwnEmail, CancellationToken cancellationToken);
+}
+
 public sealed class EmailOtpRecipientResolver(
     ApplicationDbContext db,
-    UserManager<ApplicationUser> users)
+    UserManager<ApplicationUser> users) : IEmailOtpRecipientResolver
 {
     public async Task<EmailOtpRecipient?> ResolveAsync(
         ApplicationUser user,

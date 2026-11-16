@@ -676,7 +676,9 @@ namespace SecureSmartTuitionSystem.Controllers
                 // Account ownership comes from the signed-in user.
                 model.TutorId = user.UserName ?? "";
                 ModelState.Remove(nameof(model.TutorId));
-                model.Email = (model.Email ?? "").Trim();
+                // Email changes use the shared reauthentication/verification flow.
+                model.Email = user.Email ?? "";
+                ModelState.Remove(nameof(model.Email));
 
                 if (!IsValidOwnTutorEmail(model.Email))
                 {

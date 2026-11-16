@@ -32,7 +32,7 @@
             <div class="class-details-grid">
                 <div class="class-detail-item"><span>User ID</span><strong>@Model.UserId</strong></div>
                 <div class="class-detail-item"><span>Role</span><strong>@Model.Role</strong></div>
-                <div class="class-detail-item"><span>Email Address</span><strong>@Display(Model.Email)</strong></div>
+                <div class="class-detail-item"><span>Email Address</span><strong>@Display(Model.Email)</strong>@if (editing) { <a asp-controller="AccountEmail" asp-action="Index" class="outline-button profile-email-link mt-2">@(string.IsNullOrWhiteSpace(Model.Email) ? "Add Email" : "Change Email")</a> }</div>
                 @if (Model.Role is "Admin" or "Student")
                 {
                     <div class="class-detail-item"><span>@(Model.Role == "Admin" ? "Position" : "Academic Level")</span><strong>@Display(Model.Detail)</strong></div>
