@@ -12,3 +12,101 @@
 @media (max-width: 575.98px) { .account-profile-page .profile-edit-grid { grid-template-columns: 1fr; } .account-profile-page .class-detail-header-actions { width: 100%; flex-wrap: wrap; } }
 
 .account-profile-page .profile-email-link { width: fit-content; font-size: .8rem; padding: 7px 12px; }
+
+/* Keep action dividers below the fields, with equal breathing room on every profile. */
+.account-profile-page .class-form-actions,
+.profile-save-dialog .class-form-actions { margin-top: 28px; padding-top: 24px; border-top: 1px solid #cce1e8; }
+.account-profile-page .class-form-actions form { margin: 0; }
+.account-profile-page .class-form-actions .text-button { margin-right: auto; }
+.account-profile-page .email-status-copy { margin-bottom: 0; color: #637c98; line-height: 1.65; }
+.account-profile-page .email-address { overflow-wrap: anywhere; }
+.account-profile-page .email-replacement { margin: 24px 28px 28px; border-top: 1px solid #cce1e8; padding-top: 22px; }
+.account-profile-page .email-replacement summary { width: fit-content; color: #007582; cursor: pointer; font-weight: 600; }
+.account-profile-page .email-replacement[open] summary { margin-bottom: 22px; }
+.account-profile-page .email-replacement .class-details-section { padding: 0; }
+.account-profile-page .email-info-note { display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px; border: 1px solid #b8e5eb; background: #eefbfc; border-radius: 9px; line-height: 1.6; }
+.account-profile-page .email-info-note i { color: #0097a7; }
+.account-email-confirm { max-width: 1008px; }
+.account-email-confirm .class-details-grid { grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr); }
+.profile-save-dialog { width: min(500px, calc(100% - 32px)); padding: 28px; border: 1px solid #cce1e8; border-radius: 18px; color: #073563; box-shadow: 0 16px 48px #07356326; }
+.profile-save-dialog::backdrop { background: #07356366; }
+.profile-save-dialog h2 { margin: 0 0 12px; font-size: 1.35rem; }
+.profile-save-dialog p { margin: 0; color: #637c98; line-height: 1.65; }
+.profile-save-dialog .class-form-actions { display: flex; justify-content: flex-end; gap: 12px; }
+@media (max-width: 575.98px) {
+    .account-profile-page .email-replacement { margin: 22px 20px; }
+    .account-email-confirm .class-details-grid { grid-template-columns: 1fr; }
+}
+
+.account-profile-page .profile-teaching-card { margin-top: 22px; }
+.account-profile-page .profile-teaching-entry { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.account-profile-page .profile-teaching-copy { min-width: 0; }
+.account-profile-page .profile-teaching-copy h3 { margin-bottom: 10px; }
+.account-profile-page .profile-teaching-copy p { margin-bottom: 0; line-height: 1.6; }
+.account-profile-page .profile-teaching-entry > .outline-button { flex-shrink: 0; }
+.account-profile-page .profile-personal-heading { flex-wrap: wrap; }
+.account-profile-page .profile-unsaved-note { margin-left: 8px; color: #a45d00; font-size: .8rem; font-weight: 600; }
+@media (max-width: 575.98px) {
+    .account-profile-page .profile-teaching-entry { align-items: stretch; flex-direction: column; gap: 18px; }
+    .account-profile-page .profile-teaching-entry > .outline-button { width: 100%; }
+}
+
+/* Profile cards already space their title and sections. Avoid a second outer inset. */
+.edusmart-ui main .account-profile-page .class-details-card { padding: 0; }
+.edusmart-ui main .account-profile-page .class-details-title { padding: 24px 28px; }
+.edusmart-ui main .account-profile-page .class-details-section { padding: 24px 28px; }
+.edusmart-ui main .account-profile-page .class-details-section h3 { margin-bottom: 16px; }
+.edusmart-ui main .account-profile-page .class-form-actions { margin-top: 20px; padding-top: 20px; }
+@media (max-width: 575.98px) {
+    .edusmart-ui main .account-profile-page .class-details-title,
+    .edusmart-ui main .account-profile-page .class-details-section { padding: 20px; }
+}
+
+/* Compact owned profile and document controls; no global card changes. */
+.edusmart-ui main .account-profile-page .class-details-title,
+.edusmart-ui main .account-profile-page .class-details-section { padding-top:16px; padding-bottom:16px; }
+.account-profile-page .profile-email-row { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.account-profile-page .profile-email-row > div { min-width:0; }
+.account-profile-page .profile-email-row .profile-email-link { flex-shrink:0; }
+.account-profile-page .profile-document-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; padding:12px 0; overflow-wrap:anywhere; }
+.account-profile-page .profile-document-row + .profile-document-row { border-top:1px solid var(--border); }
+.account-profile-page .profile-document-row form { margin:0; }
+.account-profile-page .profile-approval-actions { display:flex; flex-wrap:wrap; gap:12px; }
+.account-profile-page .profile-pending-note { margin:0 28px 16px; padding:12px 16px; background:#fff7e6; border:1px solid #eddaab; border-radius:9px; line-height:1.6; }
+.account-profile-page .profile-request-entry { padding:16px 0; border-bottom:1px solid var(--border); }
+@media(max-width:575.98px) {
+ .account-profile-page .profile-email-row { align-items:flex-start; flex-direction:column; gap:12px; }
+ .account-profile-page .profile-approval-actions { flex-direction:column; }
+ .account-profile-page .profile-pending-note { margin-left:20px; margin-right:20px; }
+}
+
+/* Tutor view/edit share the same compact sections and document cards. */
+.tutor-profile-layout .profile-section-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+.edusmart-ui main .tutor-profile-layout .profile-section-heading h3 { margin:0; }
+.tutor-profile-layout .profile-verification-badge { display:inline-block; flex-shrink:0; padding:5px 10px; border-radius:999px; background:#edf0f3; color:#526173; font-size:.8rem; font-weight:600; line-height:1.3; }
+.tutor-profile-layout .profile-verification-badge.is-verified { background:#d8f6e9; color:#08765f; }
+.tutor-profile-layout .profile-file-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.tutor-profile-layout .profile-file-card { display:flex; align-items:center; gap:12px; min-width:0; min-height:88px; padding:14px 16px; border:1px solid #cce1e8; border-radius:10px; background:#f6fbfc; }
+.tutor-profile-layout .profile-file-icon { display:grid; place-items:center; flex-shrink:0; width:34px; height:38px; color:#008c9c; font-size:1.5rem; }
+.tutor-profile-layout .profile-file-copy { flex:1; min-width:0; overflow-wrap:anywhere; }
+.tutor-profile-layout .profile-file-copy strong { display:block; font-size:.95rem; color:#073563; }
+.tutor-profile-layout .profile-file-copy > span { display:block; margin-top:5px; color:#637c98; font-size:.85rem; }
+.tutor-profile-layout .profile-file-card > .outline-button { flex-shrink:0; }
+.tutor-profile-layout .profile-file-label { margin:0 0 10px; color:#073563; font-weight:600; }
+.tutor-profile-layout .profile-field-help { display:block; margin-top:8px; color:#637c98; line-height:1.6; }
+.tutor-profile-layout .profile-qualification-summary { display:flex; align-items:flex-start; flex-wrap:wrap; gap:12px 20px; padding:14px 16px; margin-bottom:16px; background:#f6fbfc; border:1px solid #cce1e8; border-radius:10px; }
+.tutor-profile-layout .profile-summary-label { color:#637c98; }
+.tutor-profile-layout .profile-qualification-copy { flex:1; min-width:0; overflow-wrap:anywhere; }
+.tutor-profile-layout .profile-qualification-copy p { margin:5px 0 0; font-size:.9rem; }
+.tutor-profile-layout .profile-request-action-row { display:flex; align-items:center; justify-content:space-between; gap:16px 24px; padding:16px 0; border-top:1px solid #cce1e8; }
+.tutor-profile-layout .profile-request-action-row:last-child { padding-bottom:0; }
+.tutor-profile-layout .profile-request-action-row > div { min-width:0; }
+.tutor-profile-layout .profile-request-action-row h4 { margin:0 0 6px; color:#073563; font-size:1rem; font-weight:700; }
+.tutor-profile-layout .profile-request-action-row p { margin:0; color:#637c98; font-size:.9rem; line-height:1.6; }
+.tutor-profile-layout .profile-request-action-row > .outline-button { min-width:245px; flex-shrink:0; justify-content:center; }
+@media(max-width:767.98px) {
+ .tutor-profile-layout .profile-file-grid { grid-template-columns:1fr; }
+ .tutor-profile-layout .profile-request-action-row { align-items:stretch; flex-direction:column; }
+ .tutor-profile-layout .profile-request-action-row > .outline-button { min-width:0; width:100%; }
+ .tutor-profile-layout .profile-summary-label { flex-basis:100%; }
+}

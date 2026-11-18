@@ -1,4 +1,4 @@
-﻿
+
 (() => {
     "use strict";
 
@@ -136,7 +136,9 @@
         const snapshot = () => JSON.stringify([
             form.elements.namedItem("FullName").value.trim(),
             form.elements.namedItem("Email").value.trim().toUpperCase(),
-            form.elements.namedItem("PhoneNumber").value.trim()
+            form.elements.namedItem("PhoneNumber").value.trim(),
+            form.elements.namedItem("TeachingExperience")?.value.trim() ?? "",
+            form.elements.namedItem("Resume")?.value ?? ""
         ]);
         const initial = snapshot();
         watchSaveButton(() => snapshot() !== initial);

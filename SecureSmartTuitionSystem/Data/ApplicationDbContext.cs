@@ -133,6 +133,8 @@ namespace SecureSmartTuitionSystem.Data
         public DbSet<TutorTeachingChangeRequest> TutorTeachingChangeRequests =>
             Set<TutorTeachingChangeRequest>();
 
+        public DbSet<TutorQualificationUpdateRequest> TutorQualificationUpdateRequests => Set<TutorQualificationUpdateRequest>();
+
         public DbSet<TutorQualificationDocument> TutorQualificationDocuments =>
             Set<TutorQualificationDocument>();
 
@@ -216,6 +218,7 @@ namespace SecureSmartTuitionSystem.Data
             builder.Entity<EmailChangeRequest>(entity =>
             {
                 entity.ToTable("EmailChangeRequests");
+                entity.Property(x => x.Purpose).HasDefaultValue(EmailChangePurpose.SelfService);
                 entity.HasKey(x => x.Id);
                 entity.HasIndex(x => new { x.UserId, x.RequestedAtUtc });
                 entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
@@ -448,6 +451,17 @@ namespace SecureSmartTuitionSystem.Data
              */
             builder.Entity<AdminProfile>(entity =>
             {
+                entity.Property(admin => admin.PermissionLevel)
+                    .HasMaxLength(8)
+                    .IsRequired()
+                    .HasDefaultValue(AdminPermissionLevels.Standard);
+                entity.ToTable("AdminProfiles", table => table.HasCheckConstraint(
+                    "CK_AdminProfiles_PermissionLevel",
+                    "[PermissionLevel] IN (N'Standard', N'High')"));
+                // This release supports one High Admin and no in-app promotion flow.
+                entity.HasIndex(admin => admin.PermissionLevel)
+                    .IsUnique()
+                    .HasFilter("[PermissionLevel] = N'High'");
                 entity.HasIndex(admin =>
                         admin.ApplicationUserId)
                     .IsUnique();
@@ -493,6 +507,11 @@ namespace SecureSmartTuitionSystem.Data
                     .IsUnique().HasFilter("[Status] = 0");
             });
 
+            builder.Entity<TutorQualificationUpdateRequest>(entity =>
+            {
+                entity.HasOne(x => x.TutorProfile).WithMany().HasForeignKey(x => x.TutorProfileId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(x => x.TutorProfileId).IsUnique().HasFilter("[Status] = 0");
+            });
             builder.Entity<TutorQualificationDocument>(entity =>
             {
                 entity.HasOne(x => x.TutorProfile).WithMany()

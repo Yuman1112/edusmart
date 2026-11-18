@@ -1,277 +1,184 @@
 @model SecureSmartTuitionSystem.Controllers.UserAccountsController.AccountList
-
 @{
     ViewData["Title"] = "User Accounts";
+    var showPermission = string.IsNullOrEmpty(Model.Role) || Model.Role == "Admin";
+    var headers = new List<(string Key, string Label)> { ("name", "User"), ("email", "Email"), ("role", "Role") };
+    if (showPermission) headers.Add(("level", "Permission Level"));
+    headers.Add(("status", "Status"));
+    headers.Add(("setup", "Account Setup"));
+    string Link(int page, string? sort = null) => Url.Action("Index", "UserAccounts", new {
+        search = Model.Search, role = Model.Role, status = Model.Status, setup = Model.Setup,
+        sort = sort ?? Model.Sort, page })!;
 }
-
 @section Styles {
-    <link rel="stylesheet"
-          href="~/css/class-sessions.css"
-          asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/user-accounts.css" asp-append-version="true" />
 }
-
-<div class="user-accounts-page">
-<!-- Page Header -->
-<div class="page-header">
-    <div>
-        <h1>User Accounts</h1>
-        <p>Review and manage system user accounts.</p>
-    </div>
-
-    <a asp-controller="UserAccounts"
-       asp-action="Create"
-       class="primary-button">
-        + Create Admin
-    </a>
-</div>
-
-<!-- Success Message -->
-@if (TempData["AccountSuccess"] is string success)
-{
-    <div class="alert alert-success"
-         role="status"
-         data-success-timeout="5000">
-        @success
-    </div>
-}
-
-<!-- Error Message -->
-@if (TempData["AccountError"] is string error)
-{
-    <div class="alert alert-warning"
-         role="alert">
-        @error
-    </div>
-}
-
-<!-- Search and Filter -->
-<div class="class-filter-card">
-    <form method="get"
-          asp-controller="UserAccounts"
-          asp-action="Index"
-          class="account-filter-grid">
-
-        <div class="account-search-field">
-            <label for="account-search"
-                   class="form-label">
-                Search accounts
-            </label>
-
-            <input id="account-search"
-                   name="search"
-                   value="@Model.Search"
-                   class="form-control"
-                   placeholder="User ID, name or email" />
+<div class="container-fluid py-4 user-accounts-page account-list-page">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="tutor-management-title">User Accounts</h1>
+            <p class="tutor-management-subtitle">Review and manage system user accounts.</p>
         </div>
-
-        <div class="account-filter-field">
-            <label for="account-role"
-                   class="form-label">
-                Role
-            </label>
-
-            <select id="account-role"
-                    name="role"
-                    class="form-select">
-
-                <option value="">All Roles</option>
-
-                @foreach (var role in new[]
-                                {
-                                "Admin",
-                                "Tutor",
-                                "Student",
-                                "Parent"
-                                })
-                {
-                    <option value="@role"
-                            selected="@(Model.Role == role)">
-                        @role
-                    </option>
-                }
-            </select>
-        </div>
-
-        <div class="account-filter-field">
-            <button type="submit"
-                    class="primary-button">
-                Search
-            </button>
-        </div>
-    </form>
-</div>
-
-<!-- Accounts Table -->
-<section class="dashboard-card compact-class-card account-results">
-    <div class="dashboard-card-header">
-        <h2><i class="bi bi-people" aria-hidden="true"></i> Accounts</h2>
-        <span class="account-count">@Model.Total account(s)</span>
+        @if (Model.CanManageAdmins)
+        {
+            <a asp-action="Create" class="btn btn-primary tutor-add-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create Admin</a>
+        }
     </div>
-
-    @if (Model.Rows.Count == 0)
+    @if (TempData["AccountSuccess"] is string success)
     {
-        <p class="account-empty">
-            No accounts match these filters.
-        </p>
+        <div class="alert alert-success" role="status" data-success-timeout="5000">@success</div>
     }
-    else
+    @if (TempData["AccountError"] is string error)
     {
-        <div class="table-responsive">
-
-            <table class="table align-middle account-table"
-                   data-pagination="off">
-
-                <thead>
-                    <tr>
-                        <th scope="col" data-sort="off">No.</th>
-                        <th scope="col">User ID</th>
-                        <th scope="col">Name</th>
-                        <th scope="col">Email</th>
-                        <th scope="col">Role</th>
-                        <th scope="col">Status</th>
+        <div class="alert alert-warning" role="alert">@error</div>
+    }
+    <section class="tutor-management-filter-card" aria-labelledby="filterAccountsHeading">
+        <div class="tutor-management-filter-heading">
+            <h2 id="filterAccountsHeading"><i class="bi bi-funnel" aria-hidden="true"></i> Filter Accounts</h2>
+            <p id="account-filter-hint">Choose filters or press Enter to search.</p>
+        </div>
+        <form id="account-filter-form" method="get" asp-controller="UserAccounts" asp-action="Index" class="account-filter-grid">
+            <input type="hidden" name="sort" value="@Model.Sort" />
+            <div>
+                <label for="account-search" class="form-label">Search accounts</label>
+                <input type="search" id="account-search" name="search" value="@Model.Search" class="form-control" placeholder="Search by name, ID or email" />
+            </div>
+            <div>
+                <label for="account-role" class="form-label">Role</label>
+                <select id="account-role" name="role" class="form-select">
+                    <option value="">All Roles</option>
+                    @foreach (var role in new[] { "Admin", "Tutor", "Student", "Parent" })
+                    { <option value="@role" selected="@(Model.Role == role)">@role</option> }
+                </select>
+            </div>
+            <div>
+                <label for="account-status" class="form-label">Status</label>
+                <select id="account-status" name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="active" selected="@(Model.Status == "active")">Active</option>
+                    <option value="inactive" selected="@(Model.Status == "inactive")">Inactive</option>
+                </select>
+            </div>
+            <div>
+                <label for="account-setup" class="form-label">Account Setup</label>
+                <select id="account-setup" name="setup" class="form-select">
+                    <option value="">All Setup Statuses</option>
+                    <option value="completed" selected="@(Model.Setup == "completed")">Completed</option>
+                    <option value="pending" selected="@(Model.Setup == "pending")">Pending</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary account-search-submit">Search</button>
+        </form>
+    </section>
+    <p id="account-filter-feedback" class="account-filter-feedback" role="status" aria-live="polite"></p>
+    <section id="account-results" class="tutor-management-list-card" aria-labelledby="accountsHeading">
+        <div class="tutor-management-list-header">
+            <h2 id="accountsHeading"><i class="bi bi-people" aria-hidden="true"></i> Accounts</h2>
+            <span class="account-count" aria-live="polite">@Model.Total account(s)</span>
+        </div>
+        @if (Model.Rows.Count == 0)
+        { <p class="account-empty">No accounts match these filters.</p> }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle tutor-management-table account-list-table" data-server-managed="true">
+                    <thead><tr>
+                        <th scope="col" class="table-number-column">No.</th>
+                        @foreach (var header in headers)
+                        {
+                            var asc = Model.Sort == header.Key + "_asc";
+                            var desc = Model.Sort == header.Key + "_desc";
+                            <th scope="col" aria-sort="@(asc ? "ascending" : desc ? "descending" : "none")">
+                                <a class="account-sort-header" data-account-nav href="@Link(1, header.Key + (asc ? "_desc" : "_asc"))" aria-label="Sort by @header.Label">
+                                    @header.Label <i class="bi @(asc ? "bi-arrow-up" : desc ? "bi-arrow-down" : "bi-arrow-down-up")" aria-hidden="true"></i>
+                                </a>
+                            </th>
+                        }
                         <th scope="col">Actions</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @{ var rowNumber = (Model.Page - 1) * 25; }
+                    </tr></thead>
+                    <tbody>
+                    @{ var number = (Model.Page - 1) * 25; }
                     @foreach (var account in Model.Rows)
                     {
-                        rowNumber++;
+                        number++;
                         <tr>
-                            <td>@rowNumber</td>
-                            <td class="account-user-id">@account.UserId</td>
-
-                            <td>@account.Name</td>
-
-                            <td>@account.Email</td>
-
+                            <td>@number</td>
+                            <td><div class="tutor-list-identity"><span class="tutor-name">@account.Name</span><span class="tutor-user-id">@account.UserId</span></div></td>
+                            <td class="account-email">@account.Email</td>
                             <td>@account.Role</td>
-
-                            <!-- Account Status -->
-                            <td>
-                                @if (!account.Active)
+                            @if (showPermission)
+                            { <td>@(account.Role == "Admin" ? account.PermissionLevel ?? "Not configured" : "—")</td> }
+                            <td><span class="tutor-management-badge @(account.Active ? "tutor-badge-success" : "tutor-badge-inactive")">@(account.Active ? "Active" : "Inactive")</span></td>
+                            <td><span class="tutor-management-badge @(account.SetupPending ? "tutor-badge-pending" : "tutor-badge-success")">@(account.SetupPending ? "Pending" : "Completed")</span></td>
+                            <td><div class="account-actions">
+                            @if (account.Role == "Tutor")
+                            {
+                                <a asp-controller="TutorManagement" asp-action="Details" asp-route-userId="@account.Id" class="btn btn-outline-primary" aria-label="Manage Tutor @account.UserId"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Manage Tutor</a>
+                            }
+                            else
+                            {
+                                @if (account.Id == Model.CurrentAccountId)
+                                { <span class="account-current">Current account</span> }
+                                @if (account.Role == "Admin" && account.Id != Model.CurrentAccountId && (!Model.CanManageAdmins || account.PermissionLevel == "High"))
+                                { <span class="text-muted small">@(account.PermissionLevel == "High" ? "High Admin protected" : "High permission required")</span> }
+                                @if (account.Id != Model.CurrentAccountId && (account.Role != "Admin" || (Model.CanManageAdmins && account.PermissionLevel != "High")))
+                                { <a asp-action="Status" asp-route-id="@account.Id" class="btn btn-outline-secondary">@(account.Active ? "Deactivate" : "Reactivate")</a> }
+                                @if (Model.CanManageAdmins && account.Role == "Admin" && account.Active && account.SetupPending)
                                 {
-                                    <span class="account-status account-status-inactive">
-                                        Inactive
-                                    </span>
+                                    <form asp-action="ResendAdminSetup" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="userId" value="@account.Id" />
+                                        <button type="submit" class="btn btn-outline-secondary" onclick="return confirm('Resend the account setup email to this administrator?');">Resend Setup Email</button>
+                                    </form>
                                 }
-                                else if (account.SetupPending)
-                                {
-                                    <span class="account-status account-status-pending">
-                                        Setup pending
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="account-status account-status-active">
-                                        Active
-                                    </span>
-                                }
-                            </td>
-
-                            <!-- Account Actions -->
-                            <td>
-                                <div class="d-flex flex-wrap align-items-center gap-2">
-
-                                    @if (account.Role == "Tutor")
-                                    {
-                                        <!-- Tutor accounts are managed separately -->
-                                        <span class="text-muted small">
-                                            Manage in Tutor Management
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        @if (account.Id == Model.CurrentAccountId)
-                                        {
-                                            <span class="account-current">Current account</span>
-                                        }
-                                        <!-- Deactivate / Reactivate -->
-                                        @if (account.Id != Model.CurrentAccountId)
-                                        {
-                                            <a asp-controller="UserAccounts"
-                                               asp-action="Status"
-                                               asp-route-id="@account.Id"
-                                               class="outline-button">
-
-                                                @(account.Active
-                                                                                ? "Deactivate"
-                                                                                : "Reactivate")
-                            </a>
-                                                        }
-
-                                        <!-- Resend Admin Setup Email -->
-                                        @if (account.Role == "Admin"
-                                                                    && account.Active
-                                                                    && account.SetupPending)
-                                        {
-                                            <form asp-controller="UserAccounts"
-                                                  asp-action="ResendAdminSetup"
-                                                  method="post"
-                                                  class="d-inline">
-
-                                                @Html.AntiForgeryToken()
-
-                                                <input type="hidden"
-                                                       name="userId"
-                                                       value="@account.Id" />
-
-                                                <button type="submit"
-                                                        class="outline-button"
-                                                        onclick="return confirm('Resend the account setup email to this administrator?');">
-                                                    Resend Setup Email
-                                                </button>
-                                            </form>
-                                        }
-                                    }
-
-                                </div>
-                            </td>
+                            }
+                            </div></td>
                         </tr>
                     }
-                </tbody>
-            </table>
-
-        </div>
-    }
-
-    <!-- Pagination -->
-    @if (Model.PageCount > 1)
-    {
-        <nav aria-label="Account pages"
-             class="table-pagination">
-
-            @if (Model.Page > 1)
-            {
-                <a asp-controller="UserAccounts"
-                   asp-action="Index"
-                   asp-route-search="@Model.Search"
-                   asp-route-role="@Model.Role"
-                   asp-route-page="@(Model.Page - 1)"
-                   class="table-page-button">
-                    Previous
-                </a>
-            }
-
-            <span>
-                Page @Model.Page of @Model.PageCount
-            </span>
-
-            @if (Model.Page < Model.PageCount)
-            {
-                <a asp-controller="UserAccounts"
-                   asp-action="Index"
-                   asp-route-search="@Model.Search"
-                   asp-route-role="@Model.Role"
-                   asp-route-page="@(Model.Page + 1)"
-                   class="table-page-button">
-                    Next
-                </a>
-            }
-
+                    </tbody>
+                </table>
+            </div>
+        }
+        <nav class="table-pagination" aria-label="Account pages">
+            <span class="table-pagination-summary">@(Model.Total == 0 ? "0 rows · 25 per page" : $"{(Model.Page - 1) * 25 + 1}–{Math.Min(Model.Page * 25, Model.Total)} of {Model.Total} rows · 25 per page")</span>
+            <div class="table-pagination-controls">
+                @if (Model.Page == 1)
+                {
+                    <button type="button" class="table-page-button" disabled aria-disabled="true">First</button>
+                    <button type="button" class="table-page-button" disabled aria-disabled="true">Previous</button>
+                }
+                else
+                {
+                    <a href="@Link(1)" data-account-nav class="table-page-button">First</a>
+                    <a href="@Link(Model.Page - 1)" data-account-nav class="table-page-button">Previous</a>
+                }
+                @for (var pageNumber = Math.Max(1, Model.Page - 2); pageNumber <= Math.Min(Model.PageCount, Model.Page + 2); pageNumber++)
+                {
+                    if (pageNumber == Model.Page)
+                    {
+                        <button type="button" class="table-page-button active" aria-current="page" aria-label="Page @pageNumber, current page">@pageNumber</button>
+                    }
+                    else
+                    {
+                        <a href="@Link(pageNumber)" data-account-nav class="table-page-button" aria-label="Page @pageNumber">@pageNumber</a>
+                    }
+                }
+                @if (Model.Page == Model.PageCount)
+                {
+                    <button type="button" class="table-page-button" disabled aria-disabled="true">Next</button>
+                    <button type="button" class="table-page-button" disabled aria-disabled="true">Last</button>
+                }
+                else
+                {
+                    <a href="@Link(Model.Page + 1)" data-account-nav class="table-page-button">Next</a>
+                    <a href="@Link(Model.PageCount)" data-account-nav class="table-page-button">Last</a>
+                }
+            </div>
         </nav>
-    }
-</section>
+    </section>
 </div>
+@section Scripts {
+    <script src="~/js/user-accounts.js" asp-append-version="true"></script>
+}

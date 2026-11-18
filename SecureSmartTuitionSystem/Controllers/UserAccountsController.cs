@@ -1,4 +1,4 @@
-﻿
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -58,7 +58,13 @@ public sealed class UserAccountsController(
                            : parents.Contains(account.Id)
                                ? "Parent"
                                : "Student",
-                   Active = account.IsActive,
+                   PermissionLevel = admins.Contains(account.Id)
+                       ? db.AdminProfiles.Where(p => p.ApplicationUserId == account.Id)
+                           .Select(p => p.PermissionLevel).FirstOrDefault()
+                       : null,
+                   Active = account.IsActive && (admins.Contains(account.Id)
+                       || !tutors.Contains(account.Id)
+                       || db.TutorProfiles.Any(p => p.ApplicationUserId == account.Id && p.IsActive)),
                    SetupPending = account.MustChangePassword,
                    Version = account.ConcurrencyStamp
                };
@@ -79,6 +85,16 @@ public sealed class UserAccountsController(
             && caller.IsActive
             && !caller.MustChangePassword
             && await users.IsInRoleAsync(caller, "Admin");
+    }
+
+    private async Task<bool> CurrentAdminIsHighAsync()
+    {
+        if (!await CurrentAdminIsUsableAsync()) return false;
+        var callerId = users.GetUserId(User);
+        var level = await db.AdminProfiles.AsNoTracking()
+            .Where(p => p.ApplicationUserId == callerId)
+            .Select(p => p.PermissionLevel).SingleOrDefaultAsync();
+        return AdminPermissionLevels.IsHigh(level);
     }
 
     // SQL Server transaction-level lock.
@@ -175,7 +191,7 @@ public sealed class UserAccountsController(
     [HttpGet]
     public async Task<IActionResult> Create()
     {
-        if (!await CurrentAdminIsUsableAsync())
+        if (!await CurrentAdminIsHighAsync())
             return Forbid();
 
         return View(new CreateAdminViewModel());
@@ -187,7 +203,7 @@ public sealed class UserAccountsController(
     public async Task<IActionResult> Create(
         CreateAdminViewModel model)
     {
-        if (!await CurrentAdminIsUsableAsync())
+        if (!await CurrentAdminIsHighAsync())
             return Forbid();
 
         model.FullName = model.FullName?.Trim() ?? "";
@@ -221,7 +237,7 @@ public sealed class UserAccountsController(
             await AcquireAdminLockAsync();
 
             // Recheck the caller inside the transaction.
-            if (!await CurrentAdminIsUsableAsync())
+            if (!await CurrentAdminIsHighAsync())
                 return Forbid();
 
             // Recheck email while holding the lock.
@@ -301,6 +317,7 @@ public sealed class UserAccountsController(
                 Position = string.IsNullOrWhiteSpace(model.Position)
                     ? "Administrator"
                     : model.Position,
+                PermissionLevel = AdminPermissionLevels.Standard,
                 CreatedAt = DateTime.UtcNow
             });
 
@@ -356,7 +373,7 @@ public sealed class UserAccountsController(
     public async Task<IActionResult> ResendAdminSetup(
         string userId)
     {
-        if (!await CurrentAdminIsUsableAsync())
+        if (!await CurrentAdminIsHighAsync())
             return Forbid();
 
         if (string.IsNullOrWhiteSpace(userId)
@@ -401,12 +418,24 @@ public sealed class UserAccountsController(
     public async Task<IActionResult> Index(
         string? search,
         string? role,
-        int page = 1)
+        int page = 1,
+        string? status = null,
+        string? setup = null,
+        string? sort = null)
     {
         if (!await CurrentAdminIsUsableAsync())
             return Forbid();
 
         search = search?.Trim();
+        role = role is "Admin" or "Tutor" or "Student" or "Parent" ? role : null;
+        status = status?.Trim().ToLowerInvariant();
+        status = status is "active" or "inactive" ? status : null;
+        setup = setup?.Trim().ToLowerInvariant();
+        setup = setup is "pending" or "completed" ? setup : null;
+        sort = sort is "id_asc" or "id_desc" or "name_asc" or "name_desc"
+            or "email_asc" or "email_desc" or "role_asc" or "role_desc"
+            or "level_asc" or "level_desc" or "status_asc" or "status_desc"
+            or "setup_asc" or "setup_desc" ? sort : "id_asc";
 
         var accounts = Accounts();
 
@@ -425,6 +454,11 @@ public sealed class UserAccountsController(
             accounts = accounts.Where(a => a.Role == role);
         }
 
+        if (status != null)
+            accounts = accounts.Where(a => a.Active == (status == "active"));
+        if (setup != null)
+            accounts = accounts.Where(a => a.SetupPending == (setup == "pending"));
+
         var total = await accounts.CountAsync();
 
         var pageCount = Math.Max(
@@ -433,9 +467,24 @@ public sealed class UserAccountsController(
 
         page = Math.Clamp(page, 1, pageCount);
 
-        var rows = await accounts
-            .OrderBy(a => a.UserId)
-            .ThenBy(a => a.Id)
+        var ordered = sort switch
+        {
+            "id_desc" => accounts.OrderByDescending(a => a.UserId),
+            "name_asc" => accounts.OrderBy(a => a.Name),
+            "name_desc" => accounts.OrderByDescending(a => a.Name),
+            "email_asc" => accounts.OrderBy(a => a.Email),
+            "email_desc" => accounts.OrderByDescending(a => a.Email),
+            "role_asc" => accounts.OrderBy(a => a.Role),
+            "role_desc" => accounts.OrderByDescending(a => a.Role),
+            "level_asc" => accounts.OrderBy(a => a.PermissionLevel),
+            "level_desc" => accounts.OrderByDescending(a => a.PermissionLevel),
+            "status_asc" => accounts.OrderBy(a => a.Active),
+            "status_desc" => accounts.OrderByDescending(a => a.Active),
+            "setup_asc" => accounts.OrderBy(a => a.SetupPending),
+            "setup_desc" => accounts.OrderByDescending(a => a.SetupPending),
+            _ => accounts.OrderBy(a => a.UserId)
+        };
+        var rows = await ordered.ThenBy(a => a.Id)
             .Skip((page - 1) * PageSize)
             .Take(PageSize)
             .ToListAsync();
@@ -447,7 +496,8 @@ public sealed class UserAccountsController(
             page,
             pageCount,
             total,
-            users.GetUserId(User)));
+            users.GetUserId(User),
+            await CurrentAdminIsHighAsync(), status, setup, sort));
     }
 
     // GET: UserAccounts/Status
@@ -465,6 +515,12 @@ public sealed class UserAccountsController(
             || account.Role == "Tutor")
         {
             return NotFound();
+        }
+
+        if (account.Role == "Admin")
+        {
+            if (!await CurrentAdminIsHighAsync()) return Forbid();
+            if (AdminPermissionLevels.IsHigh(account.PermissionLevel)) return Forbid();
         }
 
         return View(account);
@@ -515,6 +571,16 @@ public sealed class UserAccountsController(
                   roles.Contains("Parent")))
             {
                 return NotFound();
+            }
+
+            if (roles.Contains("Admin"))
+            {
+                if (!await CurrentAdminIsHighAsync()) return Forbid();
+                var targetLevel = await db.AdminProfiles.AsNoTracking()
+                    .Where(p => p.ApplicationUserId == account.Id)
+                    .Select(p => p.PermissionLevel).SingleOrDefaultAsync();
+                // A High Admin cannot be disabled through this account-management flow.
+                if (AdminPermissionLevels.IsHigh(targetLevel)) return Forbid();
             }
 
             if (account.ConcurrencyStamp != version)
@@ -594,6 +660,7 @@ public sealed class UserAccountsController(
         public string? Name { get; init; }
         public string? Email { get; init; }
         public required string Role { get; init; }
+        public string? PermissionLevel { get; init; }
         public bool Active { get; init; }
         public bool SetupPending { get; init; }
         public string? Version { get; init; }
@@ -606,5 +673,9 @@ public sealed class UserAccountsController(
         int Page,
         int PageCount,
         int Total,
-        string? CurrentAccountId);
+        string? CurrentAccountId,
+        bool CanManageAdmins,
+        string? Status = null,
+        string? Setup = null,
+        string Sort = "id_asc");
 }

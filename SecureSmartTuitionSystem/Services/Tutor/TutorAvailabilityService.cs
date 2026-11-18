@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Services.Enrollment;
 
@@ -83,7 +83,12 @@ public sealed class TutorAvailabilityService(ApplicationDbContext db)
 
     private static string FormatMinutes(int minutes) => $"{minutes / 60:00}:{minutes % 60:00}";
 
-    public async Task<List<string>> FindExistingClassesOutsideAsync(string userId, IEnumerable<int> values)
+    public async Task<List<string>> FindExistingClassesOutsideAsync(string userId, IEnumerable<int> values) =>
+        (await FindExistingClassConflictsAsync(userId, values))
+            .Select(x => $"{x.ClassCode} ({x.Schedule})").ToList();
+
+    public async Task<List<SecureSmartTuitionSystem.ViewModels.Tutor.TutorScheduleConflictViewModel>>
+        FindExistingClassConflictsAsync(string userId, IEnumerable<int> values)
     {
         var selected = values.ToHashSet();
         var today = ClassScheduleService.Today;
@@ -98,9 +103,23 @@ public sealed class TutorAvailabilityService(ApplicationDbContext db)
         var lessons = await new ClassScheduleService(db).GetLessonsAsync(today, end, userId);
         return lessons.Where(x => !x.Cancelled && x.Date.Add(x.End.ToTimeSpan()) > ClassScheduleService.Now
                 && !Covers(selected, (int)x.Date.DayOfWeek, x.Start, x.End))
-            .Select(x => x.Replacement
-                ? $"{x.Class.ClassCode} (replacement {x.Date:dd MMM yyyy} {x.Start:HH:mm}–{x.End:HH:mm})"
-                : $"{x.Class.ClassCode} ({x.Date.DayOfWeek} {x.Start:HH:mm}–{x.End:HH:mm})")
+            .Select(x => new SecureSmartTuitionSystem.ViewModels.Tutor.TutorScheduleConflictViewModel(
+                x.Class.ClassCode,
+                x.Replacement
+                    ? $"replacement {x.Date:dd MMM yyyy} {x.Start:HH:mm}–{x.End:HH:mm}"
+                    : $"{x.Date.DayOfWeek} {x.Start:HH:mm}–{x.End:HH:mm}",
+                DescribeFullTimeRestriction(x.Date.DayOfWeek, x.Start, x.End)))
             .Distinct().ToList();
     }
+    public static string DescribeFullTimeRestriction(DayOfWeek day, TimeOnly start, TimeOnly end)
+    {
+        var reasons = new List<string>();
+        if (day == DayOfWeek.Sunday) reasons.Add("Sunday is not a working day");
+        if (start < new TimeOnly(8, 0)) reasons.Add("Starts before 08:00");
+        if (end > new TimeOnly(22, 0)) reasons.Add("Ends after 22:00");
+        if (start < new TimeOnly(13, 0) && end > new TimeOnly(12, 0)) reasons.Add("Lunch break (12:00–13:00)");
+        if (start < new TimeOnly(19, 0) && end > new TimeOnly(18, 0)) reasons.Add("Dinner break (18:00–19:00)");
+        return reasons.Count == 0 ? "Outside selected availability" : string.Join("; ", reasons);
+    }
+
 }

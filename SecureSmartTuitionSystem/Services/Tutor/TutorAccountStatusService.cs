@@ -124,11 +124,9 @@ public sealed class TutorAccountStatusService(
         user.IsActive = activate;
 
         // Cancel pending requests; retain the current account email.
-        user.PendingTutorEmail = null;
-        user.TutorEmailChangeRequestId = null;
-        user.TutorEmailChangeRequestedAtUtc = null;
-        user.TutorEmailChangeExpiresAtUtc = null;
-        user.TutorEmailChangeRequestedByUserId = null;
+        await db.Set<EmailChangeRequest>().Where(r => r.UserId == user.Id &&
+            (r.Status == EmailChangeStatus.VerifyCurrent || r.Status == EmailChangeStatus.VerifyNew))
+            .ExecuteUpdateAsync(set => set.SetProperty(r => r.Status, EmailChangeStatus.Cancelled));
 
         // Old cookies and setup/email tokens must not revive after reactivation.
         var identityResult = await users.UpdateSecurityStampAsync(user);

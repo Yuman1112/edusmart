@@ -1,13 +1,34 @@
 @model SecureSmartTuitionSystem.Controllers.AccountEmailController.ConfirmationModel
-@{ ViewData["Title"] = "Verify Email"; }
-@section Styles { <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" /> }
-<div class="login-page"><div class="login-card">
-    <a asp-controller="Home" asp-action="Index" class="login-logo-link"><img src="~/images/logo.png" class="login-logo" alt="EduSmart" /></a>
-    <div class="login-heading"><h1>@(Model.Success ? "Email Updated" : "Verify Email")</h1><p>@Model.Message</p></div>
-    @if (Model.CanConfirm)
-    {
-        <p class="text-break">New email: <strong>@Model.NewEmail</strong></p>
-        <form asp-controller="AccountEmail" asp-action="Complete" method="post" asp-antiforgery="true"><input type="hidden" name="token" value="@Model.Token" /><button class="login-button" type="submit">Confirm New Email</button></form>
-    }
-    else { <a asp-area="Identity" asp-page="/Account/Login" class="login-button text-decoration-none">Go to login</a> }
-</div></div>
+@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+    string heading = Model.Success ? "Email Updated" : Model.CanConfirm ? "Confirm Email Change" : "Email Change Unavailable";
+    ViewData["Title"] = heading;
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/account-profile.css" asp-append-version="true" />
+}
+<div class="account-profile-page account-email-confirm">
+    <div class="page-header"><div><h1>@heading</h1><p>@(Model.Success ? "Your account email has been updated successfully." : Model.CanConfirm ? "Review your new email address before confirming." : "This verification link cannot be used.")</p></div></div>
+    <div class="class-details-card">
+        <section class="class-details-section">
+            <h3><i class="bi bi-envelope-check" aria-hidden="true"></i> Account Email</h3>
+            @if (Model.CanConfirm || Model.Success)
+            {
+                <div class="class-details-grid">
+                    <div class="class-detail-item"><span>User ID</span><strong>@Model.UserName</strong></div>
+                    <div class="class-detail-item"><span>New Email Address</span><strong>@Model.NewEmail</strong></div>
+                </div>
+            }
+            <div class="email-info-note mt-4" role="@(Model.CanConfirm || Model.Success ? "status" : "alert")"><i class="bi bi-info-circle" aria-hidden="true"></i><span>@Model.Message @if (Model.CanConfirm) { <text>If you did not request this change, do not confirm it. Contact your EduSmart administrator.</text> }</span></div>
+            @if (Model.CanConfirm)
+            {
+                <form asp-controller="AccountEmail" asp-action="Complete" method="post" asp-antiforgery="true">
+                    <input type="hidden" name="token" value="@Model.Token" />
+                    <div class="class-form-actions"><button class="primary-button" type="submit"><i class="bi bi-check-lg" aria-hidden="true"></i> Confirm Email Change</button></div>
+                </form>
+            }
+            else { <div class="class-form-actions"><a asp-area="Identity" asp-page="/Account/Login" class="primary-button"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Go to Sign In</a></div> }
+        </section>
+    </div>
+</div>

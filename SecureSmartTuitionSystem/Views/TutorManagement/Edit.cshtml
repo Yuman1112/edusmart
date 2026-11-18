@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.EditTutorViewModel
+@model SecureSmartTuitionSystem.ViewModels.Tutor.EditTutorViewModel
 
 @{
     ViewData["Title"] = "Edit Tutor";
@@ -12,6 +12,7 @@
     <link rel="stylesheet"
           href="~/css/tutor-form.css"
           asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-ui-consistency.css" asp-append-version="true" />
 }
 
 <!-- =====================================================
@@ -143,7 +144,30 @@
 
                 </div>
 
-                <!-- Email -->
+                @if (Model.EmploymentConflicts.Count > 0)
+                {
+                    <div class="col-12 tutor-conflict-slot">
+                        <section class="tutor-employment-conflicts mt-3" aria-labelledby="employmentConflictsHeading">
+                            <h3 id="employmentConflictsHeading">Schedule Conflicts</h3>
+                            <p>Update the timetable before changing the employment type. Times are MYT.</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm" data-server-managed="true">
+                                    <thead><tr><th scope="col">Class</th><th scope="col">Schedule</th><th scope="col">Conflict</th></tr></thead>
+                                    <tbody>
+                                    @foreach (var conflict in Model.EmploymentConflicts)
+                                    {
+                                        <tr><td>@conflict.ClassCode</td><td>@conflict.Schedule</td><td>@conflict.Reason</td></tr>
+                                    }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <a asp-controller="ClassSessions" asp-action="Index" asp-route-TutorUserId="@Model.UserId" class="outline-button">
+                                <i class="bi bi-calendar3" aria-hidden="true"></i> View Timetable
+                            </a>
+                        </section>
+                    </div>
+                }
+
                 <!-- Email -->
                 <div class="col-12 col-md-6">
 

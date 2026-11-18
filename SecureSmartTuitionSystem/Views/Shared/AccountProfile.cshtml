@@ -32,7 +32,7 @@
             <div class="class-details-grid">
                 <div class="class-detail-item"><span>User ID</span><strong>@Model.UserId</strong></div>
                 <div class="class-detail-item"><span>Role</span><strong>@Model.Role</strong></div>
-                <div class="class-detail-item"><span>Email Address</span><strong>@Display(Model.Email)</strong>@if (editing) { <a asp-controller="AccountEmail" asp-action="Index" class="outline-button profile-email-link mt-2">@(string.IsNullOrWhiteSpace(Model.Email) ? "Add Email" : "Change Email")</a> }</div>
+                <div class="class-detail-item"><span>Email Address</span><strong>@Display(Model.Email)</strong>@if (editing) { <a asp-controller="AccountEmail" asp-action="Index" class="outline-button profile-email-link mt-2" data-profile-email-link>@(string.IsNullOrWhiteSpace(Model.Email) ? "Add Email" : "Change Email")</a> }</div>
                 @if (Model.Role is "Admin" or "Student")
                 {
                     <div class="class-detail-item"><span>@(Model.Role == "Admin" ? "Position" : "Academic Level")</span><strong>@Display(Model.Detail)</strong></div>
@@ -43,7 +43,7 @@
             <h3><i class="bi bi-person-vcard" aria-hidden="true"></i> Personal Information</h3>
             @if (editing)
             {
-                <form asp-action="EditProfile" method="post" asp-antiforgery="true">
+                <form id="personal-profile-form" data-profile-edit-form data-profile-has-errors="@((!ViewData.ModelState.IsValid).ToString().ToLowerInvariant())" asp-action="EditProfile" method="post" asp-antiforgery="true">
                     <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
                     <div class="profile-edit-grid">
                         <div class="profile-field">
@@ -88,6 +88,8 @@
         </section>
     </div>
 </div>
+@if (editing) { <partial name="_ProfileEmailPrompt" /> }
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/profile-email-navigation.js" asp-append-version="true"></script>
 }

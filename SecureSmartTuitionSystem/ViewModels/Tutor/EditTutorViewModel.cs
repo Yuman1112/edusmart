@@ -1,10 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace SecureSmartTuitionSystem.ViewModels.Tutor;
 
 public sealed class EditTutorViewModel
 {
+    [BindNever]
+    public List<TutorScheduleConflictViewModel> EmploymentConflicts { get; set; } = new();
+
     [Required]
     public string UserId { get; set; } = "";
 
@@ -88,3 +91,5 @@ public sealed class EditTutorViewModel
 
 public sealed record TutorDocumentSummary(
     int Id, SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind Kind, string FileName);
+
+public sealed record TutorScheduleConflictViewModel(string ClassCode, string Schedule, string Reason);

@@ -1,9 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 namespace SecureSmartTuitionSystem.Models.Identity;
 public enum EmailChangeStatus { VerifyCurrent = 0, VerifyNew = 1, Completed = 2, Cancelled = 3 }
+public enum EmailChangePurpose { SelfService = 0, TutorManaged = 1 }
 public sealed class EmailChangeRequest
 {
     public Guid Id { get; set; }
+    public EmailChangePurpose Purpose { get; set; } = EmailChangePurpose.SelfService;
+    [MaxLength(450)] public string? RequestedByUserId { get; set; }
     [Required, MaxLength(450)] public string UserId { get; set; } = "";
     public ApplicationUser User { get; set; } = null!;
     [Required, MaxLength(254)] public string NewEmail { get; set; } = "";

@@ -1,10 +1,18 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace SecureSmartTuitionSystem.ViewModels.Tutor;
 
 public sealed class EditOwnTutorProfileViewModel
 {
+    [StringLength(500), Display(Name = "Teaching Experience")]
+    public string? TeachingExperience { get; set; }
+    public IFormFile? Resume { get; set; }
+    [BindNever] public string Qualification { get; set; } = "";
+    [BindNever] public string? FieldOfStudy { get; set; }
+    [BindNever] public DateTime? QualificationVerifiedAtUtc { get; set; }
+    [BindNever] public IReadOnlyList<TutorDocumentSummary> Documents { get; set; } = [];
+    [BindNever] public QualificationUpdateRow? PendingQualification { get; set; }
     [BindNever]
     public string TutorId { get; set; } = "";
 

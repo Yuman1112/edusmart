@@ -1,4 +1,4 @@
-﻿using SecureSmartTuitionSystem.Models.Identity;
+using SecureSmartTuitionSystem.Models.Identity;
 using System.ComponentModel.DataAnnotations;
 
 namespace SecureSmartTuitionSystem.Models
@@ -16,6 +16,10 @@ namespace SecureSmartTuitionSystem.Models
 
         [StringLength(100)]
         public string? Position { get; set; }
+
+        [Required]
+        [StringLength(8)]
+        public string PermissionLevel { get; set; } = AdminPermissionLevels.Standard;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

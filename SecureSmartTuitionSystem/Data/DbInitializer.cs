@@ -63,7 +63,8 @@ public static class DbInitializer
                 db.AdminProfiles.Add(new AdminProfile
                 {
                     ApplicationUserId = admin.Id, FullName = admin.FullName,
-                    Position = "Administrator", CreatedAt = DateTime.UtcNow
+                    Position = "Administrator", PermissionLevel = AdminPermissionLevels.High,
+                    CreatedAt = DateTime.UtcNow
                 });
                 await db.SaveChangesAsync();
             }

@@ -1,0 +1,20 @@
+/* Scoped to Create Administrator; keep the required mark beside its label. */
+.create-admin-page .class-form-card label.create-admin-label {
+    display:inline-flex;
+    align-items:baseline;
+    gap:4px;
+    flex-wrap:nowrap;
+    max-width:100%;
+}
+.create-admin-page label.create-admin-label > .create-admin-label-text,
+.create-admin-page label.create-admin-label > .create-admin-required {
+    display:inline !important;
+    margin:0;
+    padding:0;
+    line-height:inherit;
+}
+.create-admin-page label.create-admin-label > .create-admin-required {
+    color:#dc3545;
+    font-weight:700;
+    flex-shrink:0;
+}

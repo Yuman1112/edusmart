@@ -58,8 +58,9 @@
         || currentController == "AdminTutorAvailability";
     bool tutorWorkloadActive = currentController == "TutorWorkload";
     bool teachingRequestsActive = currentController == "TeachingRequests";
+    bool qualificationRequestsActive = currentController == "QualificationRequests";
     bool tutorManagementActive =
-        tutorListActive || tutorWorkloadActive || teachingRequestsActive;
+        tutorListActive || tutorWorkloadActive || teachingRequestsActive || qualificationRequestsActive;
 
     // Attendance menu
     bool attendanceModuleActive =
@@ -259,6 +260,12 @@
                                    aria-current="@(teachingRequestsActive ? "page" : null)">
                                     <i class="bi bi-clipboard-check" aria-hidden="true"></i>
                                     <span>Teaching Change Requests</span>
+                                </a>
+                                <a class="sidebar-submenu-link @(qualificationRequestsActive ? "active" : "")"
+                                   asp-controller="QualificationRequests" asp-action="Index"
+                                   aria-current="@(qualificationRequestsActive ? "page" : null)">
+                                    <i class="bi bi-file-earmark-check" aria-hidden="true"></i>
+                                    <span>Qualification Update Requests</span>
                                 </a>
                             </div>
                         </div>

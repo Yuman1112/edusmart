@@ -76,7 +76,7 @@ public sealed class AccountSettingsController(
         int seconds = SecureSmartTuitionSystem.Services.Security.TwoFactorRequestLimits.TryAcquire(
             user.Id, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", operation);
         if (seconds == 0) return true;
-        TempData["TwoFactorInfo"] = $"Too many requests. Please wait {seconds} seconds before trying again.";
+        Response.Headers["Retry-After"] = seconds.ToString(CultureInfo.InvariantCulture);
         return false;
     }
 
@@ -92,6 +92,7 @@ public sealed class AccountSettingsController(
             user, requireVerifiedOwnEmail: true, HttpContext.RequestAborted);
         var pending = await GetValidPendingAsync(user, recipient);
 
+        ViewData["RequestCooldown"] = SecureSmartTuitionSystem.Services.Security.AccountRequestCooldown.Read(user.Id, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
         return View(new TwoFactorViewModel
         {
             Enabled = await users.GetTwoFactorEnabledAsync(user),

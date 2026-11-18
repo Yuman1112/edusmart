@@ -1,0 +1,9 @@
+@using SecureSmartTuitionSystem.Services.Security
+@{
+    var cooldown = ViewData["RequestCooldown"] as AccountRequestCooldown ?? new(0, 0, 0);
+    int wait = Math.Max(cooldown.Password, Math.Max(cooldown.Send, cooldown.Verify));
+}
+<div class="alert alert-warning" role="status" data-account-cooldown
+     data-wait-password="@cooldown.Password" data-wait-send="@cooldown.Send" data-wait-verify="@cooldown.Verify" hidden="@(wait == 0)">
+    <span data-cooldown-message>Please wait @wait seconds before retrying the limited operation.</span>
+</div>

@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorDetailsViewModel
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorDetailsViewModel
 
 @{
     ViewData["Title"] = "Tutor Details";
@@ -12,6 +12,7 @@
     <link rel="stylesheet"
           href="~/css/tutor-management.css"
           asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-ui-consistency.css" asp-append-version="true" />
 }
 
 <div class="page-header">
@@ -21,6 +22,7 @@
     </div>
 
     <div class="class-detail-header-actions">
+        <a asp-controller="QualificationRequests" asp-action="Index" class="outline-button">Qualification Requests</a>
         <a asp-controller="TutorManagement"
            asp-action="ChangeStatus"
            asp-route-userId="@Model.UserId"
@@ -267,6 +269,28 @@
             </div>
         </section>
     }
+
+    <section class="class-details-section tutor-supporting-documents" aria-labelledby="supportingDocumentsHeading">
+        <h3 id="supportingDocumentsHeading"><i class="bi bi-file-earmark-check" aria-hidden="true"></i> Supporting Documents</h3>
+        <p class="tutor-documents-note">Documents provided for this tutor. Uploading a document does not mark the qualification as verified.</p>
+        @foreach (var kind in new[] { SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate, SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Resume })
+        {
+            var document = Model.Documents.FirstOrDefault(d => d.Kind == kind);
+            var title = kind == SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "Qualification Certificate" : "Resume";
+            <div class="tutor-document-row">
+                <div class="tutor-document-identity">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                    <div><strong>@title</strong><span>@(document?.FileName ?? "Not uploaded")</span></div>
+                </div>
+                @if (document != null)
+                {
+                    <a asp-controller="TeachingRequests" asp-action="Document" asp-route-id="@document.Id" class="outline-button" aria-label="Download @title">
+                        <i class="bi bi-download" aria-hidden="true"></i> Download
+                    </a>
+                }
+            </div>
+        }
+    </section>
 
     <section class="class-details-section">
         <h3>

@@ -1,8 +1,10 @@
-﻿namespace SecureSmartTuitionSystem.ViewModels.Tutor;
+namespace SecureSmartTuitionSystem.ViewModels.Tutor;
 
 public sealed class TutorDetailsViewModel
 {
     public SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType EmploymentType { get; set; }
+    public QualificationUpdateRow? PendingQualification { get; set; }
+    public List<TutorDocumentSummary> Documents { get; set; } = new();
     public List<int> LegacySlots { get; set; } = new();
 
     public string UserId { get; set; } = "";

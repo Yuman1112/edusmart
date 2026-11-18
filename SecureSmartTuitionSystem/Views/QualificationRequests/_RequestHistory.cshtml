@@ -1,0 +1,16 @@
+@model IReadOnlyList<SecureSmartTuitionSystem.ViewModels.Tutor.QualificationUpdateRow>
+@using SecureSmartTuitionSystem.Models.Tutor
+@if(Model.Count==0){<p class="text-muted mb-0">No qualification update requests.</p>}
+@foreach(var r in Model){
+    <div class="profile-request-entry">
+        <div class="profile-document-row"><strong>#@r.Id — @r.Qualification</strong><span class="badge @(r.Status==QualificationUpdateStatus.Pending ? "bg-warning text-dark" : r.Status==QualificationUpdateStatus.Approved ? "bg-success" : "bg-secondary")">@r.StatusLabel</span></div>
+        <p>@r.FieldOfStudy · @r.AreaOfExpertise</p>
+        <p class="text-muted">Submitted @r.SubmittedAtUtc.AddHours(8).ToString("dd MMM yyyy, h:mm tt") MYT</p>
+        <p>@r.Reason</p>
+        <div class="profile-document-row"><a asp-controller="QualificationRequests" asp-action="Document" asp-route-id="@r.Id" class="outline-button">View @r.CertificateName</a>
+        @if(User.IsInRole("Admin")){<a asp-action="Review" asp-route-id="@r.Id" class="primary-button">Review Request</a>}
+        else if(r.Status==QualificationUpdateStatus.Pending){<form asp-action="Cancel" method="post" asp-antiforgery="true"><input type="hidden" name="id" value="@r.Id" /><button type="submit" class="outline-button">Cancel Request</button></form>}
+        </div>
+        @if(!string.IsNullOrWhiteSpace(r.ReviewNotes)){<div class="email-info-note mt-3"><span><strong>Admin review:</strong> @r.ReviewNotes</span></div>}
+    </div>
+}

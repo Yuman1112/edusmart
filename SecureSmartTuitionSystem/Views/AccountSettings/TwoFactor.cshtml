@@ -370,6 +370,7 @@
         </div>
     </div>
 
+    <partial name="_AccountRequestCooldown" />
     @if (TempData["TwoFactorSuccess"] is string success)
     {
         <div class="alert alert-success" role="status">
@@ -475,7 +476,7 @@
 
             <form asp-area=""
                   asp-controller="AccountSettings"
-                  asp-action="ConfirmChange"
+                  asp-action="ConfirmChange" data-request-limit="verify"
                   method="post"
                   asp-antiforgery="true">
 
@@ -572,7 +573,7 @@
 
             <form asp-area=""
                   asp-controller="AccountSettings"
-                  asp-action="BeginChange"
+                  asp-action="BeginChange" data-request-limit="password send"
                   method="post"
                   asp-antiforgery="true">
 
@@ -634,6 +635,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/account-request-cooldown.js" asp-append-version="true"></script>
     <script nonce="@Context.Items["CspNonce"]">
         (() => {
             const input = document.getElementById("twofa-password");

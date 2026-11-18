@@ -56,7 +56,8 @@ namespace SecureSmartTuitionSystem.Services.Authentication
             }
 
             if (!tutor.IsActive
-                || !await _users.IsInRoleAsync(tutor, "Tutor"))
+                || !await _users.IsInRoleAsync(tutor, "Tutor")
+                || !await _db.TutorProfiles.AnyAsync(p => p.ApplicationUserId == tutor.Id && p.IsActive))
             {
                 return "The active tutor account was not found.";
             }
@@ -64,7 +65,7 @@ namespace SecureSmartTuitionSystem.Services.Authentication
             // The caller passes the currently signed-in user's ID.
             var requester = await _users.FindByIdAsync(adminUserId);
 
-            if (requester == null || !requester.IsActive)
+            if (requester == null || !requester.IsActive || requester.MustChangePassword || await _users.IsLockedOutAsync(requester))
             {
                 return "You are not authorised to change this email.";
             }
@@ -99,6 +100,8 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                 return "Please enter a valid email address.";
             }
 
+            if (normalizedEmail == tutor.NormalizedEmail) return "Please enter a different email address.";
+
             bool emailAlreadyUsed = await _db.Users.AnyAsync(user =>
                 user.Id != tutor.Id
                 && user.NormalizedEmail == normalizedEmail);
@@ -115,12 +118,6 @@ namespace SecureSmartTuitionSystem.Services.Authentication
 
             DateTime now = DateTime.UtcNow;
 
-            tutor.PendingTutorEmail = newEmail;
-            tutor.TutorEmailChangeRequestId = Guid.NewGuid();
-            tutor.TutorEmailChangeRequestedAtUtc = now;
-            tutor.TutorEmailChangeExpiresAtUtc = now.AddHours(2);
-            tutor.TutorEmailChangeRequestedByUserId = adminUserId;
-
             IdentityResult result;
 
             if (tutor.MustChangePassword)
@@ -133,10 +130,18 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                 result = await _users.UpdateAsync(tutor);
             }
 
-            return result.Succeeded
-                ? null
-                : "Unable to save the email change request. "
-                    + "Please reload the page and try again.";
+            if (!result.Succeeded) return "Unable to save the email change request. Reload and try again.";
+            _db.Add(new EmailChangeRequest {
+                Id = Guid.NewGuid(), UserId = tutor.Id, NewEmail = newEmail,
+                OriginalEmail = tutor.Email, RequestedByUserId = requester.Id,
+                Purpose = EmailChangePurpose.TutorManaged,
+                Status = EmailChangeStatus.VerifyNew, RequestedAtUtc = now,
+                ExpiresAtUtc = now.AddHours(2), CodeExpiresAtUtc = now,
+                SecurityStampHash = EmailChangeRules.Hash(tutor.SecurityStamp ?? ""),
+                RecipientHash = "", CodeHash = "", CodeNonce = Guid.NewGuid(), LinkNonce = Guid.NewGuid()
+            });
+            await _db.SaveChangesAsync();
+            return null;
         }
 
         public async Task<bool> SendPendingAsync(string tutorUserId)
@@ -147,22 +152,14 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                     .AsNoTracking()
                     .FirstOrDefaultAsync(user => user.Id == tutorUserId);
 
-                if (tutor == null
-                    || !tutor.IsActive
-                    || !await _users.IsInRoleAsync(tutor, "Tutor")
-                    || string.IsNullOrWhiteSpace(tutor.PendingTutorEmail)
-                    || !tutor.TutorEmailChangeRequestId.HasValue
-                    || !tutor.TutorEmailChangeExpiresAtUtc.HasValue
-                    || tutor.TutorEmailChangeExpiresAtUtc.Value
-                        <= DateTime.UtcNow)
-                {
+                var pending = await PendingAsync(tutorUserId);
+                if (tutor == null || pending == null || await CurrentAsync(tutor, pending.Id) == null)
                     return false;
-                }
 
                 string token =
                     await _users.GenerateChangeEmailTokenAsync(
                         tutor,
-                        tutor.PendingTutorEmail);
+                        pending.NewEmail);
 
                 string encodedToken = WebEncoders.Base64UrlEncode(
                     Encoding.UTF8.GetBytes(token));
@@ -174,13 +171,13 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                     {
                         ["userId"] = tutor.Id,
                         ["requestId"] =
-                            tutor.TutorEmailChangeRequestId.Value
+                            pending.Id
                                 .ToString("D"),
                         ["token"] = encodedToken
                     });
 
                 await _emailService.SendAsync(
-                    recipientEmail: tutor.PendingTutorEmail,
+                    recipientEmail: pending.NewEmail,
                     tutorName: tutor.FullName ?? "",
                     tutorUserId: tutor.UserName ?? "",
                     verificationUrl: verificationUrl);
@@ -198,6 +195,25 @@ namespace SecureSmartTuitionSystem.Services.Authentication
 
                 return false;
             }
+        }
+
+        public Task<EmailChangeRequest?> PendingAsync(string userId, bool tracking = false)
+        {
+            IQueryable<EmailChangeRequest> query = _db.Set<EmailChangeRequest>();
+            if (!tracking) query = query.AsNoTracking();
+            return query.Where(r => r.UserId == userId && r.Purpose == EmailChangePurpose.TutorManaged
+                && r.Status == EmailChangeStatus.VerifyNew).OrderByDescending(r => r.RequestedAtUtc).FirstOrDefaultAsync();
+        }
+
+        public async Task<EmailChangeRequest?> CurrentAsync(ApplicationUser? tutor, Guid id, bool tracking = false)
+        {
+            if (tutor == null || !tutor.IsActive || id == Guid.Empty || !await _users.IsInRoleAsync(tutor, "Tutor")) return null;
+            var row = await PendingAsync(tutor.Id, tracking);
+            if (row == null || row.Id != id || row.ExpiresAtUtc <= DateTime.UtcNow ||
+                row.SecurityStampHash != EmailChangeRules.Hash(tutor.SecurityStamp ?? "") ||
+                !string.Equals(row.OriginalEmail, tutor.Email, StringComparison.OrdinalIgnoreCase) ||
+                !await _db.TutorProfiles.AnyAsync(p => p.ApplicationUserId == tutor.Id && p.IsActive)) return null;
+            return row;
         }
 
         private string GetPublicOrigin()

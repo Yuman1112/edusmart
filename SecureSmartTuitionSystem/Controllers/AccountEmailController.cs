@@ -21,7 +21,7 @@ public sealed class AccountEmailController(UserManager<ApplicationUser> users, A
         [Required, StringLength(128), DataType(DataType.Password)] public string Password { get; set; } = "";
     }
     public sealed record PageModel(string UserName, string? CurrentEmail, string ProfileController, EmailChangeRequest? Pending);
-    public sealed record ConfirmationModel(string? Token, string? NewEmail, string Message, bool CanConfirm, bool Success);
+    public sealed record ConfirmationModel(string? Token, string? NewEmail, string Message, bool CanConfirm, bool Success, string? UserName = null);
     private string ProfileController => User.IsInRole("Admin") ? "Admin" : User.IsInRole("Tutor") ? "Tutor" : User.IsInRole("Student") ? "Student" : "Parent";
     private async Task<ApplicationUser?> OwnAsync()
     {
@@ -31,7 +31,7 @@ public sealed class AccountEmailController(UserManager<ApplicationUser> users, A
     {
         var wait = TwoFactorRequestLimits.TryAcquire("email:" + user.Id, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", operation);
         if (wait == 0) return true;
-        TempData["EmailError"] = $"Too many requests. Wait {wait} seconds and try again."; Response.Headers["Retry-After"] = wait.ToString(); return false;
+        Response.Headers["Retry-After"] = wait.ToString(System.Globalization.CultureInfo.InvariantCulture); return false;
     }
     private IActionResult Feedback(EmailOperation result)
     { TempData[result.Success ? "EmailSuccess" : "EmailError"] = result.Message; return RedirectToAction(nameof(Index)); }
@@ -39,6 +39,7 @@ public sealed class AccountEmailController(UserManager<ApplicationUser> users, A
     public async Task<IActionResult> Index()
     {
         var user = await OwnAsync(); if (user == null) return Forbid();
+        ViewData["RequestCooldown"] = AccountRequestCooldown.Read("email:" + user.Id, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
         return View(new PageModel(user.UserName ?? "", user.Email, ProfileController, await service.PendingAsync(user.Id)));
     }
     [HttpPost("Start"), ValidateAntiForgeryToken]
@@ -78,8 +79,9 @@ public sealed class AccountEmailController(UserManager<ApplicationUser> users, A
     {
         Response.Headers["Referrer-Policy"] = "no-referrer";
         var row = await service.ConfirmationAsync(token);
+        var owner = row == null ? null : await users.FindByIdAsync(row.UserId);
         return View(new ConfirmationModel(row == null ? null : token, row?.NewEmail,
-            row == null ? "This link is invalid, expired or replaced. Request a new link from your profile." : "Confirm this address as your new EduSmart account email.", row != null, false));
+            row == null ? "This link is invalid, expired or replaced. Request a new link from your profile." : "Confirm this address as your new EduSmart account email.", row != null, false, owner?.UserName));
     }
     [AllowAnonymous, HttpPost("Confirm"), ValidateAntiForgeryToken]
     public async Task<IActionResult> Complete(string? token)
@@ -98,6 +100,7 @@ public sealed class AccountEmailController(UserManager<ApplicationUser> users, A
                 Response.Cookies.Delete(".EduSmart.Session");
             }
         }
-        return View("Confirm", new ConfirmationModel(null, null, outcome.Result.Message, false, outcome.Result.Success));
+        var owner = outcome.UserId == null ? null : await users.FindByIdAsync(outcome.UserId);
+        return View("Confirm", new ConfirmationModel(null, owner?.Email, outcome.Result.Message, false, outcome.Result.Success, owner?.UserName));
     }
 }

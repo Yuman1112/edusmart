@@ -9,11 +9,7 @@ public static class TwoFactorRequestLimits
     private static DateTimeOffset nextCleanup;
     private const int MaximumBuckets = 20000;
 
-    // Returns seconds to wait, or zero when the operation is allowed.
-    public static int TryAcquire(string userId, string ip, string operation, DateTimeOffset? at = null)
-    {
-        var now = at ?? DateTimeOffset.UtcNow;
-        (string Kind, string Key, int Limit, TimeSpan Window)[] rules = operation switch
+    private static (string Kind, string Key, int Limit, TimeSpan Window)[] Rules(string userId, string ip, string operation) => operation switch
         {
             "send" => [ ("send-cooldown", userId, 1, TimeSpan.FromSeconds(60)),
                 ("send-account", userId, 5, TimeSpan.FromMinutes(15)),
@@ -24,6 +20,34 @@ public static class TwoFactorRequestLimits
                 ("verify-ip", ip, 100, TimeSpan.FromMinutes(1)) ],
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
         };
+
+    // Read only: rendering or refreshing a page must never consume request quotas.
+    public static int GetWaitSeconds(string userId, string ip, string operation, DateTimeOffset? at = null)
+    {
+        var now = at ?? DateTimeOffset.UtcNow;
+        var rules = Rules(userId, ip, operation);
+        lock (Gate)
+        {
+            int wait = 0;
+            foreach (var rule in rules)
+                if (Buckets.TryGetValue((rule.Kind, rule.Key), out var bucket)
+                    && bucket.Expires > now && bucket.Count >= rule.Limit)
+                    wait = Math.Max(wait, (int)Math.Ceiling((bucket.Expires - now).TotalSeconds));
+            if (wait > 0) return wait;
+            // Expired buckets can be reclaimed by TryAcquire's cleanup.
+            bool cleanupDue = now >= nextCleanup;
+            int count = cleanupDue ? Buckets.Count(x => x.Value.Expires > now) : Buckets.Count;
+            int newKeys = rules.Count(rule => !Buckets.TryGetValue((rule.Kind, rule.Key), out var bucket)
+                || (cleanupDue && bucket.Expires <= now));
+            return count + newKeys > MaximumBuckets ? 60 : 0;
+        }
+    }
+
+    // Returns seconds to wait, or zero when the operation is allowed.
+    public static int TryAcquire(string userId, string ip, string operation, DateTimeOffset? at = null)
+    {
+        var now = at ?? DateTimeOffset.UtcNow;
+        var rules = Rules(userId, ip, operation);
         lock (Gate)
         {
             if (now >= nextCleanup)

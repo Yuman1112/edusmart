@@ -1,43 +1,96 @@
 @model SecureSmartTuitionSystem.Controllers.AccountEmailController.PageModel
 @using SecureSmartTuitionSystem.Models.Identity
 @{
-    ViewData["Title"] = string.IsNullOrWhiteSpace(Model.CurrentEmail) ? "Add Email" : "Change Email";
+    bool adding = string.IsNullOrWhiteSpace(Model.CurrentEmail);
+    ViewData["Title"] = adding ? "Add Email" : "Change Email";
     var pending = Model.Pending;
     bool expired = pending != null && pending.ExpiresAtUtc <= DateTime.UtcNow;
+    bool needsCode = pending != null && !expired && pending.Status == EmailChangeStatus.VerifyCurrent;
+    string heading = pending == null ? "Account Email" : expired ? "Request Expired" : needsCode ? (adding ? "Guardian Verification" : "Verify Your Identity") : "Check Your New Email";
+    string? success = TempData["EmailSuccess"] as string;
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/account-profile.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/login-otp.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/email-change.css" asp-append-version="true" />
+    <noscript><style>.email-change-page .otp-real-input { position: static; opacity: 1; height: 55px; border: 1px solid #cce1e8; border-radius: 9px; padding: 12px; } .email-change-page .otp-digits { display: none; }</style></noscript>
 }
-<div class="account-profile-page">
-    <div class="page-header"><div><h1>@ViewData["Title"]</h1><p>Verify your identity and new address before updating your account email.</p></div><a asp-controller="@Model.ProfileController" asp-action="MyProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
-    @if (TempData["EmailSuccess"] is string success) { <div class="alert alert-success" role="status">@success</div> }
-    @if (TempData["EmailError"] is string error) { <div class="alert alert-warning" role="alert">@error</div> }
-    <div class="class-details-card">
-        <div class="class-details-title"><h2>@Model.UserName</h2></div>
-        <section class="class-details-section"><h3>Current Email</h3><p>@(string.IsNullOrWhiteSpace(Model.CurrentEmail) ? "No personal email. Eligible verification messages are delivered to your verified primary guardian." : Model.CurrentEmail)</p></section>
-        @if (pending != null)
-        {
-            <section class="class-details-section"><h3>@(expired ? "Request expired" : pending.Status == EmailChangeStatus.VerifyCurrent ? "Step 1 · Verify your current contact" : "Step 2 · Verify your new email")</h3>
-                <p>New email: <strong>@pending.NewEmail</strong></p><p class="text-muted">Request expires @pending.ExpiresAtUtc.AddHours(8).ToString("dd MMM yyyy, h:mm tt") MYT.</p>
-                @if (!expired && pending.Status == EmailChangeStatus.VerifyCurrent)
-                {
-                    <p>Enter the code sent to your current verified email or primary guardian. The code expires in 10 minutes.</p>
-                    <form asp-action="VerifyCurrent" method="post" asp-antiforgery="true"><input type="hidden" name="requestId" value="@pending.Id" /><label for="currentEmailCode" class="form-label">Verification Code</label><input id="currentEmailCode" name="code" class="form-control" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required /><button class="primary-button mt-3" type="submit">Verify code</button></form>
-                }
-                else if (!expired) { <p>Open the verification email sent to your new address. Your current account email remains unchanged until confirmation.</p> }
-                <div class="d-flex flex-wrap gap-2 mt-3">
-                    @if (!expired) { <form asp-action="Resend" method="post" asp-antiforgery="true"><input type="hidden" name="requestId" value="@pending.Id" /><button class="outline-button" type="submit">Resend Verification</button></form> }
-                    <form asp-action="Cancel" method="post" asp-antiforgery="true"><input type="hidden" name="requestId" value="@pending.Id" /><button class="outline-button" type="submit">Cancel Request</button></form>
-                </div>
-            </section>
-        }
-        <section class="class-details-section"><h3>@(pending == null ? "Start email verification" : "Start a replacement request")</h3>
-            <form asp-action="Start" method="post" asp-antiforgery="true">
-                <div class="profile-edit-grid"><div class="profile-field"><label for="newAccountEmail" class="form-label">New Email Address</label><input id="newAccountEmail" name="NewEmail" type="email" maxlength="254" autocomplete="email" class="form-control" required /></div><div class="profile-field"><label for="accountPassword" class="form-label">Current Password</label><input id="accountPassword" name="Password" type="password" maxlength="128" autocomplete="current-password" class="form-control" required /></div></div>
-                <p class="text-muted mt-3">Your password, 2FA setting and parent/student links will not change. A new request replaces earlier pending email requests.</p>
-                <div class="class-form-actions"><button class="primary-button" type="submit">Send verification code</button></div>
-            </form>
-        </section>
+<div class="account-profile-page email-change-page" data-email-flow>
+    <div class="page-header">
+        <div><h1>@ViewData["Title"]</h1><p>Update your account email securely.</p></div>
+        <a asp-controller="@Model.ProfileController" asp-action="EditProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Profile</a>
     </div>
+    @if (TempData["ProfileSaved"] is string saved) { <div class="alert alert-success" role="status">@saved</div> }
+    @if (TempData["OwnProfileSuccess"] is string tutorSaved) { <div class="alert alert-success" role="status">@tutorSaved</div> }
+    <div data-email-inline-send="@(pending != null && !expired ? "true" : "false")"><partial name="_AccountRequestCooldown" /></div>
+    @if (TempData["EmailError"] is string error) { <div class="alert alert-warning" role="alert">@error</div> }
+    <div class="class-details-card email-change-card" data-email-verification-panel>
+        <div class="email-card-heading">
+            <div class="email-card-title"><span class="email-card-icon"><i class="bi @(needsCode ? "bi-shield-check" : "bi-envelope-check")" aria-hidden="true"></i></span><h2>@heading</h2></div>
+            <span class="profile-role">@Model.UserName</span>
+        </div>
+        <div class="email-card-body">
+            <div class="email-address-grid @(pending == null ? "email-address-single" : "")">
+                <div class="class-detail-item"><span>@(adding ? "Verification Contact" : "Current Email")</span><strong>@(adding ? "Verified primary guardian" : Model.CurrentEmail)</strong></div>
+                @if (pending != null) { <div class="class-detail-item"><span>New Email</span><strong>@pending.NewEmail</strong></div> }
+            </div>
+            @if (pending != null && !expired) { <p class="email-current-status">Your current email stays active until the change is confirmed.</p> }
+            @if (success != null) { <div class="email-inline-success" role="status"><i class="bi bi-check-circle" aria-hidden="true"></i><span>@(needsCode ? (adding ? "Verification code sent to your primary guardian." : "Verification code sent to your current email.") : success)</span></div> }
+            @if (pending == null)
+            {
+                <div class="email-start-form"><partial name="_EmailChangeStart" /></div>
+            }
+            else if (expired)
+            {
+                <p class="email-status-copy email-state-copy">This request has expired. Your account email has not changed. Cancel it or start a new request below.</p>
+                <div class="class-form-actions email-flow-actions"><button class="outline-button" type="submit" form="email-cancel-form">Cancel Request</button></div>
+            }
+            else if (needsCode)
+            {
+                <form id="email-code-form" data-request-limit="verify" asp-action="VerifyCurrent" method="post" asp-antiforgery="true">
+                    <input type="hidden" name="requestId" value="@pending.Id" />
+                    <div class="email-code-section">
+                        <label for="otpCode" class="email-code-label">Verification Code</label>
+                        <p id="email-code-help" class="email-status-copy">@(adding ? "Use the 6-digit code sent to your primary guardian." : "Use the 6-digit code sent to your current email.")<span class="email-code-expiry">Valid for 10 minutes.</span></p>
+                        <div class="otp-input-container email-otp-field">
+                            <input id="otpCode" name="code" class="otp-real-input" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" aria-describedby="email-code-help" required />
+                            <div class="otp-digits" aria-hidden="true"><span class="otp-digit"></span><span class="otp-digit"></span><span class="otp-digit"></span><span class="otp-digit"></span><span class="otp-digit"></span><span class="otp-digit"></span></div>
+                        </div>
+                        <div class="email-resend-row"><span>Didn’t receive it?</span><button type="submit" form="email-resend-form" class="email-text-button" data-cooldown-prefix="Resend in">Resend Code</button></div>
+                    </div>
+                    <div class="class-form-actions email-flow-actions">
+                        <button class="outline-button" type="submit" form="email-cancel-form">Cancel Request</button>
+                        <button class="primary-button" type="submit"><i class="bi bi-check-lg" aria-hidden="true"></i> Verify &amp; Continue</button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <div class="email-waiting-state">
+                    <i class="bi bi-envelope-paper email-waiting-icon" aria-hidden="true"></i>
+                    <p>Open the email sent to your new address and select <strong>Confirm Email Change</strong>.</p>
+                    <p class="email-status-copy">Your current account email remains unchanged until confirmation.</p>
+                </div>
+                <div class="class-form-actions email-flow-actions">
+                    <button class="outline-button" type="submit" form="email-cancel-form">Cancel Request</button>
+                    <button class="primary-button" type="submit" form="email-resend-form" data-cooldown-prefix="Resend in">Resend Email</button>
+                </div>
+            }
+        </div>
+    </div>
+    @if (pending != null)
+    {
+        <form id="email-cancel-form" asp-action="Cancel" method="post" asp-antiforgery="true" hidden><input type="hidden" name="requestId" value="@pending.Id" /></form>
+        @if (!expired) { <form id="email-resend-form" data-request-limit="send" asp-action="Resend" method="post" asp-antiforgery="true" hidden><input type="hidden" name="requestId" value="@pending.Id" /></form> }
+        <details class="email-address-change" data-email-address-change>
+            <summary><i class="bi bi-pencil" aria-hidden="true"></i> @(expired ? "Start a new request" : "Wrong new email? Change address")</summary>
+            <div class="class-details-card email-replacement-card"><h2>Change New Email</h2><p class="email-status-copy">Submitting a new request replaces the previous request and invalidates its verification code.</p><partial name="_EmailChangeStart" /></div>
+        </details>
+    }
 </div>
+@section Scripts {
+    <script src="~/js/account-request-cooldown.js" asp-append-version="true"></script>
+    <script src="~/js/email-change-layout.js" asp-append-version="true"></script>
+    @if (needsCode) { <script src="~/js/login-otp.js" asp-append-version="true" defer></script> }
+}

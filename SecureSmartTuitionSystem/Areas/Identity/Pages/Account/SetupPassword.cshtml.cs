@@ -84,7 +84,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 .AsNoTracking()
                 .FirstOrDefaultAsync(account => account.Id == userId);
 
-            if (!CanSetUpAccount(user))
+            if (!await CanSetUpAccountAsync(user))
             {
                 return BadRequest(
                     "The account setup link is invalid or unavailable. "
@@ -150,7 +150,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                     .FirstOrDefaultAsync(
                         account => account.Id == Input.UserId);
 
-                if (!CanSetUpAccount(user))
+                if (!await CanSetUpAccountAsync(user))
                 {
                     ModelState.AddModelError(
                         "",
@@ -218,13 +218,13 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 new { area = "Identity" });
         }
 
-        private static bool CanSetUpAccount(ApplicationUser? user)
+        private async Task<bool> CanSetUpAccountAsync(ApplicationUser? user)
         {
             return user != null
                 && user.IsActive
                 && user.MustChangePassword
-                && !user.TutorEmailChangeRequestId.HasValue
-                && string.IsNullOrWhiteSpace(user.PendingTutorEmail);
+                && !await _db.Set<EmailChangeRequest>().AnyAsync(r => r.UserId == user.Id &&
+                    (r.Status == EmailChangeStatus.VerifyCurrent || r.Status == EmailChangeStatus.VerifyNew));
         }
 
         private static string? DecodeToken(string encodedToken)

@@ -1,0 +1,15 @@
+.qualification-requests-page .qualification-current-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.qualification-requests-page .teaching-approved-subject strong { margin-bottom:0; overflow-wrap:anywhere; }
+.qualification-requests-page .teaching-eyebrow { display:block; }
+.qualification-requests-page .qualification-badge-neutral { color:#526173; background:#edf0f3; }
+.qualification-requests-page .qualification-details-cell { min-width:200px; max-width:340px; overflow-wrap:anywhere; white-space:normal; }
+.qualification-requests-page .qualification-reason { margin-top:8px; font-size:.85rem; }
+.qualification-requests-page .qualification-reason summary { color:#007582; cursor:pointer; }
+.qualification-requests-page .qualification-reason p { margin:8px 0 0; line-height:1.6; white-space:pre-wrap; }
+.qualification-requests-page td form { margin:0; }
+.qualification-requests-page .class-form-section:last-child { margin-bottom:0; padding-bottom:0; border-bottom:0; }
+.qualification-requests-page .qualification-review-details { display:grid; gap:14px; }
+.qualification-requests-page .qualification-review-item { border-bottom:1px solid var(--border); padding-bottom:14px; overflow-wrap:anywhere; }
+.qualification-requests-page .qualification-review-item > span { display:block; color:#58718a; font-size:.82rem; margin-bottom:5px; }
+.qualification-requests-page .qualification-review-item p { margin:6px 0 0; color:#58718a; }
+@media(max-width:767.98px) { .qualification-requests-page .qualification-current-grid { grid-template-columns:1fr; } }

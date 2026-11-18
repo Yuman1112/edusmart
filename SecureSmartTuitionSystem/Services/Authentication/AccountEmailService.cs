@@ -17,15 +17,12 @@ public sealed class AccountEmailService(ApplicationDbContext db, UserManager<App
     private static readonly string[] Roles = ["Admin", "Tutor", "Parent", "Student"];
     public async Task<bool> UsableAsync(ApplicationUser? user) => user != null && user.IsActive && !user.MustChangePassword &&
         await users.HasPasswordAsync(user) && !(await users.IsLockedOutAsync(user)) && (await users.GetRolesAsync(user)).Any(Roles.Contains);
+    private static string RecipientProofHash(EmailOtpRecipient recipient, ApplicationUser user) =>
+        EmailChangeRules.Hash(EmailChangeRules.RecipientHash(recipient) + ":email-policy-v2:" + user.TwoFactorEnabled);
     public Task<EmailChangeRequest?> PendingAsync(string userId) => db.Set<EmailChangeRequest>().AsNoTracking()
-        .Where(r => r.UserId == userId && (r.Status == EmailChangeStatus.VerifyCurrent || r.Status == EmailChangeStatus.VerifyNew))
+        .Where(r => r.UserId == userId && r.Purpose == EmailChangePurpose.SelfService && (r.Status == EmailChangeStatus.VerifyCurrent || r.Status == EmailChangeStatus.VerifyNew))
         .OrderByDescending(r => r.RequestedAtUtc).FirstOrDefaultAsync();
     private static EmailOperation Error(string message) => new(false, message);
-    private static void ClearLegacy(ApplicationUser user)
-    {
-        user.PendingTutorEmail = null; user.TutorEmailChangeRequestId = null; user.TutorEmailChangeRequestedAtUtc = null;
-        user.TutorEmailChangeExpiresAtUtc = null; user.TutorEmailChangeRequestedByUserId = null;
-    }
     private string SetCode(EmailChangeRequest row)
     {
         var code = RandomNumberGenerator.GetInt32(0, 1000000).ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
@@ -66,11 +63,12 @@ public sealed class AccountEmailService(ApplicationDbContext db, UserManager<App
         try { Origin(); } catch (InvalidOperationException) { return Error("The public website address is not configured correctly."); }
         var recipient = await recipients.ResolveAsync(user, true, CancellationToken.None);
         if (recipient == null) return Error("A verified current email or eligible primary guardian is required. Contact the tuition centre for help.");
-        var row = new EmailChangeRequest { Id = Guid.NewGuid(), UserId = user.Id, NewEmail = newEmail,
+        bool requiresCurrentCode = user.TwoFactorEnabled || recipient.GuardianLinkId != null;
+        var row = new EmailChangeRequest { Id = Guid.NewGuid(), UserId = user.Id, NewEmail = newEmail, RequestedByUserId = user.Id,
             OriginalEmail = user.Email, SecurityStampHash = EmailChangeRules.Hash(user.SecurityStamp ?? ""),
-            RecipientHash = EmailChangeRules.RecipientHash(recipient), RequestedAtUtc = DateTime.UtcNow,
-            ExpiresAtUtc = DateTime.UtcNow.AddHours(2), Status = EmailChangeStatus.VerifyCurrent };
-        var code = SetCode(row);
+            RecipientHash = RecipientProofHash(recipient, user), RequestedAtUtc = DateTime.UtcNow,
+            ExpiresAtUtc = DateTime.UtcNow.AddHours(2), LinkNonce = Guid.NewGuid(), Status = requiresCurrentCode ? EmailChangeStatus.VerifyCurrent : EmailChangeStatus.VerifyNew };
+        var code = requiresCurrentCode ? SetCode(row) : null;
         try
         {
             await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
@@ -79,20 +77,23 @@ public sealed class AccountEmailService(ApplicationDbContext db, UserManager<App
             if (await db.Users.AnyAsync(u => u.Id != user.Id && u.NormalizedEmail == normalized)) return Error("This address cannot be used. Choose another email.");
             await db.Set<EmailChangeRequest>().Where(r => r.UserId == user.Id && (r.Status == EmailChangeStatus.VerifyCurrent || r.Status == EmailChangeStatus.VerifyNew))
                 .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, EmailChangeStatus.Cancelled));
-            ClearLegacy(user);
             if (!(await users.UpdateAsync(user)).Succeeded) return Error("Your account changed. Reload and try again.");
             db.Add(row); await db.SaveChangesAsync(); await tx.CommitAsync();
         }
         catch (Exception ex) when (ex is DbUpdateException or DbException)
         { db.ChangeTracker.Clear(); return Error("The email request could not be saved. Reload and try again."); }
-        var sent = await SendAsync(recipient.Address, "EduSmart - Confirm email change", SecurityEmailTemplates.CurrentEmailCode(code, user.UserName ?? "", newEmail));
+        if (!requiresCurrentCode) return await SendNewAsync(user, row.Id);
+        var sent = await SendAsync(recipient.Address, "EduSmart - Confirm email change", SecurityEmailTemplates.CurrentEmailCode(code!, user.UserName ?? "", newEmail));
         return new(sent, sent ? "A code was sent to your current verified email or primary guardian. Enter it below." : "The request was saved, but the code could not be delivered. Use Resend after a short wait.");
     }
     private async Task<bool> EligibleAsync(EmailChangeRequest? row, ApplicationUser user)
     {
         if (row == null || !await UsableAsync(user) || !EmailChangeRules.Live(row, user, DateTime.UtcNow)) return false;
         var recipient = await recipients.ResolveAsync(user, true, CancellationToken.None);
-        return recipient != null && row.RecipientHash == EmailChangeRules.RecipientHash(recipient);
+        // Requests issued before this release already required current-contact proof.
+        // Keep them usable; never advance their VerifyCurrent state automatically.
+        return recipient != null && (row.RecipientHash == RecipientProofHash(recipient, user)
+            || row.RecipientHash == EmailChangeRules.RecipientHash(recipient));
     }
     public async Task<EmailOperation> VerifyCurrentAsync(ApplicationUser user, Guid id, string? code)
     {
@@ -153,7 +154,7 @@ public sealed class AccountEmailService(ApplicationDbContext db, UserManager<App
     {
         try
         {
-            var count = await db.Set<EmailChangeRequest>().Where(r => r.Id == id && r.UserId == user.Id && (r.Status == EmailChangeStatus.VerifyCurrent || r.Status == EmailChangeStatus.VerifyNew))
+            var count = await db.Set<EmailChangeRequest>().Where(r => r.Id == id && r.UserId == user.Id && r.Purpose == EmailChangePurpose.SelfService && (r.Status == EmailChangeStatus.VerifyCurrent || r.Status == EmailChangeStatus.VerifyNew))
                 .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, EmailChangeStatus.Cancelled));
             return new(count == 1, count == 1 ? "Email change cancelled. Your current email is unchanged." : "This request is no longer pending.");
         }

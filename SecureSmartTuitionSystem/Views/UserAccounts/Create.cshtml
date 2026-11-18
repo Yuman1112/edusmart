@@ -7,15 +7,16 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/user-accounts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/create-admin.css" asp-append-version="true" />
 }
-<div class="user-accounts-page account-form-page">
+<div class="user-accounts-page account-form-page create-admin-page">
     <div class="page-header">
         <div><h1>Create Administrator</h1><p>Create a new administrator account for EduSmart.</p></div>
         <a asp-controller="UserAccounts" asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Accounts</a>
     </div>
     <section class="class-form-card">
         <h2 class="account-section-title">Administrator Details</h2>
-        <p class="account-form-note">An Admin ID is generated automatically. An account setup email lets the new administrator create their password.</p>
+        <p class="account-form-note">New administrators receive Standard access. A setup email will be sent to create their password.</p>
                     <form asp-controller="UserAccounts"
                           asp-action="Create"
                           method="post">
@@ -27,15 +28,15 @@
 
                         <div class="mb-3">
                             <label asp-for="FullName"
-                                   class="form-label fw-semibold">
-                                Full Name <span class="text-danger">*</span>
+                                   class="form-label fw-semibold create-admin-label">
+                                <span class="create-admin-label-text">Full Name</span><span class="create-admin-required" aria-hidden="true">*</span>
                             </label>
 
                             <input asp-for="FullName"
                                    class="form-control"
                                    placeholder="Enter full name"
                                    maxlength="100"
-                                   autocomplete="name" />
+                                   autocomplete="name" required aria-required="true" />
 
                             <span asp-validation-for="FullName"
                                   class="text-danger small"></span>
@@ -43,8 +44,8 @@
 
                         <div class="mb-3">
                             <label asp-for="Email"
-                                   class="form-label fw-semibold">
-                                Email Address <span class="text-danger">*</span>
+                                   class="form-label fw-semibold create-admin-label">
+                                <span class="create-admin-label-text">Email Address</span><span class="create-admin-required" aria-hidden="true">*</span>
                             </label>
 
                             <input asp-for="Email"
@@ -52,7 +53,7 @@
                                    class="form-control"
                                    placeholder="Enter email address"
                                    maxlength="254"
-                                   autocomplete="email" />
+                                   autocomplete="email" required aria-required="true" />
 
                             <span asp-validation-for="Email"
                                   class="text-danger small"></span>
@@ -60,15 +61,16 @@
 
                         <div class="mb-3">
                             <label asp-for="PhoneNumber"
-                                   class="form-label fw-semibold">
-                                Phone Number
+                                   class="form-label fw-semibold create-admin-label">
+                                Phone Number (optional)
                             </label>
 
                             <input asp-for="PhoneNumber"
                                    type="tel"
                                    class="form-control"
-                                   placeholder="Enter phone number (optional)"
-                                   maxlength="30"
+                                   placeholder="012-3456789"
+                                   inputmode="numeric"
+                                   maxlength="12"
                                    autocomplete="tel" />
 
                             <span asp-validation-for="PhoneNumber"
@@ -77,13 +79,13 @@
 
                         <div class="mb-4">
                             <label asp-for="Position"
-                                   class="form-label fw-semibold">
-                                Position
+                                   class="form-label fw-semibold create-admin-label">
+                                Position (optional)
                             </label>
 
                             <input asp-for="Position"
                                    class="form-control"
-                                   placeholder="e.g. System Administrator"
+                                   placeholder="e.g. Centre Manager"
                                    maxlength="100" />
 
                             <span asp-validation-for="Position"
@@ -114,4 +116,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/create-admin-phone.js" asp-append-version="true"></script>
 }

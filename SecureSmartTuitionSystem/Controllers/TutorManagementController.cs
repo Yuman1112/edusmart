@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -244,14 +244,6 @@ public sealed class TutorManagementController(
                 FullName = x.FullName,
                 Email = x.ApplicationUser.Email ?? "",
 
-                PendingEmail =
-                    x.ApplicationUser.PendingTutorEmail,
-
-                PendingEmailRequestId =
-                    x.ApplicationUser.TutorEmailChangeRequestId,
-
-                PendingEmailExpiresAtUtc =
-                    x.ApplicationUser.TutorEmailChangeExpiresAtUtc,
 
                 PhoneNumber = x.ApplicationUser.PhoneNumber ?? "",
                 Qualification = x.Qualification,
@@ -273,6 +265,11 @@ public sealed class TutorManagementController(
         {
             return NotFound();
         }
+
+        var pending = await tutorEmailChanges.PendingAsync(userId);
+        tutor.PendingEmail = pending?.NewEmail;
+        tutor.PendingEmailRequestId = pending?.Id;
+        tutor.PendingEmailExpiresAtUtc = pending?.ExpiresAtUtc;
 
         var teachingSubjects = await db.TutorTeachingSubjects
             .AsNoTracking()
@@ -318,6 +315,10 @@ public sealed class TutorManagementController(
 
         var history = await new TutorAccountStatusService(db, users, auditIntegrity)
             .GetHistoryAsync(userId);
+        tutor.Documents = (await LoadTutorDocumentsAsync(
+            await db.TutorProfiles.Where(p => p.ApplicationUserId == userId)
+                .Select(p => p.TutorProfileId).SingleAsync()))
+            .Where(d => d.Kind is TutorDocumentKind.Certificate or TutorDocumentKind.Resume).ToList();
         tutor.StatusHistory = history.Items;
         tutor.StatusHistoryHasUnverifiedEntries = history.HasUnverified;
 
@@ -334,41 +335,12 @@ public sealed class TutorManagementController(
     Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> EmailChangeStatus(string userId)
     {
-        if (string.IsNullOrWhiteSpace(userId))
-            return NotFound();
-
-        var now = DateTime.UtcNow;
-
-        var status = await db.TutorProfiles
-            .AsNoTracking()
-            .Where(profile =>
-                profile.ApplicationUserId == userId)
-            .Select(profile => new
-            {
-                email = profile.ApplicationUser.Email ?? "",
-
-                requestId =
-                    profile.ApplicationUser.TutorEmailChangeRequestId,
-
-                pendingEmail =
-                    profile.ApplicationUser.PendingTutorEmail,
-
-                pendingExpired =
-                    !profile.ApplicationUser
-                        .TutorEmailChangeExpiresAtUtc.HasValue
-                    || profile.ApplicationUser
-                        .TutorEmailChangeExpiresAtUtc.Value <= now,
-
-                isActive =
-                    profile.IsActive
-                    && profile.ApplicationUser.IsActive
-            })
-            .FirstOrDefaultAsync();
-
-        if (status == null)
-            return NotFound();
-
-        return Json(status);
+        var tutor = await db.TutorProfiles.AsNoTracking().Where(p => p.ApplicationUserId == userId)
+            .Select(p => new { email = p.ApplicationUser.Email, isActive = p.IsActive && p.ApplicationUser.IsActive }).SingleOrDefaultAsync();
+        if (tutor == null) return NotFound();
+        var pending = await tutorEmailChanges.PendingAsync(userId);
+        return Json(new { email = tutor.email ?? "", requestId = pending?.Id, pendingEmail = pending?.NewEmail,
+            pendingExpired = pending == null || pending.ExpiresAtUtc <= DateTime.UtcNow, tutor.isActive });
     }
 
     // ============================================
@@ -422,7 +394,7 @@ public sealed class TutorManagementController(
                 .ToList()
         };
 
-        PopulateTutorEmailDisplay(model, profile.ApplicationUser);
+        await PopulateTutorEmailDisplayAsync(model, profile.ApplicationUser);
 
         return View(model);
     }
@@ -436,6 +408,7 @@ public sealed class TutorManagementController(
     [RequestSizeLimit(22 * 1024 * 1024)]
     public async Task<IActionResult> Edit(EditTutorViewModel model)
     {
+        model.EmploymentConflicts.Clear();
         if (string.IsNullOrWhiteSpace(model.UserId))
             return NotFound();
 
@@ -466,7 +439,7 @@ public sealed class TutorManagementController(
 
             var tutor = profile.ApplicationUser;
 
-            PopulateTutorEmailDisplay(model, tutor);
+            await PopulateTutorEmailDisplayAsync(model, tutor);
             model.Documents = await LoadTutorDocumentsAsync(profile.TutorProfileId);
             if (model.ProfileVersion != (profile.UpdatedAt?.Ticks ?? 0))
             {
@@ -498,12 +471,11 @@ public sealed class TutorManagementController(
             bool employmentChanged = profile.EmploymentType != model.EmploymentType;
             if (employmentChanged && model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime)
             {
-                var outside = await new TutorAvailabilityService(db).FindExistingClassesOutsideAsync(
-                    model.UserId, TutorAvailabilityPolicy.FullTimeSlots());
-                if (outside.Count > 0)
+                model.EmploymentConflicts = await new TutorAvailabilityService(db)
+                    .FindExistingClassConflictsAsync(model.UserId, TutorAvailabilityPolicy.FullTimeSlots());
+                if (model.EmploymentConflicts.Count > 0)
                     ModelState.AddModelError(nameof(model.EmploymentType),
-                        "Cannot switch to Full-time while scheduled lessons fall outside its fixed hours or within lunch/dinner breaks: "
-                        + string.Join("; ", outside.Take(5)) + ". Review the timetable first.");
+                        $"Cannot change to Full-time. {model.EmploymentConflicts.Count} schedule conflict(s) must be resolved first.");
             }
 
             if (!ModelState.IsValid)
@@ -976,8 +948,7 @@ public sealed class TutorManagementController(
             return RedirectToAction(nameof(Index));
         }
 
-        if (tutor.TutorEmailChangeRequestId.HasValue
-            || !string.IsNullOrWhiteSpace(tutor.PendingTutorEmail))
+        if (await tutorEmailChanges.PendingAsync(tutor.Id) != null)
         {
             TempData["TutorWarning"] =
                 "An email change is pending. Complete the new "
@@ -1026,9 +997,8 @@ public sealed class TutorManagementController(
             .AsNoTracking()
             .FirstOrDefaultAsync(user => user.Id == userId);
 
-        if (!await IsCurrentTutorEmailRequestAsync(
-                tutor,
-                requestId.Value))
+        var pending = await tutorEmailChanges.CurrentAsync(tutor, requestId.Value);
+        if (tutor == null || pending == null)
         {
             return InvalidEmailChangeView();
         }
@@ -1043,7 +1013,7 @@ public sealed class TutorManagementController(
         bool tokenValid = await users.VerifyUserTokenAsync(
             tutor!,
             users.Options.Tokens.ChangeEmailTokenProvider,
-            "ChangeEmail:" + tutor!.PendingTutorEmail,
+            "ChangeEmail:" + pending.NewEmail,
             decodedToken);
 
         if (!tokenValid)
@@ -1059,7 +1029,7 @@ public sealed class TutorManagementController(
                 RequestId = requestId.Value,
                 Token = token,
                 TutorId = tutor.UserName ?? "",
-                NewEmail = tutor.PendingTutorEmail!,
+                NewEmail = pending.NewEmail,
                 CanConfirm = true
             });
     }
@@ -1108,16 +1078,15 @@ public sealed class TutorManagementController(
                 .FirstOrDefaultAsync(
                     user => user.Id == model.UserId);
 
-            if (!await IsCurrentTutorEmailRequestAsync(
-                    tutor,
-                    model.RequestId))
+            var pending = await tutorEmailChanges.CurrentAsync(tutor, model.RequestId, tracking: true);
+            if (tutor == null || pending == null)
             {
                 return InvalidEmailChangeView();
             }
 
             // Always use the email stored by the Admin request.
             // Never accept a replacement email from this form.
-            string newEmail = tutor!.PendingTutorEmail!;
+            string newEmail = pending.NewEmail;
 
             if (!IsValidTutorEmail(newEmail))
             {
@@ -1141,11 +1110,8 @@ public sealed class TutorManagementController(
             }
 
             // These changes are saved together by ChangeEmailAsync.
-            tutor.PendingTutorEmail = null;
-            tutor.TutorEmailChangeRequestId = null;
-            tutor.TutorEmailChangeRequestedAtUtc = null;
-            tutor.TutorEmailChangeExpiresAtUtc = null;
-            tutor.TutorEmailChangeRequestedByUserId = null;
+            pending!.Status = SecureSmartTuitionSystem.Models.Identity.EmailChangeStatus.Completed;
+            pending.CompletedAtUtc = DateTime.UtcNow;
 
             var result = await users.ChangeEmailAsync(
                 tutor,
@@ -1213,31 +1179,7 @@ public sealed class TutorManagementController(
             });
     }
 
-    private async Task<bool> IsCurrentTutorEmailRequestAsync(
-        ApplicationUser? tutor,
-        Guid requestId)
-    {
-        if (tutor == null
-            || !tutor.IsActive
-            || requestId == Guid.Empty
-            || tutor.TutorEmailChangeRequestId != requestId
-            || string.IsNullOrWhiteSpace(tutor.PendingTutorEmail)
-            || !tutor.TutorEmailChangeExpiresAtUtc.HasValue
-            || tutor.TutorEmailChangeExpiresAtUtc.Value
-                <= DateTime.UtcNow)
-        {
-            return false;
-        }
 
-        if (!await users.IsInRoleAsync(tutor, "Tutor"))
-        {
-            return false;
-        }
-
-        return await db.TutorProfiles.AnyAsync(profile =>
-            profile.ApplicationUserId == tutor.Id
-            && profile.IsActive);
-    }
 
     private IActionResult InvalidEmailChangeView(
         string? message = null)
@@ -1484,17 +1426,16 @@ public sealed class TutorManagementController(
         }
     }
 
-    private static void PopulateTutorEmailDisplay(
+    private async Task PopulateTutorEmailDisplayAsync(
     EditTutorViewModel model,
     ApplicationUser tutor)
     {
+        var pending = await tutorEmailChanges.PendingAsync(tutor.Id);
         model.TutorId = tutor.UserName ?? "";
         model.CurrentEmail = tutor.Email ?? "";
-        model.PendingEmail = tutor.PendingTutorEmail;
-        model.PendingEmailRequestId =
-            tutor.TutorEmailChangeRequestId;
-        model.PendingEmailExpiresAtUtc =
-            tutor.TutorEmailChangeExpiresAtUtc;
+        model.PendingEmail = pending?.NewEmail;
+        model.PendingEmailRequestId = pending?.Id;
+        model.PendingEmailExpiresAtUtc = pending?.ExpiresAtUtc;
     }
 
     [HttpPost]
@@ -1527,9 +1468,11 @@ public sealed class TutorManagementController(
                 return NotFound();
             }
 
+            var pending = await tutorEmailChanges.PendingAsync(tutor.Id, tracking: true);
+
             if (requestId == Guid.Empty
-                || tutor.TutorEmailChangeRequestId != requestId
-                || string.IsNullOrWhiteSpace(tutor.PendingTutorEmail))
+                || pending == null || pending.Id != requestId
+                || string.IsNullOrWhiteSpace(pending.NewEmail))
             {
                 TempData["TutorWarning"] =
                     "The pending request has changed. Please reload the page.";
@@ -1539,8 +1482,7 @@ public sealed class TutorManagementController(
                     new { userId });
             }
 
-            if (tutor.TutorEmailChangeRequestedAtUtc.HasValue
-                && tutor.TutorEmailChangeRequestedAtUtc.Value
+            if (pending.RequestedAtUtc
                     > DateTime.UtcNow.AddMinutes(-1))
             {
                 TempData["TutorInfo"] =
@@ -1553,7 +1495,7 @@ public sealed class TutorManagementController(
 
             string? error = await tutorEmailChanges.PrepareAsync(
                 tutor,
-                tutor.PendingTutorEmail!,
+                pending.NewEmail,
                 adminUserId);
 
             if (error != null)
@@ -1620,8 +1562,10 @@ public sealed class TutorManagementController(
                 return NotFound();
             }
 
+            var pending = await tutorEmailChanges.PendingAsync(tutor.Id, tracking: true);
+
             if (requestId == Guid.Empty
-                || tutor.TutorEmailChangeRequestId != requestId)
+                || pending == null || pending.Id != requestId)
             {
                 TempData["TutorWarning"] =
                     "The pending request has changed. Please reload the page.";
@@ -1631,23 +1575,9 @@ public sealed class TutorManagementController(
                     new { userId });
             }
 
-            tutor.PendingTutorEmail = null;
-            tutor.TutorEmailChangeRequestId = null;
-            tutor.TutorEmailChangeRequestedAtUtc = null;
-            tutor.TutorEmailChangeExpiresAtUtc = null;
-            tutor.TutorEmailChangeRequestedByUserId = null;
+            pending!.Status = SecureSmartTuitionSystem.Models.Identity.EmailChangeStatus.Cancelled;
 
-            var result = await users.UpdateAsync(tutor);
-
-            if (!result.Succeeded)
-            {
-                TempData["TutorWarning"] =
-                    "Unable to cancel the request. Please try again.";
-
-                return RedirectToAction(
-                    nameof(Details),
-                    new { userId });
-            }
+            await db.SaveChangesAsync();
 
             await transaction.CommitAsync();
 

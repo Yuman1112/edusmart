@@ -1,84 +1,106 @@
 @model SecureSmartTuitionSystem.ViewModels.Tutor.EditOwnTutorProfileViewModel
 @{
-    ViewData["Title"] = "Edit My Profile";
+    ViewData["Title"] = "Edit Profile";
 }
-
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/account-profile.css" asp-append-version="true" />
 }
-
-<div class="page-header">
-    <div><h1>Edit My Profile</h1><p>Update your personal information and contact details.</p></div>
-    <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button">
-        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
-    </a>
-</div>
-
-<div class="class-form-card tutor-create-card">
-    <form id="edit-tutor-form" asp-controller="Tutor" asp-action="EditProfile" method="post" data-personal-only="true"
-          data-has-errors="@((!ViewData.ModelState.IsValid).ToString().ToLowerInvariant())" novalidate>
-        @Html.AntiForgeryToken()
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
-
-        <section class="class-form-section">
-            <h2><i class="bi bi-person-vcard" aria-hidden="true"></i> Personal Information</h2>
-            <div class="row g-4">
-                <div class="col-12 col-md-6">
-                    <label asp-for="TutorId" class="form-label">Tutor ID</label>
-                    <input asp-for="TutorId" class="form-control tutor-readonly-field" readonly aria-readonly="true" />
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label asp-for="FullName" class="form-label"></label>
-                    <input asp-for="FullName" class="form-control" maxlength="100" autocomplete="name" />
-                    <span asp-validation-for="FullName" class="text-danger"></span>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label asp-for="Email" class="form-label">Email Address</label>
-                    <input asp-for="Email"
-                           type="email"
-                           class="form-control tutor-readonly-field" readonly aria-readonly="true"
-                           maxlength="254"
-                           autocomplete="email" />
-
-                    <span asp-validation-for="Email"
-                          class="text-danger"></span>
-                    <a asp-controller="AccountEmail" asp-action="Index" class="outline-button mt-2">@(string.IsNullOrWhiteSpace(Model.Email) ? "Add Email" : "Change Email")</a>
-                </div>
-                
-                <div class="col-12 col-md-6">
-                    <label asp-for="PhoneNumber" class="form-label"></label>
-                    <input asp-for="PhoneNumber" type="tel" class="form-control" maxlength="12" autocomplete="tel" placeholder="012-3456789" />
-                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
-                </div>
-            </div>
-            <div class="tutor-info-note mt-4">
-                <i class="bi bi-info-circle" aria-hidden="true"></i>
-                <span>Your Tutor ID cannot be changed. A new email address must be verified before it replaces your current email.</span>
-            </div>
-        </section>
-
-        <section class="class-form-section">
-            <h2><i class="bi bi-mortarboard" aria-hidden="true"></i> Teaching Information</h2>
-            <p class="tutor-section-description">The administrator manages your qualifications and teaching approvals.</p>
-            <a asp-controller="TeachingRequests" asp-action="Mine" class="outline-button">
-                <i class="bi bi-clipboard-plus" aria-hidden="true"></i> Request Teaching Change
-            </a>
-        </section>
-
-
-        <div class="class-form-actions">
-            <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button">Cancel</a>
-            <button type="submit" id="saveTutorChanges" class="primary-button" disabled>
-                <i class="bi bi-check-lg" aria-hidden="true"></i> Save Changes
-            </button>
+<div class="account-profile-page tutor-profile-layout">
+    <div class="page-header">
+        <div><h1>Edit Profile</h1><p>Update your information and manage documents.</p></div>
+        <div class="class-detail-header-actions">
+            <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
         </div>
-    </form>
-</div>
+    </div>
+    <div class="class-details-card">
+        <div class="class-details-title"><h2>@Model.TutorId - @Model.FullName</h2><span class="profile-role">Tutor</span></div>
+        <form id="edit-tutor-form" data-profile-edit-form asp-controller="Tutor" asp-action="EditProfile" method="post" enctype="multipart/form-data" data-personal-only="true"
+              data-has-errors="@((!ViewData.ModelState.IsValid).ToString().ToLowerInvariant())" novalidate>
+            @Html.AntiForgeryToken()
+            @* Keep the existing client validation/change detection contract. The controller reloads identity fields from the signed-in account. *@
+            <input asp-for="TutorId" type="hidden" />
+            <input asp-for="Email" type="hidden" />
+        <section class="class-details-section">
+            <h3><i class="bi bi-person-badge" aria-hidden="true"></i> Account Information</h3>
+            <div class="class-details-grid">
+                <div class="class-detail-item"><span>User ID</span><strong>@Model.TutorId</strong></div>
+                <div class="class-detail-item"><span>Role</span><strong>Tutor</strong></div>
+                <div class="class-detail-item profile-email-row">
+                    <div><span>Email Address</span><strong>@(string.IsNullOrWhiteSpace(Model.Email) ? "Not provided" : Model.Email)</strong></div>
+                    <a asp-controller="AccountEmail" asp-action="Index" class="outline-button profile-email-link" data-profile-email-link>@(string.IsNullOrWhiteSpace(Model.Email) ? "Add Email" : "Change Email")</a>
+                </div>
+            </div>
+        </section>
+            <section class="class-details-section">
+                <h3 class="profile-personal-heading"><i class="bi bi-person-vcard" aria-hidden="true"></i> Personal Information <span class="profile-unsaved-note" data-profile-unsaved hidden>Unsaved changes</span></h3>
+                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+                <div class="profile-edit-grid">
+                    <div class="profile-field">
+                        <label asp-for="FullName" class="form-label"></label>
+                        <input asp-for="FullName" class="form-control" maxlength="100" autocomplete="name" required />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                    <div class="profile-field">
+                        <label asp-for="PhoneNumber" class="form-label"></label>
+                        <input asp-for="PhoneNumber" type="tel" class="form-control" maxlength="12" autocomplete="tel" placeholder="012-3456789" pattern="01[0-9]-[0-9]{7,8}" required />
+                        <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                    </div>
+                </div>
+            </section>
+            <section class="class-details-section">
+                <h3><i class="bi bi-journal-text" aria-hidden="true"></i> Teaching Experience</h3>
+                <label asp-for="TeachingExperience" class="visually-hidden"></label>
+                <textarea asp-for="TeachingExperience" class="form-control" rows="3" maxlength="500"></textarea>
+                <span asp-validation-for="TeachingExperience" class="text-danger"></span>
+            </section>
+            <section class="class-details-section">
+                <h3><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Supporting Documents</h3>
+                <div class="profile-resume-field">
+                    <p class="profile-file-label">Resume</p>
+                    @{ var resume = Model.Documents.FirstOrDefault(d => d.Kind == SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Resume); }
+                    <div class="profile-file-card">
+                        <span class="profile-file-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
+                        <div class="profile-file-copy"><strong>@(resume?.FileName ?? "Not uploaded")</strong></div>
+                        @if (resume != null) { <a asp-action="ProfileDocument" asp-route-id="@resume.Id" class="outline-button">View</a> }
+                        else { <span class="profile-verification-badge">No file</span> }
+                    </div>
+                    <label asp-for="Resume" class="form-label mt-3">Upload / Replace Resume</label>
+                    <input asp-for="Resume" type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" aria-describedby="resume-upload-help" />
+                    <span asp-validation-for="Resume" class="text-danger"></span>
+                    <small id="resume-upload-help" class="profile-field-help">PDF, PNG or JPG · Maximum 10 MB. Saved with your profile.</small>
+                </div>
+                <div class="class-form-actions">
+                    <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button">Cancel</a>
+                    <button type="submit" id="saveTutorChanges" class="primary-button" disabled>Save Changes</button>
+                </div>
 
+            </section>
+        </form>
+    </div>
+    <div class="class-details-card profile-teaching-card">
+        <section class="class-details-section">
+            <h3><i class="bi bi-mortarboard" aria-hidden="true"></i> Qualifications &amp; Teaching Approval</h3>
+            <div class="profile-qualification-summary">
+                <span class="profile-summary-label">Current qualification</span>
+                <div class="profile-qualification-copy"><strong>@Model.Qualification</strong><p class="text-muted">Field of study: @(string.IsNullOrWhiteSpace(Model.FieldOfStudy) ? "Not provided" : Model.FieldOfStudy)</p></div>
+                <span class="profile-verification-badge @(Model.QualificationVerifiedAtUtc.HasValue ? "is-verified" : "")">@(Model.QualificationVerifiedAtUtc.HasValue ? "Verified" : "Not verified")</span>
+            </div>
+            <div class="profile-request-action-row">
+                <div><h4>Qualification details</h4><p>Submit updated qualifications and supporting certificates.</p></div>
+                <a asp-controller="QualificationRequests" asp-action="Mine" class="outline-button" data-profile-destination="qualification">Request Qualification Update</a>
+            </div>
+            <div class="profile-request-action-row">
+                <div><h4>Approved subjects &amp; levels</h4><p>Request additional teaching subjects or levels.</p></div>
+                <a asp-controller="TeachingRequests" asp-action="Mine" class="outline-button" data-profile-destination="teaching">Request Teaching Change</a>
+            </div>
+        </section>
+        @if(Model.PendingQualification is {} pending) { <div class="profile-pending-note" role="status"><strong>Pending review:</strong> @pending.Qualification · @pending.FieldOfStudy. Current approved details remain active. <a asp-controller="QualificationRequests" asp-action="Mine" data-profile-destination="qualification">View Request</a></div> }
+    </div>
+</div>
+<partial name="_ProfileEmailPrompt" />
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/tutor-edit.js" asp-append-version="true"></script>
+    <script src="~/js/profile-email-navigation.js" asp-append-version="true"></script>
 }

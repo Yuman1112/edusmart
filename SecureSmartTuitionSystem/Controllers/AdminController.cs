@@ -40,7 +40,7 @@ namespace SecureSmartTuitionSystem.Controllers
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EditProfile(
             [FromServices] AccountProfileService profiles,
-            [Bind("FullName,PhoneNumber")] AccountProfileModel input)
+            [Bind("FullName,PhoneNumber")] AccountProfileModel input, bool continueToEmail = false)
         {
             var account = await _userManager.GetUserAsync(User);
             if (account == null || await profiles.LoadAsync(account, "Admin") is not { } model)
@@ -51,7 +51,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 if (await profiles.SaveAsync(account, model, input))
                 {
                     TempData["ProfileSaved"] = "Your profile was updated successfully.";
-                    return RedirectToAction(nameof(MyProfile));
+                    return continueToEmail ? RedirectToAction("Index", "AccountEmail") : RedirectToAction(nameof(MyProfile));
                 }
 
                 ModelState.AddModelError("", "Your account changed while you were editing. Reload and try again.");

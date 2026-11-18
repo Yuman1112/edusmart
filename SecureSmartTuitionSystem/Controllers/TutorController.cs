@@ -1,4 +1,7 @@
 using System.Data;
+using SecureSmartTuitionSystem.Models.Tutor;
+using SecureSmartTuitionSystem.Services.Tutor;
+using SecureSmartTuitionSystem.Services.Security;
 using Microsoft.AspNetCore.DataProtection;
 using SecureSmartTuitionSystem.Models;
 using SecureSmartTuitionSystem.Services;
@@ -562,6 +565,32 @@ namespace SecureSmartTuitionSystem.Controllers
             return View(model);
         }
 
+        private Task<List<TutorDocumentSummary>> OwnDocumentsAsync(int id) => _context.TutorQualificationDocuments.AsNoTracking()
+            .Where(d => d.TutorProfileId == id && d.TeachingChangeRequestId == null && (d.Kind == TutorDocumentKind.Certificate || d.Kind == TutorDocumentKind.Resume))
+            .OrderBy(d => d.Kind).Select(d => new TutorDocumentSummary(d.Id, d.Kind, d.FileName)).ToListAsync();
+        private Task<QualificationUpdateRow?> PendingQualificationAsync(int id) => _context.TutorQualificationUpdateRequests.AsNoTracking()
+            .Where(r => r.TutorProfileId == id && r.Status == QualificationUpdateStatus.Pending)
+            .Select(r => new QualificationUpdateRow { Id=r.Id, Qualification=r.Qualification, FieldOfStudy=r.FieldOfStudy,
+                AreaOfExpertise=r.AreaOfExpertise, CertificateName=r.CertificateName, Status=r.Status, SubmittedAtUtc=r.SubmittedAtUtc }).SingleOrDefaultAsync();
+        private async Task PopulateOwnEditAsync(EditOwnTutorProfileViewModel model, TutorProfile profile)
+        {
+            model.Documents=await OwnDocumentsAsync(profile.TutorProfileId);
+            model.Qualification=profile.Qualification; model.FieldOfStudy=profile.FieldOfStudy;
+            model.QualificationVerifiedAtUtc=profile.QualificationVerifiedAtUtc;
+            model.PendingQualification=await PendingQualificationAsync(profile.TutorProfileId);
+        }
+        [HttpGet, ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> ProfileDocument(int id)
+        {
+            var userId=_userManager.GetUserId(User); if(userId==null) return Challenge();
+            var file=await _context.TutorQualificationDocuments.AsNoTracking().Where(d=>d.Id==id && d.TutorProfile.ApplicationUserId==userId
+                && d.TeachingChangeRequestId==null && (d.Kind==TutorDocumentKind.Certificate || d.Kind==TutorDocumentKind.Resume))
+                .Select(d=>new { d.FileName,d.Content }).SingleOrDefaultAsync();
+            if(file==null) return NotFound();
+            Response.Headers["X-Content-Type-Options"]="nosniff";
+            return File(file.Content,"application/octet-stream",file.FileName);
+        }
+
         // ============================================
         // TUTOR - MY PROFILE
         // ============================================
@@ -574,6 +603,7 @@ namespace SecureSmartTuitionSystem.Controllers
             if (profile == null) return NotFound();
 
             var user = profile.ApplicationUser;
+            var pending = await _profileEmailChanges.PendingAsync(user.Id);
             var model = new TutorDetailsViewModel
             {
                 UserId = user.Id,
@@ -581,15 +611,18 @@ namespace SecureSmartTuitionSystem.Controllers
                 FullName = profile.FullName,
                 Email = user.Email ?? "",
                 PhoneNumber = user.PhoneNumber ?? "",
+                Documents = await OwnDocumentsAsync(profile.TutorProfileId),
+                QualificationVerifiedAtUtc = profile.QualificationVerifiedAtUtc,
+                PendingQualification = await PendingQualificationAsync(profile.TutorProfileId),
                 Qualification = profile.Qualification,
                 FieldOfStudy = profile.FieldOfStudy,
                 AreaOfExpertise = profile.AreaOfExpertise ?? "",
                 TeachingExperience = profile.TeachingExperience,
                 IsActive = profile.IsActive && user.IsActive,
                 SetupPending = user.MustChangePassword,
-                PendingEmail = user.PendingTutorEmail,
-                PendingEmailRequestId = user.TutorEmailChangeRequestId,
-                PendingEmailExpiresAtUtc = user.TutorEmailChangeExpiresAtUtc,
+                PendingEmail = pending?.NewEmail,
+                PendingEmailRequestId = pending?.Id,
+                PendingEmailExpiresAtUtc = pending?.ExpiresAtUtc,
                 CreatedAt = profile.CreatedAt,
                 UpdatedAt = profile.UpdatedAt,
                 TeachingLevels = profile.TeachingSubjects
@@ -613,15 +646,14 @@ namespace SecureSmartTuitionSystem.Controllers
                     .ToList()
             };
 
-            if (user.TutorEmailChangeRequestId.HasValue
-                && !string.IsNullOrWhiteSpace(user.PendingTutorEmail))
+            if (pending != null)
             {
                 var watchData = new[]
                 {
                     user.Id,
-                    user.TutorEmailChangeRequestId.Value.ToString("D"),
+                    pending.Id.ToString("D"),
                     _userManager.NormalizeEmail(
-                        user.PendingTutorEmail) ?? "",
+                        pending.NewEmail) ?? "",
                     DateTime.UtcNow.AddHours(2).Ticks.ToString(
                         System.Globalization.CultureInfo.InvariantCulture)
                 };
@@ -647,18 +679,33 @@ namespace SecureSmartTuitionSystem.Controllers
                 TutorId = profile.ApplicationUser.UserName ?? "",
                 Email = profile.ApplicationUser.Email ?? "",
                 FullName = profile.FullName,
-                PhoneNumber = profile.ApplicationUser.PhoneNumber ?? ""
+                PhoneNumber = profile.ApplicationUser.PhoneNumber ?? "",
+                TeachingExperience = profile.TeachingExperience
             };
 
+            await PopulateOwnEditAsync(model, profile);
             return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        [RequestSizeLimit(12 * 1024 * 1024)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 12 * 1024 * 1024)]
         public async Task<IActionResult> EditProfile(
-            EditOwnTutorProfileViewModel model)
+            EditOwnTutorProfileViewModel model, bool continueToEmail = false, string? continueTo = null)
         {
+            // Only fixed, owned profile destinations are accepted; never redirect to a posted URL.
+            if (continueTo != null && continueTo is not ("email" or "teaching" or "qualification"))
+                ModelState.AddModelError("", "Please choose a valid profile destination.");
+            IActionResult NextPage() => continueTo == "qualification"
+                ? RedirectToAction("Mine", "QualificationRequests")
+                : continueTo == "teaching"
+                ? RedirectToAction("Mine", "TeachingRequests")
+                : continueToEmail || continueTo == "email"
+                    ? RedirectToAction("Index", "AccountEmail")
+                    : RedirectToAction(nameof(MyProfile));
+
             bool emailChanged = false;
             bool profileChanged = false;
 
@@ -671,6 +718,9 @@ namespace SecureSmartTuitionSystem.Controllers
                 var profile = await GetOwnTutorProfileAsync(tracking: true);
                 if (profile == null) return NotFound();
 
+                await PopulateOwnEditAsync(model, profile);
+                var (resume, resumeError) = await TutorQualificationService.ReadDocumentAsync(model.Resume, HttpContext.RequestAborted);
+                if (resumeError != null) ModelState.AddModelError(nameof(model.Resume), resumeError);
                 var user = profile.ApplicationUser;
 
                 // Account ownership comes from the signed-in user.
@@ -697,16 +747,25 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 profileChanged = Clean(profile.FullName) != Clean(model.FullName)
                     || Clean(user.FullName) != Clean(model.FullName)
-                    || Clean(user.PhoneNumber) != Clean(model.PhoneNumber);
+                    || Clean(user.PhoneNumber) != Clean(model.PhoneNumber)
+                    || Clean(profile.TeachingExperience) != Clean(model.TeachingExperience) || resume != null;
 
                 if (!profileChanged && !emailChanged)
                 {
                     TempData["OwnProfileInfo"] = "No changes were made to your profile.";
-                    return RedirectToAction(nameof(MyProfile));
+                    return NextPage();
                 }
 
                 if (profileChanged)
                 {
+                    profile.TeachingExperience = Clean(model.TeachingExperience);
+                    if (resume != null)
+                    {
+                        var existing = await _context.TutorQualificationDocuments.SingleOrDefaultAsync(d => d.TutorProfileId == profile.TutorProfileId && d.Kind == TutorDocumentKind.Resume && d.TeachingChangeRequestId == null);
+                        if (existing == null) { existing = new() { TutorProfileId = profile.TutorProfileId, Kind = TutorDocumentKind.Resume }; _context.TutorQualificationDocuments.Add(existing); }
+                        existing.FileName = resume.Name; existing.Content = resume.Content;
+                    }
+                    TutorQualificationService.AddAudit(_context, HttpContext.RequestServices.GetRequiredService<AuditLogIntegrity>(), HttpContext, user.Id, "Tutor updated own personal information, teaching experience or resume; qualifications and teaching approvals unchanged.");
                     profile.FullName = model.FullName.Trim();
                     profile.UpdatedAt = DateTime.UtcNow;
                     user.FullName = profile.FullName;
@@ -774,7 +833,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 TempData["OwnProfileSuccess"] = "Your profile was updated successfully.";
             }
 
-            return RedirectToAction(nameof(MyProfile));
+            return NextPage();
         }
 
         [HttpPost]
@@ -796,9 +855,11 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 var user = profile.ApplicationUser;
 
+                var pending = await _profileEmailChanges.PendingAsync(user.Id, tracking: true);
+
                 if (requestId == Guid.Empty
-                    || user.TutorEmailChangeRequestId != requestId
-                    || string.IsNullOrWhiteSpace(user.PendingTutorEmail))
+                    || pending == null || pending.Id != requestId
+                    || string.IsNullOrWhiteSpace(pending?.NewEmail))
                 {
                     TempData["OwnProfileWarning"] =
                         "The pending request has changed. "
@@ -807,8 +868,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     return RedirectToAction(nameof(MyProfile));
                 }
 
-                if (user.TutorEmailChangeRequestedAtUtc.HasValue
-                    && user.TutorEmailChangeRequestedAtUtc.Value
+                if (pending != null
+                    && pending.RequestedAtUtc
                         > DateTime.UtcNow.AddMinutes(-1))
                 {
                     TempData["OwnProfileInfo"] =
@@ -820,7 +881,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 string? error =
                     await _profileEmailChanges.PrepareAsync(
                         user,
-                        user.PendingTutorEmail!,
+                        pending!.NewEmail,
                         user.Id);
 
                 if (error != null)
@@ -879,8 +940,10 @@ namespace SecureSmartTuitionSystem.Controllers
 
                 var user = profile.ApplicationUser;
 
+                var pending = await _profileEmailChanges.PendingAsync(user.Id, tracking: true);
+
                 if (requestId == Guid.Empty
-                    || user.TutorEmailChangeRequestId != requestId)
+                    || pending == null || pending.Id != requestId)
                 {
                     TempData["OwnProfileWarning"] =
                         "The pending request has changed. "
@@ -889,21 +952,9 @@ namespace SecureSmartTuitionSystem.Controllers
                     return RedirectToAction(nameof(MyProfile));
                 }
 
-                user.PendingTutorEmail = null;
-                user.TutorEmailChangeRequestId = null;
-                user.TutorEmailChangeRequestedAtUtc = null;
-                user.TutorEmailChangeExpiresAtUtc = null;
-                user.TutorEmailChangeRequestedByUserId = null;
+                pending!.Status = EmailChangeStatus.Cancelled;
 
-                var result = await _userManager.UpdateAsync(user);
-
-                if (!result.Succeeded)
-                {
-                    TempData["OwnProfileWarning"] =
-                        "Unable to cancel the request. Please try again.";
-
-                    return RedirectToAction(nameof(MyProfile));
-                }
+                await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
 
@@ -1001,8 +1052,12 @@ namespace SecureSmartTuitionSystem.Controllers
                     active = profile.IsActive && profile.ApplicationUser.IsActive,
                     profile.ApplicationUser.Email,
                     profile.ApplicationUser.EmailConfirmed,
-                    requestId = profile.ApplicationUser.TutorEmailChangeRequestId,
-                    expiresAt = profile.ApplicationUser.TutorEmailChangeExpiresAtUtc
+                    requestId = _context.Set<EmailChangeRequest>().Where(r => r.UserId == profile.ApplicationUserId &&
+                        r.Purpose == EmailChangePurpose.TutorManaged && r.Status == EmailChangeStatus.VerifyNew)
+                        .OrderByDescending(r => r.RequestedAtUtc).Select(r => (Guid?)r.Id).FirstOrDefault(),
+                    expiresAt = _context.Set<EmailChangeRequest>().Where(r => r.UserId == profile.ApplicationUserId &&
+                        r.Purpose == EmailChangePurpose.TutorManaged && r.Status == EmailChangeStatus.VerifyNew)
+                        .OrderByDescending(r => r.RequestedAtUtc).Select(r => (DateTime?)r.ExpiresAtUtc).FirstOrDefault()
                 })
                 .FirstOrDefaultAsync();
 
