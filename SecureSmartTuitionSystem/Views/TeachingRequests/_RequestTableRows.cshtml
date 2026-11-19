@@ -1,4 +1,4 @@
-@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingRequestListViewModel
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingRequestListViewModel
 @using SecureSmartTuitionSystem.Models.Tutor
 @{
     var number = 0;
@@ -33,13 +33,11 @@
         }
         else
         {
-            <td class="teaching-table-notes">
-                <span data-review-notes>@(string.IsNullOrWhiteSpace(request.ReviewNotes) ? "—" : request.ReviewNotes)</span>
-                <div class="small text-muted @(request.ReviewedAtUtc.HasValue ? "" : "d-none")" data-reviewed-on>@(request.ReviewedAtUtc?.AddHours(8).ToString("dd MMM yyyy, h:mm tt") ?? "—")</div>
-                @foreach (var document in request.Evidence)
-                {
-                    <div class="small"><a asp-controller="TeachingRequests" asp-action="Document" asp-route-id="@document.Id">@document.Name</a></div>
-                }
+            <td>
+                <a asp-controller="TeachingRequests" asp-action="Details" asp-route-id="@request.Id"
+                   class="outline-button teaching-review-link">
+                    <i class="bi bi-eye" aria-hidden="true"></i> View
+                </a>
             </td>
         }
     </tr>

@@ -1,5 +1,6 @@
-(() => {
+﻿(() => {
     "use strict";
+    function initialize() {
     const alert = document.querySelector("[data-account-cooldown]");
     if (!alert) return;
     const message = alert.querySelector("[data-cooldown-message]");
@@ -62,7 +63,11 @@
         }
     }));
     update();
-    window.setInterval(update, 250);
+    const timer = window.setInterval(update, 250);
     window.addEventListener("pageshow", update);
     document.addEventListener("visibilitychange", update);
+    return () => { clearInterval(timer); window.removeEventListener("pageshow", update); document.removeEventListener("visibilitychange", update); };
+    }
+    let cleanup = initialize();
+    document.addEventListener("email:flow-reset", () => { cleanup?.(); cleanup = initialize(); });
 })();

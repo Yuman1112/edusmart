@@ -1,4 +1,4 @@
-.email-change-page { max-width: 880px; }
+﻿.email-change-page { max-width: 880px; }
 .email-change-page .email-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 28px 30px 22px; }
 .email-change-page .email-card-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .email-change-page .email-card-title h2 { margin: 0; color: var(--navy); font-size: clamp(1.15rem, 2vw, 1.45rem); font-weight: 750; }
@@ -44,8 +44,6 @@
 .email-change-page .email-back-to-verification { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 18px; font-size: .9rem; }
 /* Keep verification visible while editing the replacement address below it. */
 .email-change-page .email-address-change summary { display: flex; align-items: center; gap: 6px; }
-.email-change-page .email-address-change summary::before { content: "â–¸"; }
-.email-change-page .email-address-change[open] summary::before { content: "â–¾"; }
 .email-change-page .email-replacement-card .email-flow-actions { gap: 12px; }
 .email-change-page .email-code-label { font-size: 1rem; }
 .email-change-page .email-card-heading { padding-bottom: 20px; }
@@ -61,3 +59,7 @@
     .edusmart-ui main .email-change-page .email-card-body { padding: 0 20px 20px; }
     .edusmart-ui main .email-change-page .email-replacement-card { padding: 20px; }
 }
+/* Keep the waiting instructions and actions in distinct sections. */
+.email-change-page .email-waiting-state { max-width:none; margin:22px 0 0; padding:22px 0 0; border-top:1px solid var(--border, #cce1e8); }
+.email-change-page .email-waiting-state p:last-child { margin-bottom:0; }
+.email-change-page .email-change-address-button { display:flex; align-items:center; justify-content:center; gap:8px; margin:0 auto; }

@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -25,11 +25,21 @@ public sealed class TeachingRequestsController(
 {
     [Authorize(Roles = "Tutor")]
     [HttpGet]
-    public async Task<IActionResult> Mine(CancellationToken token)
+    public async Task<IActionResult> Mine(CancellationToken token, string? search=null, TeachingChangeStatus? status=null, DateTime? from=null, DateTime? to=null)
     {
         AllowEvidencePreview();
         var profile = await OwnProfileAsync(token);
-        return profile == null ? NotFound() : View(await PopulateMineAsync(new(), profile, token));
+        if(profile==null) return NotFound();
+        SetFilters(search,status,from,to);
+        return View(new TeachingRequestListViewModel { Requests=await RequestRows(Filter(db.TutorTeachingChangeRequests.Where(x=>x.TutorProfileId==profile.TutorProfileId),search,status,from,to)).OrderByDescending(x=>x.Id).ToListAsync(token) });
+    }
+
+    [Authorize(Roles="Tutor"), HttpGet]
+    public async Task<IActionResult> Create(CancellationToken token)
+    {
+        AllowEvidencePreview();
+        var profile=await OwnProfileAsync(token);
+        return profile==null ? NotFound() : View(await PopulateMineAsync(new(),profile,token));
     }
 
     [Authorize(Roles = "Tutor")]
@@ -46,7 +56,7 @@ public sealed class TeachingRequestsController(
         if (model.Type != TeachingChangeType.AddSubject)
             ModelState.AddModelError(nameof(model.Type), "Only requests to add subjects and levels are available.");
         if (!ModelState.IsValid)
-            return View(await PopulateMineAsync(model, profile, token));
+            return View("Create", await PopulateMineAsync(model, profile, token));
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (int index = 0; index < model.Items.Count; index++)
@@ -60,7 +70,7 @@ public sealed class TeachingRequestsController(
                 ModelState.AddModelError($"Items[{index}].SubjectCode", "This subject and level is already in this submission.");
         }
         if (!ModelState.IsValid)
-            return View(await PopulateMineAsync(model, profile, token));
+            return View("Create", await PopulateMineAsync(model, profile, token));
 
         try
         {
@@ -80,7 +90,7 @@ public sealed class TeachingRequestsController(
             }
             var files = await ReadEvidenceAsync(model, profile.TutorProfileId, token);
             if (!ModelState.IsValid)
-                return View(await PopulateMineAsync(model, profile, token));
+                return View("Create", await PopulateMineAsync(model, profile, token));
 
             TutorTeachingChangeRequest? evidenceRequest = null;
             foreach (var item in model.Items)
@@ -116,7 +126,7 @@ public sealed class TeachingRequestsController(
         {
             db.ChangeTracker.Clear();
             ModelState.AddModelError("", "The request could not be saved. Check your requests before trying again.");
-            return View(await PopulateMineAsync(model, profile, token));
+            return View("Create", await PopulateMineAsync(model, profile, token));
         }
 
         TempData["TeachingSuccess"] = $"{model.Items.Count} subject and level request(s) submitted. Each item will be reviewed separately.";
@@ -125,36 +135,50 @@ public sealed class TeachingRequestsController(
 
     [Authorize(Roles = "Admin")]
     [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken token) =>
-        View(await RequestRows(db.TutorTeachingChangeRequests)
-            .OrderBy(x => x.Status == TeachingChangeStatus.Pending ? 0 : 1)
-            .ThenByDescending(x => x.Id)
-            .ToListAsync(token));
+    public async Task<IActionResult> Index(CancellationToken token, string? search=null, TeachingChangeStatus? status=null, DateTime? from=null, DateTime? to=null) {
+        SetFilters(search,status,from,to);
+        return View(await RequestRows(Filter(db.TutorTeachingChangeRequests,search,status,from,to))
+            .OrderBy(x=>x.Status==TeachingChangeStatus.Pending?0:1).ThenByDescending(x=>x.Id).ToListAsync(token));
+    }
+
+    private void SetFilters(string? search, TeachingChangeStatus? status, DateTime? from, DateTime? to) {
+        ViewData["TeachingSearch"]=search?.Trim();ViewData["TeachingStatus"]=status;
+        ViewData["TeachingFrom"]=from?.ToString("yyyy-MM-dd");ViewData["TeachingTo"]=to?.ToString("yyyy-MM-dd");
+    }
+    private static IQueryable<TutorTeachingChangeRequest> Filter(IQueryable<TutorTeachingChangeRequest> query,string? search,TeachingChangeStatus? status,DateTime? from,DateTime? to) {
+        if(!string.IsNullOrWhiteSpace(search)) {
+            var term=search.Trim();int.TryParse(term.TrimStart('#'),out var id);
+            var codes=TeachingSubjectCatalog.GetLevelsForStage("Primary").Concat(TeachingSubjectCatalog.GetLevelsForStage("Secondary")).SelectMany(level=>TeachingSubjectCatalog.GetSubjectsForLevel(level)).Distinct().Where(code=>TeachingSubjectCatalog.GetSubjectDisplayName(code).Contains(term,StringComparison.OrdinalIgnoreCase)).ToArray();
+            query=query.Where(x=>x.Id==id || x.TutorProfile.FullName.Contains(term) || (x.TutorProfile.ApplicationUser.UserName!=null && x.TutorProfile.ApplicationUser.UserName.Contains(term)) || x.AcademicLevel.Contains(term) || x.SubjectCode.Contains(term) || codes.Contains(x.SubjectCode));
+        }
+        if(status.HasValue) query=query.Where(x=>x.Status==status.Value);
+        if(from.HasValue){var start=from.Value.Date.AddHours(-8);query=query.Where(x=>x.SubmittedAtUtc>=start);}
+        if(to.HasValue){var end=to.Value.Date.AddDays(1).AddHours(-8);query=query.Where(x=>x.SubmittedAtUtc<end);}
+        return query;
+    }
 
     [HttpGet]
-    public async Task<IActionResult> Live(CancellationToken token)
+    public async Task<IActionResult> Live(CancellationToken token, string? search=null, TeachingChangeStatus? status=null, DateTime? from=null, DateTime? to=null, bool formOnly=false)
     {
-        if (User.IsInRole("Admin"))
-        {
-            return PartialView("_LiveState", new TeachingRequestListViewModel
-            {
-                IsAdmin = true,
-                Requests = await RequestRows(db.TutorTeachingChangeRequests)
-                    .OrderBy(x => x.Status == TeachingChangeStatus.Pending ? 0 : 1)
-                    .ThenByDescending(x => x.Id).ToListAsync(token)
-            });
-        }
+        if(User.IsInRole("Admin")) return PartialView("_LiveState",new TeachingRequestListViewModel {
+            IsAdmin=true,Requests=await RequestRows(Filter(db.TutorTeachingChangeRequests,search,status,from,to)).OrderBy(x=>x.Status==TeachingChangeStatus.Pending?0:1).ThenByDescending(x=>x.Id).ToListAsync(token)});
+        var profile=await OwnProfileAsync(token);if(profile==null) return Forbid();
+        var mine=await PopulateMineAsync(new TeachingChangeInput(),profile,token);
+        return PartialView("_LiveState",new TeachingRequestListViewModel {
+            Requests=formOnly ? [] : await RequestRows(Filter(db.TutorTeachingChangeRequests.Where(x=>x.TutorProfileId==profile.TutorProfileId),search,status,from,to)).OrderByDescending(x=>x.Id).ToListAsync(token),
+            ApprovedSubjects=mine.ApprovedSubjects,UnavailableCombinations=mine.UnavailableCombinations});
+    }
 
+    [Authorize(Roles = "Tutor")]
+    [HttpGet]
+    public async Task<IActionResult> Details(int id, CancellationToken token, bool partial = false)
+    {
         var profile = await OwnProfileAsync(token);
-        if (profile == null)
-            return Forbid();
-        var mine = await PopulateMineAsync(new TeachingChangeInput(), profile, token);
-        return PartialView("_LiveState", new TeachingRequestListViewModel
-        {
-            Requests = mine.Requests,
-            ApprovedSubjects = mine.ApprovedSubjects,
-            UnavailableCombinations = mine.UnavailableCombinations
-        });
+        if (profile == null) return Forbid();
+        var row = await RequestRows(db.TutorTeachingChangeRequests.Where(x =>
+            x.Id == id && x.TutorProfileId == profile.TutorProfileId)).SingleOrDefaultAsync(token);
+        if (row == null) return NotFound();
+        return partial ? PartialView("_TutorDetails", row) : View(row);
     }
 
     [Authorize(Roles = "Admin")]

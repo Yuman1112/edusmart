@@ -1,7 +1,7 @@
-@model SecureSmartTuitionSystem.Controllers.AccountEmailController.PageModel
+﻿@model SecureSmartTuitionSystem.Controllers.AccountEmailController.PageModel
 <form data-request-limit="password send" asp-controller="AccountEmail" asp-action="Start" method="post" asp-antiforgery="true">
     <div class="profile-edit-grid">
-        <div class="profile-field"><label for="newAccountEmail" class="form-label">New Email Address <span class="text-danger" aria-hidden="true">*</span></label><input id="newAccountEmail" name="NewEmail" type="email" maxlength="254" autocomplete="email" class="form-control" required /></div>
+        <div class="profile-field"><label for="newAccountEmail" class="form-label">New Email Address <span class="text-danger" aria-hidden="true">*</span></label><input id="newAccountEmail" name="NewEmail" value="@Model.DraftEmail" type="email" maxlength="254" autocomplete="email" class="form-control" required /></div>
         <div class="profile-field"><label for="accountPassword" class="form-label">Current Password <span class="text-danger" aria-hidden="true">*</span></label><input id="accountPassword" name="Password" type="password" maxlength="128" autocomplete="current-password" class="form-control" required /></div>
     </div>
     <p class="email-status-copy mt-3">We will verify your new address before updating it. Email 2FA and guardian verification remain required where applicable.</p>

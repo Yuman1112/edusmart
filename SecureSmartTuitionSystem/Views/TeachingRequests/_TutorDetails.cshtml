@@ -1,0 +1,37 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingChangeRow
+@using SecureSmartTuitionSystem.Models.Tutor
+<div data-teaching-detail-content data-version="@($"{Model.Status}|{Model.ReviewedAtUtc?.Ticks}|{Model.ReviewNotes}")">
+    <div class="class-details-card mb-4">
+        <div class="class-details-title"><h2>Request #@Model.Id</h2><partial name="_TeachingRequestStatus" model="Model" /></div>
+        <section class="class-details-section">
+            <h3><i class="bi bi-info-circle" aria-hidden="true"></i> Request Information</h3>
+            <div class="class-details-grid">
+                <div class="class-detail-item"><span>Subject</span><strong>@Model.SubjectLabel</strong></div>
+                <div class="class-detail-item"><span>Academic Level</span><strong>@Model.AcademicLevel</strong></div>
+                <div class="class-detail-item"><span>Request Type</span><strong>@Model.TypeLabel</strong></div>
+                <div class="class-detail-item"><span>Submitted On</span><strong>@Model.SubmittedAtUtc.AddHours(8).ToString("dd MMM yyyy, h:mm tt") MYT</strong></div>
+                <div class="class-detail-item class-detail-wide"><span>Reason for Request</span><p class="teaching-detail-copy">@Model.Reason</p></div>
+            </div>
+        </section>
+        <section class="class-details-section">
+            <div class="teaching-section-heading"><h3><i class="bi bi-paperclip" aria-hidden="true"></i> Supporting Evidence</h3><span class="teaching-section-count">@Model.Evidence.Count file(s)</span></div>
+            @if (Model.Evidence.Count == 0) { <p class="text-muted mb-0">No supporting files were attached.</p> }
+            @foreach (var document in Model.Evidence) {
+                <div class="teaching-review-file">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                    <div><strong>@document.Name</strong><small class="text-muted">@((document.Size / 1024d / 1024).ToString("0.##")) MB</small></div>
+                    <a asp-action="Document" asp-route-id="@document.Id" class="outline-button"><i class="bi bi-download" aria-hidden="true"></i> Download</a>
+                </div>
+            }
+        </section>
+    </div>
+    <div class="class-details-card">
+        <section class="class-details-section">
+            <h3><i class="bi bi-clipboard-check" aria-hidden="true"></i> Review Result</h3>
+            <div class="class-details-grid">
+                <div class="class-detail-item"><span>Reviewed On</span><strong>@(Model.ReviewedAtUtc.HasValue ? Model.ReviewedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy, h:mm tt") + " MYT" : "—")</strong></div>
+                <div class="class-detail-item"><span>Admin Notes</span><p class="teaching-detail-copy">@(string.IsNullOrWhiteSpace(Model.ReviewNotes) ? Model.Status == TeachingChangeStatus.Pending ? "Awaiting review" : "No review notes." : Model.ReviewNotes)</p></div>
+            </div>
+        </section>
+    </div>
+</div>

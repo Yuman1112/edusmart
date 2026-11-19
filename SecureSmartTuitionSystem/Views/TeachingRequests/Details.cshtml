@@ -1,0 +1,19 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingChangeRow
+@{ ViewData["Title"] = $"Teaching Request #{Model.Id}"; }
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/teaching-requests.css" asp-append-version="true" />
+}
+<div class="page-header">
+    <div><h1>Teaching Request Details</h1><p>View your requested subject, supporting evidence and review result.</p></div>
+    <a asp-action="Mine" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Requests</a>
+</div>
+<div data-teaching-details data-live-url="@Url.Action("Details", "TeachingRequests", new { id = Model.Id, partial = true })">
+    <p class="form-text d-none" data-detail-status role="status" aria-live="polite"></p>
+    <partial name="_TutorDetails" model="Model" />
+</div>
+@section Scripts {
+    <script src="~/js/teaching-request-details.js" asp-append-version="true"></script>
+}

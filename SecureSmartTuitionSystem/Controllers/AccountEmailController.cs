@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -20,7 +20,7 @@ public sealed class AccountEmailController(UserManager<ApplicationUser> users, A
         [Required, EmailAddress, StringLength(254)] public string NewEmail { get; set; } = "";
         [Required, StringLength(128), DataType(DataType.Password)] public string Password { get; set; } = "";
     }
-    public sealed record PageModel(string UserName, string? CurrentEmail, string ProfileController, EmailChangeRequest? Pending);
+    public sealed record PageModel(string UserName, string? CurrentEmail, string ProfileController, EmailChangeRequest? Pending, string? DraftEmail = null);
     public sealed record ConfirmationModel(string? Token, string? NewEmail, string Message, bool CanConfirm, bool Success, string? UserName = null);
     private string ProfileController => User.IsInRole("Admin") ? "Admin" : User.IsInRole("Tutor") ? "Tutor" : User.IsInRole("Student") ? "Student" : "Parent";
     private async Task<ApplicationUser?> OwnAsync()
@@ -40,7 +40,7 @@ public sealed class AccountEmailController(UserManager<ApplicationUser> users, A
     {
         var user = await OwnAsync(); if (user == null) return Forbid();
         ViewData["RequestCooldown"] = AccountRequestCooldown.Read("email:" + user.Id, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
-        return View(new PageModel(user.UserName ?? "", user.Email, ProfileController, await service.PendingAsync(user.Id)));
+        return View(new PageModel(user.UserName ?? "", user.Email, ProfileController, await service.PendingAsync(user.Id), TempData["EmailDraft"] as string));
     }
     [HttpPost("Start"), ValidateAntiForgeryToken]
     public async Task<IActionResult> Start(BeginInput input)
@@ -69,10 +69,21 @@ public sealed class AccountEmailController(UserManager<ApplicationUser> users, A
         return Feedback(await service.ResendAsync(user, requestId));
     }
     [HttpPost("Cancel"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Cancel(Guid requestId)
+    public async Task<IActionResult> Cancel(Guid requestId, bool changeAddress = false)
     {
         var user = await OwnAsync(); if (user == null) return Forbid();
-        return Feedback(await service.CancelAsync(user, requestId));
+        var pending = await service.PendingAsync(user.Id);
+        var result = await service.CancelAsync(user, requestId);
+        var draft = changeAddress && pending?.Id == requestId ? pending.NewEmail : null;
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            if (!result.Success) return Conflict(new { message = result.Message });
+            TempData["EmailSuccess"] = "Email change request cancelled. Your current email is unchanged.";
+            ViewData["RequestCooldown"] = AccountRequestCooldown.Read("email:" + user.Id, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+            return PartialView("_EmailFlow", new PageModel(user.UserName ?? "", user.Email, ProfileController, await service.PendingAsync(user.Id), draft));
+        }
+        if (result.Success && draft != null) TempData["EmailDraft"] = draft;
+        return Feedback(result);
     }
     [AllowAnonymous, HttpGet("Confirm")]
     public async Task<IActionResult> Confirm(string? token)

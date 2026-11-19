@@ -1,4 +1,4 @@
-.teaching-section-heading {
+﻿.teaching-section-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -450,3 +450,10 @@
         white-space: normal;
     }
 }
+
+.teaching-filter-grid { grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr)); }
+.teaching-filter-grid :is(.form-control,.form-select) { min-width:0; width:100%; }
+@media(max-width:1000px){.teaching-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:600px){.teaching-filter-grid{grid-template-columns:1fr;}}
+
+.teaching-detail-copy { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
