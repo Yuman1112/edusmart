@@ -1,0 +1,13 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.QualificationFileList
+@using SecureSmartTuitionSystem.Services.Learning
+<ul class="qualification-document-list">
+@foreach(var file in Model.Files){
+    var action=Model.Current ? "CurrentDocument" : "Document";
+    var previewType=MaterialFileService.PreviewContentType(file.Name);
+    var previewUrl=Url.Action(action,"QualificationRequests",new {id=Model.OwnerId,attachmentId=file.Id==0?(int?)null:file.Id,preview=true});
+    <li><div class="qualification-document-name"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><div><strong>@file.Name</strong><small>@(file.Size>=1024*1024 ? $"{file.Size/1048576d:0.##} MB" : $"{file.Size/1024d:0.#} KB")</small></div></div><div class="qualification-document-actions">
+        @if(previewType!=null){<a href="@previewUrl" target="_blank" rel="noopener" class="outline-button" data-material-preview data-preview-name="@file.Name" data-preview-type="@previewType">Preview</a>}
+        <a asp-controller="QualificationRequests" asp-action="@action" asp-route-id="@Model.OwnerId" asp-route-attachmentId="@(file.Id==0?(int?)null:file.Id)" class="outline-button"><i class="bi bi-download" aria-hidden="true"></i> Download</a>
+    </div></li>
+}
+</ul>

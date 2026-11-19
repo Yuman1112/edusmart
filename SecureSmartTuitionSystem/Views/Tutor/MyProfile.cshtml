@@ -173,10 +173,10 @@
         <div class="profile-file-grid">
             @foreach(var kind in new[] { SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate, SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Resume }) {
                 var doc=Model.Documents.FirstOrDefault(d=>d.Kind==kind);
-                <div class="profile-file-card" data-qualification-document="@((int)kind)" data-document-url="@Url.Action("ProfileDocument", "Tutor")">
+                <div class="profile-file-card" data-qualification-document="@((int)kind)" data-document-url="@(kind==SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? Url.Action("Current","QualificationRequests") : Url.Action("ProfileDocument","Tutor"))">
                     <span class="profile-file-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
                     <div class="profile-file-copy"><strong>@(kind==SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "Qualification Certificate" : "Resume")</strong><span data-qualification-file-name>@(doc?.FileName ?? "Not uploaded")</span></div>
-                    <a asp-action="ProfileDocument" asp-route-id="@(doc?.Id ?? 0)" class="outline-button @(doc == null ? "d-none" : "")" data-qualification-file-link>View</a>
+                    <a asp-controller="@(kind==SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "QualificationRequests" : "Tutor")" asp-action="@(kind==SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "Current" : "ProfileDocument")" asp-route-id="@(doc?.Id ?? 0)" class="outline-button @(doc == null ? "d-none" : "")" data-qualification-file-link>View</a>
                     <span class="profile-verification-badge @(doc == null ? "" : "d-none")" data-qualification-no-file>No file</span>
                 </div>
             }

@@ -1266,6 +1266,10 @@ public sealed class TutorManagementController(
             return;
         }
 
+        if(kind==TutorDocumentKind.Certificate) {
+            var extras=await db.QualificationRequestAttachments.Where(f=>f.CurrentDocumentId==document.Id).ToListAsync(HttpContext.RequestAborted);
+            foreach(var extra in extras) extra.CurrentDocumentId=null;
+        }
         document.FileName = file.Name;
         document.Content = file.Content;
     }

@@ -5,6 +5,7 @@ public enum QualificationUpdateStatus { Pending, Approved, Rejected, Cancelled }
 
 public sealed class TutorQualificationUpdateRequest
 {
+    public List<QualificationRequestAttachment> AdditionalFiles { get; set; } = [];
     public int Id { get; set; }
     public int TutorProfileId { get; set; }
     public TutorProfile TutorProfile { get; set; } = null!;

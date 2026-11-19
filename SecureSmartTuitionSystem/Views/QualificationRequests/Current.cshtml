@@ -1,0 +1,14 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.QualificationFileList
+@{ViewData["Title"]="Current Qualification Documents";}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/teaching-requests.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/qualification-requests.css" asp-append-version="true" />
+}
+<div class="qualification-requests-page"><div class="page-header"><div><h1>Current Qualification Documents</h1><p>Approved supporting documents for this tutor.</p></div>
+@if(User.IsInRole("Admin")){<a asp-controller="TutorManagement" asp-action="Index" class="outline-button">Tutor Management</a>}else{<a asp-controller="Tutor" asp-action="MyProfile" class="outline-button">My Profile</a>}
+</div><div class="class-form-card tutor-create-card"><section class="class-form-section"><h2>Supporting Documents</h2><partial name="_DocumentList" model="Model" /></section></div></div>
+@section Scripts {<script src="~/js/learning-materials-preview.js" asp-append-version="true"></script>}

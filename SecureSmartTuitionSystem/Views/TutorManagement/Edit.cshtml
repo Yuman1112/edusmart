@@ -505,7 +505,7 @@
                     {
                         <li>
                             @(document.Kind == SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "Certificate" : "Resume") ·
-                            <a asp-controller="TeachingRequests" asp-action="Document" asp-route-id="@document.Id">@document.FileName</a>
+                            <a asp-controller="@(document.Kind==SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "QualificationRequests" : "TeachingRequests")" asp-action="@(document.Kind==SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "Current" : "Document")" asp-route-id="@document.Id">@document.FileName</a>
                         </li>
                     }
                 </ul>

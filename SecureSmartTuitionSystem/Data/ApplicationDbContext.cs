@@ -135,6 +135,7 @@ namespace SecureSmartTuitionSystem.Data
 
         public DbSet<TutorQualificationUpdateRequest> TutorQualificationUpdateRequests => Set<TutorQualificationUpdateRequest>();
 
+        public DbSet<QualificationRequestAttachment> QualificationRequestAttachments => Set<QualificationRequestAttachment>();
         public DbSet<TutorQualificationDocument> TutorQualificationDocuments =>
             Set<TutorQualificationDocument>();
 
@@ -511,6 +512,11 @@ namespace SecureSmartTuitionSystem.Data
             {
                 entity.HasOne(x => x.TutorProfile).WithMany().HasForeignKey(x => x.TutorProfileId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasIndex(x => x.TutorProfileId).IsUnique().HasFilter("[Status] = 0");
+            });
+            builder.Entity<QualificationRequestAttachment>(entity =>
+            {
+                entity.HasOne(x => x.Request).WithMany(x => x.AdditionalFiles).HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.CurrentDocument).WithMany().HasForeignKey(x => x.CurrentDocumentId).OnDelete(DeleteBehavior.SetNull);
             });
             builder.Entity<TutorQualificationDocument>(entity =>
             {

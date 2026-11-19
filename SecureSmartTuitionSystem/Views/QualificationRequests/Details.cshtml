@@ -1,0 +1,23 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.QualificationDecisionInput
+@using SecureSmartTuitionSystem.Models.Tutor
+@{ViewData["Title"]=$"Request #{Model.Id}";var r=Model.Request!;}
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/teaching-requests.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/qualification-requests.css" asp-append-version="true" />
+}
+<div class="qualification-requests-page" data-qualification-details data-qualification-live-url="@Url.Action("Live","QualificationRequests",new {requestId=Model.Id})">
+    <div class="page-header"><div><h1>Qualification Request Details</h1><p>View the requested changes, supporting documents and review result.</p></div><a asp-action="Mine" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Requests</a></div>
+    <div class="qualification-stacked-cards">
+    <div class="class-details-card qualification-details-card qualification-simplified"><div class="class-details-title"><h2>Request #@r.Id</h2><span data-qualification-review-status class="tutor-management-badge @(r.Status==QualificationUpdateStatus.Pending?"tutor-badge-pending":r.Status==QualificationUpdateStatus.Approved?"tutor-badge-success":"qualification-badge-neutral")">@r.StatusLabel</span></div>
+    <partial name="_RequestInformation" model="Model" />
+    <partial name="_RequestSections" model="Model" />
+    <div class="class-form-actions @(r.Status==QualificationUpdateStatus.Pending?"":"d-none")" data-qualification-detail-cancel><form asp-action="Cancel" method="post" asp-antiforgery="true"><input name="id" value="@r.Id" type="hidden" /><button type="submit" class="outline-button">Cancel Request</button></form></div></div>
+    <div class="class-details-card qualification-details-card qualification-simplified">
+    <section class="class-details-section"><h3><i class="bi bi-clipboard-check" aria-hidden="true"></i> Review Result</h3><div class="class-details-grid"><div class="class-detail-item"><span>Reviewed On</span><strong data-qualification-detail-time>@(r.ReviewedAtUtc.HasValue?r.ReviewedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy, h:mm tt")+" MYT":"—")</strong></div><div class="class-detail-item"><span>Admin Notes</span><p class="qualification-detail-copy" data-qualification-detail-notes>@(string.IsNullOrWhiteSpace(r.ReviewNotes)?r.Status==QualificationUpdateStatus.Pending?"Awaiting review":"No review notes.":r.ReviewNotes)</p></div></div></section>
+    </div></div>
+</div>
+@section Scripts {<script src="~/js/learning-materials-preview.js" asp-append-version="true"></script><script src="~/js/qualification-live.js" asp-append-version="true"></script>}

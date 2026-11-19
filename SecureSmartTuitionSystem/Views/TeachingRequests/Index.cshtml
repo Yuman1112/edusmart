@@ -17,9 +17,6 @@
         <h1>Teaching Change Requests</h1>
         <p>Review additional teaching subjects and levels. Each item has its own decision.</p>
     </div>
-    <a asp-controller="TutorManagement" asp-action="Index" class="outline-button">
-        <i class="bi bi-arrow-left" aria-hidden="true"></i> Tutor Management
-    </a>
 </div>
 
 <partial name="_RequestTable" model="new SecureSmartTuitionSystem.ViewModels.Tutor.TeachingRequestListViewModel { IsAdmin = true, Requests = Model }" />

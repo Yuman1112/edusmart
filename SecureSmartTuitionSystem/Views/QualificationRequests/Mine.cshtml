@@ -1,6 +1,6 @@
-@model SecureSmartTuitionSystem.ViewModels.Tutor.QualificationUpdateInput
+@model IReadOnlyList<SecureSmartTuitionSystem.ViewModels.Tutor.QualificationUpdateRow>
 @using SecureSmartTuitionSystem.Models.Tutor
-@{ ViewData["Title"] = "Qualification Update Requests"; bool pending = Model.Requests.Any(r => r.Status == QualificationUpdateStatus.Pending); }
+@{ViewData["Title"]="Qualification Update Requests"; bool pending=ViewData["QualificationHasPending"] is bool hasPending ? hasPending : Model.Any(r=>r.Status==QualificationUpdateStatus.Pending);}
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
@@ -9,35 +9,10 @@
     <link rel="stylesheet" href="~/css/qualification-requests.css" asp-append-version="true" />
 }
 <div class="qualification-requests-page" data-qualification-live-url="@Url.Action("Live", "QualificationRequests")">
-    <div class="page-header"><div><h1>Qualification Update Requests</h1><p>Request approval for updated qualifications and supporting certificates.</p></div><a asp-controller="Tutor" asp-action="EditProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Edit Profile</a></div>
-    @if (TempData["QualificationSuccess"] is string success) { <div class="alert alert-success" role="status">@success</div> }
-    <div class="class-form-card tutor-create-card mb-4 teaching-approved-card"><section class="class-form-section">
-        <div class="teaching-section-heading"><h2><i class="bi bi-patch-check" aria-hidden="true"></i> Current Qualification Details</h2><span data-qualification-verified class="tutor-management-badge @(Model.CurrentVerified ? "tutor-badge-success" : "qualification-badge-neutral")">@(Model.CurrentVerified ? "Verified" : "Not verified")</span></div>
-        <div class="qualification-current-grid">
-            <div class="teaching-approved-subject"><span class="teaching-eyebrow">Highest Qualification</span><strong data-qualification-field="qualification">@Model.CurrentQualification</strong></div>
-            <div class="teaching-approved-subject"><span class="teaching-eyebrow">Field of Study</span><strong data-qualification-field="fieldOfStudy">@(string.IsNullOrWhiteSpace(Model.CurrentFieldOfStudy) ? "Not provided" : Model.CurrentFieldOfStudy)</strong></div>
-            <div class="teaching-approved-subject"><span class="teaching-eyebrow">Area of Expertise</span><strong data-qualification-field="areaOfExpertise">@(string.IsNullOrWhiteSpace(Model.CurrentAreaOfExpertise) ? "Not provided" : Model.CurrentAreaOfExpertise)</strong></div>
-        </div>
-        <p class="form-text mt-3 mb-0">Your current details and certificate remain active until approval. Subject and level approvals are managed separately.</p>
-    </section></div>
-    <div class="class-form-card tutor-create-card mb-4">
-        <form id="qualification-request-form" asp-action="Mine" method="post" enctype="multipart/form-data" asp-antiforgery="true">
-            <section class="class-form-section">
-                <div class="teaching-section-heading"><h2><i class="bi bi-clipboard-plus" aria-hidden="true"></i> Request Qualification Update</h2></div>
-                <p class="tutor-section-description">Enter your proposed details and attach the certificate for review.</p>
-                <div class="alert alert-info @(pending ? "" : "d-none")" role="status" data-qualification-pending-form>A request is pending review. Cancel it in My Requests before submitting another.</div>
-                <div class="teaching-validation-notice" hidden="@ViewData.ModelState.IsValid" role="alert"><i class="bi bi-exclamation-circle" aria-hidden="true"></i><div><strong>Please review the highlighted fields.</strong><div asp-validation-summary="ModelOnly" class="teaching-model-errors"></div></div></div>
-                <div class="row g-4">
-                    <div class="col-md-6"><label asp-for="Qualification" class="form-label"></label><input asp-for="Qualification" class="form-control" maxlength="200" required disabled="@pending" /><span asp-validation-for="Qualification" class="text-danger"></span></div>
-                    <div class="col-md-6"><label asp-for="FieldOfStudy" class="form-label"></label><input asp-for="FieldOfStudy" class="form-control" maxlength="200" required disabled="@pending" /><span asp-validation-for="FieldOfStudy" class="text-danger"></span></div>
-                    <div class="col-12"><label asp-for="AreaOfExpertise" class="form-label"></label><input asp-for="AreaOfExpertise" class="form-control" maxlength="200" required disabled="@pending" /><span asp-validation-for="AreaOfExpertise" class="text-danger"></span></div>
-                    <div class="col-12 teaching-request-reason"><label asp-for="Reason" class="form-label">Reason for Request</label><textarea asp-for="Reason" class="form-control" rows="3" maxlength="1000" placeholder="Tell us what has changed in your qualifications." required disabled="@pending"></textarea><span asp-validation-for="Reason" class="text-danger"></span></div>
-                    <div class="col-12"><label asp-for="Certificate" class="form-label"></label><input asp-for="Certificate" type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required disabled="@pending" aria-describedby="qualification-file-help" /><div id="qualification-file-help" class="form-text">PDF, PNG or JPG · Maximum 10 MB. Select the file again after a validation error.</div><span asp-validation-for="Certificate" class="text-danger"></span></div>
-                </div>
-            </section>
-            <div class="class-form-actions"><button type="submit" class="primary-button" disabled="@pending"><i class="bi bi-send" aria-hidden="true"></i> Submit for Review</button></div>
-        </form>
-    </div>
-    <partial name="/Views/QualificationRequests/_RequestTable.cshtml" model="Model.Requests" />
+    <div class="page-header"><div><h1>Qualification Update Requests</h1><p>Track your qualification update requests.</p></div><div class="qualification-page-actions"><a asp-controller="Tutor" asp-action="EditProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Edit Profile</a><a asp-action="Create" class="primary-button @(pending ? "d-none" : "")" data-qualification-new><i class="bi bi-plus" aria-hidden="true"></i> New Request</a></div></div>
+    @if(TempData["QualificationSuccess"] is string success){<div class="alert alert-success" role="status">@success</div>}
+    <div class="alert alert-info @(pending ? "" : "d-none")" data-qualification-pending-list role="status">You have a pending request. View or cancel it before starting another.</div>
+    <partial name="_Filters" />
+    <partial name="/Views/QualificationRequests/_RequestTable.cshtml" model="Model" />
 </div>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> <script src="~/js/qualification-live.js" asp-append-version="true"></script> }
+@section Scripts {<script src="~/js/qualification-live.js" asp-append-version="true"></script>}

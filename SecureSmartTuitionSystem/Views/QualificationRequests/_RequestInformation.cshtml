@@ -1,0 +1,10 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.QualificationDecisionInput
+@{var r=Model.Request!;}
+<section class="class-details-section qualification-request-overview">
+    <h3><i class="bi bi-info-circle" aria-hidden="true"></i> Request Information</h3>
+    <div class="class-details-grid">
+        @if(User.IsInRole("Admin")){<div class="class-detail-item"><span>Tutor</span><strong>@r.TutorId — @r.TutorName</strong></div>}
+        <div class="class-detail-item @(User.IsInRole("Admin")?"":"class-detail-wide")"><span>Submitted On</span><strong>@r.SubmittedAtUtc.AddHours(8).ToString("dd MMM yyyy, h:mm tt") MYT</strong></div>
+        <div class="class-detail-item class-detail-wide"><span>Reason for Request</span><p class="qualification-detail-copy">@r.Reason</p></div>
+    </div>
+</section>

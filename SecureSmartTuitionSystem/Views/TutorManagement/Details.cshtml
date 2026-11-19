@@ -284,8 +284,8 @@
                 </div>
                 @if (document != null)
                 {
-                    <a asp-controller="TeachingRequests" asp-action="Document" asp-route-id="@document.Id" class="outline-button" aria-label="Download @title">
-                        <i class="bi bi-download" aria-hidden="true"></i> Download
+                    <a asp-controller="@(kind==SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "QualificationRequests" : "TeachingRequests")" asp-action="@(kind==SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "Current" : "Document")" asp-route-id="@document.Id" class="outline-button" aria-label="View @title">
+                        <i class="bi bi-eye" aria-hidden="true"></i> View
                     </a>
                 }
             </div>

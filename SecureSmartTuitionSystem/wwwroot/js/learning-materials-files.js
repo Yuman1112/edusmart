@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
     function init() {
         document.querySelectorAll('[data-attachment-editor]').forEach(editor => {
             const input = editor.querySelector('input[type="file"]');
@@ -18,6 +18,10 @@
                 clearTimeout(noticeTimer); notice.textContent = text; notice.hidden = !text;
                 if (text) noticeTimer = setTimeout(() => { notice.hidden = true; notice.textContent = ''; }, 5000);
             }
+            const qualificationUpload = editor.hasAttribute('data-qualification-upload');
+            const maxFiles = Number(editor.dataset.maxFiles || 10);
+            const maxBytes = Number(editor.dataset.maxTotalMb || 30) * 1024 * 1024;
+            const extensions = editor.dataset.extensions?.split(',');
             let pending = [];
             const previews = new Map();
             function previewType(name) {
@@ -77,9 +81,10 @@
             }
             function limits(files, requireFile = false) {
                 const size = summary(files);
-                if (requireFile && size.count === 0) return 'Keep at least one material file.';
-                if (size.count > 10 || size.bytes > 30 * 1024 * 1024) return 'Keep up to 10 files and 30 MB in total, including saved attachments.';
+                if (requireFile && size.count === 0) return qualificationUpload ? 'Upload at least one supporting document when changing your highest qualification.' : 'Keep at least one material file.';
+                if (size.count > maxFiles || size.bytes > maxBytes) return qualificationUpload ? 'Select up to 5 files and 25 MB in total.' : 'Keep up to 10 files and 30 MB in total, including saved attachments.';
                 if (files.some(f => f.size === 0 || f.size > 10 * 1024 * 1024)) return 'Each file must contain data and be at most 10 MB.';
+                if (extensions && files.some(f => !extensions.includes(f.name.split('.').pop().toLowerCase()))) return 'Choose PDF, PNG or JPG files.';
                 if (files.some(f => !/\.(pdf|docx|pptx|xlsx|png|jpe?g)$/i.test(f.name))) return 'Choose PDF, DOCX, PPTX, XLSX, PNG or JPG files.';
                 return '';
             }
@@ -87,6 +92,7 @@
                 const transfer = new DataTransfer();
                 pending.forEach(f => transfer.items.add(f));
                 input.files = transfer.files;
+                if (qualificationUpload) form.dispatchEvent(new Event('attachment:changed'));
             }
             function render() {
                 previews.forEach((entry, file) => { if (!pending.includes(file)) release(file); });
@@ -97,7 +103,7 @@
                     const detail = document.createElement('small'); detail.className = 'text-muted d-block'; detail.textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB · New`;
                     info.append(icon, name, detail);
                     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'outline-button'; remove.textContent = '×'; remove.setAttribute('aria-label', `Remove ${file.name}`);
-                    remove.addEventListener('click', () => { pending.splice(index, 1); sync(); showError(); showNotice(); render(); });
+                    remove.addEventListener('click', () => { if(input.disabled) return; pending.splice(index, 1); sync(); showError(); showNotice(); render(); });
                     row.append(info);
                     const type = previewType(file.name);
                     if (type && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
@@ -118,6 +124,7 @@
                 if (empty) empty.hidden = pending.length > 0 || saved.length > 0;
             }
             function addFiles(files) {
+                if(input.disabled) return;
                 showNotice();
                 const next = [...pending];
                 let duplicates = 0;
@@ -135,8 +142,13 @@
                     else showNotice(`${added ? `${added} file${added === 1 ? '' : 's'} added. ` : ''}${duplicates} duplicate file${duplicates === 1 ? '' : 's'} skipped.`);
                 }
             }
+            if (qualificationUpload) input.addEventListener('invalid', event => {
+                event.preventDefault();
+                showError(limits(pending, input.required) || input.validationMessage);
+                add.focus();
+            });
             input.hidden = true; add.hidden = false;
-            add.addEventListener('click', () => { input.value = ''; input.click(); });
+            add.addEventListener('click', () => { if(input.disabled) return; input.value = ''; input.click(); });
             input.addEventListener('cancel', sync);
             input.addEventListener('change', () => addFiles(input.files));
             if (drop) {
@@ -185,7 +197,7 @@
             form.addEventListener('submit', event => {
                 attempted = true;
                 const firstInvalid = requiredFields();
-                const problem = limits(pending, true);
+                const problem = limits(pending, qualificationUpload ? input.required : true);
                 showError(problem);
                 if (problem || firstInvalid) {
                     event.preventDefault(); event.stopImmediatePropagation();
@@ -194,6 +206,10 @@
                 }
                 else sync();
             }, true);
+            form.addEventListener('reset', () => {
+                if (!qualificationUpload) return;
+                setTimeout(() => { pending = []; sync(); showError(); render(); }, 0);
+            });
             render();
             if (typeof window !== 'undefined') {
                 window.addEventListener('pagehide', () => { showNotice(); Array.from(previews.keys()).forEach(release); });

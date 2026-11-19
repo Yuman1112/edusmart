@@ -1,0 +1,5 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.QualificationUpdateRow
+@if(Model.Changes.Count>0){<div class="table-responsive qualification-diff-wrap"><table class="table qualification-diff-table" data-server-managed="true"><thead><tr><th scope="col">Field</th><th scope="col">Original Value</th><th scope="col">Requested Value</th></tr></thead><tbody>
+@foreach(var change in Model.Changes){<tr><th scope="row">@change.Label</th><td data-label="Original Value">@(string.IsNullOrWhiteSpace(change.Before)?"Not provided":change.Before)</td><td class="qualification-new-value" data-label="Requested Value">@change.After</td></tr>}
+</tbody></table></div>}
+<div class="qualification-reason-block"><h3>Reason for Request</h3><p>@Model.Reason</p></div>

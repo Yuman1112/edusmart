@@ -1,6 +1,6 @@
-﻿(() => {
+(() => {
     function init() {
-        if (!document.querySelector('.learning-materials-page') || !window.HTMLDialogElement) return;
+        if (!document.querySelector('.learning-materials-page, .qualification-requests-page') || !window.HTMLDialogElement) return;
         const dialog = document.createElement('dialog'); dialog.className = 'material-preview-dialog';
         dialog.setAttribute('aria-labelledby', 'material-preview-name');
         const header = document.createElement('div'); header.className = 'material-preview-header';

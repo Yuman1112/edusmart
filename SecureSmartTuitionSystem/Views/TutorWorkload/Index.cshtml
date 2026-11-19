@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Tutor Workload";
     string weekValue = Model.WeekStart.ToString("yyyy-MM-dd");
+    int workloadNumber = 0;
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
@@ -53,42 +54,40 @@
     <div class="col-12 col-md-4"><div class="class-form-card h-100"><p>Scheduled Lessons</p><h2>@Model.TotalLessons</h2></div></div>
     <div class="col-12 col-md-4"><div class="class-form-card h-100"><p>Scheduled Teaching Hours</p><h2>@Model.TotalHours.ToString("0.##")</h2></div></div>
 </div>
-<div class="class-details-card mb-4">
-    <section class="class-details-section">
-        <h3><i class="bi bi-bar-chart" aria-hidden="true"></i> Weekly Overview</h3>
-        <p class="text-muted">Cancelled lessons are excluded. Replacements are included in lessons and hours. Classes counts distinct classes scheduled this week. These figures follow the current Calendar records and are not attendance totals.</p>
+<section class="tutor-management-list-card mb-4" aria-labelledby="weekly-overview-heading">
+    <div class="tutor-management-list-header"><h2 id="weekly-overview-heading"><i class="bi bi-bar-chart" aria-hidden="true"></i> Weekly Overview</h2></div>
+        <p class="form-text px-4 py-3 mb-0">Cancelled lessons are excluded. Replacements are included in lessons and hours. Classes counts distinct classes scheduled this week. These figures follow the current Calendar records and are not attendance totals.</p>
         <div class="table-responsive">
-            <table class="table align-middle">
-                <thead><tr><th scope="col">Tutor</th><th scope="col">Status</th><th scope="col">Classes</th><th scope="col">Lessons</th><th scope="col">Replacements</th><th scope="col">Hours</th><th scope="col">Actions</th></tr></thead>
+            <table class="table align-middle mb-0 tutor-management-table">
+                <thead><tr><th scope="col" data-sortable="false">No.</th><th scope="col">Tutor</th><th scope="col">Status</th><th scope="col">Classes</th><th scope="col">Lessons</th><th scope="col">Replacements</th><th scope="col">Hours</th><th scope="col">Actions</th></tr></thead>
                 <tbody>
                     @foreach (var tutor in Model.Rows)
                     {
                         <tr>
+                            <td>@(++workloadNumber)</td>
                             <td><strong>@tutor.FullName</strong><br /><small class="text-muted">@tutor.TutorId</small></td>
                             <td><span class="status-pill @(tutor.IsActive ? "status-success" : "status-warning")">@(tutor.IsActive ? "Active" : "Inactive")</span></td>
                             <td>@tutor.ClassCount</td>
                             <td>@tutor.LessonCount</td>
                             <td>@tutor.ReplacementCount</td>
                             <td>@tutor.TeachingHours.ToString("0.##")</td>
-                            <td><a class="btn btn-sm btn-outline-secondary" asp-action="Index" asp-route-week="@weekValue" asp-route-userId="@tutor.UserId" asp-fragment="workload-lessons">View Week</a></td>
+                            <td><a class="outline-button" asp-action="Index" asp-route-week="@weekValue" asp-route-userId="@tutor.UserId" asp-fragment="workload-lessons">View Week</a></td>
                         </tr>
                     }
                     @if (Model.Rows.Count == 0)
                     {
-                        <tr><td colspan="7" class="text-muted">No tutor records found.</td></tr>
+                        <tr><td colspan="8" class="text-muted">No tutor records found.</td></tr>
                     }
                 </tbody>
             </table>
         </div>
-    </section>
-</div>
+</section>
 @if (!string.IsNullOrEmpty(Model.SelectedUserId))
 {
-    <div id="workload-lessons" class="class-details-card">
-        <section class="class-details-section">
-            <h3><i class="bi bi-calendar-week" aria-hidden="true"></i> Lesson Breakdown · @Model.Rows[0].TutorId</h3>
+    <section id="workload-lessons" class="tutor-management-list-card" aria-labelledby="workload-lessons-heading">
+        <div class="tutor-management-list-header"><h2 id="workload-lessons-heading"><i class="bi bi-calendar-week" aria-hidden="true"></i> Lesson Breakdown · @Model.Rows[0].TutorId</h2></div>
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle mb-0 tutor-management-table">
                     <thead><tr><th scope="col">Date</th><th scope="col">Class</th><th scope="col">Level / Subject</th><th scope="col">Time (MYT)</th><th scope="col">Type</th><th scope="col">Actions</th></tr></thead>
                     <tbody>
                         @foreach (var lesson in Model.Lessons)
@@ -99,7 +98,7 @@
                                 <td>@lesson.Class.Subject.AcademicLevel · @lesson.Class.Subject.SubjectName</td>
                                 <td class="text-nowrap">@lesson.Start.ToString("HH:mm")–@lesson.End.ToString("HH:mm")</td>
                                 <td>@(lesson.Replacement ? "Replacement" : "Regular")</td>
-                                <td><a class="btn btn-sm btn-outline-secondary" asp-controller="ClassSessions" asp-action="Details" asp-route-id="@lesson.Class.ClassSessionId">Class Details</a></td>
+                                <td><a class="outline-button" asp-controller="ClassSessions" asp-action="Details" asp-route-id="@lesson.Class.ClassSessionId">Class Details</a></td>
                             </tr>
                         }
                         @if (Model.Lessons.Count == 0)
@@ -109,6 +108,5 @@
                     </tbody>
                 </table>
             </div>
-        </section>
-    </div>
+    </section>
 }

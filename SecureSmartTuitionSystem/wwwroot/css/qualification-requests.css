@@ -13,3 +13,187 @@
 .qualification-requests-page .qualification-review-item > span { display:block; color:#58718a; font-size:.82rem; margin-bottom:5px; }
 .qualification-requests-page .qualification-review-item p { margin:6px 0 0; color:#58718a; }
 @media(max-width:767.98px) { .qualification-requests-page .qualification-current-grid { grid-template-columns:1fr; } }
+
+/* Match Enrollment: retain the border and soft ring without a second hard outline. */
+.edusmart-ui main .qualification-requests-page :is(.form-control, .form-select):focus,
+.edusmart-ui main .qualification-requests-page :is(.form-control, .form-select):focus-visible {
+    outline: none;
+    outline-width: 0;
+    outline-offset: 0;
+}
+
+.qualification-requests-page .qualification-limit-note { margin:0; padding:0 24px 14px; color:var(--muted); font-size:.8rem; }
+.qualification-requests-page .qualification-diff-table { margin:0; border:1px solid var(--border); }
+.qualification-requests-page .qualification-diff-table :is(th,td) { padding:12px 14px; white-space:normal; overflow-wrap:anywhere; vertical-align:top; }
+.qualification-requests-page .qualification-diff-table thead { background:#f3fafb; }
+.qualification-requests-page .qualification-new-value { background:#eefaf9; }
+.qualification-requests-page .qualification-unchanged-heading { margin:0 0 12px; font-size:1rem; }
+.qualification-requests-page .qualification-unchanged-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+@media(max-width:575.98px) { .qualification-requests-page .qualification-unchanged-grid { grid-template-columns:1fr; } }
+
+/* Keep required markers alongside labels, including the shared text-danger rules. */
+.qualification-requests-page .form-label > .text-danger {
+    display: inline;
+    margin: 0;
+}
+
+.qualification-page-actions, .qualification-document-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.qualification-review-stack { display:grid; gap:20px; }
+.qualification-document-list { list-style:none; padding:0; margin:12px 0 0; display:grid; gap:10px; }
+.qualification-document-list > li { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 14px; border:1px solid var(--border,#cde2e9); border-radius:8px; background:#f7fbfc; }
+.qualification-document-name { display:flex; align-items:center; gap:12px; min-width:0; }
+.qualification-document-name > i { color:var(--teal,#009aaa); font-size:22px; }
+.qualification-document-name strong { overflow-wrap:anywhere; display:block; }
+.qualification-document-name small { display:block; color:var(--muted,#6583a0); margin-top:3px; }
+.qualification-document-actions { flex-shrink:0; }
+.qualification-current-disclosure { border-top:1px solid var(--border,#cde2e9); margin-top:16px; padding-top:14px; }
+.qualification-current-disclosure summary { cursor:pointer; font-weight:600; color:var(--navy,#003568); }
+.qualification-current-disclosure dl { margin:16px 0; display:grid; grid-template-columns:1fr 2fr; gap:8px 16px; }
+.qualification-current-disclosure dd { margin:0; overflow-wrap:anywhere; }
+.qualification-selected-files { list-style:none; padding:0; margin:10px 0 0; }
+.qualification-selected-files li { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--border,#cde2e9); }
+.qualification-selected-files span { overflow-wrap:anywhere; min-width:0; }
+@media(max-width:600px) {
+ .qualification-document-list > li { align-items:stretch; flex-direction:column; }
+ .qualification-document-actions { justify-content:flex-end; }
+ .qualification-current-disclosure dl { grid-template-columns:1fr; gap:4px; }
+ .qualification-current-disclosure dd { margin-bottom:8px; }
+}
+
+.qualification-create-current { display:flex; gap:8px 24px; flex-wrap:wrap; padding:12px 14px; background:#f0f9fb; border:1px solid var(--border,#cde2e9); border-radius:8px; margin-bottom:18px; font-size:.9rem; }
+.qualification-create-current > span { overflow-wrap:anywhere; }
+@media(max-width:600px) {
+ .qualification-diff-table thead { display:none; }
+ .qualification-diff-table, .qualification-diff-table tbody { display:block; width:100%; }
+ .qualification-diff-table tr { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+ .qualification-diff-table tbody th { grid-column:1 / -1; }
+ .qualification-diff-table td::before { content:attr(data-label); display:block; color:#58718a; font-size:.75rem; font-weight:600; margin-bottom:6px; }
+ .qualification-diff-table td, .qualification-diff-table th { min-width:0; padding:10px; }
+}
+
+/* Review sections follow the existing compact card and action layout. */
+.qualification-requests-page .qualification-only-files { margin:0; line-height:1.6; }
+.qualification-requests-page .qualification-only-files > i { color:var(--teal,#009aaa); margin-right:6px; }
+.qualification-requests-page .qualification-reason-block { margin-top:18px; }
+.qualification-requests-page .qualification-reason-block h3,
+.qualification-requests-page .qualification-review-files h3 { font-size:.95rem; margin:0; font-weight:600; }
+.qualification-requests-page .qualification-reason-block p { margin:8px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.qualification-requests-page .qualification-review-files { margin-top:18px; padding-top:18px; border-top:1px solid var(--border,#cde2e9); }
+.qualification-review-files .teaching-section-heading { margin-bottom:0; }
+.qualification-decision-card .class-form-actions { justify-content:flex-end; flex-direction:row; }
+.qualification-decision-card .class-form-actions button { flex:0 0 auto; width:auto; min-width:100px; }
+.qualification-decision-card .qualification-review-confirm { background:transparent; margin:16px 0 0; padding:0 0 0 1.6em; }
+.qualification-decision-metadata { display:flex; gap:12px; margin:16px 0 0; flex-wrap:wrap; }
+.qualification-decision-metadata dt { font-weight:500; color:#58718a; }
+.qualification-decision-metadata dd { margin:0; }
+.qualification-requests-page [data-qualification-review-draft] p { white-space:pre-wrap; overflow-wrap:anywhere; margin-top:12px; }
+.qualification-requests-page [data-qualification-review-notice]:not(.d-none) { margin:20px 20px 0; }
+.qualification-requests-page .material-attachment-heading { gap:12px; }
+.qualification-requests-page .material-attachment-row { min-width:0; }
+.qualification-requests-page .material-attachment-row > div { min-width:0; }
+.qualification-requests-page .material-attachment-row > div > span { overflow-wrap:anywhere; }
+@media(max-width:600px) {
+ .qualification-requests-page .qualification-only-files > span { display:block; }
+ .qualification-decision-card .class-form-actions button { min-width:90px; }
+}
+
+.qualification-requests-page .qualification-filter-grid { grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr)); }
+.qualification-details-card .class-details-title { padding:18px 24px; }
+.qualification-details-card .class-details-title h2 { font-size:1.1rem; }
+.qualification-details-card .class-details-section { padding:20px 24px; }
+.qualification-details-card .class-details-section h3 { font-size:1rem; margin-bottom:14px; }
+.qualification-details-card .teaching-section-heading h3 { margin-bottom:0; }
+.qualification-details-card .qualification-current-disclosure { border:0; margin:0; padding:0; }
+.qualification-requests-page .qualification-detail-copy { margin:0; color:var(--navy); white-space:pre-wrap; overflow-wrap:anywhere; }
+@media(max-width:1000px){.qualification-requests-page .qualification-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }}
+@media(max-width:600px){.qualification-requests-page .qualification-filter-grid { grid-template-columns:1fr; }.qualification-details-card .class-details-title,.qualification-details-card .class-details-section {padding:16px;}}
+
+.qualification-requests-page .qualification-details-card { padding:0; }
+
+.qualification-filter-grid :is(.form-control,.form-select) { min-width:0; width:100%; }
+
+/* Compact headers shared by Tutor details and Admin review. */
+.qualification-requests-page .qualification-details-card .class-details-title { padding:12px 24px; min-height:0; flex-direction:row; align-items:center; }
+.qualification-requests-page .qualification-current-summary { padding-bottom:18px; margin-bottom:18px; border-bottom:1px solid var(--border,#cde2e9); }
+.qualification-requests-page .qualification-current-summary h2 { display:flex; align-items:center; gap:8px; font-size:1rem; margin:0 0 14px; }
+.qualification-current-summary h2 i { color:var(--teal,#009aaa); }
+.qualification-summary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.qualification-summary-grid .class-detail-item { padding:12px 14px; }
+@media(max-width:767.98px) { .qualification-summary-grid { grid-template-columns:1fr; } }
+@media(max-width:600px) { .qualification-requests-page .qualification-details-card .class-details-title {padding:12px 16px;} }
+
+/* Request-focused summary: plain label/value rows, without read-only field boxes. */
+.qualification-summary-list { display:grid; grid-template-columns:minmax(130px,170px) minmax(0,1fr); gap:10px 18px; margin:0; }
+.qualification-summary-list dt { font-weight:600; color:var(--navy-soft,#415c76); }
+.qualification-summary-list dd { margin:0; min-width:0; overflow-wrap:anywhere; color:var(--navy); }
+.qualification-summary-reason { margin-top:18px; }
+.qualification-summary-reason h4 { font-size:.9rem; font-weight:600; color:var(--navy-soft,#415c76); margin:0 0 6px; }
+.qualification-summary-reason p, .qualification-summary-notes { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.qualification-simplified .qualification-decision-card .class-form-actions { margin:18px 0 0; padding:16px 0 0; }
+.qualification-simplified [data-qualification-review-notice]:not(.d-none) { margin:0 0 16px; }
+@media(max-width:600px) {
+ .qualification-summary-list {grid-template-columns:1fr; gap:4px;}
+ .qualification-summary-list dd {margin-bottom:10px;}
+ .qualification-summary-list dd:last-child {margin-bottom:0;}
+}
+
+/* Avoid the global detail-card padding being added a second time. */
+.edusmart-ui main .qualification-requests-page .qualification-simplified { padding:0; }
+.edusmart-ui main .qualification-requests-page .qualification-simplified .class-details-title { padding:12px 24px; gap:12px; flex-direction:row; align-items:center; }
+.edusmart-ui main .qualification-requests-page .qualification-simplified .class-details-section { padding:20px 24px; }
+@media(max-width:600px) {
+ .edusmart-ui main .qualification-requests-page .qualification-simplified .class-details-title { padding:12px 16px; }
+ .edusmart-ui main .qualification-requests-page .qualification-simplified .class-details-section { padding:16px; }
+}
+
+/* One shared two-column summary for the Tutor and Admin request pages. */
+.qualification-summary-columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.edusmart-ui main .qualification-requests-page .qualification-summary-columns > .class-details-section { border-top:0; min-width:0; }
+.qualification-summary-columns > .class-details-section + .class-details-section { border-left:1px solid var(--border,#cde2e9); }
+.qualification-summary-columns + .class-details-section { border-top:1px solid var(--border,#cde2e9); }
+.qualification-summary-columns .qualification-summary-list { display:block; }
+.qualification-summary-columns .qualification-summary-list dt { font-size:.84rem; font-weight:500; color:var(--muted,#6583a0); }
+.qualification-summary-columns .qualification-summary-list dd { margin:4px 0 16px; }
+.qualification-summary-columns .qualification-summary-list dd:last-child { margin-bottom:0; }
+.qualification-requests-page .qualification-summary-columns .qualification-summary-reason h4 { color:var(--muted,#6583a0); font-size:.84rem; font-weight:500; }
+@media(max-width:767.98px) {
+ .qualification-summary-columns { grid-template-columns:1fr; }
+ .qualification-summary-columns > .class-details-section + .class-details-section { border-left:0; }
+ .edusmart-ui main .qualification-requests-page .qualification-summary-columns > .class-details-section + .class-details-section { border-top:1px solid var(--border,#cde2e9); }
+}
+
+/* Application/evidence first; decision/result in its own card below. */
+.qualification-stacked-cards { display:grid; gap:20px; }
+.qualification-request-meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 24px; margin:0; }
+.qualification-request-meta > div { min-width:0; }
+.qualification-request-meta dt { color:var(--muted,#6583a0); font-weight:500; font-size:.84rem; margin:0 0 5px; }
+.qualification-request-meta dd { margin:0; overflow-wrap:anywhere; color:var(--navy); }
+.qualification-stacked-cards .qualification-summary-reason { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px; margin-top:16px; }
+.qualification-stacked-cards .qualification-summary-reason h4 { font-size:.9rem; margin:0; }
+.qualification-stacked-cards .qualification-summary-reason p { flex:1 1 200px; min-width:0; }
+.qualification-stacked-cards [data-qualification-decision-form] > h3,
+.qualification-stacked-cards [data-qualification-decision-result] > h3 { padding-bottom:14px; border-bottom:1px solid var(--border,#cde2e9); }
+@media(max-width:600px) {
+ .qualification-request-meta { grid-template-columns:1fr; }
+ .qualification-stacked-cards .qualification-summary-reason { display:block; }
+ .qualification-stacked-cards .qualification-summary-reason h4 { margin-bottom:5px; }
+}
+
+/* These views now use ClassSessions' actual detail-item and form-control components. */
+.edusmart-ui main .qualification-requests-page .qualification-class-decision .class-form-actions { justify-content:flex-end; }
+.edusmart-ui main .qualification-requests-page .qualification-class-decision .class-form-actions button { flex:0 0 auto; width:auto; }
+
+/* Match Class Session Details' standard card insets. */
+.edusmart-ui main .qualification-requests-page .qualification-simplified .class-details-title { padding:24px 28px; }
+.edusmart-ui main .qualification-requests-page .qualification-simplified .class-details-section { padding:26px 28px; }
+.edusmart-ui main .qualification-requests-page [data-qualification-detail-cancel] {
+    display:flex; flex-direction:row; align-items:center; justify-content:flex-end;
+    margin:0; padding:24px 28px; border-top:1px solid var(--border,#cde2e9);
+}
+.edusmart-ui main .qualification-requests-page [data-qualification-detail-cancel] form { display:flex; justify-content:flex-end; margin:0; }
+.edusmart-ui main .qualification-requests-page [data-qualification-detail-cancel] button { width:auto; margin:0; }
+@media(max-width:767.98px) {
+ .edusmart-ui main .qualification-requests-page .qualification-simplified .class-details-title { padding:20px; }
+ .edusmart-ui main .qualification-requests-page .qualification-simplified .class-details-section { padding:22px 20px; }
+ .edusmart-ui main .qualification-requests-page [data-qualification-detail-cancel] { padding:20px; }
+}

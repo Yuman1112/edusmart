@@ -2507,6 +2507,38 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("SecurityEmailDeliveries");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.QualificationRequestAttachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int?>("CurrentDocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.Property<int>("RequestId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CurrentDocumentId");
+
+                    b.HasIndex("RequestId");
+
+                    b.ToTable("QualificationRequestAttachments");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorAvailabilitySlot", b =>
                 {
                     b.Property<int>("TutorAvailabilitySlotId")
@@ -3527,6 +3559,24 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.QualificationRequestAttachment", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Tutor.TutorQualificationDocument", "CurrentDocument")
+                        .WithMany()
+                        .HasForeignKey("CurrentDocumentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Tutor.TutorQualificationUpdateRequest", "Request")
+                        .WithMany("AdditionalFiles")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CurrentDocument");
+
+                    b.Navigation("Request");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorAvailabilitySlot", b =>
                 {
                     b.HasOne("SecureSmartTuitionSystem.Models.Identity.ApplicationUser", "ApplicationUser")
@@ -3706,6 +3756,11 @@ namespace SecureSmartTuitionSystem.Migrations
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.Assessment", b =>
                 {
                     b.Navigation("Participants");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorQualificationUpdateRequest", b =>
+                {
+                    b.Navigation("AdditionalFiles");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.TutorProfile", b =>

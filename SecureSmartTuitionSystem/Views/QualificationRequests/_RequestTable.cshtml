@@ -3,9 +3,10 @@
 @{ bool admin = User.IsInRole("Admin"); }
 <div class="tutor-management-list-card teaching-request-list" data-qualification-request-list>
     <div class="tutor-management-list-header"><h2><i class="bi bi-clipboard-check" aria-hidden="true"></i> @(admin ? "Tutor Requests" : "My Requests")</h2><span class="teaching-section-count" data-qualification-count>@Model.Count request(s)</span></div>
-    <p class="teaching-live-status">@(admin ? "Showing up to 200 requests, pending first." : "Showing your latest 100 requests.") Updates automatically every 5 seconds.</p>
+    <p class="teaching-live-status d-none" role="status" aria-live="polite"></p>
+    <p class="qualification-limit-note @(Model.Count >= (admin ? 200 : 100) ? "" : "d-none")" data-qualification-limit="@(admin ? 200 : 100)">Showing the latest @(admin ? 200 : 100) requests.</p>
     <div class="table-responsive"><table class="table align-middle mb-0 teaching-requests-table" id="qualification-requests-table">
-        <thead><tr><th scope="col">No.</th><th scope="col">Request ID</th>@if (admin) { <th scope="col">Tutor</th> }<th scope="col">Qualification Details</th><th scope="col">Submitted On</th><th scope="col">Status</th>@if (!admin) { <th scope="col">Admin Notes &amp; Evidence</th> }<th scope="col" data-sortable="false">Actions</th></tr></thead>
+        <thead><tr><th scope="col">No.</th><th scope="col">Request ID</th>@if (admin) { <th scope="col">Tutor</th> }<th scope="col">Requested Changes</th><th scope="col">Submitted On</th><th scope="col">Status</th>@if (!admin) { <th scope="col">Admin Notes</th> }<th scope="col" data-sortable="false">Actions</th></tr></thead>
         <tbody>
         <partial name="/Views/QualificationRequests/_RequestTableRows.cshtml" model="Model" />
         </tbody>
