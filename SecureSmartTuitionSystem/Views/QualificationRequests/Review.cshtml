@@ -8,14 +8,14 @@
     <link rel="stylesheet" href="~/css/teaching-requests.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/qualification-requests.css" asp-append-version="true" />
 }
-<div class="qualification-requests-page">
+<div class="qualification-requests-page" data-qualification-review data-qualification-live-url="@Url.Action("Live", "QualificationRequests", new { requestId = Model.Id })">
     <div class="page-header"><div><h1>Review Qualification Update</h1><p>@r.TutorId — @r.TutorName · Request #@r.Id</p></div><a asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Requests</a></div>
     @if(TempData["QualificationSuccess"] is string success){<div class="alert alert-success" role="status">@success</div>}
     <div class="teaching-review-grid">
         <div class="class-form-card tutor-create-card teaching-summary-card">
-            <section class="class-form-section"><div class="teaching-section-heading"><h2><i class="bi bi-file-earmark-check" aria-hidden="true"></i> Qualification Request</h2><span class="tutor-management-badge @(r.Status==QualificationUpdateStatus.Approved ? "tutor-badge-success" : r.Status==QualificationUpdateStatus.Pending ? "tutor-badge-pending" : "qualification-badge-neutral")">@r.StatusLabel</span></div>
+            <section class="class-form-section"><div class="teaching-section-heading"><h2><i class="bi bi-file-earmark-check" aria-hidden="true"></i> Qualification Request</h2><span data-qualification-review-status class="tutor-management-badge @(r.Status==QualificationUpdateStatus.Approved ? "tutor-badge-success" : r.Status==QualificationUpdateStatus.Pending ? "tutor-badge-pending" : "qualification-badge-neutral")">@r.StatusLabel</span></div>
                 <div class="qualification-review-details">
-                    <div class="qualification-review-item"><span>Current Qualification Details</span><strong>@Model.CurrentQualification</strong><p>@Model.CurrentFieldOfStudy · @Model.CurrentAreaOfExpertise</p></div>
+                    <div class="qualification-review-item"><span>Current Qualification Details</span><strong data-qualification-field="qualification">@Model.CurrentQualification</strong><p><span data-qualification-field="fieldOfStudy">@Model.CurrentFieldOfStudy</span> · <span data-qualification-field="areaOfExpertise">@Model.CurrentAreaOfExpertise</span></p></div>
                     <div class="qualification-review-item"><span>Proposed Qualification Details</span><strong>@r.Qualification</strong><p>@r.FieldOfStudy · @r.AreaOfExpertise</p></div>
                     <div class="qualification-review-item"><span>Reason for Request</span><p>@r.Reason</p></div>
                     <div><a asp-action="Document" asp-route-id="@r.Id" class="outline-button"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> View @r.CertificateName</a></div>
@@ -24,6 +24,7 @@
             </section>
         </div>
         <div class="class-form-card tutor-create-card teaching-decision-card">
+            <div class="alert alert-info d-none" role="status" data-qualification-review-notice></div>
             @if(r.Status==QualificationUpdateStatus.Pending){
                 <form asp-action="Review" method="post" asp-antiforgery="true"><input asp-for="Id" type="hidden" />
                     <section class="class-form-section"><h2><i class="bi bi-pencil-square" aria-hidden="true"></i> Admin Decision</h2>
@@ -37,4 +38,4 @@
         </div>
     </div>
 </div>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+@section Scripts { <partial name="_ValidationScriptsPartial" /> <script src="~/js/qualification-live.js" asp-append-version="true"></script> }

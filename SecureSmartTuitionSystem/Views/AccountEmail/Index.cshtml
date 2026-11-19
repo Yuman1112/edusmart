@@ -19,7 +19,7 @@
 <div class="account-profile-page email-change-page" data-email-flow>
     <div class="page-header">
         <div><h1>@ViewData["Title"]</h1><p>Update your account email securely.</p></div>
-        <a asp-controller="@Model.ProfileController" asp-action="EditProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Profile</a>
+        <a asp-controller="@Model.ProfileController" asp-action="EditProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Edit Profile</a>
     </div>
     @if (TempData["ProfileSaved"] is string saved) { <div class="alert alert-success" role="status">@saved</div> }
     @if (TempData["OwnProfileSuccess"] is string tutorSaved) { <div class="alert alert-success" role="status">@tutorSaved</div> }

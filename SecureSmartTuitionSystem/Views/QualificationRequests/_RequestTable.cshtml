@@ -1,29 +1,14 @@
 @model IReadOnlyList<SecureSmartTuitionSystem.ViewModels.Tutor.QualificationUpdateRow>
 @using SecureSmartTuitionSystem.Models.Tutor
-@{ bool admin = User.IsInRole("Admin"); int number = 0; }
-<div class="tutor-management-list-card teaching-request-list">
-    <div class="tutor-management-list-header"><h2><i class="bi bi-clipboard-check" aria-hidden="true"></i> @(admin ? "Tutor Requests" : "My Requests")</h2><span class="teaching-section-count">@Model.Count request(s)</span></div>
-    <p class="teaching-live-status">@(admin ? "Showing up to 200 requests, pending first." : "Showing your latest 100 requests.") Refresh the page for the latest status.</p>
+@{ bool admin = User.IsInRole("Admin"); }
+<div class="tutor-management-list-card teaching-request-list" data-qualification-request-list>
+    <div class="tutor-management-list-header"><h2><i class="bi bi-clipboard-check" aria-hidden="true"></i> @(admin ? "Tutor Requests" : "My Requests")</h2><span class="teaching-section-count" data-qualification-count>@Model.Count request(s)</span></div>
+    <p class="teaching-live-status">@(admin ? "Showing up to 200 requests, pending first." : "Showing your latest 100 requests.") Updates automatically every 5 seconds.</p>
     <div class="table-responsive"><table class="table align-middle mb-0 teaching-requests-table" id="qualification-requests-table">
         <thead><tr><th scope="col">No.</th><th scope="col">Request ID</th>@if (admin) { <th scope="col">Tutor</th> }<th scope="col">Qualification Details</th><th scope="col">Submitted On</th><th scope="col">Status</th>@if (!admin) { <th scope="col">Admin Notes &amp; Evidence</th> }<th scope="col" data-sortable="false">Actions</th></tr></thead>
         <tbody>
-        @foreach (var request in Model) {
-            number++;
-            var badge = request.Status switch { QualificationUpdateStatus.Approved => "tutor-badge-success", QualificationUpdateStatus.Rejected => "teaching-badge-rejected", QualificationUpdateStatus.Cancelled => "qualification-badge-neutral", _ => "tutor-badge-pending" };
-            <tr><td>@number</td><td data-sort-value="@request.Id"><strong>#@request.Id</strong></td>
-                @if (admin) { <td><strong>@request.TutorName</strong><div class="small text-muted">@request.TutorId</div></td> }
-                <td class="qualification-details-cell"><strong>@request.Qualification</strong><div class="small text-muted">@request.FieldOfStudy · @request.AreaOfExpertise</div><details class="qualification-reason"><summary>Reason for request</summary><p>@request.Reason</p></details></td>
-                <td data-sort-value="@request.SubmittedAtUtc.ToString("O")">@request.SubmittedAtUtc.AddHours(8).ToString("dd MMM yyyy")<div class="small text-muted">@request.SubmittedAtUtc.AddHours(8).ToString("h:mm tt") MYT</div></td>
-                <td><span class="tutor-management-badge @badge">@request.StatusLabel</span></td>
-                @if (!admin) { <td class="teaching-table-notes"><span>@(string.IsNullOrWhiteSpace(request.ReviewNotes) ? "—" : request.ReviewNotes)</span><div class="small"><a asp-controller="QualificationRequests" asp-action="Document" asp-route-id="@request.Id">@request.CertificateName</a></div></td> }
-                <td>
-                    @if (admin) { <a asp-controller="QualificationRequests" asp-action="Review" asp-route-id="@request.Id" class="outline-button teaching-review-link"><i class="bi bi-eye" aria-hidden="true"></i> @(request.Status == QualificationUpdateStatus.Pending ? "Review" : "View")</a> }
-                    else if (request.Status == QualificationUpdateStatus.Pending) { <form asp-controller="QualificationRequests" asp-action="Cancel" method="post" asp-antiforgery="true"><input type="hidden" name="id" value="@request.Id" /><button type="submit" class="outline-button">Cancel Request</button></form> }
-                    else { <span class="text-muted">—</span> }
-                </td>
-            </tr>
-        }
+        <partial name="/Views/QualificationRequests/_RequestTableRows.cshtml" model="Model" />
         </tbody>
     </table></div>
-    @if (Model.Count == 0) { <p class="teaching-empty-state">No requests have been submitted yet.</p> }
+    <p class="teaching-empty-state @(Model.Count == 0 ? "" : "d-none")" data-qualification-empty>No requests have been submitted yet.</p>
 </div>

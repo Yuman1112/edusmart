@@ -1,0 +1,4 @@
+@model SecureSmartTuitionSystem.ViewModels.Tutor.QualificationLiveState
+<div data-qualification-live-state data-profile="@System.Text.Json.JsonSerializer.Serialize(Model.Profile, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))">
+    <table><tbody><partial name="/Views/QualificationRequests/_RequestTableRows.cshtml" model="Model.Requests" /></tbody></table>
+</div>

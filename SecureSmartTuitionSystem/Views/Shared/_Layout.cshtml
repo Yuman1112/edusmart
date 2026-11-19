@@ -456,6 +456,13 @@
                             <span>Teaching Requests</span>
                         </a>
 
+                        <a class="sidebar-link @(currentController == "QualificationRequests" ? "active" : "")"
+                           asp-area="" asp-controller="QualificationRequests" asp-action="Mine"
+                           aria-current="@(currentController == "QualificationRequests" ? "page" : null)">
+                            <i class="bi bi-file-earmark-check" aria-hidden="true"></i>
+                            <span>Qualification Requests</span>
+                        </a>
+
                         <!-- Tutor: Classes -->
                         <div class="sidebar-module">
                             <button type="button"

@@ -110,3 +110,5 @@
  .tutor-profile-layout .profile-request-action-row > .outline-button { min-width:0; width:100%; }
  .tutor-profile-layout .profile-summary-label { flex-basis:100%; }
 }
+
+.tutor-profile-layout .profile-qualification-fields { margin-bottom:16px; }

@@ -47,3 +47,18 @@ public sealed class QualificationDecisionInput
     [BindNever] public string CurrentFieldOfStudy { get; set; } = "";
     [BindNever] public string CurrentAreaOfExpertise { get; set; } = "";
 }
+
+public sealed class QualificationLiveProfile
+{
+    public string Qualification { get; set; } = "";
+    public string? FieldOfStudy { get; set; }
+    public string? AreaOfExpertise { get; set; }
+    public bool Verified { get; set; }
+    public QualificationUpdateRow? Pending { get; set; }
+    public IReadOnlyList<TutorDocumentSummary> Documents { get; set; } = [];
+}
+public sealed class QualificationLiveState
+{
+    public IReadOnlyList<QualificationUpdateRow> Requests { get; set; } = [];
+    public QualificationLiveProfile? Profile { get; set; }
+}

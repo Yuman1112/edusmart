@@ -95,6 +95,41 @@ public sealed class QualificationRequestsController(ApplicationDbContext db,
     public async Task<IActionResult> Index(CancellationToken token) => View(await Rows(db.TutorQualificationUpdateRequests.AsNoTracking())
         .OrderBy(r=>r.Status==QualificationUpdateStatus.Pending?0:1).ThenByDescending(r=>r.Id).Take(200).ToListAsync(token));
 
+    [HttpGet]
+    public async Task<IActionResult> Live(int? requestId, CancellationToken token)
+    {
+        var userId = users.GetUserId(User);
+        if (userId == null) return Challenge();
+        bool admin = User.IsInRole("Admin");
+        var query = db.TutorQualificationUpdateRequests.AsNoTracking();
+        TutorProfile? profile = null;
+        if (!admin)
+        {
+            profile = await Own().AsNoTracking().SingleOrDefaultAsync(token);
+            if (profile == null) return Forbid();
+            query = query.Where(r => r.TutorProfileId == profile.TutorProfileId);
+        }
+        if (requestId.HasValue)
+        {
+            query = query.Where(r => r.Id == requestId.Value);
+            if (admin) profile = await query.Select(r => r.TutorProfile).AsNoTracking().SingleOrDefaultAsync(token);
+        }
+        var rows = await Rows(query).OrderBy(r => admin && r.Status == QualificationUpdateStatus.Pending ? 0 : 1)
+            .ThenByDescending(r => r.Id).Take(admin ? 200 : 100).ToListAsync(token);
+        QualificationLiveProfile? current = null;
+        if (profile != null)
+        {
+            current = new() { Qualification = profile.Qualification, FieldOfStudy = profile.FieldOfStudy,
+                AreaOfExpertise = profile.AreaOfExpertise, Verified = profile.QualificationVerifiedAtUtc.HasValue,
+                Pending = rows.FirstOrDefault(r => r.Status == QualificationUpdateStatus.Pending) };
+            if (!admin) current.Documents = await db.TutorQualificationDocuments.AsNoTracking()
+                .Where(d => d.TutorProfileId == profile.TutorProfileId && d.TeachingChangeRequestId == null
+                    && (d.Kind == TutorDocumentKind.Certificate || d.Kind == TutorDocumentKind.Resume))
+                .Select(d => new TutorDocumentSummary(d.Id, d.Kind, d.FileName)).ToListAsync(token);
+        }
+        return PartialView("_LiveState", new QualificationLiveState { Requests = rows, Profile = current });
+    }
+
     private async Task<bool> PopulateDecision(QualificationDecisionInput model, CancellationToken token)
     {
         model.Request=await Rows(db.TutorQualificationUpdateRequests.AsNoTracking().Where(r=>r.Id==model.Id)).SingleOrDefaultAsync(token);

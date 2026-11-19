@@ -7,7 +7,9 @@
     <link rel="stylesheet" href="~/css/teaching-requests.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/qualification-requests.css" asp-append-version="true" />
 }
-<div class="qualification-requests-page">
+<div class="qualification-requests-page" data-qualification-live-url="@Url.Action("Live", "QualificationRequests")">
     <div class="page-header"><div><h1>Qualification Update Requests</h1><p>Review tutor qualifications and supporting certificates.</p></div><a asp-controller="TutorManagement" asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Tutor Management</a></div>
     <partial name="/Views/QualificationRequests/_RequestTable.cshtml" model="Model" />
 </div>
+
+@section Scripts { <script src="~/js/qualification-live.js" asp-append-version="true"></script> }

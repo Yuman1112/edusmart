@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="~/css/account-profile.css" asp-append-version="true" />
 }
 
-<div class="account-profile-page tutor-profile-layout">
+<div class="account-profile-page tutor-profile-layout" data-qualification-live-url="@Url.Action("Live", "QualificationRequests")">
 <div class="page-header">
     <div>
         <h1>My Profile</h1>
@@ -151,15 +151,15 @@
     }
 
     <section class="class-details-section">
-        <div class="profile-section-heading"><h3><i class="bi bi-mortarboard-fill" aria-hidden="true"></i> My Teaching Information</h3><span class="profile-verification-badge @(Model.QualificationVerifiedAtUtc.HasValue ? "is-verified" : "")">@(Model.QualificationVerifiedAtUtc.HasValue ? "Verified" : "Not verified")</span></div>
-        @if(Model.PendingQualification is {} pending) { <div class="alert alert-warning" role="status">Qualification update pending review: @pending.Qualification. Current approved details remain active.</div> }
+        <div class="profile-section-heading"><h3><i class="bi bi-mortarboard-fill" aria-hidden="true"></i> My Teaching Information</h3><span data-qualification-verified class="profile-verification-badge @(Model.QualificationVerifiedAtUtc.HasValue ? "is-verified" : "")">@(Model.QualificationVerifiedAtUtc.HasValue ? "Verified" : "Not verified")</span></div>
+        <div class="alert alert-warning @(Model.PendingQualification == null ? "d-none" : "")" role="status" data-qualification-pending-note>Qualification update pending review: <span data-qualification-pending-copy>@Model.PendingQualification?.Qualification</span>. Current approved details remain active.</div>
 
         <div class="class-details-grid">
-            <div class="class-detail-item"><span>Highest Qualification</span><strong>@Model.Qualification</strong></div>
-            <div class="class-detail-item"><span>Field of Study</span><strong>@(Model.FieldOfStudy ?? "Not provided")</strong></div>
+            <div class="class-detail-item"><span>Highest Qualification</span><strong data-qualification-field="qualification">@Model.Qualification</strong></div>
+            <div class="class-detail-item"><span>Field of Study</span><strong data-qualification-field="fieldOfStudy">@(Model.FieldOfStudy ?? "Not provided")</strong></div>
             <div class="class-detail-item class-detail-wide">
                 <span>Area of Expertise</span>
-                <strong>@(string.IsNullOrWhiteSpace(Model.AreaOfExpertise) ? "Not provided" : Model.AreaOfExpertise)</strong>
+                <strong data-qualification-field="areaOfExpertise">@(string.IsNullOrWhiteSpace(Model.AreaOfExpertise) ? "Not provided" : Model.AreaOfExpertise)</strong>
             </div>
             <div class="class-detail-item class-detail-wide">
                 <span>Teaching Experience</span>
@@ -173,11 +173,11 @@
         <div class="profile-file-grid">
             @foreach(var kind in new[] { SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate, SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Resume }) {
                 var doc=Model.Documents.FirstOrDefault(d=>d.Kind==kind);
-                <div class="profile-file-card">
+                <div class="profile-file-card" data-qualification-document="@((int)kind)" data-document-url="@Url.Action("ProfileDocument", "Tutor")">
                     <span class="profile-file-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
-                    <div class="profile-file-copy"><strong>@(kind==SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "Qualification Certificate" : "Resume")</strong><span>@(doc?.FileName ?? "Not uploaded")</span></div>
-                    @if(doc!=null){<a asp-action="ProfileDocument" asp-route-id="@doc.Id" class="outline-button">View</a>}
-                    else { <span class="profile-verification-badge">No file</span> }
+                    <div class="profile-file-copy"><strong>@(kind==SecureSmartTuitionSystem.Models.Tutor.TutorDocumentKind.Certificate ? "Qualification Certificate" : "Resume")</strong><span data-qualification-file-name>@(doc?.FileName ?? "Not uploaded")</span></div>
+                    <a asp-action="ProfileDocument" asp-route-id="@(doc?.Id ?? 0)" class="outline-button @(doc == null ? "d-none" : "")" data-qualification-file-link>View</a>
+                    <span class="profile-verification-badge @(doc == null ? "" : "d-none")" data-qualification-no-file>No file</span>
                 </div>
             }
         </div>
@@ -239,6 +239,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/qualification-live.js" asp-append-version="true"></script>
     <script src="~/js/tutor-profile-email-watch.js"
             asp-append-version="true"></script>
 }

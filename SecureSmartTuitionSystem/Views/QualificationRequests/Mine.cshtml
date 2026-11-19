@@ -8,15 +8,15 @@
     <link rel="stylesheet" href="~/css/teaching-requests.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/qualification-requests.css" asp-append-version="true" />
 }
-<div class="qualification-requests-page">
+<div class="qualification-requests-page" data-qualification-live-url="@Url.Action("Live", "QualificationRequests")">
     <div class="page-header"><div><h1>Qualification Update Requests</h1><p>Request approval for updated qualifications and supporting certificates.</p></div><a asp-controller="Tutor" asp-action="EditProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Edit Profile</a></div>
     @if (TempData["QualificationSuccess"] is string success) { <div class="alert alert-success" role="status">@success</div> }
     <div class="class-form-card tutor-create-card mb-4 teaching-approved-card"><section class="class-form-section">
-        <div class="teaching-section-heading"><h2><i class="bi bi-patch-check" aria-hidden="true"></i> Current Qualification Details</h2><span class="tutor-management-badge @(Model.CurrentVerified ? "tutor-badge-success" : "qualification-badge-neutral")">@(Model.CurrentVerified ? "Verified" : "Not verified")</span></div>
+        <div class="teaching-section-heading"><h2><i class="bi bi-patch-check" aria-hidden="true"></i> Current Qualification Details</h2><span data-qualification-verified class="tutor-management-badge @(Model.CurrentVerified ? "tutor-badge-success" : "qualification-badge-neutral")">@(Model.CurrentVerified ? "Verified" : "Not verified")</span></div>
         <div class="qualification-current-grid">
-            <div class="teaching-approved-subject"><span class="teaching-eyebrow">Highest Qualification</span><strong>@Model.CurrentQualification</strong></div>
-            <div class="teaching-approved-subject"><span class="teaching-eyebrow">Field of Study</span><strong>@(string.IsNullOrWhiteSpace(Model.CurrentFieldOfStudy) ? "Not provided" : Model.CurrentFieldOfStudy)</strong></div>
-            <div class="teaching-approved-subject"><span class="teaching-eyebrow">Area of Expertise</span><strong>@(string.IsNullOrWhiteSpace(Model.CurrentAreaOfExpertise) ? "Not provided" : Model.CurrentAreaOfExpertise)</strong></div>
+            <div class="teaching-approved-subject"><span class="teaching-eyebrow">Highest Qualification</span><strong data-qualification-field="qualification">@Model.CurrentQualification</strong></div>
+            <div class="teaching-approved-subject"><span class="teaching-eyebrow">Field of Study</span><strong data-qualification-field="fieldOfStudy">@(string.IsNullOrWhiteSpace(Model.CurrentFieldOfStudy) ? "Not provided" : Model.CurrentFieldOfStudy)</strong></div>
+            <div class="teaching-approved-subject"><span class="teaching-eyebrow">Area of Expertise</span><strong data-qualification-field="areaOfExpertise">@(string.IsNullOrWhiteSpace(Model.CurrentAreaOfExpertise) ? "Not provided" : Model.CurrentAreaOfExpertise)</strong></div>
         </div>
         <p class="form-text mt-3 mb-0">Your current details and certificate remain active until approval. Subject and level approvals are managed separately.</p>
     </section></div>
@@ -25,7 +25,7 @@
             <section class="class-form-section">
                 <div class="teaching-section-heading"><h2><i class="bi bi-clipboard-plus" aria-hidden="true"></i> Request Qualification Update</h2></div>
                 <p class="tutor-section-description">Enter your proposed details and attach the certificate for review.</p>
-                @if (pending) { <div class="alert alert-info" role="status">A request is pending review. Cancel it in My Requests before submitting another.</div> }
+                <div class="alert alert-info @(pending ? "" : "d-none")" role="status" data-qualification-pending-form>A request is pending review. Cancel it in My Requests before submitting another.</div>
                 <div class="teaching-validation-notice" hidden="@ViewData.ModelState.IsValid" role="alert"><i class="bi bi-exclamation-circle" aria-hidden="true"></i><div><strong>Please review the highlighted fields.</strong><div asp-validation-summary="ModelOnly" class="teaching-model-errors"></div></div></div>
                 <div class="row g-4">
                     <div class="col-md-6"><label asp-for="Qualification" class="form-label"></label><input asp-for="Qualification" class="form-control" maxlength="200" required disabled="@pending" /><span asp-validation-for="Qualification" class="text-danger"></span></div>
@@ -40,4 +40,4 @@
     </div>
     <partial name="/Views/QualificationRequests/_RequestTable.cshtml" model="Model.Requests" />
 </div>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+@section Scripts { <partial name="_ValidationScriptsPartial" /> <script src="~/js/qualification-live.js" asp-append-version="true"></script> }
