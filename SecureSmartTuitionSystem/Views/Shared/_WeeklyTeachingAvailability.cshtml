@@ -1,0 +1,23 @@
+﻿@model System.Collections.Generic.IReadOnlyList<int>
+@using SecureSmartTuitionSystem.Services.Tutor
+<div class="table-responsive">
+    <table class="table align-middle mb-0 availability-summary-table" data-pagination="off">
+        <caption class="visually-hidden">Regular weekly teaching availability, Monday to Saturday, in Malaysia time</caption>
+        <thead><tr><th scope="col" data-sortable="false">No.</th><th scope="col" data-sortable="false">Day</th><th scope="col" data-sortable="false">Available Times</th><th scope="col" data-sortable="false">Total Hours</th></tr></thead>
+        <tbody>
+        @foreach (var day in Enumerable.Range(1, 6))
+        {
+            var values = Model.Where(TutorAvailabilityPolicy.IsOpen).Distinct().Where(value => value / 48 == day).ToList();
+            var description = TutorAvailabilityService.DescribeDay(values, day);
+            <tr>
+                <td>@day</td><th scope="row">@((DayOfWeek)day)</th>
+                <td>
+                    @if (values.Count == 0) { <span class="text-muted">Not available</span> }
+                    else { <div class="availability-time-ranges">@foreach (var range in description.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) { <span class="availability-time-chip">@range</span> }</div> }
+                </td>
+                <td class="@(values.Count > TutorAvailabilityPolicy.MaxDailySlots ? "text-danger" : "")">@(values.Count == 0 ? "—" : (values.Count / 2d).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " h")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

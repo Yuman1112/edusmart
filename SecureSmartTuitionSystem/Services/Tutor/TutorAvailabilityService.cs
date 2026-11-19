@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Services.Enrollment;
 
@@ -15,25 +15,8 @@ public sealed class TutorAvailabilityService(ApplicationDbContext db)
     {
         var type = await db.TutorProfiles.AsNoTracking().Where(p => p.ApplicationUserId == userId)
             .Select(p => (Models.Tutor.TutorEmploymentType?)p.EmploymentType).SingleOrDefaultAsync();
-        if (type == Models.Tutor.TutorEmploymentType.FullTime) return TutorAvailabilityPolicy.FullTimeSlots();
-        if (type != Models.Tutor.TutorEmploymentType.PartTime) return new();
+        if (type is not (Models.Tutor.TutorEmploymentType.FullTime or Models.Tutor.TutorEmploymentType.PartTime)) return new();
         return (await GetStoredSlotsAsync(userId)).Where(TutorAvailabilityPolicy.IsOpen).ToList();
-    }
-
-    // Caller owns the transaction and SaveChanges.
-    public async Task SyncFullTimeSlotsAsync(string userId)
-    {
-        var expected = TutorAvailabilityPolicy.FullTimeSlots().ToHashSet();
-        var stored = await db.TutorAvailabilitySlots.Where(x => x.ApplicationUserId == userId).ToListAsync();
-        var original = stored.Select(x => x.Day * 48 + x.Slot).ToHashSet();
-        db.TutorAvailabilitySlots.RemoveRange(stored.Where(x => !expected.Contains(x.Day * 48 + x.Slot)));
-        foreach (var value in expected.Except(original))
-            db.TutorAvailabilitySlots.Add(new Models.Tutor.TutorAvailabilitySlot
-            {
-                ApplicationUserId = userId,
-                Day = value / 48,
-                Slot = value % 48
-            });
     }
 
     // End is exclusive. Partial half-hours must also be covered.
@@ -61,6 +44,8 @@ public sealed class TutorAvailabilityService(ApplicationDbContext db)
         if (!active) return "The selected tutor account is not available for teaching.";
 
         var slots = await GetSlotsAsync(userId);
+        if (TutorAvailabilityPolicy.DaysOverLimit(slots).Count > 0)
+            return "This tutor must update My Availability to a maximum of eight hours per day before new lessons can be assigned.";
         if (slots.Count == 0)
             return "This tutor has no available teaching slots. Ask the tutor to save My Availability first.";
         return Covers(slots, (int)day, start, end) ? null
@@ -108,17 +93,15 @@ public sealed class TutorAvailabilityService(ApplicationDbContext db)
                 x.Replacement
                     ? $"replacement {x.Date:dd MMM yyyy} {x.Start:HH:mm}–{x.End:HH:mm}"
                     : $"{x.Date.DayOfWeek} {x.Start:HH:mm}–{x.End:HH:mm}",
-                DescribeFullTimeRestriction(x.Date.DayOfWeek, x.Start, x.End)))
+                DescribeOperatingRestriction(x.Date.DayOfWeek, x.Start, x.End)))
             .Distinct().ToList();
     }
-    public static string DescribeFullTimeRestriction(DayOfWeek day, TimeOnly start, TimeOnly end)
+    public static string DescribeOperatingRestriction(DayOfWeek day, TimeOnly start, TimeOnly end)
     {
         var reasons = new List<string>();
         if (day == DayOfWeek.Sunday) reasons.Add("Sunday is not a working day");
         if (start < new TimeOnly(8, 0)) reasons.Add("Starts before 08:00");
         if (end > new TimeOnly(22, 0)) reasons.Add("Ends after 22:00");
-        if (start < new TimeOnly(13, 0) && end > new TimeOnly(12, 0)) reasons.Add("Lunch break (12:00–13:00)");
-        if (start < new TimeOnly(19, 0) && end > new TimeOnly(18, 0)) reasons.Add("Dinner break (18:00–19:00)");
         return reasons.Count == 0 ? "Outside selected availability" : string.Join("; ", reasons);
     }
 

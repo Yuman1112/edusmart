@@ -1,125 +1,30 @@
 ﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorAvailabilityViewModel
 @using SecureSmartTuitionSystem.Models.Tutor
 @using SecureSmartTuitionSystem.Services.Tutor
-@{
-    ViewData["Title"] = "My Availability";
-    int[] days = { 1, 2, 3, 4, 5, 6 };
-    bool fullTime = Model.EmploymentType == TutorEmploymentType.FullTime;
-}
+@{ ViewData["Title"] = "My Availability"; }
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/tutor-availability.css" asp-append-version="true" />
 }
 <div class="page-header">
-    <div>
-        <h1>My Availability</h1>
-        <p>
-            @(fullTime
-                        ? "Full-time · fixed regular teaching hours"
-                        : "Part-time · manage your regular teaching hours")
-        </p>
+    <div><h1>My Availability</h1><p>Your regular weekly teaching availability.</p></div>
+    <div class="class-detail-header-actions">
+        <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
+        <a asp-action="Edit" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Availability</a>
     </div>
-    <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
 </div>
-@if (TempData["TutorAvailabilitySuccess"] is string success)
+<p class="form-text mb-4">Monday–Saturday · 08:00–22:00 MYT · Maximum 8 hours per day</p>
+@foreach (var key in new[] { "TutorAvailabilitySuccess", "TutorAvailabilityInfo", "TutorAvailabilityWarning" })
 {
-    <div class="alert alert-success" role="status" data-success-timeout="5000">@success</div>
-}
-@if (TempData["TutorAvailabilityInfo"] is string info)
-{
-    <div class="alert alert-info" role="status">@info</div>
-}
-@if (TempData["TutorAvailabilityWarning"] is string warning)
-{
-    <div class="alert alert-warning" role="alert">@warning</div>
-}
-<div class="class-form-card tutor-create-card tutor-availability">
-    @if (fullTime)
+    if (TempData[key] is string message)
     {
-        <section class="class-form-section">
-            <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Regular Teaching Hours <span class="availability-type-label">@(fullTime ? "Full-time" : "Part-time")</span></h2>
-            <p class="text-muted mb-2">Monday–Saturday · MYT (UTC+8)</p>
-            <p class="form-text mb-4">
-                Your regular teaching hours. Scheduled lessons are shown in Class Calendar.
-            </p>
-            <h3 class="availability-timeline-title">Daily Teaching Windows</h3>
-            <div class="availability-timeline" role="list" aria-label="Fixed daily teaching windows and breaks">
-                <div class="availability-timeline-segment" role="listitem">
-                    <div class="availability-timeline-bar">Teaching</div>
-                    <div class="availability-timeline-label"><strong>08:00–12:00</strong><span>Morning</span></div>
-                </div>
-                <div class="availability-timeline-segment is-break" role="listitem">
-                    <div class="availability-timeline-bar"><i class="bi bi-cup-hot" aria-hidden="true"></i></div>
-                    <div class="availability-timeline-label"><strong>Lunch</strong><span>12:00–13:00</span></div>
-                </div>
-                <div class="availability-timeline-segment" role="listitem">
-                    <div class="availability-timeline-bar">Teaching</div>
-                    <div class="availability-timeline-label"><strong>13:00–18:00</strong><span>Afternoon</span></div>
-                </div>
-                <div class="availability-timeline-segment is-break" role="listitem">
-                    <div class="availability-timeline-bar"><i class="bi bi-cup-hot" aria-hidden="true"></i></div>
-                    <div class="availability-timeline-label"><strong>Dinner</strong><span>18:00–19:00</span></div>
-                </div>
-                <div class="availability-timeline-segment" role="listitem">
-                    <div class="availability-timeline-bar">Teaching</div>
-                    <div class="availability-timeline-label"><strong>19:00–22:00</strong><span>Evening</span></div>
-                </div>
-            </div>
-            <div class="availability-timeline-legend">
-                <span><i class="availability-timeline-dot" aria-hidden="true"></i> Teaching window</span>
-                <span><i class="availability-timeline-dot is-break" aria-hidden="true"></i> Break</span>
-                <span class="availability-timeline-closed">Sunday · Closed</span>
-            </div>
-            <hr class="availability-timeline-divider" />
-            <p class="form-text">
-                Full-time teaching hours are fixed. Contact your administrator if changes are needed.
-            </p>
-            <a asp-controller="ClassSchedules" asp-action="Index" class="outline-button"><i class="bi bi-calendar-week" aria-hidden="true"></i> View Class Calendar</a>
-        </section>
+        <div class="alert @(key.EndsWith("Warning") ? "alert-warning" : key.EndsWith("Success") ? "alert-success" : "alert-info")" role="status">@message</div>
     }
-    else
-    {
-        <section class="class-form-section">
-            <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Regular Teaching Hours <span class="availability-type-label">Part-time</span></h2>
-            <p class="text-muted mb-2">Monday–Saturday · MYT (UTC+8)</p>
-            <p class="form-text mb-4">
-                Your regular teaching hours. Scheduled lessons are shown in Class Calendar.
-            </p>
-            <div class="availability-day-list" aria-label="Weekly teaching windows">
-                @foreach (var day in days)
-                {
-                    var description = TutorAvailabilityService.DescribeDay(Model.SelectedSlots, day);
-                    <div class="availability-day-row">
-                        <strong>@((DayOfWeek)day)</strong>
-                        <div>
-                            @if (description == "Not available")
-                            {
-                                <span class="text-muted">Not available</span>
-                            }
-                            else
-                            {
-                                foreach (var range in description.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                                {
-                                    <span class="availability-time-chip">@range</span>
-                                }
-                            }
-                        </div>
-                    </div>
-                }
-            </div>
-            <p class="form-text mt-3">
-                Sunday is closed. Updating these hours does not change existing classes.
-            </p>
-            <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-                <a asp-controller="TutorAvailability" asp-action="Edit" class="outline-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Availability</a>
-                <a asp-controller="ClassSchedules" asp-action="Index" class="outline-button"><i class="bi bi-calendar-week" aria-hidden="true"></i> View Class Calendar</a>
-            </div>
-        </section>
-        @if (Model.LegacySlots.Count > 0)
-        {
-            <div class="alert alert-warning" role="alert">Older times outside centre hours are stored. Open Edit Availability to review and acknowledge their removal.</div>
-        }
-
-    }
+}
+<div data-availability-live data-live-url="@Url.Action("Index", new { partial = true })">
+    <p class="form-text d-none" data-availability-live-status role="status" aria-live="polite"></p>
+    <partial name="_AvailabilityState" model="Model" />
 </div>
+@section Scripts { <script src="~/js/tutor-availability-live.js" asp-append-version="true"></script> }

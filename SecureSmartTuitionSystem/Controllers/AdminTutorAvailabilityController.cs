@@ -12,7 +12,7 @@ namespace SecureSmartTuitionSystem.Controllers;
 public sealed class AdminTutorAvailabilityController(ApplicationDbContext db) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index(string userId)
+    public async Task<IActionResult> Index(string userId, bool partial = false)
     {
         if (string.IsNullOrWhiteSpace(userId)) return NotFound();
         var model = await db.TutorProfiles.AsNoTracking()
@@ -26,8 +26,9 @@ public sealed class AdminTutorAvailabilityController(ApplicationDbContext db) : 
             }).FirstOrDefaultAsync();
         if (model == null) return NotFound();
         var availability = new TutorAvailabilityService(db);
-        model.SelectedSlots = await availability.GetSlotsAsync(userId);
-        model.LegacySlots = (await availability.GetStoredSlotsAsync(userId)).Where(x => !TutorAvailabilityPolicy.IsOpen(x)).ToList();
-        return View(model);
+        var raw = await availability.GetStoredSlotsAsync(userId);
+        model.SelectedSlots = raw.Where(TutorAvailabilityPolicy.IsOpen).ToList();
+        model.LegacySlots = raw.Where(x => !TutorAvailabilityPolicy.IsOpen(x)).ToList();
+        return partial ? PartialView("_AvailabilityState", model) : View(model);
     }
 }

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Enrollment;
@@ -30,10 +30,12 @@ public sealed class TutorSchedulingService(ApplicationDbContext db)
         DateTime from, DateTime to, DayOfWeek day, TimeOnly start, TimeOnly end, DateTime now,
         IReadOnlyList<ClassSession>? weeklyReservations = null)
     {
+        var selected = availability.ToArray();
+        if (TutorAvailabilityPolicy.DaysOverLimit(selected).Count > 0) return false;
         if (ValidateTerm(from, to, now) != null || !Enum.IsDefined(day) || day == DayOfWeek.Sunday
             || start >= end || start < new TimeOnly(8, 0) || end > new TimeOnly(22, 0)
             || end - start < TimeSpan.FromMinutes(30) || end - start > TimeSpan.FromHours(4)
-            || !TutorAvailabilityService.Covers(availability, (int)day, start, end)) return false;
+            || !TutorAvailabilityService.Covers(selected, (int)day, start, end)) return false;
         var first = FirstUpcomingLesson(from, to, day, start, now);
         if (!first.HasValue) return false;
         // A one-off cancellation does not release an active recurring class's weekly reservation.

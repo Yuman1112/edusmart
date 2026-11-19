@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -469,15 +469,6 @@ public sealed class TutorManagementController(
             if (!TutorAvailabilityPolicy.IsTypeValid(model.EmploymentType))
                 ModelState.AddModelError(nameof(model.EmploymentType), "Please select a valid employment type.");
             bool employmentChanged = profile.EmploymentType != model.EmploymentType;
-            if (employmentChanged && model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime)
-            {
-                model.EmploymentConflicts = await new TutorAvailabilityService(db)
-                    .FindExistingClassConflictsAsync(model.UserId, TutorAvailabilityPolicy.FullTimeSlots());
-                if (model.EmploymentConflicts.Count > 0)
-                    ModelState.AddModelError(nameof(model.EmploymentType),
-                        $"Cannot change to Full-time. {model.EmploymentConflicts.Count} schedule conflict(s) must be resolved first.");
-            }
-
             if (!ModelState.IsValid)
                 return View(model);
 
@@ -594,8 +585,6 @@ public sealed class TutorManagementController(
             if (profileChanged)
             {
                 profile.EmploymentType = model.EmploymentType;
-                if (employmentChanged && model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime)
-                    await new TutorAvailabilityService(db).SyncFullTimeSlotsAsync(model.UserId);
                 profile.FullName = model.FullName.Trim();
                 profile.Qualification = model.Qualification.Trim();
                 profile.FieldOfStudy = model.FieldOfStudy?.Trim();
@@ -903,8 +892,6 @@ public sealed class TutorManagementController(
                     subject => $"{subject.AcademicLevel}/{subject.SubjectCode}"));
                 TutorQualificationService.AddAudit(db, auditIntegrity, HttpContext, tutor.Id,
                     $"Verified qualifications and approved initial teaching subjects: {approvals}.");
-                if (model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime)
-                    await new TutorAvailabilityService(db).SyncFullTimeSlotsAsync(tutor.Id);
 
                 await db.SaveChangesAsync();
                 await transaction.CommitAsync();

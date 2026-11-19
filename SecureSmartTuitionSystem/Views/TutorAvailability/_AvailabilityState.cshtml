@@ -1,0 +1,30 @@
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorAvailabilityViewModel
+@using SecureSmartTuitionSystem.Models.Tutor
+@using SecureSmartTuitionSystem.Services.Tutor
+<div data-availability-state data-version="@Model.Version">
+@if (TutorAvailabilityPolicy.DaysOverLimit(Model.SelectedSlots).Count > 0)
+{
+    <div class="alert alert-warning" role="alert">Saved availability exceeds eight hours on one or more days. @(User.IsInRole("Tutor") ? "Open Edit Availability to adjust it." : "Ask the tutor to update My Availability.") New lessons cannot be assigned until it is updated. Existing lessons remain scheduled.</div>
+}
+@if (Model.LegacySlots.Count > 0)
+{
+    <div class="alert alert-warning" role="alert">Older times outside centre hours are retained for review. @(User.IsInRole("Tutor") ? "Open Edit Availability to review their removal." : "Ask the tutor to review these times.") Existing lessons are not cancelled automatically.</div>
+}
+@if (Model.SelectedSlots.Count == 0)
+{
+    <div class="alert alert-info" role="status">No teaching availability has been saved. @(User.IsInRole("Tutor") ? "Select Edit Availability to choose your times." : "Ask the tutor to save My Availability before assigning a class.")</div>
+}
+<div class="tutor-management-list-card tutor-availability-summary tutor-availability">
+    <div class="tutor-management-list-header">
+        <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Weekly Availability <span class="availability-type-label">@(Model.EmploymentType == TutorEmploymentType.FullTime ? "Full-time" : "Part-time")</span></h2>
+        <span class="availability-week-total">@(Model.SelectedSlots.Where(TutorAvailabilityPolicy.IsOpen).Distinct().Count() / 2d) hours / week</span>
+    </div>
+    <partial name="_WeeklyTeachingAvailability" model="Model.SelectedSlots" />
+    <div class="availability-summary-footer">
+        <p>This pattern repeats every week. Sunday is closed.</p>
+        <a asp-controller="ClassSchedules" asp-action="Index" class="outline-button"><i class="bi bi-calendar-week" aria-hidden="true"></i> View Class Calendar</a>
+    </div>
+</div>
+<p class="form-text mt-3">Availability shows when you can teach. Scheduled lessons are shown in Class Calendar. Updating availability does not change existing classes.</p>
+
+</div>

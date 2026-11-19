@@ -21,14 +21,21 @@
         selected().sort((a, b) => a - b).join(",")
         + "|legacy:" + Boolean(form.querySelector('input[name="RemoveLegacySlots"]:checked'));
 
-    const original = signature();
+    let original = signature();
 
-    const saveFailed = form.dataset.saveFailed === "true";
+    let saveFailed = form.dataset.saveFailed === "true";
 
     const hasChanges = () =>
         saveFailed || signature() !== original;
 
     let submitting = false;
+    let saving = false;
+    const saveResult = form.querySelector('[data-availability-save-result]');
+    function showResult(message, kind = 'danger') {
+        if (!saveResult) return;
+        saveResult.textContent = message;
+        saveResult.className = 'alert alert-' + kind;
+    }
 
     const hours = document.getElementById("availability-hours");
     const source = document.getElementById("availability-source");
@@ -74,11 +81,39 @@
             : "Not available";
     }
 
+    const dailyTotals = document.getElementById("availability-day-totals");
+    const limitMessage = document.getElementById("availability-limit-message");
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const maxDailySlots = 16;
+    function countsByDay(values) {
+        const counts = Array(7).fill(0);
+        values.forEach(value => counts[Math.floor(value / 48)]++);
+        return counts;
+    }
+
     function update() {
         const values = selected();
         const changed = hasChanges();
 
-        saveButton.disabled = !changed;
+        const counts = countsByDay(values);
+        const overLimit = counts.map((count, day) => count > maxDailySlots ? dayNames[day] : null).filter(Boolean);
+        saveButton.disabled = saving || form.dataset.stale === "true" || !changed || overLimit.length > 0;
+        boxes.forEach(box => {
+            box.disabled = !box.checked && counts[Math.floor(Number(box.value) / 48)] >= maxDailySlots;
+        });
+        if (dailyTotals) {
+            dailyTotals.replaceChildren(...dayNames.slice(1).map((day, index) => {
+                const chip = document.createElement("span");
+                chip.className = "availability-day-total" + (counts[index + 1] > maxDailySlots ? " is-over-limit" : "");
+                chip.textContent = `${day}: ${counts[index + 1] / 2} / 8 h`;
+                chip.dataset.dailyTotal = String(index + 1);
+                return chip;
+            }));
+        }
+        if (limitMessage) {
+            limitMessage.hidden = overLimit.length === 0;
+            limitMessage.textContent = overLimit.length ? `Select no more than eight hours per day. Review: ${overLimit.join(", ")}.` : "";
+        }
 
         form.querySelectorAll("[data-summary-day]").forEach(cell => {
             cell.textContent = describe(
@@ -201,14 +236,42 @@
             update();
         });
 
-    form.addEventListener("submit", event => {
-        if (!hasChanges()) {
-            event.preventDefault();
-            update();
-            return;
+    document.addEventListener('availability:stale', update);
+    form.addEventListener("submit", async event => {
+        if (event.defaultPrevented) return;
+        if (saving || form.dataset.stale === 'true' || !hasChanges() || countsByDay(selected()).some(count => count > maxDailySlots)) {
+            event.preventDefault(); update(); return;
         }
-
-        submitting = true;
+        if (!window.fetch || !window.FormData) { submitting = true; return; }
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        const submittedSignature = signature();
+        const body = new FormData(form);
+        saving = true; form.dataset.saving = 'true'; update();
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+            const response = await fetch(form.action, {method:'POST', body, credentials:'same-origin', cache:'no-store', signal:controller.signal, headers:{'X-Requested-With':'XMLHttpRequest'}});
+            if (response.redirected || response.status === 401 || response.status === 403) throw new Error('Your session may have expired. Sign in again before saving.');
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                if (result.stale) {
+                    form.dataset.stale = 'true';
+                    form.querySelector('[data-availability-stale-notice]')?.classList.remove('d-none');
+                }
+                throw new Error(result.message || 'Availability could not be saved. Your selections have been kept.');
+            }
+            original = submittedSignature; saveFailed = false;
+            form.elements.namedItem('Version').value = result.version;
+            form.dataset.stale = 'false';
+            form.querySelector('[data-availability-stale-notice]')?.classList.add('d-none');
+            showResult(result.message + (result.warning ? ' ' + result.warning : ''), result.warning ? 'warning' : 'success');
+            document.dispatchEvent(new Event('availability:saved'));
+        } catch (error) {
+            showResult(error.name === 'AbortError' ? 'The response timed out. Your selections are kept; check the latest availability before retrying.' : error.message);
+        } finally {
+            clearTimeout(timeout); saving = false; form.dataset.saving = 'false'; update();
+        }
     });
 
     window.addEventListener("beforeunload", event => {

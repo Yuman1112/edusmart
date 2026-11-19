@@ -350,3 +350,27 @@
         margin-left: 0;
     }
 }
+
+/* Use the same list card as the other tutor management modules. */
+.tutor-availability-summary { overflow:hidden; }
+.tutor-availability-summary .tutor-management-list-header { flex-wrap:wrap; }
+.tutor-availability-summary .tutor-management-list-header h2 { flex-wrap:wrap; }
+.availability-week-total { color:var(--muted); font-size:.9rem; white-space:nowrap; }
+.availability-summary-table { min-width:580px; color:var(--navy); }
+.availability-summary-table :is(th,td) { padding:16px 20px; border-color:var(--border); }
+.availability-summary-table thead th { background:#f3fafb; color:var(--navy); font-size:.75rem; text-transform:uppercase; letter-spacing:.03em; }
+.availability-summary-table tbody th { font-weight:650; }
+.availability-time-ranges { display:flex; flex-wrap:wrap; gap:8px; }
+.availability-summary-table .availability-time-chip { margin:0; white-space:nowrap; }
+.availability-summary-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; padding:20px; }
+.availability-summary-footer p { margin:0; color:var(--muted); font-size:.875rem; }
+.availability-day-totals { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.availability-day-total { padding:6px 10px; border:1px solid var(--border); border-radius:8px; background:#f6fbfc; color:var(--navy); font-size:.85rem; }
+.availability-day-total.is-over-limit { color:#a52232; border-color:#e4a9b1; background:#fff5f5; }
+.tutor-availability .availability-cell:has(input:disabled) { cursor:not-allowed; opacity:.55; }
+@media(max-width:575.98px) {
+    .availability-summary-table :is(th,td) { padding:14px; }
+    .availability-summary-footer { padding:18px 14px; }
+}
+
+.tutor-availability-summary > .table-responsive { max-height:none; height:auto; overflow-y:hidden; }

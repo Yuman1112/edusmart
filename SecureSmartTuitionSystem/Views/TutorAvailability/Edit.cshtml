@@ -11,16 +11,22 @@
     <link rel="stylesheet" href="~/css/tutor-availability.css" asp-append-version="true" />
 }
 <div class="page-header">
-    <div><h1>Edit Availability</h1><p>Part-time · update your regular weekly teaching windows.</p></div>
+    <div><h1>Edit Availability</h1><p>@(Model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime ? "Full-time" : "Part-time") · update your regular weekly teaching availability.</p></div>
     <a asp-controller="TutorAvailability" asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
 </div>
 <div class="class-form-card tutor-create-card tutor-availability">
     <form id="tutor-availability-form"
           asp-action="Index"
           method="post"
+          data-stale="@(ViewData["AvailabilityStale"] is true ? "true" : "false")"
+          data-live-url="@Url.Action("Index", new { partial = true })"
           data-save-failed="@(ViewData["AvailabilitySaveFailed"] is true ? "true" : "false")"
     >
         @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Version" />
+        <div class="alert alert-warning @(ViewData["AvailabilityStale"] is true ? "" : "d-none")" data-availability-stale-notice role="alert">Saved availability has changed in another page. Your unsaved selections are kept. <a asp-action="Edit" class="alert-link">Reload latest availability</a> before saving.</div>
+        <p class="form-text d-none" data-availability-live-status role="status" aria-live="polite"></p>
+        <div class="alert d-none" data-availability-save-result role="status" aria-live="polite"></div>
         <div asp-validation-summary="ModelOnly"
              class="alert alert-danger availability-validation-summary"
              role="alert">
@@ -29,7 +35,7 @@
             <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Weekly Teaching Availability</h2>
             <div class="tutor-info-note mb-4">
                 <i class="bi bi-info-circle" aria-hidden="true"></i>
-                <span>Part-time: select any half-hour slots within Monday–Saturday, 08:00–22:00 MYT (UTC+8). Full-time lunch/dinner breaks do not restrict part-time tutors. Sunday is closed. Saving does not automatically change existing classes.</span>
+                <span>Select up to eight hours per day within Monday–Saturday, 08:00–22:00 MYT. Each slot is 30 minutes. Leave your meal and rest times unselected. Sunday is closed. Saving does not change existing classes.</span>
             </div>
             @if (Model.LegacySlots.Count > 0)
             {
@@ -49,6 +55,8 @@
                     <span asp-validation-for="RemoveLegacySlots" class="text-danger"></span>
                 </div>
             }
+            <div id="availability-day-totals" class="availability-day-totals" role="status" aria-live="polite"></div>
+            <p id="availability-limit-message" class="text-danger" role="alert" hidden></p>
             <p id="availability-help">Tick available slots; untick to remove. This pattern repeats every week.</p>
             <div class="availability-scroll" tabindex="0" role="region" aria-label="Weekly availability timetable">
                 <table data-pagination="off" class="availability-table" aria-describedby="availability-help">
@@ -87,4 +95,5 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/tutor-availability.js" asp-append-version="true"></script>
+    <script src="~/js/tutor-availability-live.js" asp-append-version="true"></script>
 }
