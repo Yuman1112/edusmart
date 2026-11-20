@@ -2595,10 +2595,6 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TeachingChangeRequestId")
-<<<<<<< Updated upstream
-=======
-                        .IsUnique()
->>>>>>> Stashed changes
                         .HasFilter("[TeachingChangeRequestId] IS NOT NULL");
 
                     b.HasIndex("TutorProfileId", "Kind")
@@ -2608,7 +2604,6 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("TutorQualificationDocuments");
                 });
 
-<<<<<<< Updated upstream
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorQualificationUpdateRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -2691,8 +2686,6 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("TutorQualificationUpdateRequests");
                 });
 
-=======
->>>>>>> Stashed changes
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorTeachingChangeRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -2706,12 +2699,9 @@ namespace SecureSmartTuitionSystem.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-<<<<<<< Updated upstream
                     b.Property<int?>("EvidenceRequestId")
                         .HasColumnType("int");
 
-=======
->>>>>>> Stashed changes
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -2747,11 +2737,8 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasKey("Id");
 
-<<<<<<< Updated upstream
                     b.HasIndex("EvidenceRequestId");
 
-=======
->>>>>>> Stashed changes
                     b.HasIndex("TutorProfileId", "AcademicLevel", "SubjectCode")
                         .IsUnique()
                         .HasFilter("[Status] = 0");
@@ -3619,7 +3606,6 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("TutorProfile");
                 });
 
-<<<<<<< Updated upstream
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorQualificationUpdateRequest", b =>
                 {
                     b.HasOne("SecureSmartTuitionSystem.Models.TutorProfile", "TutorProfile")
@@ -3638,21 +3624,14 @@ namespace SecureSmartTuitionSystem.Migrations
                         .HasForeignKey("EvidenceRequestId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-=======
-            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorTeachingChangeRequest", b =>
-                {
->>>>>>> Stashed changes
                     b.HasOne("SecureSmartTuitionSystem.Models.TutorProfile", "TutorProfile")
                         .WithMany()
                         .HasForeignKey("TutorProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-<<<<<<< Updated upstream
                     b.Navigation("EvidenceRequest");
 
-=======
->>>>>>> Stashed changes
                     b.Navigation("TutorProfile");
                 });
 
