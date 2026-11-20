@@ -1,4 +1,4 @@
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
@@ -175,6 +175,16 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.LoginPath = "/Identity/Account/Login";
     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+    options.Events.OnRedirectToAccessDenied = context => {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToLogin = context => {
+        // A protected-route challenge uses the branded 401 page (or JSON),
+        // with an explicit Sign in button rather than hiding the status in a redirect.
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    };
 });
 
 builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
@@ -191,10 +201,19 @@ builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.AddService<SecureSmartTuitionSystem.Filters.BillingViewOnlyFilter>();
+    options.Filters.Add<SecureSmartTuitionSystem.Filters.SiteErrorResultFilter>();
     options.Filters.Add(
         new AutoValidateAntiforgeryTokenAttribute());
 });
 
+builder.Services.AddAuthorization(options => {
+    options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser().RequireRole(PageAccessRules.ApplicationRoles).Build();
+    // Every routed application page must explicitly declare Authorize or AllowAnonymous.
+    // An accidentally unclassified future endpoint is denied to every role.
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser().RequireAssertion(_ => false).Build();
+});
 builder.Services.AddRazorPages();
 
 builder.Services.AddRateLimiter(options =>
@@ -517,11 +536,9 @@ static bool IsDatabaseTemporarilyUnavailable(Exception exception)
  * =====================================================
  */
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
+// Keep private diagnostics in logs, including during local runs.
+app.UseExceptionHandler("/Errors/500");
+if (!app.Environment.IsDevelopment()) app.UseHsts();
 
 /*
  * =====================================================
@@ -532,6 +549,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseMiddleware<SecurityMonitoringMiddleware>();
+app.UseStatusCodePagesWithReExecute("/Errors/{0}");
 
 app.UseRouting();
 
@@ -587,14 +605,18 @@ app.UseRateLimiter();
 
 app.UseSession();
 
-app.UseAuthentication();
-app.UseMiddleware<AuthenticatedSessionMiddleware>();
+// Error re-execution must remain renderable when Identity's database is unavailable.
+app.UseWhen(context => !context.Request.Path.StartsWithSegments("/Errors"), branch => {
+    branch.UseAuthentication();
+    branch.UseMiddleware<AuthenticatedSessionMiddleware>();
+});
 app.Use(async (context, next) =>
 {
     if (context.User.Identity?.IsAuthenticated == true)
         context.Response.Headers["Cache-Control"] = "no-store";
     await next();
 });
+app.UseMiddleware<PageAudienceMiddleware>();
 app.UseAuthorization();
 
 /*
@@ -603,7 +625,7 @@ app.UseAuthorization();
  * =====================================================
  */
 
-app.MapStaticAssets();
+app.MapStaticAssets().AllowAnonymous();
 
 /*
  * =====================================================

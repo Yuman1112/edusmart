@@ -1,55 +1,18 @@
-﻿@{
-    ViewData["Title"] = "Payment Cancelled";
-
-    string? paymentAccessToken =
-        ViewBag.PaymentAccessToken as string;
-
-    bool preserveSession =
-        ViewBag.PreserveSession is bool value &&
-        value;
+@{
+    Layout = "~/Views/Shared/_ErrorLayout.cshtml";
+    ViewData["Title"] = "Checkout closed";
+    string? token = ViewBag.PaymentAccessToken as string;
+    bool preserveSession = ViewBag.PreserveSession is bool value && value;
 }
-
-@section Styles {
-    <link rel="stylesheet"
-          href="~/css/payment.css"
-          asp-append-version="true" />
-}
-
-<div class="payment-result-page">
-    <main class="payment-result-card">
-        <div class="payment-result-icon cancelled">
-            <i class="bi bi-x-lg"></i>
-        </div>
-
-        <span class="payment-eyebrow">
-            Payment Cancelled
-        </span>
-
-        <h1>No Payment Was Made</h1>
-
-        <p>
-            The Stripe Checkout process was cancelled.
-            Your bill remains unpaid.
-        </p>
-
-        @if (!string.IsNullOrWhiteSpace(
-                paymentAccessToken))
-        {
-            <a asp-controller="Payments"
-               asp-action="Checkout"
-               asp-route-token="@paymentAccessToken"
-               asp-route-preserveSession="@preserveSession"
-               class="payment-result-button">
-
-                Try Again
-            </a>
-        }
-
-        <a asp-controller="Home"
-           asp-action="Index"
-           class="payment-secondary-link">
-
-            Return to Home
-        </a>
-    </main>
-</div>
+<section class="error-card" aria-labelledby="closed-title">
+    <span class="error-status payment-status-neutral">Checkout closed</span>
+    <h1 id="closed-title">Checkout closed</h1>
+    <p class="error-message">The checkout was closed or cancelled. This page does not confirm the final payment status.
+        If you may have completed payment, check your bill and receipt before trying again.</p>
+    <div class="error-actions">
+    @if (!string.IsNullOrWhiteSpace(token)) {
+        <a asp-controller="Payments" asp-action="Checkout" asp-route-token="@token" asp-route-preserveSession="@preserveSession" class="error-button">Check Payment Status</a>
+    }
+        <a asp-controller="Home" asp-action="Index" class="error-button secondary">Return Home</a>
+    </div>
+</section>

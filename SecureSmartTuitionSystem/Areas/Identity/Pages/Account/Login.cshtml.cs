@@ -1,4 +1,4 @@
-
+﻿
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +16,7 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
     [ResponseCache(
         NoStore = true,
         Location = ResponseCacheLocation.None)]
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
     public class LoginModel : PageModel
     {
         private readonly SignInManager<ApplicationUser> _signInManager;

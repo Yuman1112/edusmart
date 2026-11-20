@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
@@ -13,6 +13,7 @@ using SecureSmartTuitionSystem.Models.Identity;
 namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
 {
     [EnableRateLimiting("PublicFormPolicy")]
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
     public class SetupPasswordModel : PageModel
     {
         private readonly UserManager<ApplicationUser> _userManager;

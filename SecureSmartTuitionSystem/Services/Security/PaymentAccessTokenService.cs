@@ -5,6 +5,9 @@ namespace SecureSmartTuitionSystem.Services.Security
 {
     public static class PaymentAccessTokenService
     {
+        public static bool IsWellFormed([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? token) => token is { Length: 64 } &&
+            token.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F');
+
         public static string GenerateToken()
         {
             byte[] tokenBytes =

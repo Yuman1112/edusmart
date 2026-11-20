@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
@@ -255,12 +255,10 @@ namespace SecureSmartTuitionSystem.Services.Billing
                 bill.PaidAt =
                     completedAt;
 
-                /*
-                 * A successful payment permanently invalidates the
-                 * anonymous first-payment link.
-                 */
-                bill.PaymentAccessTokenHash = null;
-                bill.PaymentAccessTokenExpiresAt = null;
+                // Retain only the one-way token hash for a minimal "already paid"
+                // acknowledgement. Paid state prevents all further checkout attempts;
+                // expired capabilities never expose billing details or receipts.
+                // Do not extend the original token lifetime or store its raw value.
 
                 /*
                  * Record payment confirmation.

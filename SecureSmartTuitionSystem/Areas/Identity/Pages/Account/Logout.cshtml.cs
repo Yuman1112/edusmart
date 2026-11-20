@@ -8,6 +8,7 @@ using SecureSmartTuitionSystem.Services.Security;
 
 namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account;
 
+[Microsoft.AspNetCore.Authorization.Authorize]
 public sealed class LogoutModel : PageModel
 {
     private readonly SecurityEventService _events;

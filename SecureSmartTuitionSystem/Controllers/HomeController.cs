@@ -1,9 +1,10 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using SecureSmartTuitionSystem.Models;
 
 namespace SecureSmartTuitionSystem.Controllers
 {
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
@@ -57,13 +58,7 @@ namespace SecureSmartTuitionSystem.Controllers
             NoStore = true)]
         public IActionResult Error()
         {
-            return View(
-                new ErrorViewModel
-                {
-                    RequestId =
-                        Activity.Current?.Id
-                        ?? HttpContext.TraceIdentifier
-                });
+            return SecureSmartTuitionSystem.Services.Security.SiteErrorResponses.Result(HttpContext, 500);
         }
     }
 }

@@ -28,6 +28,9 @@ public sealed class SecurityEventService
             TraceId = Limit(context?.TraceIdentifier ?? string.Empty, 120),
             Summary = Limit(summary, 1000)
         };
+        // Denials and safe error pages must not wait indefinitely for the audit database.
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        var cancellationToken = deadline.Token;
         try
         {
             using var scope = _scopes.CreateScope();
@@ -35,7 +38,7 @@ public sealed class SecurityEventService
             if (!string.IsNullOrWhiteSpace(actorUserId))
             {
                 var name = await db.Users.AsNoTracking().Where(x => x.Id == actorUserId)
-                    .Select(x => x.UserName).FirstOrDefaultAsync();
+                    .Select(x => x.UserName).FirstOrDefaultAsync(cancellationToken);
                 if (!string.IsNullOrWhiteSpace(name)) entry.ActorName = Limit(name, 256);
             }
             if (severity == SecuritySeverity.Warning && entry.RemoteIp.Length > 0 &&
@@ -43,12 +46,12 @@ public sealed class SecurityEventService
             {
                 var since = DateTime.UtcNow.AddMinutes(-15);
                 int recent = await db.AuditLogEntries.AsNoTracking().CountAsync(x =>
-                    x.EventName == eventName && x.Severity != SecuritySeverity.Information && x.RemoteIp == entry.RemoteIp && x.OccurredAtUtc >= since);
+                    x.EventName == eventName && x.Severity != SecuritySeverity.Information && x.RemoteIp == entry.RemoteIp && x.OccurredAtUtc >= since, cancellationToken);
                 if (recent >= 4) entry.Severity = SecuritySeverity.High;
             }
             _integrity.Seal(entry);
             db.AuditLogEntries.Add(entry);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {

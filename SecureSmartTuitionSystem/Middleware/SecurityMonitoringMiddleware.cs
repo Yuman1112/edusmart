@@ -19,7 +19,8 @@ public sealed class SecurityMonitoringMiddleware
                 context.Response.Headers.Location.ToString().Contains("/Identity/Account/AccessDenied", StringComparison.Ordinal);
             // A guest receives a cookie challenge (302 to Login), not a direct 401.
             // Only record challenges for protected endpoints; opening Login itself is normal.
-            var endpoint = context.GetEndpoint();
+            var endpoint = context.Items.TryGetValue(SiteErrorResponses.OriginalEndpoint, out var originalEndpoint)
+                ? originalEndpoint as Endpoint : context.GetEndpoint();
             var location = context.Response.Headers.Location.ToString();
             var redirectPath = location.StartsWith('/') ? location.Split('?')[0]
                 : Uri.TryCreate(location, UriKind.Absolute, out var redirectUri)
@@ -28,8 +29,10 @@ public sealed class SecurityMonitoringMiddleware
                 context.Response.StatusCode == StatusCodes.Status302Found &&
                 redirectPath.EndsWith("/Identity/Account/Login", StringComparison.OrdinalIgnoreCase) &&
                 endpoint?.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() == null &&
-                endpoint?.Metadata.GetOrderedMetadata<Microsoft.AspNetCore.Authorization.IAuthorizeData>().Count > 0;
+                endpoint != null;
             var descriptor = endpoint?.Metadata.GetMetadata<Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor>();
+            // Directly previewing an error URL is not evidence of a new server incident.
+            if (descriptor?.ControllerName == "SiteErrors") return;
             var destination = descriptor == null ? "application endpoint" : $"{descriptor.ControllerName}.{descriptor.ActionName}";
             // Public payment links use bearer-token ownership and deliberately return 404.
             bool paymentLinkUnavailable = context.Response.StatusCode == StatusCodes.Status404NotFound &&
@@ -37,7 +40,12 @@ public sealed class SecurityMonitoringMiddleware
             bool protectedNotFound = context.Response.StatusCode == StatusCodes.Status404NotFound &&
                 endpoint?.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.IAllowAnonymous>() == null &&
                 endpoint?.Metadata.GetOrderedMetadata<Microsoft.AspNetCore.Authorization.IAuthorizeData>().Count > 0;
-            if (context.Response.StatusCode >= 500)
+            if (context.Items.ContainsKey("Security.DisabledIdentityPage"))
+            {
+                await events.RecordAsync(context, "DisabledAccountEndpoint", SecuritySeverity.Warning,
+                    "A disabled stock account endpoint was rejected (HTTP 404). Account provisioning must use the approved workflow.");
+            }
+            else if (context.Response.StatusCode >= 500)
             {
                 await events.RecordAsync(context, "ServerError", SecuritySeverity.High,
                     $"Application returned HTTP {context.Response.StatusCode} at {destination}. Refer to private server logs using the trace ID.");
@@ -48,11 +56,11 @@ public sealed class SecurityMonitoringMiddleware
                 await events.RecordAsync(context, "ProtectedResourceUnavailable", SecuritySeverity.Information,
                     $"Protected/payment resource unavailable (HTTP 404) at {destination}. The resource may be missing or outside the caller's permitted scope; this alone does not prove an attack.");
             }
-            else if (context.Response.StatusCode is 400 or 401 or 403 or 413 or 429 || accessDeniedRedirect || guestChallenge)
+            else if (context.Response.StatusCode >= 400 || accessDeniedRedirect || guestChallenge)
             {
                 int code = guestChallenge ? StatusCodes.Status401Unauthorized : accessDeniedRedirect ? StatusCodes.Status403Forbidden : context.Response.StatusCode;
                 _logger.LogWarning("Request rejected: {StatusCode}; trace {TraceId}.", code, context.TraceIdentifier);
-                await events.RecordAsync(context, "RequestRejected", guestChallenge ? SecuritySeverity.Information : SecuritySeverity.Warning,
+                await events.RecordAsync(context, "RequestRejected", guestChallenge || code == 404 ? SecuritySeverity.Information : SecuritySeverity.Warning,
                     guestChallenge
                         ? $"Guest authentication required (HTTP 401) at {destination}; redirected to Login. No request content or query string was retained."
                         : $"Request rejected with HTTP {code} at {destination}. No request content or query string was retained.");

@@ -1,4 +1,4 @@
-@using Microsoft.AspNetCore.Identity
+﻿@using Microsoft.AspNetCore.Identity
 @using SecureSmartTuitionSystem.Models.Identity
 
 @{
@@ -662,7 +662,7 @@
                                 <a class="sidebar-submenu-link @(currentController == "GuestEnquiries" ? "active" : "")" asp-controller="GuestEnquiries" asp-action="Index"><i class="bi bi-envelope" aria-hidden="true"></i><span>Guest enquiries</span>@await Component.InvokeAsync("GuestEnquiryPending")</a>
                             }
 
-                            @if (!isAdmin && !User.IsInRole("Tutor"))
+                            @if (!isAdmin)
                             {
                                 <a class="sidebar-submenu-link @(currentController == "Faq" ? "active" : "")"
                                    asp-controller="Faq" asp-action="Index" aria-current="@(currentController == "Faq" ? "page" : null)">

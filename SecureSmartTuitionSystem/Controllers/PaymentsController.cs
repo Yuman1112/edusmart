@@ -1,4 +1,4 @@
-using SecureSmartTuitionSystem.Services.Enrollment;
+﻿using SecureSmartTuitionSystem.Services.Enrollment;
 using SecureSmartTuitionSystem.Models.Security;
 using System.Data;
 using System.Security.Claims;
@@ -21,6 +21,24 @@ namespace SecureSmartTuitionSystem.Controllers
 {
     public class PaymentsController : Controller
     {
+        // A consumed/expired payment capability may reveal only a paid/not-payable
+        // acknowledgement, never the bill, applicant data, receipt or a new checkout.
+        private Task<bool> IsAlreadyPaidLinkAsync(string tokenHash) =>
+            _context.Bills.AsNoTracking().AnyAsync(bill =>
+                bill.PaymentAccessTokenHash == tokenHash &&
+                (bill.Status == BillStatus.Paid || _context.Payments.Any(payment =>
+                    payment.BillId == bill.BillId && payment.Status == PaymentStatus.Succeeded)));
+
+        private IActionResult PaymentAlreadyCompleted()
+        {
+            Response.Headers.CacheControl = "no-store";
+            Response.Headers["Referrer-Policy"] = "no-referrer";
+            if (SiteErrorResponses.WantsJson(Request))
+                return Json(new { code = "PAYMENT_ALREADY_COMPLETED", paymentRequired = false,
+                    message = "This bill has already been settled. You do not need to pay again or request another payment link." });
+            return View("AlreadyPaid");
+        }
+
         private const string VerifiedReceiptSessionKey =
             "Payments.VerifiedReceiptSessionId";
 
@@ -165,13 +183,18 @@ namespace SecureSmartTuitionSystem.Controllers
             string? token,
             bool preserveSession = false)
         {
-            if (string.IsNullOrWhiteSpace(token))
+            if (!PaymentAccessTokenService.IsWellFormed(token))
             {
                 return NotFound();
             }
 
             string tokenHash =
                 PaymentAccessTokenService.HashToken(token);
+
+            if (await IsAlreadyPaidLinkAsync(tokenHash))
+            {
+                return PaymentAlreadyCompleted();
+            }
 
             var bill =
                 await _context.Bills
@@ -193,19 +216,8 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
-            if (!preserveSession &&
-                User.Identity?.IsAuthenticated == true)
-            {
-                await _signInManager.SignOutAsync();
-
-                return RedirectToAction(
-                    nameof(Checkout),
-                    new
-                    {
-                        token,
-                        preserveSession = false
-                    });
-            }
+            // Opening an email link must not sign an existing user out via GET.
+            // The bearer token scopes this workflow; it never grants a dashboard role.
 
             bool hasSuccessfulPayment =
                 await _context.Payments
@@ -217,8 +229,7 @@ namespace SecureSmartTuitionSystem.Controllers
             if (bill.Status == BillStatus.Paid ||
                 hasSuccessfulPayment)
             {
-                TempData["SuccessMessage"] =
-                    "This bill has already been paid.";
+                return PaymentAlreadyCompleted();
             }
 
 
@@ -329,13 +340,18 @@ namespace SecureSmartTuitionSystem.Controllers
                 string token,
                 bool preserveSession = false)
         {
-            if (string.IsNullOrWhiteSpace(token))
+            if (!PaymentAccessTokenService.IsWellFormed(token))
             {
                 return NotFound();
             }
 
             string tokenHash =
                 PaymentAccessTokenService.HashToken(token);
+
+            if (await IsAlreadyPaidLinkAsync(tokenHash))
+            {
+                return PaymentAlreadyCompleted();
+            }
 
             var bill =
                 await _context.Bills
@@ -362,16 +378,7 @@ namespace SecureSmartTuitionSystem.Controllers
             if (bill.Status == BillStatus.Paid ||
                 hasSuccessfulPayment)
             {
-                TempData["SuccessMessage"] =
-                    "This bill has already been paid.";
-
-                return RedirectToAction(
-                    nameof(Checkout),
-                    new
-                    {
-                        token,
-                        preserveSession
-                    });
+                return PaymentAlreadyCompleted();
             }
 
             if (bill.Status !=
@@ -1186,12 +1193,17 @@ namespace SecureSmartTuitionSystem.Controllers
         [AllowAnonymous]
         [EnableRateLimiting("PaymentPolicy")]
         [HttpGet]
-        public IActionResult Cancelled(
+        public async Task<IActionResult> Cancelled(
             string? token,
             bool preserveSession = false)
         {
+            if (PaymentAccessTokenService.IsWellFormed(token) &&
+                await IsAlreadyPaidLinkAsync(PaymentAccessTokenService.HashToken(token)))
+                return PaymentAlreadyCompleted();
+            Response.Headers.CacheControl = "no-store";
+            Response.Headers["Referrer-Policy"] = "no-referrer";
             ViewBag.PaymentAccessToken =
-                token;
+                PaymentAccessTokenService.IsWellFormed(token) ? token : null;
 
             ViewBag.PreserveSession =
                 preserveSession;

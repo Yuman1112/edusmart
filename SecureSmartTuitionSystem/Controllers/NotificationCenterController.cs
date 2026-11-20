@@ -6,7 +6,7 @@ using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Communication;
 using SecureSmartTuitionSystem.Services.Enrollment;
 namespace SecureSmartTuitionSystem.Controllers;
-[Authorize]
+[Authorize(Roles = "Admin,Tutor,Parent,Student")]
 public sealed class NotificationCenterController(ApplicationDbContext db) : Controller
 {
     [HttpGet] public async Task<IActionResult> Index(int page = 1, bool unreadOnly = false)
