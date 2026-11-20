@@ -2539,6 +2539,43 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("QualificationRequestAttachments");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorAvailabilityAdjustment", b =>
+                {
+                    b.Property<int>("ClassLessonChangeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("AddedDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly?>("AddedEnd")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly?>("AddedStart")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("BlocksOriginal")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ChangedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TutorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ClassLessonChangeId");
+
+                    b.HasIndex("TutorUserId", "AddedDate");
+
+                    b.ToTable("TutorAvailabilityAdjustments");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorAvailabilitySlot", b =>
                 {
                     b.Property<int>("TutorAvailabilitySlotId")
@@ -3575,6 +3612,17 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("CurrentDocument");
 
                     b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorAvailabilityAdjustment", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.ClassLessonChange", "ClassLessonChange")
+                        .WithOne()
+                        .HasForeignKey("SecureSmartTuitionSystem.Models.Tutor.TutorAvailabilityAdjustment", "ClassLessonChangeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassLessonChange");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorAvailabilitySlot", b =>

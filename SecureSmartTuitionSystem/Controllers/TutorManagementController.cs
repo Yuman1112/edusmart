@@ -469,6 +469,9 @@ public sealed class TutorManagementController(
             if (!TutorAvailabilityPolicy.IsTypeValid(model.EmploymentType))
                 ModelState.AddModelError(nameof(model.EmploymentType), "Please select a valid employment type.");
             bool employmentChanged = profile.EmploymentType != model.EmploymentType;
+            if (employmentChanged && await db.TutorAvailabilityAdjustments.AnyAsync(x => x.TutorUserId == model.UserId &&
+                ((x.BlocksOriginal && x.ClassLessonChange.OriginalDate >= SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today) || x.AddedDate >= SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today)))
+                ModelState.AddModelError(nameof(model.EmploymentType),"Resolve future dated availability adjustments before changing employment type.");
             if (!ModelState.IsValid)
                 return View(model);
 

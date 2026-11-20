@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="~/css/tutor-availability.css" asp-append-version="true" />
 }
 <div class="page-header">
-    <div><h1>My Availability</h1><p>Your regular weekly teaching availability.</p></div>
+    <div><h1>My Availability</h1><p>Your teaching availability for the selected week.</p></div>
     <div class="class-detail-header-actions">
         <a asp-controller="Tutor" asp-action="MyProfile" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
-        <a asp-action="Edit" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Availability</a>
+        @if (Model.EmploymentType == TutorEmploymentType.PartTime) { <a asp-action="Edit" class="primary-button"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Availability</a> }
     </div>
 </div>
 <p class="form-text mb-4">Monday–Saturday · 08:00–22:00 MYT · Maximum 8 hours per day</p>
@@ -23,7 +23,8 @@
         <div class="alert @(key.EndsWith("Warning") ? "alert-warning" : key.EndsWith("Success") ? "alert-success" : "alert-info")" role="status">@message</div>
     }
 }
-<div data-availability-live data-live-url="@Url.Action("Index", new { partial = true })">
+<partial name="_AvailabilityWeekSelector" model="Model.WeekStart" />
+<div data-availability-live data-live-url="@Url.Action("Index", new { partial = true, week = Model.WeekStart.ToString("yyyy-MM-dd") })">
     <p class="form-text d-none" data-availability-live-status role="status" aria-live="polite"></p>
     <partial name="_AvailabilityState" model="Model" />
 </div>

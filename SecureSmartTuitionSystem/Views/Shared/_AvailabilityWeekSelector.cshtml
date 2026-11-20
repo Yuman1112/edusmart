@@ -1,0 +1,13 @@
+﻿@model DateTime
+<form method="get" class="availability-week-toolbar" data-availability-week-form>
+    @if (ViewContext.RouteData.Values["controller"]?.ToString() == "AdminTutorAvailability") { <input type="hidden" name="userId" value="@Context.Request.Query["userId"]" /> }
+    <label for="availability-week">Week of</label>
+    <input id="availability-week" name="week" type="date" value="@Model.ToString("yyyy-MM-dd")" min="2000-01-01" max="2100-12-31" class="form-control" />
+    <strong data-availability-week-label>@Model.ToString("dd MMM yyyy") – @Model.AddDays(6).ToString("dd MMM yyyy")</strong>
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="outline-button" data-week-shift="-7">Previous</button>
+        <button type="button" class="outline-button" data-week-today>This Week</button>
+        <button type="button" class="outline-button" data-week-shift="7">Next</button>
+    </div>
+    <noscript><button type="submit" class="primary-button">View Week</button></noscript>
+</form>

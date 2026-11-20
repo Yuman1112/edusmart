@@ -22,26 +22,36 @@ public sealed class TutorAvailabilityController(ApplicationDbContext db, UserMan
             && p.IsActive && p.ApplicationUser.IsActive && !p.ApplicationUser.MustChangePassword);
     }
     [HttpGet]
-    public async Task<IActionResult> Index(bool partial = false)
+    public async Task<IActionResult> Index(bool partial = false, DateTime? week = null, bool template = false)
     {
         var tutor = await OwnAsync();
         if (tutor == null || !TutorAvailabilityPolicy.IsTypeValid(tutor.EmploymentType)) return Forbid();
+        if (!ModelState.IsValid || (week.HasValue && (week.Value.Year < 2000 || week.Value.Year > 2100))) return BadRequest();
         var availability = new TutorAvailabilityService(db);
         var raw = await availability.GetStoredSlotsAsync(tutor.ApplicationUserId);
-        var model = new TutorAvailabilityViewModel
-        {
-            EmploymentType = tutor.EmploymentType,
-            Version = TutorAvailabilityPolicy.Version(tutor.EmploymentType, raw),
-            SelectedSlots = raw.Where(TutorAvailabilityPolicy.IsOpen).ToList(),
-            LegacySlots = raw.Where(x => !TutorAvailabilityPolicy.IsOpen(x)).ToList()
+        var normal = await availability.GetSlotsAsync(tutor.ApplicationUserId);
+        var start = TutorAvailabilityPolicy.WeekStart(week ?? SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Today);
+        var effective = template ? normal : await new TutorDatedAvailabilityService(db).WeekAsync(tutor.ApplicationUserId,start);
+        var model = new TutorAvailabilityViewModel {
+            EmploymentType=tutor.EmploymentType, WeekStart=start, IsWeeklyView=!template,
+            Version=TutorAvailabilityPolicy.Version(tutor.EmploymentType, template ? raw : effective) + (template ? "" : ":"+start.ToString("yyyy-MM-dd")),
+            SelectedSlots=effective,
+            LegacySlots=tutor.EmploymentType == TutorEmploymentType.PartTime ? raw.Where(x=>!TutorAvailabilityPolicy.IsOpen(x)).ToList() : [],
+            AdjustedDays=Enumerable.Range(1,6).Where(day=>!normal.Where(x=>x/48==day).ToHashSet().SetEquals(effective.Where(x=>x/48==day))).ToList()
         };
+        if (!template)
+        {
+            var lessons=await new SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService(db).GetLessonsAsync(start,start.AddDays(6),tutor.ApplicationUserId);
+            model.OutsideLessonCount=lessons.Count(x=>!x.Cancelled&&!TutorAvailabilityService.Covers(effective,(int)x.Date.DayOfWeek,x.Start,x.End));
+            model.Version += "|"+model.OutsideLessonCount;
+        }
         return partial ? PartialView("_AvailabilityState", model) : View(model);
     }
     [HttpGet]
     public async Task<IActionResult> Edit()
     {
         var tutor = await OwnAsync();
-        if (tutor == null || !TutorAvailabilityPolicy.IsTypeValid(tutor.EmploymentType)) return Forbid();
+        if (tutor == null || tutor.EmploymentType != TutorEmploymentType.PartTime) return Forbid();
         var availability = new TutorAvailabilityService(db);
         var raw = await availability.GetStoredSlotsAsync(tutor.ApplicationUserId);
         return View(new TutorAvailabilityViewModel
@@ -57,7 +67,7 @@ public sealed class TutorAvailabilityController(ApplicationDbContext db, UserMan
     {
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var tutor = await OwnAsync();
-        if (tutor == null || !TutorAvailabilityPolicy.IsTypeValid(tutor.EmploymentType)) return Forbid();
+        if (tutor == null || tutor.EmploymentType != TutorEmploymentType.PartTime) return Forbid();
         model.EmploymentType = tutor.EmploymentType;
         model.SelectedSlots ??= new();
         var existing = await db.TutorAvailabilitySlots.Where(x => x.ApplicationUserId == tutor.ApplicationUserId).ToListAsync();
@@ -72,9 +82,11 @@ public sealed class TutorAvailabilityController(ApplicationDbContext db, UserMan
             return View("Edit", model);
         }
         model.LegacySlots = original.Where(x => !TutorAvailabilityPolicy.IsOpen(x)).ToList();
-        if (model.SelectedSlots.Count > 6 * TutorAvailabilityPolicy.MaxDailySlots || model.SelectedSlots.Any(x => !TutorAvailabilityPolicy.IsOpen(x))
+        if (model.SelectedSlots.Count > TutorAvailabilityPolicy.MaxWeeklySlots || model.SelectedSlots.Any(x => !TutorAvailabilityPolicy.IsOpen(x))
             || model.SelectedSlots.Distinct().Count() != model.SelectedSlots.Count)
             ModelState.AddModelError("", "Please select valid half-hour slots within Monday–Saturday, 08:00–22:00 MYT.");
+        if (model.SelectedSlots.Distinct().Count() > TutorAvailabilityPolicy.MaxWeeklySlots)
+            ModelState.AddModelError("", "Select no more than 45 hours per week.");
         var overLimit = TutorAvailabilityPolicy.DaysOverLimit(model.SelectedSlots);
         if (overLimit.Count > 0)
             ModelState.AddModelError("", "Select no more than eight hours per day. Review: "
@@ -96,6 +108,18 @@ public sealed class TutorAvailabilityController(ApplicationDbContext db, UserMan
             return RedirectToAction(nameof(Index));
         }
         var warnings = await new TutorAvailabilityService(db).FindExistingClassesOutsideAsync(tutor.ApplicationUserId, selected);
+        var patternError=await new TutorDatedAvailabilityService(db).PatternChangeErrorAsync(tutor.ApplicationUserId,selected);
+        if(patternError!=null)
+        {
+            if(Request.Headers["X-Requested-With"]=="XMLHttpRequest")return BadRequest(new { message=patternError });
+            ModelState.AddModelError("",patternError);return View("Edit",model);
+        }
+        if (warnings.Count > 0)
+        {
+            string message = "These times are needed by future lessons: " + string.Join("; ",warnings.Take(5)) + ". Arrange those lessons before removing their availability.";
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest") return BadRequest(new { message });
+            ModelState.AddModelError("",message); return View("Edit",model);
+        }
         db.TutorAvailabilitySlots.RemoveRange(existing.Where(x => !selected.Contains(x.Day * 48 + x.Slot)));
         foreach (var value in selected.Except(original))
             db.TutorAvailabilitySlots.Add(new TutorAvailabilitySlot

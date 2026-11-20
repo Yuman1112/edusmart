@@ -16,6 +16,7 @@ public sealed class TutorAvailabilityService(ApplicationDbContext db)
         var type = await db.TutorProfiles.AsNoTracking().Where(p => p.ApplicationUserId == userId)
             .Select(p => (Models.Tutor.TutorEmploymentType?)p.EmploymentType).SingleOrDefaultAsync();
         if (type is not (Models.Tutor.TutorEmploymentType.FullTime or Models.Tutor.TutorEmploymentType.PartTime)) return new();
+        if (type == Models.Tutor.TutorEmploymentType.FullTime) return TutorAvailabilityPolicy.FullTimeSlots();
         return (await GetStoredSlotsAsync(userId)).Where(TutorAvailabilityPolicy.IsOpen).ToList();
     }
 
@@ -38,14 +39,16 @@ public sealed class TutorAvailabilityService(ApplicationDbContext db)
         if ((int)day == 0 || start < new TimeOnly(8, 0) || end > new TimeOnly(22, 0))
             return "Lessons must be within Monday–Saturday, 08:00–22:00 MYT.";
 
+        if (!TutorDatedAvailabilityService.Aligned(start) || !TutorDatedAvailabilityService.Aligned(end))
+            return "Choose teaching times in 30-minute increments.";
         bool active = await db.TutorProfiles.AsNoTracking().AnyAsync(p =>
             p.ApplicationUserId == userId && p.IsActive && p.ApplicationUser.IsActive
             && !p.ApplicationUser.MustChangePassword);
         if (!active) return "The selected tutor account is not available for teaching.";
 
         var slots = await GetSlotsAsync(userId);
-        if (TutorAvailabilityPolicy.DaysOverLimit(slots).Count > 0)
-            return "This tutor must update My Availability to a maximum of eight hours per day before new lessons can be assigned.";
+        if (TutorAvailabilityPolicy.DaysOverLimit(slots).Count > 0 || slots.Distinct().Count() > TutorAvailabilityPolicy.MaxWeeklySlots)
+            return "This tutor must update My Availability to a maximum of eight hours per day and 45 hours per week before new lessons can be assigned.";
         if (slots.Count == 0)
             return "This tutor has no available teaching slots. Ask the tutor to save My Availability first.";
         return Covers(slots, (int)day, start, end) ? null
@@ -86,8 +89,10 @@ public sealed class TutorAvailabilityService(ApplicationDbContext db)
             .Select(AcademicYearPolicy.ClassEnd).Append(today).Max();
         if (latestReplacement.HasValue && latestReplacement.Value.Date > end) end = latestReplacement.Value.Date;
         var lessons = await new ClassScheduleService(db).GetLessonsAsync(today, end, userId);
+        var dated = new TutorDatedAvailabilityService(db);
+        var changes = await dated.AdjustmentsAsync(userId,TutorAvailabilityPolicy.WeekStart(today),end);
         return lessons.Where(x => !x.Cancelled && x.Date.Add(x.End.ToTimeSpan()) > ClassScheduleService.Now
-                && !Covers(selected, (int)x.Date.DayOfWeek, x.Start, x.End))
+                && !Covers(TutorDatedAvailabilityService.Apply(selected,x.Date,changes),(int)x.Date.DayOfWeek,x.Start,x.End))
             .Select(x => new SecureSmartTuitionSystem.ViewModels.Tutor.TutorScheduleConflictViewModel(
                 x.Class.ClassCode,
                 x.Replacement

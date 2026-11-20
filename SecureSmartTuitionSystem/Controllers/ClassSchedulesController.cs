@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
@@ -54,13 +54,18 @@ public sealed class ClassSchedulesController(ApplicationDbContext db, ClassSched
             ModelState.AddModelError("", "Only a scheduled lesson that has not finished can be cancelled.");
         if (await db.ClassLessonChanges.AnyAsync(x => x.ClassSessionId == c.ClassSessionId && x.OriginalDate == model.Date))
             ModelState.AddModelError("", "This lesson has already been cancelled. Use Pending Replacements.");
+        bool fixedTutor = await db.TutorProfiles.AnyAsync(x=>x.ApplicationUserId==c.TutorUserId && x.EmploymentType==SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime);
+        if (fixedTutor && !TutorAvailabilityService.Covers(TutorAvailabilityPolicy.FullTimeSlots(),(int)model.Date.DayOfWeek,c.StartTime,c.EndTime))
+            ModelState.AddModelError("", "This legacy lesson is outside the fixed full-time timetable. Ask the administrator to adjust its class timetable before cancelling it for a same-week availability swap.");
         if (!ModelState.IsValid) return View(model);
         var students = await schedules.RosterAsync(c.ClassSessionId, model.Date);
         var recipients = await schedules.RecipientsAsync(students, c.TutorUserId);
-        db.ClassLessonChanges.Add(new ClassLessonChange { ClassSessionId = c.ClassSessionId, OriginalDate = model.Date,
+        var change = new ClassLessonChange { ClassSession = c, ClassSessionId = c.ClassSessionId, OriginalDate = model.Date,
             OriginalStartTime = c.StartTime, OriginalEndTime = c.EndTime, CancellationReason = model.Reason.Trim(),
             CancelledAtUtc = DateTime.UtcNow, ChangedByUserId = UserId,
-            StudentIdsJson = JsonSerializer.Serialize(students), RecipientIdsJson = JsonSerializer.Serialize(recipients) });
+            StudentIdsJson = JsonSerializer.Serialize(students), RecipientIdsJson = JsonSerializer.Serialize(recipients) };
+        db.ClassLessonChanges.Add(change);
+        await new TutorDatedAvailabilityService(db).BlockOriginalAsync(change,UserId);
         await schedules.NotifyAsync(recipients, "Class cancelled", $"{c.ClassName}: {model.Date:dd MMM yyyy} {c.StartTime:HH:mm} cancelled. {model.Reason.Trim()} Replacement date is pending.", c.ClassSessionId);
         await db.SaveChangesAsync(); await tx.CommitAsync();
         TempData["SuccessMessage"] = "Only this dated lesson was cancelled. It is listed in Pending Replacements.";
@@ -99,6 +104,9 @@ public sealed class ClassSchedulesController(ApplicationDbContext db, ClassSched
         if (!ModelState.IsValid) return View(model);
         if (c.ReplacementDate == model.Date!.Value.Date && c.ReplacementStartTime == model.Start && c.ReplacementEndTime == model.End && c.ReplacementVenue == model.Venue.Trim())
             return RedirectToAction(nameof(Pending), new { includeScheduled = true });
+        bool availabilityChanged = c.ReplacementDate?.Date != model.Date!.Value.Date || c.ReplacementStartTime != model.Start || c.ReplacementEndTime != model.End;
+        if (availabilityChanged)
+            await new TutorDatedAvailabilityService(db).SaveReplacementAsync(c,model.Date.Value.Date,model.Start!.Value,model.End!.Value,UserId);
         c.ReplacementDate = model.Date!.Value.Date; c.ReplacementStartTime = model.Start; c.ReplacementEndTime = model.End;
         c.ReplacementVenue = model.Venue.Trim(); c.ChangedByUserId = UserId;
         var recipients = JsonSerializer.Deserialize<List<string>>(c.RecipientIdsJson) ?? new();
@@ -141,8 +149,8 @@ public sealed class ClassSchedulesController(ApplicationDbContext db, ClassSched
                 .ValidateSubjectAsync(c.ClassSession.TutorUserId, c.ClassSession.SubjectId);
             if (teachingError != null) errors.Add(teachingError);
 
-            string? availabilityError = await new TutorAvailabilityService(db).ValidateAsync(
-                c.ClassSession.TutorUserId, model.Date.Value.DayOfWeek, model.Start.Value, model.End.Value);
+            string? availabilityError = await new TutorDatedAvailabilityService(db).ReplacementErrorAsync(
+                c, model.Date.Value.Date, model.Start.Value, model.End.Value);
             if (availabilityError != null) errors.Add(availabilityError);
         }
         if (errors.Count == 0 && await schedules.HasConflictAsync(c, model.Date.Value.Date, model.Start.Value, model.End.Value))
@@ -160,6 +168,7 @@ public sealed class ClassSchedulesController(ApplicationDbContext db, ClassSched
         if (!c.ReplacementDate.HasValue) return RedirectToAction(nameof(Pending));
         if (c.ReplacementDate.Value.Add(c.ReplacementStartTime!.Value.ToTimeSpan()) <= ClassScheduleService.Now) return BadRequest();
         var oldDate = c.ReplacementDate.Value;
+        await new TutorDatedAvailabilityService(db).ClearReplacementAsync(c,UserId);
         c.ReplacementDate = null; c.ReplacementStartTime = null; c.ReplacementEndTime = null; c.ReplacementVenue = null; c.ChangedByUserId = UserId;
         await schedules.NotifyAsync(JsonSerializer.Deserialize<List<string>>(c.RecipientIdsJson) ?? new(), "Replacement cancelled",
             $"{c.ClassSession.ClassName}: replacement on {oldDate:dd MMM yyyy} has been cancelled. {reason.Trim()} A new replacement date is pending.", c.ClassSessionId);

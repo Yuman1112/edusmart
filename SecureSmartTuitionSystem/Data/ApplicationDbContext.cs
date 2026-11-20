@@ -1,4 +1,4 @@
-using SecureSmartTuitionSystem.Models.Video;
+﻿using SecureSmartTuitionSystem.Models.Video;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -44,6 +44,7 @@ namespace SecureSmartTuitionSystem.Data
         public DbSet<GuestEnquiry> GuestEnquiries => Set<GuestEnquiry>();
 
         public DbSet<EnrollmentExitRequest> EnrollmentExitRequests => Set<EnrollmentExitRequest>();
+        public DbSet<TutorAvailabilityAdjustment> TutorAvailabilityAdjustments => Set<TutorAvailabilityAdjustment>();
         public DbSet<ClassLessonChange> ClassLessonChanges => Set<ClassLessonChange>();
         public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
         public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
@@ -259,6 +260,13 @@ namespace SecureSmartTuitionSystem.Data
                 entity.Property(x => x.EffectiveDate).HasColumnType("date");
                 entity.HasOne(x => x.StudentEnrollment).WithMany().HasForeignKey(x => x.StudentEnrollmentId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(x => x.Payment).WithMany().HasForeignKey(x => x.PaymentId).OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<TutorAvailabilityAdjustment>(entity =>
+            {
+                entity.HasKey(x => x.ClassLessonChangeId);
+                entity.HasOne(x => x.ClassLessonChange).WithOne().HasForeignKey<TutorAvailabilityAdjustment>(x => x.ClassLessonChangeId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(x => new { x.TutorUserId, x.AddedDate });
+                entity.Property(x => x.AddedDate).HasColumnType("date");
             });
             builder.Entity<ClassLessonChange>(entity =>
             {

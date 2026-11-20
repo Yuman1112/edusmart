@@ -1,4 +1,4 @@
-using SecureSmartTuitionSystem.Services.Enrollment;
+﻿using SecureSmartTuitionSystem.Services.Enrollment;
 using System.Data;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -732,6 +732,9 @@ namespace SecureSmartTuitionSystem.Controllers
                 TempData["ErrorMessage"] = availabilityError;
                 return RedirectToAction(nameof(Index));
             }
+            var datedError = await new TutorDatedAvailabilityService(_context).RecurringErrorAsync(session.TutorUserId,
+                ClassScheduleService.Today, AcademicYearPolicy.ClassEnd(session), session.DayOfWeek, session.StartTime, session.EndTime);
+            if (datedError != null) { TempData["ErrorMessage"] = datedError; return RedirectToAction(nameof(Index)); }
             session.Status = ClassSessionStatus.Active;
 
             await _context.SaveChangesAsync();
@@ -955,6 +958,13 @@ namespace SecureSmartTuitionSystem.Controllers
                     model.TutorUserId, model.DayOfWeek.Value, model.StartTime.Value, model.EndTime.Value);
                 if (availabilityError != null)
                     ModelState.AddModelError(nameof(model.TutorUserId), availabilityError);
+                if (availabilityError == null && model.StartDate.HasValue)
+                {
+                    var datedError = await new TutorDatedAvailabilityService(_context).RecurringErrorAsync(model.TutorUserId,
+                        model.StartDate.Value, model.EndDate ?? AcademicYearPolicy.EndOfYear(model.StartDate.Value),
+                        model.DayOfWeek.Value, model.StartTime.Value, model.EndTime.Value);
+                    if (datedError != null) ModelState.AddModelError(nameof(model.TutorUserId), datedError);
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(

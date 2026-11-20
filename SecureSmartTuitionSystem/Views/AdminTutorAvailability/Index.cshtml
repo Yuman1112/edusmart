@@ -13,7 +13,8 @@
     <a asp-controller="TutorManagement" asp-action="Details" asp-route-userId="@Model.UserId" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a>
 </div>
 <p class="form-text mb-4">Monday–Saturday · 08:00–22:00 MYT · Maximum 8 hours per day · Maintained by the tutor</p>
-<div data-availability-live data-live-url="@Url.Action("Index", new { userId = Model.UserId, partial = true })">
+<partial name="_AvailabilityWeekSelector" model="Model.WeekStart" />
+<div data-availability-live data-live-url="@Url.Action("Index", new { userId = Model.UserId, partial = true, week = Model.WeekStart.ToString("yyyy-MM-dd") })">
     <p class="form-text d-none" data-availability-live-status role="status" aria-live="polite"></p>
     <partial name="_AvailabilityState" model="Model" />
 </div>

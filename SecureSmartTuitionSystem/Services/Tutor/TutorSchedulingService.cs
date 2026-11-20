@@ -97,7 +97,16 @@ public sealed class TutorSchedulingService(ApplicationDbContext db)
         var availability = await new TutorAvailabilityService(db).GetSlotsAsync(tutorId);
         var booked = await new ClassScheduleService(db).GetLessonsAsync(from.Date, to, tutorId);
         var reservations = await WeeklyReservationsAsync(tutorId, from, to);
-        return BuildSlots(availability, booked, from, to, duration, ClassScheduleService.Now, reservations);
+        var options = BuildSlots(availability, booked, from, to, duration, ClassScheduleService.Now, reservations);
+        var dated = new TutorDatedAvailabilityService(db);
+        var result = new List<TutorWeeklySlot>();
+        foreach (var option in options)
+        {
+            var start = TimeOnly.Parse(option.Start, CultureInfo.InvariantCulture);
+            var finish = TimeOnly.Parse(option.End, CultureInfo.InvariantCulture);
+            if (await dated.RecurringErrorAsync(tutorId,from,to,(DayOfWeek)option.DayNumber,start,finish) == null) result.Add(option);
+        }
+        return result;
     }
     // Used again by the existing Create validator, including its Serializable save transaction.
     public async Task<string?> ValidateSelectionAsync(string tutorId, DateTime from, DateTime? end,
@@ -106,6 +115,8 @@ public sealed class TutorSchedulingService(ApplicationDbContext db)
         var termError = ValidateTerm(from, end, ClassScheduleService.Now);
         if (termError != null) return termError;
         var to = end?.Date ?? AcademicYearPolicy.EndOfYear(from);
+        var datedError = await new TutorDatedAvailabilityService(db).RecurringErrorAsync(tutorId,from,to,day,start,finish);
+        if (datedError != null) return datedError;
         var availability = await new TutorAvailabilityService(db).GetSlotsAsync(tutorId);
         var booked = await new ClassScheduleService(db).GetLessonsAsync(from.Date, to, tutorId);
         var reservations = await WeeklyReservationsAsync(tutorId, from, to);

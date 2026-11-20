@@ -97,9 +97,9 @@
 
         const counts = countsByDay(values);
         const overLimit = counts.map((count, day) => count > maxDailySlots ? dayNames[day] : null).filter(Boolean);
-        saveButton.disabled = saving || form.dataset.stale === "true" || !changed || overLimit.length > 0;
+        saveButton.disabled = values.length > 90 || saving || form.dataset.stale === "true" || !changed || overLimit.length > 0;
         boxes.forEach(box => {
-            box.disabled = !box.checked && counts[Math.floor(Number(box.value) / 48)] >= maxDailySlots;
+            box.disabled = !box.checked && (counts[Math.floor(Number(box.value) / 48)] >= maxDailySlots || values.length >= 90);
         });
         if (dailyTotals) {
             dailyTotals.replaceChildren(...dayNames.slice(1).map((day, index) => {
@@ -111,8 +111,8 @@
             }));
         }
         if (limitMessage) {
-            limitMessage.hidden = overLimit.length === 0;
-            limitMessage.textContent = overLimit.length ? `Select no more than eight hours per day. Review: ${overLimit.join(", ")}.` : "";
+            limitMessage.hidden = overLimit.length === 0 && values.length <= 90;
+            limitMessage.textContent = values.length > 90 ? "Select no more than 45 hours per week." : overLimit.length ? `Select no more than eight hours per day. Review: ${overLimit.join(", ")}.` : "";
         }
 
         form.querySelectorAll("[data-summary-day]").forEach(cell => {
@@ -239,7 +239,7 @@
     document.addEventListener('availability:stale', update);
     form.addEventListener("submit", async event => {
         if (event.defaultPrevented) return;
-        if (saving || form.dataset.stale === 'true' || !hasChanges() || countsByDay(selected()).some(count => count > maxDailySlots)) {
+        if (selected().length > 90 || saving || form.dataset.stale === 'true' || !hasChanges() || countsByDay(selected()).some(count => count > maxDailySlots)) {
             event.preventDefault(); update(); return;
         }
         if (!window.fetch || !window.FormData) { submitting = true; return; }

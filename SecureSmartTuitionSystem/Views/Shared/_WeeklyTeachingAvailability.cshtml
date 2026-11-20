@@ -1,16 +1,17 @@
 ﻿@model System.Collections.Generic.IReadOnlyList<int>
 @using SecureSmartTuitionSystem.Services.Tutor
+@{ var week=ViewData["AvailabilityWeek"] as DateTime?; var adjusted=ViewData["AdjustedDays"] as List<int> ?? []; }
 <div class="table-responsive">
     <table class="table align-middle mb-0 availability-summary-table" data-pagination="off">
         <caption class="visually-hidden">Regular weekly teaching availability, Monday to Saturday, in Malaysia time</caption>
-        <thead><tr><th scope="col" data-sortable="false">No.</th><th scope="col" data-sortable="false">Day</th><th scope="col" data-sortable="false">Available Times</th><th scope="col" data-sortable="false">Total Hours</th></tr></thead>
+        <thead><tr><th scope="col" data-sortable="false">No.</th><th scope="col" data-sortable="false">@(week.HasValue ? "Date" : "Day")</th><th scope="col" data-sortable="false">Available Times</th><th scope="col" data-sortable="false">Total Hours</th></tr></thead>
         <tbody>
         @foreach (var day in Enumerable.Range(1, 6))
         {
             var values = Model.Where(TutorAvailabilityPolicy.IsOpen).Distinct().Where(value => value / 48 == day).ToList();
             var description = TutorAvailabilityService.DescribeDay(values, day);
             <tr>
-                <td>@day</td><th scope="row">@((DayOfWeek)day)</th>
+                <td>@day</td><th scope="row">@(week.HasValue ? week.Value.AddDays(day-1).ToString("ddd dd MMM") : ((DayOfWeek)day).ToString()) @if(adjusted.Contains(day)){<span class="availability-adjusted">Adjusted</span>}</th>
                 <td>
                     @if (values.Count == 0) { <span class="text-muted">Not available</span> }
                     else { <div class="availability-time-ranges">@foreach (var range in description.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) { <span class="availability-time-chip">@range</span> }</div> }

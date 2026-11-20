@@ -19,7 +19,7 @@
           asp-action="Index"
           method="post"
           data-stale="@(ViewData["AvailabilityStale"] is true ? "true" : "false")"
-          data-live-url="@Url.Action("Index", new { partial = true })"
+          data-live-url="@Url.Action("Index", new { partial = true, template = true })"
           data-save-failed="@(ViewData["AvailabilitySaveFailed"] is true ? "true" : "false")"
     >
         @Html.AntiForgeryToken()
@@ -35,7 +35,7 @@
             <h2><i class="bi bi-calendar-week" aria-hidden="true"></i> Weekly Teaching Availability</h2>
             <div class="tutor-info-note mb-4">
                 <i class="bi bi-info-circle" aria-hidden="true"></i>
-                <span>Select up to eight hours per day within Monday–Saturday, 08:00–22:00 MYT. Each slot is 30 minutes. Leave your meal and rest times unselected. Sunday is closed. Saving does not change existing classes.</span>
+                <span>Monday–Saturday · 08:00–22:00 MYT · Maximum 8 hours per day and 45 hours per week. Leave meal and rest times out. This pattern repeats every week.</span>
             </div>
             @if (Model.LegacySlots.Count > 0)
             {
@@ -55,6 +55,36 @@
                     <span asp-validation-for="RemoveLegacySlots" class="text-danger"></span>
                 </div>
             }
+            <div id="availability-range-editor" hidden>
+                <div class="availability-range-heading"><h3>Add Available Time</h3><strong data-range-total aria-live="polite"></strong></div>
+                <fieldset class="availability-range-days">
+                    <legend>Days</legend>
+                    @foreach (var day in days)
+                    {
+                        <label><input type="checkbox" value="@day" data-range-day /><span>@(((DayOfWeek)day).ToString().Substring(0, 3))</span></label>
+                    }
+                </fieldset>
+                <div class="availability-range-inputs">
+                    <label>Start Time<select class="form-select" data-range-start>
+                        @for (int slot = 16; slot < 44; slot++)
+                        {
+                            <option value="@slot">@(new TimeOnly(slot / 2, slot % 2 * 30).ToString("HH:mm"))</option>
+                        }
+                    </select></label>
+                    <label>End Time<select class="form-select" data-range-end>
+                        @for (int slot = 17; slot <= 44; slot++)
+                        {
+                            <option value="@slot">@(new TimeOnly(slot / 2, slot % 2 * 30).ToString("HH:mm"))</option>
+                        }
+                    </select></label>
+                    <button type="button" class="outline-button" data-range-add>+ Add Time</button>
+                    <button type="button" class="outline-button" data-range-cancel hidden>Cancel Edit</button>
+                </div>
+                <p data-range-message role="status" aria-live="polite" hidden></p>
+                <div class="availability-range-heading availability-range-list-heading"><h3>Your Weekly Availability</h3><span class="form-text">Changes take effect after saving.</span></div>
+                <div data-range-list aria-label="Selected weekly availability"></div>
+            </div>
+            <div data-availability-grid-fallback>
             <div id="availability-day-totals" class="availability-day-totals" role="status" aria-live="polite"></div>
             <p id="availability-limit-message" class="text-danger" role="alert" hidden></p>
             <p id="availability-help">Tick available slots; untick to remove. This pattern repeats every week.</p>
@@ -85,6 +115,7 @@
                     </tbody>
                 </table>
             </div>
+            </div>
         </section>
         <div class="class-form-actions">
             <a asp-controller="TutorAvailability" asp-action="Index" class="outline-button">Cancel</a>
@@ -94,6 +125,7 @@
 </div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/tutor-availability-ranges.js" asp-append-version="true"></script>
     <script src="~/js/tutor-availability.js" asp-append-version="true"></script>
     <script src="~/js/tutor-availability-live.js" asp-append-version="true"></script>
 }
