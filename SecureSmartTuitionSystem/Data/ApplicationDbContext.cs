@@ -1,4 +1,4 @@
-﻿using SecureSmartTuitionSystem.Models.Video;
+using SecureSmartTuitionSystem.Models.Video;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -70,6 +70,8 @@ namespace SecureSmartTuitionSystem.Data
         private void PrepareAuditEntries()
         {
             ChangeTracker.DetectChanges();
+            if (ChangeTracker.Entries<SecureSmartTuitionSystem.Models.Progress.ProgressChange>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
+                throw new InvalidOperationException("Teaching progress history cannot be modified or deleted.");
             if (ChangeTracker.Entries<AuditLogEntry>().Any(x =>
                 x.State is EntityState.Modified or EntityState.Deleted))
                 throw new InvalidOperationException("Audit entries cannot be modified or deleted.");
@@ -217,6 +219,39 @@ namespace SecureSmartTuitionSystem.Data
             ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<SecureSmartTuitionSystem.Models.Progress.ProgressSyllabus>(e => {
+                e.ToTable("ProgressSyllabuses",t=>t.HasCheckConstraint("CK_ProgressSyllabus_Year","[AcademicYear] BETWEEN 2000 AND 2100 AND YEAR([TrackingFrom]) = [AcademicYear]"));
+                e.HasIndex(x=>new{x.SubjectId,x.AcademicYear}).IsUnique();
+                e.HasOne(x=>x.Subject).WithMany().HasForeignKey(x=>x.SubjectId).OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<SecureSmartTuitionSystem.Models.Progress.ProgressTopic>(e=>{
+                e.ToTable("ProgressTopics",t=>t.HasCheckConstraint("CK_ProgressTopic_Numbers","[Chapter] BETWEEN 1 AND 20 AND [Subchapter] BETWEEN 1 AND 20"));
+                e.HasIndex(x=>new{x.SyllabusId,x.Chapter,x.Subchapter}).IsUnique();
+                e.HasOne(x=>x.Syllabus).WithMany(x=>x.Topics).HasForeignKey(x=>x.SyllabusId).OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<SecureSmartTuitionSystem.Models.Progress.ProgressClassState>(e=>{
+                e.ToTable("ProgressClassStates");e.HasKey(x=>x.ClassSessionId);
+                e.HasOne(x=>x.ClassSession).WithMany().HasForeignKey(x=>x.ClassSessionId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x=>x.Syllabus).WithMany().HasForeignKey(x=>x.SyllabusId).OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<SecureSmartTuitionSystem.Models.Progress.ProgressTopicState>(e=>{
+                e.ToTable("ProgressTopicStates",t=>t.HasCheckConstraint("CK_ProgressTopicState_Percent","[Percent] IN (0,25,50,75,100) AND (([Percent] = 100 AND [CompletedAtUtc] IS NOT NULL) OR ([Percent] < 100 AND [CompletedAtUtc] IS NULL))"));
+                e.HasKey(x=>new{x.ClassSessionId,x.TopicId});
+                e.HasOne(x=>x.ClassState).WithMany().HasForeignKey(x=>x.ClassSessionId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x=>x.Topic).WithMany().HasForeignKey(x=>x.TopicId).OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<SecureSmartTuitionSystem.Models.Progress.ProgressLessonRecord>(e=>{
+                e.ToTable("ProgressLessonRecords");e.HasIndex(x=>new{x.ClassSessionId,x.LessonDate,x.ChangeKey}).IsUnique();
+                e.HasOne(x=>x.ClassState).WithMany().HasForeignKey(x=>x.ClassSessionId).OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<SecureSmartTuitionSystem.Models.Progress.ProgressChange>(e=>{
+                e.ToTable("ProgressChanges");e.HasIndex(x=>new{x.ClassSessionId,x.RecordedAtUtc});
+                e.HasOne(x=>x.ClassState).WithMany().HasForeignKey(x=>x.ClassSessionId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x=>x.LessonRecord).WithMany().HasForeignKey(x=>x.LessonRecordId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x=>x.Topic).WithMany().HasForeignKey(x=>x.TopicId).OnDelete(DeleteBehavior.Restrict);
+            });
+
             builder.Entity<EmailChangeRequest>(entity =>
             {
                 entity.ToTable("EmailChangeRequests");

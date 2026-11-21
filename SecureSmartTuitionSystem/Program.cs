@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
@@ -56,6 +56,7 @@ builder.Services.AddScoped<IGuestEnquiryEmailSender, GuestEnquiryEmailSender>();
 builder.Services.AddScoped<EnrollmentNoticeService>();
 builder.Services.AddScoped<IEnrollmentNoticeSender, EnrollmentNoticeSender>();
 builder.Services.AddHostedService<EnrollmentNoticeWorker>();
+builder.Services.AddHostedService<SecureSmartTuitionSystem.Services.Learning.AssessmentReminderWorker>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotKnowledgeStore>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotContextService>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotAssistantService>();
@@ -459,12 +460,14 @@ for (int attempt = 1; attempt <= maxInitializationAttempts; attempt++)
 
         var tutorTimer = System.Diagnostics.Stopwatch.StartNew();
 
+        await DbInitializer.SeedInitialAccountsAsync(app.Services, app.Configuration, app.Environment);
+
         await DbInitializer.BootstrapAdminAsync(app.Services, app.Configuration);
 
         tutorTimer.Stop();
 
         app.Logger.LogWarning(
-            "PERFORMANCE: BootstrapAdminAsync took {ElapsedMs} ms.",
+            "PERFORMANCE: Account initialization took {ElapsedMs} ms.",
             tutorTimer.ElapsedMilliseconds);
 
         initializationTimer.Stop();

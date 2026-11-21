@@ -1,4 +1,4 @@
-﻿using SecureSmartTuitionSystem.Services.Enrollment;
+using SecureSmartTuitionSystem.Services.Enrollment;
 using System.Data;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -855,6 +855,9 @@ namespace SecureSmartTuitionSystem.Controllers
                     ModelState.AddModelError("", "A closed class is read-only. Create a new class session to offer this class again.");
                     return;
                 }
+                if (model.EndDate.HasValue && await _context.Set<SecureSmartTuitionSystem.Models.Progress.ProgressLessonRecord>()
+                    .AnyAsync(r => r.ClassSessionId == existingClassSessionId.Value && (r.LessonDate > model.EndDate.Value.Date || r.OriginalDate > model.EndDate.Value.Date)))
+                    ModelState.AddModelError(nameof(model.EndDate), "End date cannot exclude an existing teaching progress record.");
                 bool promised = await _context.EnrollmentApplications.AnyAsync(x => (x.Status == EnrollmentStatus.ApprovedPendingPayment || x.Status == EnrollmentStatus.PaymentConfirmed) && x.SelectedSubjects.Any(y => y.ClassSessionId == existingClassSessionId.Value)) ||
                     await _context.StudentEnrollments.AnyAsync(x => x.ClassSessionId == existingClassSessionId.Value && (x.Status == StudentEnrollmentStatus.Active || x.Status == StudentEnrollmentStatus.PendingDrop));
                 if (previous != null && (ClassScheduleService.FirstDate(previous) <= ClassScheduleService.Today || promised) &&

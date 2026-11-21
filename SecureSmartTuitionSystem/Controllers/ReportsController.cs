@@ -6,11 +6,11 @@ using SecureSmartTuitionSystem.Services.Reporting;
 
 namespace SecureSmartTuitionSystem.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,Tutor")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class ReportsController(ApplicationDbContext db) : Controller
 {
-    [HttpGet]
+    [HttpGet, Authorize(Roles = "Admin")]
     public async Task<IActionResult> Index(string? end, int? months, CancellationToken ct, int? year = null, int? month = null)
     {
         if (!ModelState.IsValid || (months ?? 1) is < 1 or > 12) return BadRequest("Choose a period from 1 to 12 months.");
@@ -27,6 +27,22 @@ public sealed class ReportsController(ApplicationDbContext db) : Controller
         return View(await new IncomeReportService(db).BuildAsync(endMonth, months ?? 1, ct));
     }
 
+    [HttpGet, Authorize(Roles = "Admin,Tutor")]
+    public async Task<IActionResult> Academic([FromQuery] SecureSmartTuitionSystem.ViewModels.Reporting.AcademicReportFilter filter, CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return BadRequest("Choose valid year, subject and class filters.");
+        return View(await new AcademicReportService(db).BuildAsync(User, filter, ct));
+    }
+
+    [HttpGet, Authorize(Roles = "Admin,Tutor")]
+    public async Task<IActionResult> AcademicExport([FromQuery] SecureSmartTuitionSystem.ViewModels.Reporting.AcademicReportFilter filter, string format, CancellationToken ct)
+    {
+        if (!ModelState.IsValid || format is not ("pdf" or "excel")) return BadRequest("Choose a valid report format and filters.");
+        var report = await new AcademicReportService(db).BuildAsync(User, filter, ct);
+        return File(format == "pdf" ? AcademicReportExport.Pdf(report) : AcademicReportExport.Excel(report),
+            format == "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"EduSmart - Academic - {filter.Year}." + (format == "pdf" ? "pdf" : "xlsx"));
+    }
+
     private static string ReportFileName(IncomeReport report, string extension)
     {
         var start = report.Months[0].Month.ToString("MM-yyyy", CultureInfo.InvariantCulture);
@@ -35,7 +51,7 @@ public sealed class ReportsController(ApplicationDbContext db) : Controller
         return $"EduSmart - Income - {period}.{extension}";
     }
 
-    [HttpGet]
+    [HttpGet, Authorize(Roles = "Admin")]
     public async Task<IActionResult> Excel(string? end, int? months, CancellationToken ct)
     {
         if (!ModelState.IsValid || (months ?? 1) is < 1 or > 12) return BadRequest("Choose a period from 1 to 12 months.");
@@ -44,7 +60,7 @@ public sealed class ReportsController(ApplicationDbContext db) : Controller
         return File(IncomeReportExport.Excel(report), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ReportFileName(report, "xlsx"));
     }
 
-    [HttpGet]
+    [HttpGet, Authorize(Roles = "Admin")]
     public async Task<IActionResult> Pdf(string? end, int? months, CancellationToken ct)
     {
         if (!ModelState.IsValid || (months ?? 1) is < 1 or > 12) return BadRequest("Choose a period from 1 to 12 months.");

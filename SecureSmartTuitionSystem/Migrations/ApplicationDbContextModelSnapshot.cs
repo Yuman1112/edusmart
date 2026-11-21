@@ -2419,6 +2419,242 @@ namespace SecureSmartTuitionSystem.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressChange", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ActorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("After")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Before")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LateReason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("LessonRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("RecordedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("TopicId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonRecordId");
+
+                    b.HasIndex("TopicId");
+
+                    b.HasIndex("ClassSessionId", "RecordedAtUtc");
+
+                    b.ToTable("ProgressChanges", (string)null);
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressClassState", b =>
+                {
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SyllabusId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ClassSessionId");
+
+                    b.HasIndex("SyllabusId");
+
+                    b.ToTable("ProgressClassStates", (string)null);
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressLessonRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChangeKey")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly>("End")
+                        .HasColumnType("time");
+
+                    b.Property<string>("LateReason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("LessonDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("OriginalDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<TimeOnly>("Start")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime>("SubmittedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("SubmittedLate")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TutorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClassSessionId", "LessonDate", "ChangeKey")
+                        .IsUnique();
+
+                    b.ToTable("ProgressLessonRecords", (string)null);
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressSyllabus", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AcademicYear")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("TrackingFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId", "AcademicYear")
+                        .IsUnique();
+
+                    b.ToTable("ProgressSyllabuses", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProgressSyllabus_Year", "[AcademicYear] BETWEEN 2000 AND 2100 AND YEAR([TrackingFrom]) = [AcademicYear]");
+                        });
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressTopic", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Chapter")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ChapterTitle")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Subchapter")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SyllabusId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SyllabusId", "Chapter", "Subchapter")
+                        .IsUnique();
+
+                    b.ToTable("ProgressTopics", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProgressTopic_Numbers", "[Chapter] BETWEEN 1 AND 20 AND [Subchapter] BETWEEN 1 AND 20");
+                        });
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressTopicState", b =>
+                {
+                    b.Property<int>("ClassSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TopicId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Percent")
+                        .HasColumnType("int");
+
+                    b.HasKey("ClassSessionId", "TopicId");
+
+                    b.HasIndex("TopicId");
+
+                    b.ToTable("ProgressTopicStates", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProgressTopicState_Percent", "[Percent] IN (0,25,50,75,100) AND (([Percent] = 100 AND [CompletedAtUtc] IS NOT NULL) OR ([Percent] < 100 AND [CompletedAtUtc] IS NULL))");
+                        });
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Security.AuditLogEntry", b =>
                 {
                     b.Property<long>("AuditLogEntryId")
@@ -3587,6 +3823,102 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Navigation("LearningMaterial");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressChange", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Progress.ProgressClassState", "ClassState")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Progress.ProgressLessonRecord", "LessonRecord")
+                        .WithMany()
+                        .HasForeignKey("LessonRecordId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Progress.ProgressTopic", "Topic")
+                        .WithMany()
+                        .HasForeignKey("TopicId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ClassState");
+
+                    b.Navigation("LessonRecord");
+
+                    b.Navigation("Topic");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressClassState", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.ClassSession", "ClassSession")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Progress.ProgressSyllabus", "Syllabus")
+                        .WithMany()
+                        .HasForeignKey("SyllabusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassSession");
+
+                    b.Navigation("Syllabus");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressLessonRecord", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Progress.ProgressClassState", "ClassState")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassState");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressSyllabus", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Enrollment.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressTopic", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Progress.ProgressSyllabus", "Syllabus")
+                        .WithMany("Topics")
+                        .HasForeignKey("SyllabusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Syllabus");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressTopicState", b =>
+                {
+                    b.HasOne("SecureSmartTuitionSystem.Models.Progress.ProgressClassState", "ClassState")
+                        .WithMany()
+                        .HasForeignKey("ClassSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SecureSmartTuitionSystem.Models.Progress.ProgressTopic", "Topic")
+                        .WithMany()
+                        .HasForeignKey("TopicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClassState");
+
+                    b.Navigation("Topic");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Security.SecurityEmailDelivery", b =>
                 {
                     b.HasOne("SecureSmartTuitionSystem.Models.Security.AuditLogEntry", null)
@@ -3804,6 +4136,11 @@ namespace SecureSmartTuitionSystem.Migrations
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Learning.Assessment", b =>
                 {
                     b.Navigation("Participants");
+                });
+
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Progress.ProgressSyllabus", b =>
+                {
+                    b.Navigation("Topics");
                 });
 
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Tutor.TutorQualificationUpdateRequest", b =>

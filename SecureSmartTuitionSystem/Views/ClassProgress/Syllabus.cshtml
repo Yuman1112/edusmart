@@ -1,0 +1,13 @@
+@model SecureSmartTuitionSystem.ViewModels.Progress.SyllabusForm
+@{ViewData["Title"]="Subject Teaching Outline";}
+@section Styles { <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true"/><link rel="stylesheet" href="~/css/class-progress.css" asp-append-version="true"/> }
+<h1>Subject Teaching Outline</h1><p>@Model.ClassLabel</p>
+@if(TempData["ProgressError"] is string e){<div class="progress-alert" role="alert">@e</div>}
+@if(TempData["ProgressSuccess"] is string ok){<div class="alert alert-success" role="status">@ok</div>}
+<section class="reports-card"><p>This outline is shared by classes of this subject and academic year. Each chapter supports up to 20 subchapters. Enter one subchapter name per line. Leave unused chapters entirely blank. Once any class saves its first teaching record, the entire outline is locked to preserve progress and history.</p>
+@if(Model.Locked){<div class="progress-alert">Outline locked: teaching records already exist. Existing subchapters cannot be removed, renamed or renumbered.</div>}
+<form asp-action="Syllabus" method="post"><input asp-for="ClassId" type="hidden"/><input asp-for="Version" type="hidden"/>
+<label asp-for="TrackingFrom" class="form-label">Start tracking lessons from</label><input asp-for="TrackingFrom" type="date" class="form-control" disabled="@Model.Locked"/>
+<fieldset disabled="@Model.Locked"><div class="progress-outline">@for(int i=0;i<Model.Chapters.Count;i++){<section class="progress-chapter"><h2>Chapter @(i+1)</h2><label asp-for="Chapters[i].Title">Chapter title</label><input asp-for="Chapters[i].Title" class="form-control" maxlength="100"/><label asp-for="Chapters[i].Subchapters">Subchapters (one per line, maximum 20)</label><textarea asp-for="Chapters[i].Subchapters" class="form-control" rows="4" maxlength="2100"></textarea></section>}</div>
+<button type="submit" class="primary-button">Save outline</button></fieldset></form></section>
+<a class="outline-button" asp-action="Details" asp-route-id="@Model.ClassId">← Back to class progress</a>

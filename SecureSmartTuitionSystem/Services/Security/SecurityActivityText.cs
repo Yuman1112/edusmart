@@ -31,6 +31,7 @@ public static class SecurityActivityText
         ["EnrollmentApplicationSubject"]="selected class", ["Bill"]="enrollment bill", ["Payment"]="payment",
         ["MonthlyInvoice"]="monthly tuition bill", ["MonthlyInvoiceLine"]="monthly bill item",
         ["BillingReminder"]="billing notification", ["EnrollmentExitRequest"]="withdrawal request",
+        ["ProgressSyllabus"]="subject teaching outline", ["ProgressTopic"]="teaching subchapter", ["ProgressClassState"]="class teaching progress", ["ProgressTopicState"]="subchapter progress", ["ProgressLessonRecord"]="lesson teaching record", ["ProgressChange"]="teaching progress history",
         ["UserNotification"]="notification", ["Conversation"]="conversation", ["ChatMessage"]="message",
         ["MessageAttachment"]="message attachment", ["AttendanceRecord"]="attendance record"
     };

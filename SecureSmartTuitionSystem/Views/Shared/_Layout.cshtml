@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @using SecureSmartTuitionSystem.Models.Identity
 
 @{
@@ -684,6 +684,7 @@
                         </div>
                     </div>
 
+                    <a class="sidebar-link @(currentController == "ClassProgress" ? "active" : "")" asp-controller="ClassProgress" asp-action="Index"><i class="bi bi-check2-square" aria-hidden="true"></i><span>@(isAdmin ? "Class Progress Overview" : "Class Progress")</span></a>
                     @if (isAdmin)
                     {
                         <!-- Admin: Reports & Security -->
@@ -705,12 +706,9 @@
                     else
                     {
                         <!-- Tutor: Reports -->
-                        <span class="sidebar-link disabled-link"
-                              aria-disabled="true"
-                              title="This module will be developed later">
-                            <i class="bi bi-bar-chart" aria-hidden="true"></i>
-                            <span>Reports</span>
-                        </span>
+                        <a class="sidebar-link @(currentController == "Reports" ? "active" : "")" asp-controller="Reports" asp-action="Academic">
+                            <i class="bi bi-bar-chart" aria-hidden="true"></i><span>Reports &amp; Analytics</span>
+                        </a>
                     }
 
                 </nav>
