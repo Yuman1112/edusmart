@@ -9,6 +9,10 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
+    @if (studentView)
+    {
+        <link rel="stylesheet" href="~/css/student-material-details.css" asp-append-version="true" />
+    }
 }
 
 <div class="learning-materials-page @(studentView ? "student-material-page" : "")">
@@ -51,9 +55,10 @@
              *@
             @if (!string.IsNullOrWhiteSpace(Model.Description))
             {
-                <p class="material-description student-material-notes">
-                    @Model.Description
-                </p>
+                <section class="student-material-description" aria-labelledby="studentDescriptionTitle">
+                    <h2 id="studentDescriptionTitle"><i class="bi bi-text-left" aria-hidden="true"></i> Description</h2>
+                    <p class="material-description student-material-notes">@Model.Description</p>
+                </section>
             }
         }
         else
@@ -90,7 +95,7 @@
         {
             <p class="student-files-hint">Select a PDF or image to preview it. Office files download directly.</p>
         }
-        <ul class="@(studentView ? "student-material-files" : "staff-material-detail-files")">
+        <ul class="@(studentView ? (Model.Attachments.Count == 1 ? "student-material-files student-material-files-single" : "student-material-files") : "staff-material-detail-files")">
             @foreach (var file in Model.Attachments)
             {
                 var previewType = MaterialFileService.PreviewContentType(file.Name);
@@ -124,6 +129,10 @@
                         </div>
                     </div>
                     <div class="material-actions">
+                        @if (studentView && previewType != null)
+                        {
+                            <a href="@previewUrl" target="_blank" rel="noopener" class="primary-button student-material-preview-button" data-material-preview data-preview-name="@file.Name" data-preview-type="@previewType"><i class="bi bi-eye" aria-hidden="true"></i> Preview</a>
+                        }
                         @if (!studentView && previewType != null)
                         {
                             <a href="@previewUrl" target="_blank" rel="noopener" class="outline-button" data-material-preview data-preview-name="@file.Name" data-preview-type="@previewType">Preview</a>

@@ -1,0 +1,16 @@
+﻿/* Scoped to the student material details page. */
+.student-material-page .student-material-summary { padding-bottom: 20px; margin-bottom: 24px; }
+.student-material-page .student-material-description { padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--border, #d4e7ed); }
+.student-material-page .student-material-description h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--navy, #073563); font-size: 1rem; font-weight: 700; }
+.student-material-page .student-material-description h2 i { color: var(--teal, #0798a4); }
+.student-material-page .student-material-description .student-material-notes { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; line-height: 1.7; }
+.student-material-page .student-material-files-single { grid-template-columns: minmax(0, 1fr); }
+.student-material-page .student-file-card { flex-wrap: wrap; min-width: 0; }
+.student-material-page .student-file-card .material-file-caption { flex: 1 1 200px; min-width: 0; }
+.student-material-page .student-file-card .material-actions { display: flex; flex-wrap: wrap; gap: 8px; max-width: 100%; }
+.student-material-page .student-material-preview-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 11px; font-size: .8rem; }
+@media (max-width: 575.98px) {
+    .student-material-page .student-file-card .material-file-caption { flex-basis: 100%; }
+    .student-material-page .student-file-card .material-actions { width: 100%; margin-left: 0; }
+    .student-material-page .student-file-card .material-actions > a { flex: 1; justify-content: center; min-height: 44px; }
+}
