@@ -11,59 +11,153 @@ using SecureSmartTuitionSystem.ViewModels.Enrollment;
 namespace SecureSmartTuitionSystem.Services.Attendance;
 public sealed class AttendanceService(ApplicationDbContext db)
 {
-    public static bool ValidSort(string? sort) => sort is "date_asc" or "date_desc" or "class_asc" or "class_desc" or "tutor_asc" or "tutor_desc" or "state_asc" or "state_desc";
-    private static int StateOrder(string state) => state switch { "Upcoming" => 0, "Unrecorded" => 1, "Draft" => 2, "Pending submission" => 3, "Reopened" => 4, "Submitted" => 5, "Submitted late" => 5, "Locked" => 6, _ => 7 };
-    public static List<AttendanceLessonRow> SortLessons(IEnumerable<AttendanceLessonRow> rows, string sort)
+    public static bool ValidSort(
+        string? sort) => sort is "date_asc"
+        or "date_desc"
+        or "class_asc"
+        or "class_desc"
+        or "tutor_asc"
+        or "tutor_desc"
+        or "state_asc"
+        or "state_desc";
+    private static int StateOrder(string state) => state switch
+    {
+        "Upcoming" => 0,
+        "Unrecorded" => 1,
+        "Draft" => 2,
+        "Pending submission" => 3,
+        "Reopened" => 4,
+        "Submitted" => 5,
+        "Submitted late" => 5,
+        "Locked" => 6,
+        _ => 7
+    };
+    public static List<AttendanceLessonRow> SortLessons(
+        IEnumerable<AttendanceLessonRow> rows,
+        string sort)
     {
         var ordered = sort switch
         {
-            "date_desc" => rows.OrderByDescending(x => x.Date).ThenByDescending(x => x.Start),
-            "class_asc" => rows.OrderBy(x => x.ClassCode, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Date),
-            "class_desc" => rows.OrderByDescending(x => x.ClassCode, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Date),
-            "tutor_asc" => rows.OrderBy(x => x.TutorName, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Date),
-            "tutor_desc" => rows.OrderByDescending(x => x.TutorName, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Date),
-            "state_asc" => rows.OrderBy(x => StateOrder(x.State)).ThenBy(x => x.Date),
-            "state_desc" => rows.OrderByDescending(x => StateOrder(x.State)).ThenBy(x => x.Date),
+            "date_desc" => rows
+                .OrderByDescending(x => x.Date)
+                .ThenByDescending(x => x.Start),
+            "class_asc" => rows.OrderBy(x => x.ClassCode,
+                StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Date),
+            "class_desc" => rows.OrderByDescending(x => x.ClassCode,
+                StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.Date),
+            "tutor_asc" => rows.OrderBy(x => x.TutorName,
+                StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Date),
+            "tutor_desc" => rows.OrderByDescending(x => x.TutorName,
+                StringComparer.OrdinalIgnoreCase)
+                .ThenBy(x => x.Date),
+            "state_asc" => rows
+                .OrderBy(x => StateOrder(x.State))
+                .ThenBy(x => x.Date),
+            "state_desc" => rows
+                .OrderByDescending(x => StateOrder(x.State))
+                .ThenBy(x => x.Date),
             _ => rows.OrderBy(x => x.Date).ThenBy(x => x.Start)
         };
-        return ordered.ThenBy(x => x.Start).ThenBy(x => x.ClassCode).ThenBy(x => x.ClassSessionId).ThenBy(x => x.SavedId).ThenBy(x => x.ChangeId).ToList();
+        return ordered.ThenBy(x => x.Start)
+            .ThenBy(x => x.ClassCode)
+            .ThenBy(x => x.ClassSessionId)
+            .ThenBy(x => x.SavedId)
+            .ThenBy(x => x.ChangeId)
+            .ToList();
     }
-
-    public static bool Editable(DateTime date, TimeOnly start, TimeOnly end, DateTime? submitted, DateTime now) =>
+    public static bool Editable(
+        DateTime date,
+        TimeOnly start,
+        TimeOnly end,
+        DateTime? submitted,
+        DateTime now) =>
         AttendanceEntryPolicy.CanEdit(date, start, end, submitted, now);
-    public static string State(DateTime date, TimeOnly start, TimeOnly end, DateTime? submitted, bool saved, DateTime now) =>
-        submitted != null ? "Submitted" : now >= AttendanceEntryPolicy.Deadline(date,end) ? (saved ? "Locked" : "Unrecorded (locked)")
-        : now < date.Date.Add(start.ToTimeSpan()) ? "Upcoming" : now >= AttendanceEntryPolicy.LessonEnd(date,end) ? "Pending submission" : saved ? "Draft" : "Unrecorded";
-    private IQueryable<AttendanceLesson> Saved(string userId, bool admin) => db.Set<AttendanceLesson>().AsNoTracking()
+    public static string State(
+        DateTime date,
+        TimeOnly start,
+        TimeOnly end,
+        DateTime? submitted,
+        bool saved,
+        DateTime now) =>
+        submitted != null
+            ? "Submitted"
+            : now >= AttendanceEntryPolicy.Deadline(date, end)
+                ? (saved ? "Locked" : "Unrecorded (locked)")
+                : now < date.Date.Add(start.ToTimeSpan())
+                    ? "Upcoming"
+                    : now >= AttendanceEntryPolicy.LessonEnd(date, end)
+                        ? "Pending submission"
+                        : saved ? "Draft" : "Unrecorded";
+    private IQueryable<AttendanceLesson> Saved(
+        string userId,
+
+        bool admin) => db.Set<AttendanceLesson>()
+        .AsNoTracking()
         .Where(x => admin || x.TutorUserId == userId);
-    private async Task<LessonItem?> CurrentAsync(int classId, DateTime date, int? changeId, bool replacement, string userId, bool admin)
+    private async Task<LessonItem?> CurrentAsync(
+        int classId,
+         DateTime date,
+
+        int? changeId, bool replacement, string userId, bool admin)
     {
-        var lessons = await new ClassScheduleService(db).GetLessonsAsync(date.Date, date.Date, admin ? null : userId, classId);
-        return lessons.FirstOrDefault(x => !x.Cancelled && x.Class.Status == ClassSessionStatus.Active
+        var lessons = await new ClassScheduleService(db).GetLessonsAsync(date.Date,
+            date.Date, admin ? null : userId, classId);
+        return lessons.FirstOrDefault(x => !x.Cancelled
+            && x.Class.Status == ClassSessionStatus.Active
             && x.Replacement == replacement && x.ChangeId == changeId);
     }
-    private static bool Same(AttendanceLesson saved, LessonItem current) =>
-        saved.ClassSessionId == current.Class.ClassSessionId && saved.OriginalDate == current.OriginalDate.Date
-        && saved.LessonDate == current.Date.Date && saved.IsReplacement == current.Replacement
-        && saved.ClassLessonChangeId == current.ChangeId && saved.StartTime == current.Start
-        && saved.EndTime == current.End && saved.TutorUserId == current.Class.TutorUserId;
+    private static bool Same(
+        AttendanceLesson saved,
+         LessonItem current) =>
+        saved.ClassSessionId == current.Class.ClassSessionId
+        && saved.OriginalDate == current.OriginalDate.Date
+        && saved.LessonDate == current.Date.Date
+        && saved.IsReplacement == current.Replacement
+        && saved.ClassLessonChangeId == current.ChangeId
+        && saved.StartTime == current.Start
+        && saved.EndTime == current.End
+        && saved.TutorUserId == current.Class.TutorUserId;
     private async Task<List<int>> RosterAsync(LessonItem lesson)
     {
-        if (!lesson.Replacement) return await new ClassScheduleService(db).RosterAsync(lesson.Class.ClassSessionId, lesson.Date.Date);
-        var json = await db.ClassLessonChanges.AsNoTracking().Where(x => x.ClassLessonChangeId == lesson.ChangeId)
+        if (!lesson.Replacement)
+            return await new ClassScheduleService(db).RosterAsync(lesson.Class.ClassSessionId,
+            lesson.Date.Date);
+        var json = await db.ClassLessonChanges
+            .AsNoTracking()
+            .Where(x => x.ClassLessonChangeId == lesson.ChangeId)
             .Select(x => x.StudentIdsJson).SingleAsync();
-        return (JsonSerializer.Deserialize<List<int>>(json) ?? []).Distinct().ToList();
+        return (JsonSerializer.Deserialize<List<int>>(json) ?? []).Distinct()
+            .ToList();
     }
-    public async Task<AttendanceIndexViewModel> IndexAsync(DateTime date, string userId, bool admin, string sort = "date_asc")
+    public async Task<AttendanceIndexViewModel> IndexAsync(
+        DateTime date,
+         string userId,
+
+        bool admin, string sort = "date_asc")
     {
         var monday = date.Date.AddDays(-(((int)date.DayOfWeek + 6) % 7));
-        var model = new AttendanceIndexViewModel { WeekStart = monday, IsAdmin = admin, Sort = sort };
-        var saved = await Saved(userId, admin).Where(x => x.LessonDate >= monday && x.LessonDate <= model.WeekEnd).ToListAsync();
-        var lessons = await new ClassScheduleService(db).GetLessonsAsync(monday, model.WeekEnd, admin ? null : userId);
-        var now = ClassScheduleService.Now;
-        foreach (var lesson in lessons.Where(x => !x.Cancelled && x.Class.Status == ClassSessionStatus.Active))
+        var model = new AttendanceIndexViewModel
         {
-            if (saved.Any(x => x.ClassSessionId == lesson.Class.ClassSessionId && x.OriginalDate == lesson.OriginalDate.Date && x.IsReplacement == lesson.Replacement)) continue;
+            WeekStart = monday,
+            IsAdmin = admin,
+            Sort = sort
+        };
+        var saved = await Saved(userId, admin)
+            .Where(x => x.LessonDate >= monday
+            && x.LessonDate <= model.WeekEnd)
+            .ToListAsync();
+        var lessons = await new ClassScheduleService(db).GetLessonsAsync(monday,
+            model.WeekEnd, admin ? null : userId);
+        var now = ClassScheduleService.Now;
+
+        foreach (var lesson in lessons.Where(x => !x.Cancelled
+            && x.Class.Status == ClassSessionStatus.Active))
+        {
+            if (saved.Any(x => x.ClassSessionId == lesson.Class.ClassSessionId
+                && x.OriginalDate == lesson.OriginalDate.Date
+                && x.IsReplacement == lesson.Replacement))
+                continue;
             model.Lessons.Add(new AttendanceLessonRow
             {
                 ClassSessionId = lesson.Class.ClassSessionId,
@@ -78,6 +172,7 @@ public sealed class AttendanceService(ApplicationDbContext db)
                 State = State(lesson.Date, lesson.Start, lesson.End, null, false, now)
             });
         }
+
         foreach (var record in saved)
             model.Lessons.Add(new AttendanceLessonRow
             {
@@ -91,26 +186,70 @@ public sealed class AttendanceService(ApplicationDbContext db)
                 TutorName = record.TutorName,
                 Start = record.StartTime,
                 End = record.EndTime,
-                State = record.SubmittedLate ? "Submitted late" : State(record.LessonDate, record.StartTime, record.EndTime, record.SubmittedAtUtc, true, now)
+                State = record.SubmittedLate ? "Submitted late" : State(record.LessonDate,
+                    record.StartTime, record.EndTime, record.SubmittedAtUtc,
+                    true, now)
             });
-        var grants = await db.Set<AttendanceReopenRequest>().AsNoTracking().Where(r => r.Decision == AttendanceReopenDecision.Approved && r.OpenUntilUtc > DateTime.UtcNow && (admin || r.TutorUserId == userId)).ToListAsync();
-        foreach (var row in model.Lessons.Where(r => !r.State.StartsWith("Submitted")))
-            if (grants.Any(g => g.ClassSessionId == row.ClassSessionId && g.LessonDate == row.Date.Date && g.StartTime == row.Start && g.EndTime == row.End && g.ChangeId == row.ChangeId && g.IsReplacement == row.Replacement)) row.State = "Reopened";
+        var grants = await db.Set<AttendanceReopenRequest>()
+            .AsNoTracking()
+            .Where(r => r.Decision == AttendanceReopenDecision.Approved
+            && r.OpenUntilUtc > DateTime.UtcNow
+            && (admin
+            || r.TutorUserId == userId))
+            .ToListAsync();
+
+        foreach (var row in model.Lessons
+            .Where(r => !r.State.StartsWith("Submitted")))
+            if (grants.Any(g => g.ClassSessionId == row.ClassSessionId
+                && g.LessonDate == row.Date.Date
+                && g.StartTime == row.Start
+                && g.EndTime == row.End
+                && g.ChangeId == row.ChangeId
+                    && g.IsReplacement == row.Replacement)) row.State = "Reopened";
         model.Lessons = SortLessons(model.Lessons, sort);
         return model;
     }
-    public async Task<AttendanceSheetViewModel?> SheetAsync(int classId, DateTime date, int? changeId, bool replacement, int? savedId, string userId, bool admin)
+    public async Task<AttendanceSheetViewModel?> SheetAsync(
+        int classId,
+         DateTime date,
+
+        int? changeId, bool replacement, int? savedId, string userId, bool admin)
     {
         AttendanceLesson? saved;
+
         if (savedId.HasValue)
-            saved = await Saved(userId, admin).Include(x => x.Records).SingleOrDefaultAsync(x => x.AttendanceLessonId == savedId);
+            saved = await Saved(userId, admin)
+                .Include(x => x.Records)
+                .SingleOrDefaultAsync(x => x.AttendanceLessonId == savedId);
         else
-            saved = await Saved(userId, admin).Include(x => x.Records).SingleOrDefaultAsync(x => x.ClassSessionId == classId
-                && x.LessonDate == date.Date && x.ClassLessonChangeId == changeId && x.IsReplacement == replacement);
-        if (savedId.HasValue && saved == null) return null;
-        if (saved != null) { classId = saved.ClassSessionId; date = saved.LessonDate; changeId = saved.ClassLessonChangeId; replacement = saved.IsReplacement; }
-        var lesson = await CurrentAsync(classId, date, changeId, replacement, userId, admin);
-        if (saved == null && lesson == null) return null;
+            saved = await Saved(userId, admin)
+                .Include(x => x.Records)
+                .SingleOrDefaultAsync(x => x.ClassSessionId == classId
+                    && x.LessonDate == date.Date
+                    && x.ClassLessonChangeId == changeId
+                    && x.IsReplacement == replacement);
+
+        if (savedId.HasValue && saved == null)
+            return null;
+
+        if (saved != null)
+        {
+            classId = saved.ClassSessionId;
+            date = saved.LessonDate;
+            changeId = saved.ClassLessonChangeId;
+            replacement = saved.IsReplacement;
+        }
+
+        var lesson = await CurrentAsync(
+            classId,
+            date,
+            changeId,
+            replacement,
+            userId,
+            admin);
+
+        if (saved == null && lesson == null)
+            return null;
         var model = new AttendanceSheetViewModel
         {
             ClassSessionId = classId,
@@ -124,89 +263,202 @@ public sealed class AttendanceService(ApplicationDbContext db)
             End = saved?.EndTime ?? lesson!.End,
             RowVersion = saved == null ? "" : Convert.ToBase64String(saved.RowVersion)
         };
-        model.State = State(date, model.Start, model.End, saved?.SubmittedAtUtc, saved != null, ClassScheduleService.Now);
-        var grant = lesson == null ? null : await new AttendanceReopenService(db).GrantUntilAsync(lesson);
+        model.State = State(date, model.Start, model.End, saved?.SubmittedAtUtc,
+            saved != null, ClassScheduleService.Now);
+        var grant = lesson == null
+            ? null
+            : await new AttendanceReopenService(db).GrantUntilAsync(lesson);
         model.EditUntil = AttendanceEntryPolicy.Deadline(date, model.End, grant);
-        model.IsLateEntry = AttendanceEntryPolicy.IsLate(date, model.End, ClassScheduleService.Now);
+        model.IsLateEntry = AttendanceEntryPolicy.IsLate(date,
+            model.End,
+            ClassScheduleService.Now);
         model.LateSubmissionReason = saved?.LateSubmissionReason;
         model.SubmittedAtUtc = saved?.SubmittedAtUtc;
         model.SubmittedLate = saved?.SubmittedLate ?? false;
-        model.CanRequestReopen = !admin && lesson != null && (saved == null || Same(saved, lesson)) && saved?.SubmittedAtUtc == null && ClassScheduleService.Now >= model.EditUntil;
-        model.CanEdit = !admin && lesson != null && (saved == null || Same(saved, lesson))
-            && AttendanceEntryPolicy.CanEdit(date, model.Start, model.End, saved?.SubmittedAtUtc, ClassScheduleService.Now, grant);
+        model.CanRequestReopen = !admin
+            && lesson != null
+            && (saved == null
+            || Same(saved, lesson))
+            && saved?.SubmittedAtUtc == null
+            && ClassScheduleService.Now >= model.EditUntil;
+        model.CanEdit = !admin
+            && lesson != null
+            && (saved == null
+            || Same(saved, lesson))
+                && AttendanceEntryPolicy.CanEdit(date, model.Start, model.End,
+                    saved?.SubmittedAtUtc, ClassScheduleService.Now, grant);
+
         if (!admin && lesson != null)
         {
-            model.LatestReopenRequest = await db.Set<AttendanceReopenRequest>().AsNoTracking()
-                .Where(r => r.TutorUserId == userId && r.ClassSessionId == classId
-                    && r.OriginalDate == lesson.OriginalDate.Date && r.IsReplacement == replacement)
-                .OrderByDescending(r => r.RequestedAtUtc).ThenByDescending(r => r.AttendanceReopenRequestId).FirstOrDefaultAsync();
-            if (model.CanEdit && model.IsLateEntry && string.IsNullOrWhiteSpace(model.LateSubmissionReason)
-                && model.LatestReopenRequest?.Decision == AttendanceReopenDecision.Approved
-                && AttendanceReopenService.Same(model.LatestReopenRequest, lesson))
+            model.LatestReopenRequest = await db.Set<AttendanceReopenRequest>()
+                .AsNoTracking()
+
+                    .Where(r => r.TutorUserId == userId
+                    && r.ClassSessionId == classId
+                    && r.OriginalDate == lesson.OriginalDate.Date
+                        && r.IsReplacement == replacement)
+                .OrderByDescending(r => r.RequestedAtUtc)
+
+                        .ThenByDescending(r => r.AttendanceReopenRequestId)
+                        .FirstOrDefaultAsync();
+
+            if (model.CanEdit
+                && model.IsLateEntry
+                && string.IsNullOrWhiteSpace(model.LateSubmissionReason)
+                    && model.LatestReopenRequest?.Decision == AttendanceReopenDecision.Approved
+                    && AttendanceReopenService.Same(model.LatestReopenRequest, lesson))
                 model.LateSubmissionReason = model.LatestReopenRequest.Reason;
+
             if (model.LatestReopenRequest?.Decision == AttendanceReopenDecision.Pending)
                 model.CanRequestReopen = false;
         }
+
         if (model.CanEdit && lesson != null)
         {
             var approvedRequest = await new AttendanceReopenService(db).ApprovedRequestAsync(lesson);
             model.UsesApprovedReopenReason = approvedRequest != null;
-            if (approvedRequest != null) model.LateSubmissionReason = approvedRequest.Reason;
+
+            if (approvedRequest != null)
+                model.LateSubmissionReason = approvedRequest.Reason;
         }
-        if (saved?.SubmittedLate == true) model.State = "Submitted late";
-        else if (model.CanEdit && model.IsLateEntry) model.State = grant.HasValue && grant.Value.AddHours(8) > AttendanceEntryPolicy.Deadline(date,model.End) ? "Reopened for late entry" : "Late entry window";
-        if (saved != null && (lesson == null || !Same(saved, lesson))) model.State += " · Schedule changed (read only)";
+
+        if (saved?.SubmittedLate == true)
+            model.State = "Submitted late";
+        else if (model.CanEdit
+            && model.IsLateEntry)
+            model.State = grant.HasValue
+        && grant.Value.AddHours(8) > AttendanceEntryPolicy.Deadline(date,
+            model.End) ? "Reopened for late entry" : "Late entry window";
+
+        if (saved != null
+            && (lesson == null
+            || !Same(saved, lesson)))
+            model.State += " · Schedule changed (read only)";
+
         if (saved != null)
-            model.Students = saved.Records.OrderBy(x => x.StudentNumber).Select(x => new AttendanceStudentRow
-            {
-                StudentProfileId = x.StudentProfileId,
-                StudentNumber = x.StudentNumber,
-                StudentName = x.StudentName,
-                Status = x.Status,
-                Remark = x.Remark
-            }).ToList();
+            model.Students = saved.Records
+                .OrderBy(x => x.StudentNumber)
+                .Select(x => new AttendanceStudentRow
+                {
+                    StudentProfileId = x.StudentProfileId,
+                    StudentNumber = x.StudentNumber,
+                    StudentName = x.StudentName,
+                    Status = x.Status,
+                    Remark = x.Remark
+                }).ToList();
         else
         {
             var ids = await RosterAsync(lesson!);
-            model.Students = await db.StudentProfiles.AsNoTracking().Where(x => ids.Contains(x.StudentProfileId)).OrderBy(x => x.StudentNumber)
-                .Select(x => new AttendanceStudentRow { StudentProfileId = x.StudentProfileId, StudentNumber = x.StudentNumber, StudentName = x.FullName }).ToListAsync();
+            model.Students = await db.StudentProfiles.AsNoTracking()
+                .Where(x => ids.Contains(x.StudentProfileId))
+                .OrderBy(x => x.StudentNumber)
+                .Select(x => new AttendanceStudentRow
+                {
+                    StudentProfileId = x.StudentProfileId,
+                    StudentNumber = x.StudentNumber,
+                    StudentName = x.FullName
+                }
+                ).ToListAsync();
         }
         return model;
     }
-    public async Task<string?> SaveAsync(SaveAttendanceViewModel input, string userId)
+    public async Task<string?> SaveAsync(
+        SaveAttendanceViewModel input,
+         string userId)
     {
-        if (input.Students == null || input.Students.Count == 0 || input.Students.Count > 100
-            || input.Students.Select(x => x.StudentProfileId).Distinct().Count() != input.Students.Count
-            || input.Students.Any(x => (x.Status.HasValue && !Enum.IsDefined(x.Status.Value)) || x.Remark?.Length > 300))
+        if (input.Students == null
+            || input.Students.Count == 0
+            || input.Students.Count > 100
+                || input.Students
+                .Select(x => x.StudentProfileId).Distinct().Count() != input.Students.Count
+                || input.Students.Any(x => (x.Status.HasValue
+                && !Enum.IsDefined(x.Status.Value))
+                || x.Remark?.Length > 300))
             return "Please enter valid attendance records.";
-        if (input.FinalSubmit && input.Students.Any(x => x.Status == null)) return "Select Present, Absent or Late for every student before submitting.";
+
+        if (input.FinalSubmit
+            && input.Students.Any(x => x.Status == null))
+            return "Select Present, Absent or Late for every student before submitting.";
+
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
         try
         {
-            var lesson = await CurrentAsync(input.ClassSessionId, input.Date, input.ChangeId, input.Replacement, userId, false);
-            if (lesson == null) return "This lesson is no longer available. Return to Attendance and reload.";
-            if (!await db.TutorProfiles.AnyAsync(x => x.ApplicationUserId == userId && x.IsActive && x.ApplicationUser.IsActive && !x.ApplicationUser.MustChangePassword))
+            var lesson = await CurrentAsync(input.ClassSessionId, input.Date,
+                input.ChangeId, input.Replacement, userId, false);
+
+            if (lesson == null)
+                return "This lesson is no longer available. Return to Attendance and reload.";
+
+            if (!await db.TutorProfiles.AnyAsync(x => x.ApplicationUserId == userId
+                && x.IsActive
+                && x.ApplicationUser.IsActive
+                && !x.ApplicationUser.MustChangePassword))
                 return "Your tutor account is not available for recording attendance.";
-            var saved = await db.Set<AttendanceLesson>().Include(x => x.Records).SingleOrDefaultAsync(x =>
-                x.ClassSessionId == lesson.Class.ClassSessionId && x.OriginalDate == lesson.OriginalDate.Date && x.IsReplacement == lesson.Replacement);
-            if (saved != null && (!Same(saved, lesson) || saved.TutorUserId != userId)) return "The schedule has changed. Existing attendance is read only.";
+            var saved = await db.Set<AttendanceLesson>()
+                .Include(x => x.Records)
+                .SingleOrDefaultAsync(x =>
+                x.ClassSessionId == lesson.Class.ClassSessionId
+                    && x.OriginalDate == lesson.OriginalDate.Date
+                    && x.IsReplacement == lesson.Replacement);
+
+            if (saved != null
+                && (!Same(saved, lesson)
+                || saved.TutorUserId != userId))
+                return "The schedule has changed. Existing attendance is read only.";
             var grant = await new AttendanceReopenService(db).GrantUntilAsync(lesson);
-            if (!AttendanceEntryPolicy.CanEdit(lesson.Date, lesson.Start, lesson.End, saved?.SubmittedAtUtc, ClassScheduleService.Now, grant))
-                return "The entry window is closed or attendance was already submitted. Request reopening for an overdue unsubmitted lesson.";
+           /*
+            * OWASP TOP 10 | A04:2021 / A06:2025
+            * Recheck attendance rules on the server before saving.
+            * Reject ordinary edits after final submission or outside the entry window.
+            */
+            if (!AttendanceEntryPolicy.CanEdit(
+                lesson.Date,
+                lesson.Start,
+                lesson.End,
+                saved?.SubmittedAtUtc,
+                ClassScheduleService.Now,
+                grant))
+                return
+                    "The entry window is closed or attendance was already submitted. Request reopening for an overdue unsubmitted lesson.";
+
             // Use the matching, unexpired approval from the database, never a posted reason.
             var approvedRequest = await new AttendanceReopenService(db).ApprovedRequestAsync(lesson);
-            var reason = approvedRequest != null ? approvedRequest.Reason.Trim() : input.LateSubmissionReason?.Trim();
-            var reasonError = AttendanceEntryPolicy.ReasonError(reason,input.FinalSubmit,AttendanceEntryPolicy.IsLate(lesson.Date,lesson.End,ClassScheduleService.Now));
-            if (reasonError != null) return reasonError;
-            string version = saved == null ? "" : Convert.ToBase64String(saved.RowVersion);
-            if (!string.Equals(input.RowVersion ?? "", version, StringComparison.Ordinal)) return "Attendance changed in another tab. Reload before saving again.";
-            var ids = saved == null ? await RosterAsync(lesson) : saved.Records.Select(x => x.StudentProfileId).ToList();
-            if (!ids.ToHashSet().SetEquals(input.Students.Select(x => x.StudentProfileId)))
+            var reason = approvedRequest != null
+                ? approvedRequest.Reason.Trim()
+                : input.LateSubmissionReason?.Trim();
+            var reasonError = AttendanceEntryPolicy.ReasonError(reason, input.FinalSubmit,
+                AttendanceEntryPolicy.IsLate(lesson.Date,
+                    lesson.End,
+                    ClassScheduleService.Now));
+
+            if (reasonError != null)
+                return reasonError;
+            string version = saved == null
+                ? ""
+                : Convert.ToBase64String(saved.RowVersion);
+
+            if (!string.Equals(input.RowVersion ?? "",
+                version,
+                StringComparison.Ordinal))
+                return "Attendance changed in another tab. Reload before saving again.";
+            var ids = saved == null
+                ? await RosterAsync(lesson)
+                : saved.Records.Select(x => x.StudentProfileId)
+                .ToList();
+
+            if (!ids.ToHashSet().SetEquals(input.Students
+                .Select(x => x.StudentProfileId)))
                 return "The student roster has changed. Reload this page before saving.";
+
             if (saved == null)
             {
-                var students = await db.StudentProfiles.Where(x => ids.Contains(x.StudentProfileId)).ToListAsync();
-                if (students.Count != ids.Count) return "The student roster is no longer valid. Reload the page.";
+                var students = await db.StudentProfiles
+                    .Where(x => ids.Contains(x.StudentProfileId))
+                    .ToListAsync();
+
+                if (students.Count != ids.Count)
+                    return "The student roster is no longer valid. Reload the page.";
                 saved = new AttendanceLesson
                 {
                     ClassSessionId = lesson.Class.ClassSessionId,
@@ -220,29 +472,77 @@ public sealed class AttendanceService(ApplicationDbContext db)
                     TutorName = lesson.Class.TutorUser.FullName ?? "",
                     StartTime = lesson.Start,
                     EndTime = lesson.End,
-                    Records = students.Select(x => new AttendanceRecord { StudentProfileId = x.StudentProfileId, StudentNumber = x.StudentNumber, StudentName = x.FullName }).ToList()
+                    Records = students.Select(x => new AttendanceRecord
+                    {
+                        StudentProfileId = x.StudentProfileId,
+                        StudentNumber = x.StudentNumber,
+                        StudentName = x.FullName
+                    }
+                        )
+                        .ToList()
                 };
                 db.Set<AttendanceLesson>().Add(saved);
             }
+
             var posted = input.Students.ToDictionary(x => x.StudentProfileId);
-            foreach (var record in saved.Records) { record.Status = posted[record.StudentProfileId].Status; record.Remark = posted[record.StudentProfileId].Remark?.Trim(); }
-            saved.UpdatedAtUtc = DateTime.UtcNow; saved.UpdatedByUserId = userId;
+
+            foreach (var record in saved.Records)
+            {
+                record.Status = posted[record.StudentProfileId].Status;
+                record.Remark = posted[record.StudentProfileId].Remark?.Trim();
+            }
+            saved.UpdatedAtUtc = DateTime.UtcNow;
+            saved.UpdatedByUserId = userId;
             var finalNow = ClassScheduleService.Now;
-            if (!AttendanceEntryPolicy.CanEdit(lesson.Date,lesson.Start,lesson.End,null,finalNow,grant)) return "The entry window has ended. Attendance is now locked.";
-            bool late = AttendanceEntryPolicy.IsLate(lesson.Date,lesson.End,finalNow);
-            reasonError = AttendanceEntryPolicy.ReasonError(reason,input.FinalSubmit,late);
-            if (reasonError != null) return reasonError;
+
+            if (!AttendanceEntryPolicy.CanEdit(lesson.Date, lesson.Start, lesson.End,
+                null,
+                    finalNow,
+                    grant))
+                return "The entry window has ended. Attendance is now locked.";
+            bool late = AttendanceEntryPolicy.IsLate(lesson.Date, lesson.End, finalNow);
+            reasonError = AttendanceEntryPolicy.ReasonError(reason,
+                input.FinalSubmit,
+                late);
+
+            if (reasonError != null)
+                return reasonError;
             saved.LateSubmissionReason = reason;
-            if (input.FinalSubmit) {
+            /*
+            * OWASP TOP 10 | A04:2021 / A06:2025
+            * Final submission records a timestamp that blocks later ordinary edits.
+            */
+            if (input.FinalSubmit)
+            {
                 saved.SubmittedLate = late;
                 saved.SubmittedAtUtc = DateTime.UtcNow;
             }
-            await db.SaveChangesAsync(); await tx.CommitAsync(); return null;
+
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            return null;
         }
         catch (SqlException ex) when (ex.Number == 1205)
-        { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return "Another request changed this lesson. Reload before saving again."; }
-        catch (DbUpdateConcurrencyException) { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return "Attendance changed in another tab. Reload before saving again."; }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException sql && (sql.Number == 2601 || sql.Number == 2627 || sql.Number == 1205))
-        { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return "Another request changed this lesson. Reload before saving again."; }
+        {
+            await tx.RollbackAsync();
+            db.ChangeTracker.Clear();
+            return "Another request changed this lesson. Reload before saving again.";
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await tx.RollbackAsync();
+            db.ChangeTracker.Clear();
+            return "Attendance changed in another tab. Reload before saving again.";
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException sql
+            && (sql.Number == 2601
+            || sql.Number == 2627
+            || sql.Number == 1205))
+        {
+            await tx.RollbackAsync();
+            db.ChangeTracker.Clear();
+            return "Another request changed this lesson. Reload before saving again.";
+        }
     }
 }

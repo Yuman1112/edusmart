@@ -21,6 +21,10 @@ using SecureSmartTuitionSystem.ViewModels.Tutor;
 
 namespace SecureSmartTuitionSystem.Controllers;
 
+/* 
+ * OWASP TOP 10 | A01: 2021 / A01:2025
+ * Only Admin users can execute, including direct URL requests
+ */
 [Authorize(Roles = "Admin")]
 [AutoValidateAntiforgeryToken]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -38,6 +42,7 @@ public sealed class TutorManagementController(
     // ============================================
     // ADMIN - DEACTIVATE / REACTIVATE TUTOR
     // ============================================
+    // Show tutor status and check active assignments
     [HttpGet]
     public async Task<IActionResult> ChangeStatus(
         string userId,
@@ -82,6 +87,7 @@ public sealed class TutorManagementController(
         return View(model);
     }
 
+    // Validate status change and use service to update account and record action.
     [HttpPost]
     public async Task<IActionResult> ChangeStatus(ChangeTutorStatusViewModel model)
     {

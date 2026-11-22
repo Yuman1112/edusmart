@@ -168,6 +168,11 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
                 // A guardian-delivered setup link does not confirm a student email.
                 user.EmailConfirmed = !string.IsNullOrWhiteSpace(user.Email);
 
+                /*
+                 * OWASP TOP 10 | A02:2021 / A04:2025
+                 * ASP.NET Core Identity hashes and salts the new password.
+                 * The database stores a password hash instead of plaintext.
+                 */
                 IdentityResult result =
                     await _userManager.ResetPasswordAsync(
                         user,

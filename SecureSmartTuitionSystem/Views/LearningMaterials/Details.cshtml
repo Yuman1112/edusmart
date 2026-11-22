@@ -1,13 +1,16 @@
 ﻿@model SecureSmartTuitionSystem.ViewModels.Learning.MaterialRow
 @using SecureSmartTuitionSystem.Services.Learning
+
 @{
     bool studentView = User.IsInRole("Student") && !User.IsInRole("Admin") && !User.IsInRole("Tutor");
     ViewData["Title"] = studentView ? Model.Title : "Material Details";
 }
+
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/learning-materials.css" asp-append-version="true" />
 }
+
 <div class="learning-materials-page @(studentView ? "student-material-page" : "")">
     <div class="page-header">
         <div>
@@ -40,9 +43,17 @@
                 <div class="student-material-context"><span class="student-material-subject">@Model.Level · @Model.Subject</span><span><i class="bi bi-person" aria-hidden="true"></i> @Model.Tutor</span></div>
                 <p>Updated @Model.UpdatedAtUtc.AddHours(8).ToString("dd MMM yyyy · HH:mm") MYT</p>
             </div>
+
+            @*
+             * OWASP TOP 10 | A03:2021 / A05:2025
+             * Razor HTML-encodes the description when rendering it.
+             * Script markup is displayed as text, not executable HTML.
+             *@
             @if (!string.IsNullOrWhiteSpace(Model.Description))
             {
-                <p class="material-description student-material-notes">@Model.Description</p>
+                <p class="material-description student-material-notes">
+                    @Model.Description
+                </p>
             }
         }
         else

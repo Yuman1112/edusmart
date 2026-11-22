@@ -170,8 +170,12 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             // VALIDATE PASSWORD
             // =====================================================
-            // Validates password and applies account lockout.
-            // Does not create an authentication cookie.
+            /*
+             * OWASP TOP 10 | A02:2021 / A04:2025
+             * ASP.NET Core Identity verifies password against its stored hash.
+             * The original password is not decrypted or retrieved.
+             * Failed attempts count towards lockout; no sign-in cookie is created here.
+             */
             var result =
                 await _signInManager.CheckPasswordSignInAsync(
                     user,
@@ -186,6 +190,11 @@ namespace SecureSmartTuitionSystem.Areas.Identity.Pages.Account
             // =====================================================
             // ACCOUNT LOCKOUT
             // =====================================================
+            /*
+             * OWASP TOP 10 | A07:2021 / A07:2025
+             * A locked account is rejected before sign-in continues.
+             * Display the remaining lockout time and return to the login page.
+             */
             if (result.IsLockedOut)
             {
                 await _events.RecordAsync(

@@ -129,6 +129,11 @@ builder.Services
             options.Password.RequiredLength =
                 8;
 
+            /*
+             * OWASP TOP 10 | A07:2021 / A07:2025
+             * Lockout-enabled accounts are locked after five failed attempts.
+             * The configured lockout duration is 15 minutes.
+             */
             options.Lockout.MaxFailedAccessAttempts =
                 5;
 
