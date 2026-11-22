@@ -251,7 +251,9 @@ public sealed class TeachingRequestsController(
             }
 
             request.Status = approve == true ? TeachingChangeStatus.Approved : TeachingChangeStatus.Rejected;
-            request.ReviewNotes = model.ReviewNotes.Trim();
+            request.ReviewNotes = string.IsNullOrWhiteSpace(model.ReviewNotes)
+                ? null
+                : model.ReviewNotes.Trim();
             request.ReviewedByUserId = adminId;
             request.ReviewedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync(token);

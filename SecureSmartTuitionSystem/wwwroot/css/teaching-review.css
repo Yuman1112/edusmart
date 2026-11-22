@@ -1,0 +1,21 @@
+﻿.teaching-review-subtitle { margin: 6px 0 0; color: #58718a; font-size: .9rem; }
+.teaching-review-page { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, .7fr); align-items: start; gap: 20px; }
+.teaching-review-main { display: grid; gap: 20px; min-width: 0; }
+.teaching-review-panel { min-width: 0; overflow: hidden; border: 1px solid var(--border, #d4e7ed); border-radius: 16px; background: rgba(255,255,255,.97); box-shadow: var(--shadow, 0 8px 24px rgba(8,54,94,.05)); }
+.teaching-review-panel-header { display: flex; min-height: 62px; padding: 16px 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid var(--border, #d4e7ed); }
+.teaching-review-panel-header h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--navy, #08365e); font-size: 1.05rem; font-weight: 750; }
+.teaching-review-panel-header h2 i { color: var(--teal, #0798a4); }
+.teaching-review-panel-body { padding: 20px; }
+.teaching-review-information { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px 24px; margin: 0; }
+.teaching-review-information dt { color: #58718a; font-size: .82rem; font-weight: 400; margin-bottom: 6px; }
+.teaching-review-information dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.teaching-review-secondary { display: block; margin-top: 6px; color: #58718a; font-size: .82rem; font-weight: 400; }
+.teaching-review-information .teaching-level-chip { display: table; margin-top: 6px; }
+.teaching-review-optional { color: #58718a; font-weight: 400; }
+.teaching-review-page .teaching-review-copy { margin-bottom: 0; }
+.teaching-review-page textarea { resize: vertical; min-height: 106px; }
+.teaching-review-confirm { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border, #d4e7ed); }
+.teaching-review-actions { display: grid; gap: 10px; margin-top: 20px; }
+.teaching-review-actions button { width: 100%; justify-content: center; }
+@media (max-width: 991.98px) { .teaching-review-page { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 575.98px) { .teaching-review-information { grid-template-columns: minmax(0,1fr); } .teaching-review-panel-header, .teaching-review-panel-body { padding: 16px; } }

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using SecureSmartTuitionSystem.Models.Tutor;
 using SecureSmartTuitionSystem.Services;
@@ -78,10 +78,9 @@ public sealed class TeachingDecisionInput
 {
     public int Id { get; set; }
 
-    [Required(ErrorMessage = "Please enter your review notes.")]
     [StringLength(1000)]
     [Display(Name = "Admin Review Notes")]
-    public string ReviewNotes { get; set; } = "";
+    public string? ReviewNotes { get; set; }
 
     [Display(Name = "I have reviewed the qualification or supporting evidence.")]
     public bool QualificationVerified { get; set; }

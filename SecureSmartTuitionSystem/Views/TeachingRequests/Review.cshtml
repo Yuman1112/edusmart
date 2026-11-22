@@ -1,25 +1,19 @@
-@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingDecisionInput
+﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TeachingDecisionInput
 @using SecureSmartTuitionSystem.Models.Tutor
-
 @{
     ViewData["Title"] = "Review Teaching Request";
     var request = Model.Request!;
 }
-
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/teaching-requests.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/teaching-review.css" asp-append-version="true" />
 }
-
 <div class="page-header">
-    <div>
-        <h1>Review Teaching Request</h1>
-    </div>
+    <div><h1>Review Teaching Request</h1><p class="teaching-review-subtitle">Review the request details and supporting evidence.</p></div>
     <a asp-action="Index" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Requests</a>
 </div>
-
 @if (TempData["TeachingSuccess"] is string success)
 {
     <div class="alert alert-success" role="status">@success</div>
@@ -28,60 +22,85 @@
 {
     <div class="alert alert-warning" role="alert">@warning</div>
 }
-
-<div class="teaching-review-grid">
-    <div class="class-form-card tutor-create-card teaching-summary-card">
-        <partial name="_RequestSummary" model="request" />
-    </div>
-    <div class="class-form-card tutor-create-card teaching-decision-card">
-    @if (request.Status == TeachingChangeStatus.Pending)
-    {
-        <form asp-action="Review" method="post">
-            <input asp-for="Id" type="hidden" />
-            <section class="class-form-section">
-                <h2><i class="bi bi-pencil-square" aria-hidden="true"></i> Admin Decision</h2>
+<div class="teaching-review-page">
+    <main class="teaching-review-main">
+        <section class="teaching-review-panel" aria-labelledby="requestDetailsTitle">
+            <div class="teaching-review-panel-header">
+                <h2 id="requestDetailsTitle"><i class="bi bi-clipboard" aria-hidden="true"></i> Request Details</h2>
+                <partial name="_TeachingRequestStatus" model="request" />
+            </div>
+            <div class="teaching-review-panel-body">
+                <dl class="teaching-review-information">
+                    <div><dt>Request ID</dt><dd>#@request.Id</dd></div>
+                    <div><dt>Request Type</dt><dd>@request.TypeLabel</dd></div>
+                    <div><dt>Tutor</dt><dd>@request.TutorName <span class="teaching-review-secondary">@request.TutorId</span></dd></div>
+                    <div><dt>Subject &amp; Level</dt><dd>@request.SubjectLabel <span class="teaching-level-chip">@request.AcademicLevel</span></dd></div>
+                    <div><dt>Submitted On</dt><dd>@request.SubmittedAtUtc.AddHours(8).ToString("dd MMM yyyy") <span class="teaching-review-secondary">@request.SubmittedAtUtc.AddHours(8).ToString("h:mm tt") MYT</span></dd></div>
+                </dl>
+            </div>
+        </section>
+        <section class="teaching-review-panel" aria-labelledby="requestReasonTitle">
+            <div class="teaching-review-panel-header"><h2 id="requestReasonTitle"><i class="bi bi-chat-left-text" aria-hidden="true"></i> Reason for Request</h2></div>
+            <div class="teaching-review-panel-body"><p class="teaching-review-copy">@request.Reason</p></div>
+        </section>
+        <section class="teaching-review-panel" aria-labelledby="requestEvidenceTitle">
+            <div class="teaching-review-panel-header"><h2 id="requestEvidenceTitle"><i class="bi bi-paperclip" aria-hidden="true"></i> Supporting Evidence</h2><span class="teaching-section-count">@request.Evidence.Count file(s)</span></div>
+            <div class="teaching-review-panel-body">
+                @if (request.Evidence.Count == 0)
+                {
+                    <p class="text-muted mb-0">No supporting files were attached.</p>
+                }
+                @foreach (var document in request.Evidence)
+                {
+                    <div class="teaching-review-file">
+                        <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                        <div><strong>@document.Name</strong><small class="text-muted">@((document.Size / 1024d / 1024).ToString("0.##")) MB</small></div>
+                        <a asp-action="Document" asp-route-id="@document.Id" class="outline-button"><i class="bi bi-download" aria-hidden="true"></i> Download</a>
+                    </div>
+                }
+            </div>
+        </section>
+    </main>
+    <aside class="teaching-review-panel" aria-labelledby="reviewActionsTitle">
+        <div class="teaching-review-panel-header"><h2 id="reviewActionsTitle"><i class="bi bi-check2-square" aria-hidden="true"></i> @(request.Status == TeachingChangeStatus.Pending ? "Review Actions" : "Review Outcome")</h2></div>
+        <div class="teaching-review-panel-body">
+        @if (request.Status == TeachingChangeStatus.Pending)
+        {
+            <form asp-action="Review" method="post">
+                <input asp-for="Id" type="hidden" />
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
-                <div class="mb-3">
-                    <label asp-for="ReviewNotes" class="form-label"></label>
-                    <textarea asp-for="ReviewNotes" class="form-control" rows="3" maxlength="1000"></textarea>
-                    <span asp-validation-for="ReviewNotes" class="text-danger"></span>
-                    <div class="form-text">These notes will be visible to the tutor.</div>
-                </div>
+                <label asp-for="ReviewNotes" class="form-label">Admin Review Notes <span class="teaching-review-optional">(Optional)</span></label>
+                <textarea asp-for="ReviewNotes" class="form-control" rows="4" maxlength="1000" placeholder="Add comments for the tutor, if needed." aria-describedby="reviewNotesHelp"></textarea>
+                <span asp-validation-for="ReviewNotes" class="text-danger"></span>
+                <p id="reviewNotesHelp" class="form-text">Notes will be visible to the tutor when provided.</p>
                 @if (request.Type != TeachingChangeType.Remove)
                 {
-                    <div class="form-check teaching-qualification-confirm">
+                    <div class="form-check teaching-review-confirm">
                         <input asp-for="QualificationVerified" class="form-check-input" />
                         <label asp-for="QualificationVerified" class="form-check-label"></label>
                     </div>
                     <span asp-validation-for="QualificationVerified" class="text-danger" role="alert"></span>
                 }
-            </section>
-            <div class="class-form-actions">
-                <button type="submit" name="approve" value="false" class="outline-button">Reject</button>
-                <button type="submit" name="approve" value="true" class="primary-button"
-                        disabled="@(request.Type == TeachingChangeType.Remove)">
-                    <i class="bi bi-check-circle" aria-hidden="true"></i> Approve
-                </button>
-            </div>
-            @if (request.Type == TeachingChangeType.Remove)
-            {
-                <p class="form-text">This earlier removal request can be rejected with an explanation. Subject removal is currently unavailable.</p>
-            }
-        </form>
-    }
-    else
-    {
-        <section class="class-form-section">
-            <h2><i class="bi bi-check2-circle" aria-hidden="true"></i> Review Outcome</h2>
-            <p class="teaching-review-copy">@request.ReviewNotes</p>
+                <div class="teaching-review-actions">
+                    <button type="submit" name="approve" value="true" class="primary-button" disabled="@(request.Type == TeachingChangeType.Remove)"><i class="bi bi-check-circle" aria-hidden="true"></i> Approve Request</button>
+                    <button type="submit" name="approve" value="false" class="outline-button">Reject Request</button>
+                </div>
+                @if (request.Type == TeachingChangeType.Remove)
+                {
+                    <p class="form-text">Subject removal is currently unavailable. You can reject this earlier request.</p>
+                }
+            </form>
+        }
+        else
+        {
+            <p class="teaching-review-copy">@(string.IsNullOrWhiteSpace(request.ReviewNotes) ? "No review notes provided." : request.ReviewNotes)</p>
             @if (request.ReviewedAtUtc.HasValue)
             {
                 <p class="text-muted mb-0">Reviewed @request.ReviewedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy, h:mm tt") MYT</p>
             }
-        </section>
-    }
-</div>
-
+        }
+        </div>
+    </aside>
 </div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
