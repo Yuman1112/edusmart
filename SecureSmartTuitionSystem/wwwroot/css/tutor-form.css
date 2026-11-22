@@ -867,3 +867,18 @@
 .edusmart-ui main .tutor-create-card :is(.form-control, .form-select):is(.input-validation-error, .is-invalid):focus-visible {
     box-shadow: inset 0 0 0 1px var(--red);
 }
+
+/* Keep required markers beside label text, overriding shared span layouts. */
+.edusmart-ui main .tutor-create-card .tutor-required-label {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: baseline;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.edusmart-ui main .tutor-create-card .tutor-required-marker {
+    display: inline !important;
+    width: auto !important;
+    margin: 0 !important;
+    flex: 0 0 auto;
+}

@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
     "use strict";
 
     const form = document.getElementById("tutor-availability-form");
@@ -267,6 +267,14 @@
             form.querySelector('[data-availability-stale-notice]')?.classList.add('d-none');
             showResult(result.message + (result.warning ? ' ' + result.warning : ''), result.warning ? 'warning' : 'success');
             document.dispatchEvent(new Event('availability:saved'));
+            // Navigate only after confirmed success, preserving any edits made during the request.
+            if (result.redirectUrl && signature() === submittedSignature) {
+                const destination = new URL(result.redirectUrl, window.location.href);
+                if (destination.origin === window.location.origin) {
+                    submitting = true;
+                    window.location.assign(destination.href);
+                }
+            }
         } catch (error) {
             showResult(error.name === 'AbortError' ? 'The response timed out. Your selections are kept; check the latest availability before retrying.' : error.message);
         } finally {

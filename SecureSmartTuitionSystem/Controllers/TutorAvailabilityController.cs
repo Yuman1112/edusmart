@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -103,7 +103,10 @@ public sealed class TutorAvailabilityController(ApplicationDbContext db, UserMan
         if (original.SetEquals(selected))
         {
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                return Json(new { success = true, version, message = "No changes were made.", warning = "" });
+            {
+                TempData["TutorAvailabilityInfo"] = "No changes were made.";
+                return Json(new { success = true, version, message = "No changes were made.", warning = "", redirectUrl = Url.Action(nameof(Index)) });
+            }
             TempData["TutorAvailabilityInfo"] = "No changes were made.";
             return RedirectToAction(nameof(Index));
         }
@@ -148,10 +151,6 @@ public sealed class TutorAvailabilityController(ApplicationDbContext db, UserMan
 
             return View("Edit", model);
         }
-        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-            return Json(new { success = true, version = TutorAvailabilityPolicy.Version(tutor.EmploymentType, selected),
-                message = selected.Count == 0 ? "Availability saved. You currently have no available teaching slots." : "Your weekly teaching availability was saved successfully.",
-                warning = warnings.Count == 0 ? "" : "Existing lessons remain outside your new availability: " + string.Join("; ", warnings.Take(5)) + ". Contact your administrator to review them." });
         if (warnings.Count > 0)
             TempData["TutorAvailabilityWarning"] = "Availability saved. Existing lessons remain scheduled outside your new availability: "
                 + string.Join("; ", warnings.Take(5)) + (warnings.Count > 5 ? "; and more." : ".")
@@ -159,6 +158,14 @@ public sealed class TutorAvailabilityController(ApplicationDbContext db, UserMan
         TempData["TutorAvailabilitySuccess"] = selected.Count == 0
             ? "Availability saved. You currently have no available teaching slots."
             : "Your weekly teaching availability was saved successfully.";
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            return Json(new {
+                success = true,
+                version = TutorAvailabilityPolicy.Version(tutor.EmploymentType, selected),
+                message = selected.Count == 0 ? "Availability saved. You currently have no available teaching slots." : "Your weekly teaching availability was saved successfully.",
+                warning = "",
+                redirectUrl = Url.Action(nameof(Index))
+            });
         return RedirectToAction(nameof(Index));
     }
 }
