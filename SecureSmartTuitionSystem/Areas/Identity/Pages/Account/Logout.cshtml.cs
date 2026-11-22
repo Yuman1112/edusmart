@@ -25,6 +25,14 @@ public sealed class LogoutModel : PageModel
             var revoked = await _users.UpdateSecurityStampAsync(user);
             if (!revoked.Succeeded) throw new InvalidOperationException("Session revocation failed.");
         }
+        return await ClearBrowserSessionAsync();
+    }
+
+    // Switching accounts from a settled bill clears this browser's session.
+    public Task<IActionResult> OnPostSwitchAccountAsync() => ClearBrowserSessionAsync();
+
+    private async Task<IActionResult> ClearBrowserSessionAsync()
+    {
         HttpContext.Session.Clear();
         await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
         await HttpContext.SignOutAsync(IdentityConstants.TwoFactorUserIdScheme);
