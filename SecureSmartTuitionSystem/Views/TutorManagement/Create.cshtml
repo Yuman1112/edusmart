@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.CreateTutorViewModel
+@model SecureSmartTuitionSystem.ViewModels.Tutor.CreateTutorViewModel
 
 @{
     ViewData["Title"] = "Add Tutor";
@@ -43,6 +43,8 @@
           data-check-email-url="@Url.Action("CheckEmail", "TutorManagement")"
           novalidate>
 
+        <p class="text-muted mb-3"><span class="text-danger" aria-hidden="true">*</span> Required fields</p>
+
         @Html.AntiForgeryToken()
 
         <div asp-validation-summary="All"
@@ -61,7 +63,7 @@
 
             <div class="row g-4">
                 <div class="col-12 col-md-6">
-                    <label asp-for="EmploymentType" class="form-label">Employment Type</label>
+                    <label asp-for="EmploymentType" class="form-label">Employment Type <span class="text-danger" aria-hidden="true">*</span></label>
                     <select asp-for="EmploymentType" class="form-select">
                         <option value="0">Part-time</option>
                         <option value="1">Full-time</option>
@@ -74,8 +76,7 @@
                 <!-- FULL NAME -->
                 <div class="col-12 col-md-6">
                     <label asp-for="FullName"
-                           class="form-label">
-                    </label>
+                           class="form-label">Full Name <span class="text-danger" aria-hidden="true">*</span></label>
 
                     <input asp-for="FullName"
                            class="form-control"
@@ -90,8 +91,7 @@
                 <!-- EMAIL -->
                 <div class="col-12 col-md-6">
                     <label asp-for="Email"
-                           class="form-label">
-                    </label>
+                           class="form-label">Email Address <span class="text-danger" aria-hidden="true">*</span></label>
 
                     <input asp-for="Email"
                            type="email"
@@ -114,8 +114,7 @@
                 <!-- PHONE NUMBER -->
                 <div class="col-12 col-md-6">
                     <label asp-for="PhoneNumber"
-                           class="form-label">
-                    </label>
+                           class="form-label">Phone Number <span class="text-danger" aria-hidden="true">*</span></label>
 
                     <input asp-for="PhoneNumber"
                            id="tutorPhone"
@@ -158,8 +157,7 @@
                 <!-- QUALIFICATION -->
                 <div class="col-12 col-md-6">
                     <label asp-for="Qualification"
-                           class="form-label">
-                    </label>
+                           class="form-label">Highest Qualification <span class="text-danger" aria-hidden="true">*</span></label>
 
                     <input asp-for="Qualification"
                            class="form-control"
@@ -171,7 +169,7 @@
                 </div>
 
                 <div class="col-12 col-md-6">
-                    <label asp-for="FieldOfStudy" class="form-label"></label>
+                    <label asp-for="FieldOfStudy" class="form-label">Field of Study <span class="text-danger" aria-hidden="true">*</span></label>
                     <input asp-for="FieldOfStudy" class="form-control" maxlength="200"
                            placeholder="e.g. Education (Mathematics)" />
                     <span asp-validation-for="FieldOfStudy" class="text-danger"></span>
@@ -351,7 +349,7 @@
             <p class="tutor-section-description">The system assigns the Tutor ID and sends the setup email after the account is created.</p>
             <div class="form-check">
                 <input asp-for="QualificationVerified" class="form-check-input" />
-                <label asp-for="QualificationVerified" class="form-check-label"></label>
+                <label asp-for="QualificationVerified" class="form-check-label">I have verified the tutor's qualifications for the selected subjects and levels. <span class="text-danger" aria-hidden="true">*</span></label>
             </div>
             <span asp-validation-for="QualificationVerified" class="text-danger" role="alert"></span>
         </section>

@@ -192,6 +192,6 @@ public sealed class AccountEmailService(ApplicationDbContext db, UserManager<App
         catch (Exception ex) when (ex is DbUpdateException or DbException)
         { db.ChangeTracker.Clear(); return (Error("The request changed. Reload and try again."), null); }
         await SendAsync(notice!, "EduSmart - Account email updated", SecurityEmailTemplates.EmailChangeNotice(userName ?? ""));
-        return (new(true, "Your email is verified and updated. Sign in again. Your User ID, password, 2FA setting and guardian links are unchanged."), owner);
+        return (new(true, "Your email address has been verified and updated. Please sign in again using your existing User ID and password."), owner);
     }
 }

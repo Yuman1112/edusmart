@@ -1,4 +1,4 @@
-﻿.email-change-page { max-width: 880px; }
+.email-change-page { max-width: 880px; }
 .email-change-page .email-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 28px 30px 22px; }
 .email-change-page .email-card-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .email-change-page .email-card-title h2 { margin: 0; color: var(--navy); font-size: clamp(1.15rem, 2vw, 1.45rem); font-weight: 750; }
@@ -63,3 +63,31 @@
 .email-change-page .email-waiting-state { max-width:none; margin:22px 0 0; padding:22px 0 0; border-top:1px solid var(--border, #cce1e8); }
 .email-change-page .email-waiting-state p:last-child { margin-bottom:0; }
 .email-change-page .email-change-address-button { display:flex; align-items:center; justify-content:center; gap:8px; margin:0 auto; }
+
+/* Match the Login password reveal control. */
+.email-change-page .email-password-wrapper { position: relative; }
+.email-change-page .email-password-wrapper .form-control { padding-inline-end: 48px; }
+.email-change-page .email-password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    width: 32px;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: var(--teal-dark, #007582);
+    padding: 0;
+    cursor: pointer;
+}
+.email-change-page .email-password-toggle:hover { color: var(--teal, #0097a7); }
+.email-change-page .email-password-toggle:focus-visible { outline: 2px solid var(--teal, #0097a7); outline-offset: 2px; border-radius: 4px; }
+.email-change-page .email-password-toggle i { font-size: 1.1rem; pointer-events: none; }
+
+/* Hide Edge's built-in reveal button; keep the website's accessible toggle. */
+.email-change-page .email-password-wrapper input::-ms-reveal {
+    display: none;
+}

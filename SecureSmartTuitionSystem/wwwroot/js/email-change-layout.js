@@ -1,5 +1,19 @@
 (() => {
     "use strict";
+    // Delegation also handles the form restored after cancelling an email request.
+    document.addEventListener("click", event => {
+        const button = event.target.closest?.(".email-password-toggle");
+        if (!button) return;
+        const input = button.closest(".email-password-wrapper")?.querySelector("input");
+        if (!input) return;
+        const revealed = input.type === "password";
+        input.type = revealed ? "text" : "password";
+        button.setAttribute("aria-label", revealed ? "Hide password" : "Show password");
+        button.setAttribute("aria-pressed", String(revealed));
+        const icon = button.querySelector("i");
+        icon?.classList.toggle("bi-eye", !revealed);
+        icon?.classList.toggle("bi-eye-slash", revealed);
+    });
     if (!window.fetch || !window.FormData || !window.DOMParser) return;
     let busy = false;
     document.addEventListener("submit", async event => {

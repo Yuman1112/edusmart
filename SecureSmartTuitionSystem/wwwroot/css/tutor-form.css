@@ -845,3 +845,25 @@
     }
 }
 #edit-tutor-form .tutor-readonly-field:is(.is-invalid,.input-validation-error) {background-image:none;}
+
+/* Tutor Add/Edit: keep one visible field edge instead of stacked focus rings. */
+.edusmart-ui main .tutor-create-card :is(.form-control, .form-select):focus {
+    outline: none;
+    box-shadow: none;
+    border-color: var(--teal);
+}
+
+/* Strengthen the same edge for keyboard focus without an outer second ring. */
+.edusmart-ui main .tutor-create-card :is(.form-control, .form-select):focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 1px var(--teal);
+}
+
+/* Validation keeps its red edge, including while focused. */
+.edusmart-ui main .tutor-create-card :is(.form-control, .form-select):is(.input-validation-error, .is-invalid):focus {
+    border-color: var(--red) !important;
+    box-shadow: none;
+}
+.edusmart-ui main .tutor-create-card :is(.form-control, .form-select):is(.input-validation-error, .is-invalid):focus-visible {
+    box-shadow: inset 0 0 0 1px var(--red);
+}

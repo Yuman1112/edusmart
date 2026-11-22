@@ -100,9 +100,9 @@ public sealed class VideoFileStore
         CancellationToken ct,
         string? currentVideoKey = null)
     {
-        // Reject empty, oversized or non-MP4 uploads before creating a staged file.
+        // Reject empty, oversized (>200MB) or non-MP4 uploads before creating a staged file.
         if (upload.Length <= 0
-            || upload.Length > MaxBytes
+            || upload.Length > MaxBytes 
             || !string.Equals(Path.GetExtension(upload.FileName),
             ".mp4",
             StringComparison.OrdinalIgnoreCase))

@@ -1,9 +1,21 @@
-﻿@model SecureSmartTuitionSystem.Controllers.AccountEmailController.PageModel
+@model SecureSmartTuitionSystem.Controllers.AccountEmailController.PageModel
 <form data-request-limit="password send" asp-controller="AccountEmail" asp-action="Start" method="post" asp-antiforgery="true">
     <div class="profile-edit-grid">
         <div class="profile-field"><label for="newAccountEmail" class="form-label">New Email Address <span class="text-danger" aria-hidden="true">*</span></label><input id="newAccountEmail" name="NewEmail" value="@Model.DraftEmail" type="email" maxlength="254" autocomplete="email" class="form-control" required /></div>
-        <div class="profile-field"><label for="accountPassword" class="form-label">Current Password <span class="text-danger" aria-hidden="true">*</span></label><input id="accountPassword" name="Password" type="password" maxlength="128" autocomplete="current-password" class="form-control" required /></div>
+        <div class="profile-field"><label for="accountPassword" class="form-label">Current Password <span class="text-danger" aria-hidden="true">*</span></label><div class="email-password-wrapper">
+                <input id="accountPassword" name="Password" type="password" maxlength="128" autocomplete="current-password" class="form-control" required />
+                <button type="button" class="email-password-toggle" aria-label="Show password" aria-controls="accountPassword" aria-pressed="false">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+            </div></div>
     </div>
-    <p class="email-status-copy mt-3">We will verify your new address before updating it. Email 2FA and guardian verification remain required where applicable.</p>
+    <p class="email-status-copy mt-3">@if (string.IsNullOrWhiteSpace(Model.CurrentEmail))
+        {
+            <text>We’ll send a verification link to your new email address. The address will be added after you confirm.</text>
+        }
+        else
+        {
+            <text>We’ll send a verification link to your new email address. Your current email will remain unchanged until you confirm.</text>
+        }</p>
     <div class="class-form-actions @(Model.Pending != null ? "email-flow-actions" : "")">@if (Model.Pending != null) { <button type="button" class="outline-button" data-email-return>Cancel</button> }<button class="primary-button" type="submit">@(Model.Pending != null ? "Send New Request" : "Continue")</button></div>
 </form>
