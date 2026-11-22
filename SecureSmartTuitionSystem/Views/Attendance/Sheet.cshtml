@@ -1,4 +1,4 @@
-@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceSheetViewModel
+﻿@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceSheetViewModel
 @using SecureSmartTuitionSystem.Models.Attendance
 @{
     ViewData["Title"] = "Class Attendance";
@@ -7,7 +7,7 @@
     var submitted = Model.SubmittedAtUtc.HasValue || Model.State.StartsWith("Submitted");
     var showRemarks = submitted || Model.CanEdit || Model.Students.Any(s => !string.IsNullOrWhiteSpace(s.Remark));
 }
-@section Styles { <link rel="stylesheet" href="~/css/attendance.css" asp-append-version="true" /> }
+@section Styles { <link rel="stylesheet" href="~/css/attendance.css" asp-append-version="true" /><link rel="stylesheet" href="~/css/attendance-notes.css" asp-append-version="true" /><link rel="stylesheet" href="~/css/attendance-class-style.css" asp-append-version="true" /> }
 <div class="attendance-page attendance-sheet-page attendance-bulk-page @(submitted ? "attendance-submitted-page" : "")">
     <div class="page-header"><div><h1>Class Attendance</h1><p>@(submitted ? "View submitted attendance for this lesson." : "Record attendance for your assigned lesson.")</p></div><a asp-action="Index" asp-route-week="@Model.Date.ToString("yyyy-MM-dd")" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
     @if (TempData["AttendanceSuccess"] is string success) { <div class="alert alert-success" role="status">@success</div> }
@@ -57,45 +57,76 @@
             </form>
         </section>
     }
+    <section class="attendance-student-filter-card" aria-labelledby="attendanceFilterTitle">
+        <div class="attendance-student-filter-heading">
+            <div><h2 id="attendanceFilterTitle"><i class="bi bi-funnel" aria-hidden="true"></i> Filter Students</h2><p>The student list updates automatically.</p></div>
+            <button type="button" class="attendance-text-button" id="attendance-clear-filters" hidden><i class="bi bi-x-circle" aria-hidden="true"></i> Clear Filters</button>
+        </div>
+        <div class="attendance-roster-tools"><div><label for="attendance-search" class="form-label">Search Student</label><input id="attendance-search" type="search" class="form-control" placeholder="Search by name or student ID" /></div><div><label for="attendance-status-filter" class="form-label">Attendance</label><select id="attendance-status-filter" class="form-select"><option value="all">All Statuses</option><option value="">Unrecorded</option><option value="1">Present</option><option value="2">Absent</option><option value="3">Late</option></select></div></div>
+    </section>
     <section class="class-form-card attendance-roster-card">
-        <div class="attendance-roster-heading"><h2><i class="bi bi-people" aria-hidden="true"></i> @(submitted ? "Attendance Results" : "Student Attendance")</h2><div class="attendance-result-header-tools">@if (submitted) { <partial name="/Views/Attendance/_SheetTotals.cshtml" model="Model" /> }<span class="attendance-sheet-muted">@Model.Students.Count student(s)</span></div></div>
         <form asp-action="Save" method="post" id="attendance-sheet-form" data-editable="@Model.CanEdit.ToString().ToLowerInvariant()" data-approved-reason="@Model.UsesApprovedReopenReason.ToString().ToLowerInvariant()" data-ends-at="@(Model.EditUntil.ToString("yyyy-MM-dd") + "T" + Model.EditUntil.ToString("HH:mm:ss") + "+08:00")" data-lesson-ends-at="@(Model.Date.ToString("yyyy-MM-dd") + "T" + Model.End.ToString("HH:mm:ss") + "+08:00")">
             @Html.AntiForgeryToken()
+            <div class="attendance-roster-heading"><div><h2><i class="bi bi-people" aria-hidden="true"></i> @(submitted ? "Attendance Results" : "Student Attendance")</h2><p class="attendance-sheet-muted">@Model.Students.Count students · Whole-class totals</p></div><div class="attendance-result-header-tools"><partial name="/Views/Attendance/_SheetTotals.cshtml" model="Model" /></div></div>
             <div asp-validation-summary="All" class="text-danger" role="alert"></div>
             <input asp-for="ClassSessionId" type="hidden" /><input asp-for="Date" type="hidden" value="@Model.Date.ToString("yyyy-MM-dd")" /><input asp-for="ChangeId" type="hidden" /><input asp-for="Replacement" type="hidden" /><input asp-for="RowVersion" type="hidden" />
             @if (Model.Students.Count == 0) { <p class="attendance-sheet-note">No students are entitled to attend this lesson. Attendance cannot be saved.</p> }
             else {
-                <div class="attendance-roster-tools" hidden="@(Model.Students.Count <= 10)"><div><label for="attendance-search" class="form-label">Search Student</label><input id="attendance-search" type="search" class="form-control" placeholder="Search by name or student ID" /></div><div><label for="attendance-status-filter" class="form-label">Attendance</label><select id="attendance-status-filter" class="form-select"><option value="all">All Statuses</option><option value="">Unrecorded</option><option value="1">Present</option><option value="2">Absent</option><option value="3">Late</option></select></div></div>
+
                 @if (Model.CanEdit) {
-                    <div class="attendance-selection-help" hidden="@(Model.Students.Count <= 25)"><span>Select this page using the header checkbox.</span><button type="button" class="attendance-text-button" id="attendance-select-all">Select all @Model.Students.Count students</button></div>
+                    <div class="attendance-selection-help" hidden="@(Model.Students.Count <= 10)"><button type="button" class="attendance-text-button" id="attendance-select-all" aria-describedby="attendance-selection-scope">Select all @Model.Students.Count students</button></div>
                     <div id="attendance-bulk-toolbar" class="attendance-bulk-toolbar" hidden><strong id="attendance-selected-count" aria-live="polite"></strong><span>Mark selected as:</span><button type="button" class="outline-button" data-attendance-bulk="1">Present</button><button type="button" class="outline-button" data-attendance-bulk="2">Absent</button><button type="button" class="outline-button" data-attendance-bulk="3">Late</button><button type="button" class="attendance-text-button" id="attendance-clear-selection">Clear selection</button><small>Updates selected students across all pages. Save to keep changes.</small></div>
                 }
                 <div id="attendance-form-feedback" class="attendance-sheet-note" role="status" hidden></div>
-                <div class="table-responsive"><table class="table align-middle @(submitted ? "attendance-results-table" : "")" id="attendance-roster-table" data-server-managed="true"><thead><tr>
-                    @if (Model.CanEdit) { <th scope="col" data-sortable="false"><input type="checkbox" id="attendance-select-page" class="form-check-input" aria-label="Select students on this page" /></th> }
-                    <th scope="col" class="attendance-number-column">No.</th><th scope="col">Student</th><th scope="col">Attendance</th>@if (showRemarks) { <th scope="col">@(submitted ? "Remark" : "Remark (optional)")</th> }
+                <div class="table-responsive"><table class="table align-middle attendance-compact-notes-table @(Model.CanEdit ? "attendance-notes-editable" : "attendance-notes-readonly") @(submitted ? "attendance-results-table" : "")" id="attendance-roster-table" data-server-managed="true"><thead><tr>
+                    @if (Model.CanEdit) { <th scope="col" data-sortable="false"><input type="checkbox" id="attendance-select-page" class="form-check-input" aria-label="Select students on this page (up to 10)" /></th> }
+                    <th scope="col" class="attendance-number-column">No.</th><th scope="col" class="attendance-student-column" aria-sort="ascending"><button type="button" class="attendance-sort-button" data-attendance-sort="name">Student <i class="bi bi-arrow-up" data-sort-icon aria-hidden="true"></i></button></th><th scope="col" class="attendance-status-column" aria-sort="none"><button type="button" class="attendance-sort-button" data-attendance-sort="status">Attendance <i class="bi bi-arrow-down-up" data-sort-icon aria-hidden="true"></i></button></th>@if (showRemarks) { <th scope="col" class="attendance-note-column">Note</th> }
                 </tr></thead><tbody>
                 @for (int i=0;i<Model.Students.Count;i++) { var student=Model.Students[i];
-                    <tr data-attendance-row data-student-search="@student.StudentName @student.StudentNumber" data-attendance-status="@((int?)student.Status)">
+                    <tr data-attendance-row data-student-name="@student.StudentName" data-student-number="@student.StudentNumber" data-student-search="@student.StudentName @student.StudentNumber" data-attendance-status="@((int?)student.Status)">
                         @if (Model.CanEdit) { <td><input type="checkbox" class="form-check-input attendance-student-check" aria-label="Select @student.StudentName" /></td> }
-                        <td>@(i+1)</td><td><strong>@student.StudentName</strong><br /><small>@student.StudentNumber</small><input asp-for="Students[i].StudentProfileId" type="hidden" /></td>
+                        <td>@(i+1)</td><td><strong>@student.StudentName</strong><br /><small>@student.StudentNumber</small><input asp-for="Students[i].StudentProfileId" type="hidden" />
+                            @if (showRemarks && (Model.CanEdit || !string.IsNullOrWhiteSpace(student.Remark)))
+                            {
+                                <div id="attendance-note-@i" class="attendance-note-editor" hidden>
+                                    @if (Model.CanEdit)
+                                    {
+                                        <label asp-for="Students[i].Remark" class="form-label">Remark (optional)</label>
+                                        <input asp-for="Students[i].Remark" class="form-control" maxlength="300" placeholder="Add a short note" aria-label="Remark for @student.StudentName" />
+                                    }
+                                    else
+                                    {
+                                        <p class="attendance-note-copy">@student.Remark</p>
+                                    }
+                                </div>
+                            }
+                        </td>
                         <td>@if (Model.CanEdit) { <select asp-for="Students[i].Status" class="form-select" aria-label="Attendance for @student.StudentName"><option value="">Unrecorded</option><option value="1">Present</option><option value="2">Absent</option><option value="3">Late</option></select> } else { <span class="tutor-management-badge @(student.Status == AttendanceStatus.Present ? "tutor-badge-success" : student.Status == AttendanceStatus.Absent ? "tutor-badge-inactive" : "tutor-badge-pending")">@(student.Status?.ToString() ?? "Unrecorded")</span> }</td>
-                        @if (showRemarks) { <td>@if (Model.CanEdit) { <input asp-for="Students[i].Remark" class="form-control" maxlength="300" placeholder="Optional" aria-label="Remark for @student.StudentName" /> } else { <span>@(string.IsNullOrWhiteSpace(student.Remark) ? "—" : student.Remark)</span> }</td> }
+                        @if (showRemarks)
+                        {
+                            <td class="attendance-note-cell">
+                                @if (Model.CanEdit || !string.IsNullOrWhiteSpace(student.Remark))
+                                {
+                                    <button type="button" class="attendance-text-button attendance-note-toggle" data-attendance-note="attendance-note-@i" data-note-editable="@Model.CanEdit.ToString().ToLowerInvariant()" aria-controls="attendance-note-@i" aria-expanded="false" aria-label="@(Model.CanEdit ? $"Edit optional remark for {student.StudentName}" : $"View remark for {student.StudentName}")">@(Model.CanEdit ? (string.IsNullOrWhiteSpace(student.Remark) ? "+ Add note" : "Edit note") : "View note")</button>
+                                }
+                                else { <span class="attendance-sheet-muted">—</span> }
+                            </td>
+                        }
                     </tr>
                 }
                 </tbody></table></div>
                 <p id="attendance-no-matches" class="attendance-sheet-note" hidden>No students match these filters.</p>
                 <nav id="attendance-roster-pagination" class="table-pagination" aria-label="Student pages" hidden></nav>
-                @if (!submitted) { <partial name="/Views/Attendance/_SheetTotals.cshtml" model="Model" /> }
+
             }
             @if (Model.CanEdit && Model.Students.Count > 0) {
                 @if (!Model.UsesApprovedReopenReason)
                 {
                 <div id="attendance-late-reason" class="attendance-late-reason" hidden="@(!Model.IsLateEntry)"><label asp-for="LateSubmissionReason" class="form-label">Late Submission Reason <span class="text-danger">*</span></label><textarea asp-for="LateSubmissionReason" class="form-control" rows="2" maxlength="500" placeholder="Explain why attendance was submitted late"></textarea><span asp-validation-for="LateSubmissionReason" class="text-danger"></span><p class="attendance-sheet-help">@(request?.Decision==AttendanceReopenDecision.Approved ? "You may update this reason before submitting." : "Required when submitting attendance after the lesson ends.")</p></div>
                 }
-                <div class="class-form-actions attendance-sheet-footer"><small class="attendance-sheet-muted">Submit & Lock saves and finalises attendance.</small><button type="submit" name="FinalSubmit" value="false" class="outline-button" id="attendance-save-draft" disabled>Save Draft</button><button type="submit" name="FinalSubmit" value="true" class="primary-button" id="attendance-final-submit">Submit &amp; Lock</button></div>
+                <div class="class-form-actions attendance-sheet-footer"><small class="attendance-sheet-muted">Save a draft, or submit to finalise attendance for all students.</small><button type="submit" name="FinalSubmit" value="false" class="outline-button" id="attendance-save-draft" disabled>Save Draft</button><button type="submit" name="FinalSubmit" value="true" class="primary-button" id="attendance-final-submit">Submit &amp; Lock</button></div>
             }
         </form>
     </section>
 </div>
-@section Scripts { <partial name="_ValidationScriptsPartial" /><script src="~/js/attendance-sheet.js" asp-append-version="true"></script> }
+@section Scripts { <partial name="_ValidationScriptsPartial" /><script src="~/js/attendance-sheet.js" asp-append-version="true"></script><script src="~/js/attendance-notes.js" asp-append-version="true"></script> }

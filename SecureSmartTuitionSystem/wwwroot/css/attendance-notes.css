@@ -1,0 +1,18 @@
+﻿/* Compact optional notes, using the existing Attendance palette and controls. */
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table { table-layout: fixed; min-width: 560px; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table th:first-child,
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table td:first-child { width: 50px; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-notes-editable th:first-child,
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-notes-editable td:first-child { width: 38px; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-notes-editable th:nth-child(2),
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-notes-editable td:nth-child(2) { width: 50px; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table .attendance-student-column { width: auto; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table .attendance-status-column { width: 180px; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table .attendance-note-column { width: 110px; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-notes-readonly td:nth-child(2) { width: auto; }
+.attendance-bulk-page .attendance-note-toggle { display: inline-flex; min-height: 36px; align-items: center; font-size: .84rem; white-space: nowrap; }
+.attendance-bulk-page .attendance-note-editor { margin-top: 12px; max-width: 440px; }
+.attendance-bulk-page .attendance-note-editor .form-label { margin-bottom: 6px; color: var(--muted); font-size: .82rem; }
+.attendance-bulk-page .attendance-note-copy { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .86rem; line-height: 1.6; }
+.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table td { overflow-wrap: anywhere; }
+@media(max-width:575.98px) { .attendance-bulk-page .attendance-note-toggle { min-height: 44px; } }

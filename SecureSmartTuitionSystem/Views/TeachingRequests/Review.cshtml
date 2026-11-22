@@ -3,11 +3,17 @@
 @{
     ViewData["Title"] = "Review Teaching Request";
     var request = Model.Request!;
+    bool hasErrors = !ViewData.ModelState.IsValid;
+    bool approveDecision = request.Type != TeachingChangeType.Remove;
+    if (ViewData.ModelState.TryGetValue("approve", out var decisionState)
+        && bool.TryParse(decisionState.AttemptedValue, out var attemptedDecision))
+        approveDecision = attemptedDecision;
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/tutor-management.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/teaching-requests.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/enrollment.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/teaching-review.css" asp-append-version="true" />
 }
 <div class="page-header">
@@ -66,30 +72,19 @@
         <div class="teaching-review-panel-body">
         @if (request.Status == TeachingChangeStatus.Pending)
         {
-            <form asp-action="Review" method="post">
-                <input asp-for="Id" type="hidden" />
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
-                <label asp-for="ReviewNotes" class="form-label">Admin Review Notes <span class="teaching-review-optional">(Optional)</span></label>
-                <textarea asp-for="ReviewNotes" class="form-control" rows="4" maxlength="1000" placeholder="Add comments for the tutor, if needed." aria-describedby="reviewNotesHelp"></textarea>
-                <span asp-validation-for="ReviewNotes" class="text-danger"></span>
-                <p id="reviewNotesHelp" class="form-text">Notes will be visible to the tutor when provided.</p>
-                @if (request.Type != TeachingChangeType.Remove)
-                {
-                    <div class="form-check teaching-review-confirm">
-                        <input asp-for="QualificationVerified" class="form-check-input" />
-                        <label asp-for="QualificationVerified" class="form-check-label"></label>
-                    </div>
-                    <span asp-validation-for="QualificationVerified" class="text-danger" role="alert"></span>
-                }
-                <div class="teaching-review-actions">
-                    <button type="submit" name="approve" value="true" class="primary-button" disabled="@(request.Type == TeachingChangeType.Remove)"><i class="bi bi-check-circle" aria-hidden="true"></i> Approve Request</button>
-                    <button type="submit" name="approve" value="false" class="outline-button">Reject Request</button>
-                </div>
-                @if (request.Type == TeachingChangeType.Remove)
-                {
-                    <p class="form-text">Subject removal is currently unavailable. You can reject this earlier request.</p>
-                }
-            </form>
+            <div class="enrollment-review-actions">
+                <button type="button" class="enrollment-action-button enrollment-approve-button" data-teaching-decision="true" disabled="@(request.Type == TeachingChangeType.Remove)"><i class="bi bi-check-circle" aria-hidden="true"></i> Approve Request</button>
+                <button type="button" class="enrollment-action-button enrollment-reject-button" data-teaching-decision="false"><i class="bi bi-x-circle" aria-hidden="true"></i> Reject Request</button>
+            </div>
+            @if (hasErrors)
+            {
+                <p class="text-danger mt-3 mb-0" role="alert">The decision was not saved. Open the review dialog to check the highlighted details.</p>
+            }
+            @if (request.Type == TeachingChangeType.Remove)
+            {
+                <p class="form-text">Subject removal is currently unavailable. You can reject this earlier request.</p>
+            }
+            <noscript><p class="form-text">Enable JavaScript to open the review confirmation dialog.</p></noscript>
         }
         else
         {
@@ -102,6 +97,47 @@
         </div>
     </aside>
 </div>
+@if (request.Status == TeachingChangeStatus.Pending)
+{
+    <div class="modal fade enrollment-modal teaching-decision-modal" id="teachingDecisionModal" tabindex="-1" aria-labelledby="teachingDecisionTitle" aria-hidden="true" data-review-errors="@hasErrors.ToString().ToLowerInvariant()" data-review-approve="@approveDecision.ToString().ToLowerInvariant()">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form asp-action="Review" method="post" id="teachingDecisionForm">
+                    <input asp-for="Id" type="hidden" />
+                    <input type="hidden" name="approve" id="teachingApproveDecision" value="@approveDecision.ToString().ToLowerInvariant()" />
+                    <div class="modal-header">
+                        <h2 class="modal-title" id="teachingDecisionTitle">@(approveDecision ? "Approve Request" : "Reject Request")</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="teachingDecisionQuestion">@(approveDecision ? "Are you sure you want to approve this teaching request?" : "Are you sure you want to reject this teaching request?")</p>
+                        <p class="text-muted" id="teachingDecisionEffect">@(approveDecision ? "Approval adds the requested subject and level to this tutor's approved teaching subjects." : "The requested teaching change will not be applied.")</p>
+                        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+                        <label asp-for="ReviewNotes" class="form-label">Admin Review Notes <span class="teaching-review-optional">(Optional)</span></label>
+                        <textarea asp-for="ReviewNotes" class="form-control" rows="3" maxlength="1000" placeholder="Enter optional remarks" aria-describedby="reviewNotesHelp"></textarea>
+                        <span asp-validation-for="ReviewNotes" class="text-danger"></span>
+                        <p id="reviewNotesHelp" class="form-text">Notes will be visible to the tutor when provided.</p>
+                        @if (request.Type != TeachingChangeType.Remove)
+                        {
+                            <div id="teachingQualificationBlock" hidden="@(!approveDecision)">
+                                <div class="form-check mt-3">
+                                    <input asp-for="QualificationVerified" class="form-check-input" disabled="@(!approveDecision)" required="@approveDecision" />
+                                    <label asp-for="QualificationVerified" class="form-check-label"></label>
+                                </div>
+                                <span asp-validation-for="QualificationVerified" class="text-danger" role="alert"></span>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Back</button>
+                        <button type="submit" class="btn @(approveDecision ? "btn-success" : "btn-danger")" id="teachingConfirmDecision">@(approveDecision ? "Confirm Approval" : "Confirm Rejection")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/teaching-review-modal.js" asp-append-version="true"></script>
 }

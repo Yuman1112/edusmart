@@ -1,0 +1,21 @@
+﻿.attendance-bulk-page .attendance-student-filter-card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:22px 24px; box-shadow:var(--shadow); margin-bottom:20px; }
+.attendance-bulk-page .attendance-student-filter-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.attendance-bulk-page .attendance-student-filter-heading h2 { display:flex; align-items:center; gap:8px; margin:0 0 6px; color:var(--navy); font-size:1.05rem; font-weight:700; }
+.attendance-bulk-page .attendance-student-filter-heading h2 i { color:var(--teal); }
+.attendance-bulk-page .attendance-student-filter-heading p { color:var(--muted); margin:0; font-size:.86rem; }
+.attendance-bulk-page .attendance-student-filter-card .attendance-roster-tools { margin:0; }
+.attendance-bulk-page .attendance-roster-card .attendance-roster-heading { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:18px; }
+.attendance-bulk-page .attendance-roster-heading p { margin:6px 0 0; }
+.attendance-bulk-page .attendance-result-header-tools { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.attendance-bulk-page .attendance-roster-heading .attendance-totals { display:flex; flex-wrap:wrap; gap:8px; margin:0; padding:0; border:0; }
+.attendance-bulk-page .attendance-roster-heading .attendance-totals .tutor-management-badge { padding:5px 9px; font-size:.78rem; }
+.attendance-bulk-page .attendance-sort-button { display:inline-flex; align-items:center; gap:6px; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-transform:inherit; letter-spacing:inherit; cursor:pointer; }
+.attendance-bulk-page .attendance-roster-card .attendance-sheet-footer { border-top:0; margin-top:8px; padding-top:8px; }
+.attendance-bulk-page #attendance-roster-pagination { border:0; margin-bottom:12px; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table .attendance-number-column { width:48px; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table .attendance-student-column { width:55%; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table .attendance-status-column { width:25%; }
+.attendance-page.attendance-bulk-page #attendance-roster-table.attendance-compact-notes-table .attendance-note-column { width:110px; }
+.attendance-bulk-page .attendance-roster-card #attendance-roster-table td { padding:12px; }
+@media(max-width:767.98px) { .attendance-bulk-page .attendance-student-filter-card { padding:20px; } .attendance-bulk-page .attendance-roster-heading .attendance-result-header-tools { width:100%; } }
+@media(max-width:575.98px) { .attendance-bulk-page .attendance-student-filter-heading { align-items:flex-start; flex-wrap:wrap; } }

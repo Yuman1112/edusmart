@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
     'use strict';
     const one = (s, root = document) => root.querySelector(s);
     const headers = { 'X-Requested-With': 'XMLHttpRequest' };
@@ -26,7 +26,11 @@
             const input = key === 'ClassSessionId' ? classes : form.elements[key];
             if (input) input.classList.toggle('input-validation-error', !!message);
         }
-        function summary(message) { const node = one('[data-video-form-error]', form); if (node) { node.textContent = message; node.hidden = !message; } const footer = one('[data-video-submit-error]', form); if (footer) { footer.textContent = message; footer.hidden = !message; } }
+        function summary(message) {
+            // One form-level notice for upload/connection failures; field errors stay beside their inputs.
+            const footer = one('[data-video-submit-error]', form);
+            if (footer) { footer.textContent = message; footer.hidden = !message; }
+        }
         function replacementBlocked() {
             return replacementState === 'checking' || replacementState === 'blocked';
         }
@@ -68,6 +72,8 @@
                     : `${queue.length} ${queue.length === 1 ? 'video' : 'videos'} ready to upload`;
             list.replaceChildren();
             drop.hidden = started;
+            const picker = one('.video-file-picker', form);
+            if (picker) picker.hidden = started;
             queue.forEach((item, index) => {
                 const row = document.createElement('div'); row.className = 'video-batch-row';
                 const info = document.createElement('div'); info.className = 'video-batch-info';
@@ -249,16 +255,18 @@
             event.preventDefault(); if (busy || pendingSelections > 0 || replacementBlocked()) return;
             try {
                 let valid = true; summary(''); error('VideoFile', '');
+                const serverErrors = one('[data-video-server-errors]', form);
+                if (serverErrors) { serverErrors.replaceChildren(); serverErrors.classList.remove('validation-summary-errors'); serverErrors.classList.add('validation-summary-valid'); }
                 const keys = [['ClassSessionId', 'Please select an assigned class.']];
                 if (editing) keys.push(['Title', 'Please enter a lesson title.']);
                 keys.forEach(([key, message]) => { const missing = !(key === 'ClassSessionId' ? classes : form.elements[key]).value.trim(); error(key, missing ? message : ''); valid = valid && !missing; });
                 const pending = queue.filter(x => x.state === 'ready' || x.state === 'failed');
-                if (!editing && (!pending.length || pending.some(x => !x.title.trim()))) { error('VideoFile', pending.length ? 'Enter a lesson title for every video.' : 'Add at least one video to upload.'); valid = false; }
+                if (!editing && (!pending.length || pending.some(x => !x.title.trim()))) { error('VideoFile', pending.length ? 'Enter a lesson title for every video.' : 'Please add at least one MP4 video.'); valid = false; }
                 for (const key of ['Description', ...(editing ? ['Title'] : [])]) {
                     const input = form.elements[key];
                     if (input && !input.disabled && input.validity && !input.validity.valid) { error(key, input.validationMessage || 'Check this value.'); valid = false; }
                 }
-                if (!valid) { summary('Please check the highlighted fields and video titles before uploading.'); one('.input-validation-error', form)?.focus(); return; }
+                if (!valid) { one('.input-validation-error', form)?.focus(); return; }
                 closePreview();
                 if (editing && file?.files.length) {
                     busy = true; dirty();
@@ -296,6 +304,16 @@
                     const saved = queue.filter(x => x.state === 'saved').length;
                     batchStatus.textContent = `${saved} of ${queue.length} videos uploaded. Each uploaded video is saved separately.`;
                     one('[data-video-done]', form).hidden = false;
+                    // Redirect only when every queued upload has a confirmed successful response.
+                    if (queue.length > 0 && queue.every(item => item.state === 'saved')) {
+                        const destination = new URL(form.dataset.videoListUrl, location.href);
+                        if (destination.origin === location.origin && form.dataset.videoListUrl) {
+                            busy = false;
+                            if (progress) progress.hidden = true;
+                            location.assign(destination.href);
+                            return;
+                        }
+                    }
                 }
                 busy = false; if (progress) progress.hidden = true; renderQueue(); dirty();
                 if (!editing) { save.textContent = 'Retry Remaining Videos'; save.disabled = queue.some(x => x.state === 'unknown') || !queue.some(x => x.state === 'ready' || x.state === 'failed'); }

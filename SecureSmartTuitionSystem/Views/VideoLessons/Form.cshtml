@@ -1,4 +1,4 @@
-@model SecureSmartTuitionSystem.ViewModels.Video.VideoForm
+﻿@model SecureSmartTuitionSystem.ViewModels.Video.VideoForm
 @{
     bool editing = Model.Id > 0;
     ViewData["Title"] = editing ? "Edit Recorded Lesson" : "Upload Recorded Lesson";
@@ -14,15 +14,15 @@
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/video-playback.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/video-upload-picker.css" asp-append-version="true" />
 }
 <div class="video-page">
     <div class="page-header"><div><h1>@ViewData["Title"]</h1><p>@(editing ? "Update the recording information or replace the video for this class." : "Share a recorded lesson with your assigned class.")</p></div><a href="@backUrl" class="outline-button"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</a></div>
     <div class="alert alert-info">Students can view each recording for 30 days from its first successful upload. Editing, replacing or restoring a recording does not restart this period.</div>
     <div class="class-form-card tutor-create-card">
-        <form asp-action="Save" asp-route-returnUrl="@listReturnUrl" method="post" enctype="multipart/form-data" data-video-form novalidate data-choices-url="@Url.Action("ClassChoices")" data-editing="@editing.ToString().ToLowerInvariant()" data-video-replacement-info-url="@Url.Action("ReplacementInfo")" data-video-expiry="@(Model.CreatedAtUtc.HasValue ? new DateTimeOffset(SecureSmartTuitionSystem.Services.Video.VideoAvailability.ExpiresAtUtc(Model.CreatedAtUtc.Value)).ToUnixTimeMilliseconds().ToString() : "")" data-video-server-now="@(new DateTimeOffset(DateTime.SpecifyKind(Model.ServerNowUtc, DateTimeKind.Utc)).ToUnixTimeMilliseconds())">
+        <form asp-action="Save" asp-route-returnUrl="@listReturnUrl" method="post" enctype="multipart/form-data" data-video-form novalidate data-video-list-url="@Url.Action("Index", "VideoLessons", new { Status = "all", Watch = "all", Sort = "date_desc", Page = 1 })" data-choices-url="@Url.Action("ClassChoices")" data-editing="@editing.ToString().ToLowerInvariant()" data-video-replacement-info-url="@Url.Action("ReplacementInfo")" data-video-expiry="@(Model.CreatedAtUtc.HasValue ? new DateTimeOffset(SecureSmartTuitionSystem.Services.Video.VideoAvailability.ExpiresAtUtc(Model.CreatedAtUtc.Value)).ToUnixTimeMilliseconds().ToString() : "")" data-video-server-now="@(new DateTimeOffset(DateTime.SpecifyKind(Model.ServerNowUtc, DateTimeKind.Utc)).ToUnixTimeMilliseconds())">
             <input asp-for="Id" type="hidden" /><input asp-for="RowVersion" type="hidden" /><input name="ReplacementConfirmed" type="hidden" value="false" />
-            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-            <div class="text-danger" role="alert" data-video-form-error hidden></div>
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert" data-video-server-errors></div>
             @if (!editing)
             {
                 <div class="alert alert-info" data-video-no-classes hidden="@(Model.Classes.Count > 0)">No active assigned classes are available. Ask your administrator to assign a class before uploading a recording.</div>

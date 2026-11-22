@@ -1,0 +1,5 @@
+﻿/* Keep the custom Add Videos picker visually consistent in enabled/disabled states. */
+.video-page .video-file-picker { position: relative; overflow: hidden; }
+.video-page .video-file-picker[hidden] { display: none !important; }
+.video-page .video-file-picker input[type="file"],
+.video-page .video-file-picker input[type="file"]:disabled { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0 !important; margin: 0; }

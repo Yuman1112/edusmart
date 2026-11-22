@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
     "use strict";
     const form = document.getElementById("attendance-sheet-form");
     if (!form) return;
@@ -12,7 +12,10 @@
     const snapshot = () => JSON.stringify(fields.map(f => f.value));
     const original = snapshot();
     let locked = false, page = 1, visible = [], filtered = [];
-    const size = 25;
+    const size = 10;
+    let sortKey = "name", sortAscending = true;
+    const sortButtons = [...form.querySelectorAll("[data-attendance-sort]")];
+    const clearFilters = $("attendance-clear-filters");
     const status = row => row.querySelector('select[name$=".Status"]')?.value ?? row.dataset.attendanceStatus ?? "";
     const check = row => row.querySelector(".attendance-student-check");
     const selected = () => rows.filter(row => check(row)?.checked);
@@ -36,6 +39,21 @@
         const query = (search?.value || "").trim().toLocaleLowerCase();
         const filter = statusFilter?.value ?? "all";
         filtered = rows.filter(row => (!query || row.dataset.studentSearch.toLocaleLowerCase().includes(query)) && (filter === "all" || status(row) === filter));
+        filtered.sort((a, b) => {
+            const name = row => row.dataset.studentName ?? row.dataset.studentSearch ?? "";
+            const value = row => sortKey === "status" ? ({ "1": "Present", "2": "Absent", "3": "Late", "": "Unrecorded" }[status(row)] ?? "Unrecorded") : name(row);
+            const compared = value(a).localeCompare(value(b), undefined, { sensitivity: "base", numeric: true });
+            return (compared || name(a).localeCompare(name(b), undefined, { sensitivity: "base", numeric: true })) * (sortAscending ? 1 : -1);
+        });
+        const body = $("attendance-roster-table")?.tBodies[0];
+        if (body) filtered.forEach(row => body.append(row));
+        if (clearFilters) clearFilters.hidden = !query && filter === "all";
+        sortButtons.forEach(button => {
+            const active = button.dataset.attendanceSort === sortKey;
+            button.closest("th")?.setAttribute("aria-sort", active ? (sortAscending ? "ascending" : "descending") : "none");
+            const icon = button.querySelector("[data-sort-icon]");
+            if (icon) icon.className = `bi ${active ? (sortAscending ? "bi-arrow-up" : "bi-arrow-down") : "bi-arrow-down-up"}`;
+        });
         const pages = Math.max(1, Math.ceil(filtered.length / size));
         page = Math.max(1, Math.min(page, pages));
         visible = filtered.slice((page - 1) * size, page * size);
@@ -47,7 +65,7 @@
             nav.replaceChildren();
             if (!nav.hidden) {
                 const summary = document.createElement("span"); summary.className = "table-pagination-summary";
-                summary.textContent = `${(page - 1) * size + 1}–${Math.min(page * size, filtered.length)} of ${filtered.length} students`;
+                summary.textContent = `${(page - 1) * size + 1}–${Math.min(page * size, filtered.length)} of ${filtered.length} students · ${size} per page`;
                 const controls = document.createElement("div"); controls.className = "table-pagination-controls";
                 function button(text, target, disabled, current = false) {
                     const b = document.createElement("button"); b.type = "button"; b.className = `table-page-button${current ? " active" : ""}`; b.textContent = text; b.disabled = disabled;
@@ -73,10 +91,21 @@
         selection();
         $("attendance-state").textContent = "The entry deadline has passed. Attendance is now locked. Unsaved changes were not saved.";
     }
+    sortButtons.forEach(button => button.addEventListener("click", () => {
+        const key = button.dataset.attendanceSort;
+        sortAscending = key === sortKey ? !sortAscending : true;
+        sortKey = key;
+        page = 1; draw();
+    }));
+    clearFilters?.addEventListener("click", () => {
+        if (search) search.value = "";
+        if (statusFilter) statusFilter.value = "all";
+        page = 1; draw();
+    });
     search?.addEventListener("input", () => { page = 1; draw(); });
     statusFilter?.addEventListener("change", () => { page = 1; draw(); });
     pageCheck?.addEventListener("change", () => { checkEnd(); if (locked) return; visible.forEach(row => { check(row).checked = pageCheck.checked; }); selection(); });
-    $("attendance-select-all")?.addEventListener("click", () => { checkEnd(); if (locked) return; rows.forEach(row => { check(row).checked = true; }); selection(); });
+    $("attendance-select-all")?.addEventListener("click", () => { checkEnd(); if (locked) return; rows.forEach(row => { check(row).checked = true; }); selection(); feedback(`All ${rows.length} students selected across all pages, including students hidden by filters.`); });
     $("attendance-clear-selection")?.addEventListener("click", () => { rows.forEach(row => { check(row).checked = false; }); selection(); });
     form.querySelectorAll("[data-attendance-bulk]").forEach(button => button.addEventListener("click", () => {
         checkEnd(); if (locked) return;

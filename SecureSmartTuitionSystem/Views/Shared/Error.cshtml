@@ -1,105 +1,29 @@
-@model SecureSmartTuitionSystem.Models.ErrorViewModel
+﻿@model SecureSmartTuitionSystem.Models.ErrorViewModel
 @{
-    bool serverError = Model.StatusCode == 500;
-    bool accessDenied = Model.StatusCode == 403;
-    bool signInRequired = Model.StatusCode == 401;
-    bool useSiteLayout = accessDenied || signInRequired;
-    if (signInRequired) ViewData["UseGuestErrorLayout"] = true;
-    bool signedIn = User.Identity?.IsAuthenticated == true;
-    Layout = serverError ? "~/Views/Shared/_ServiceErrorLayout.cshtml"
-        : useSiteLayout ? "~/Views/Shared/_Layout.cshtml" : "~/Views/Shared/_ErrorLayout.cshtml";
-    ViewData["Title"] = signInRequired ? "Sign In Required" : accessDenied ? "Access Denied" : Model.Title;
-    string? dashboardController = User.IsInRole("Admin") ? "Admin"
-        : User.IsInRole("Tutor") ? "Tutor"
-        : User.IsInRole("Parent") ? "Parent"
-        : User.IsInRole("Student") ? "Student" : null;
+    // Independent shell keeps error pages usable when normal site services are unavailable.
+    Layout = "~/Views/Shared/_ErrorLayout.cshtml";
+    ViewData["Title"] = Model.Title;
 }
-@if (serverError)
-{
-    <div class="service-error-page">
-        <div class="page-header">
-            <h1>Something Went Wrong</h1>
-            <p>We could not complete your request. Please try again later.</p>
-        </div>
-        <section class="service-error-card" aria-labelledby="service-error-title">
-            <div class="service-error-icon" aria-hidden="true">!</div>
-            <span class="service-error-status">HTTP 500</span>
-            <h2 id="service-error-title">This request could not be completed</h2>
-            <p>If the problem continues, contact the centre with the reference below.</p>
-            <div class="service-error-actions">
-                <a class="service-primary" href="@Url.Content("~/")">Return Home</a>
-                @if (SecureSmartTuitionSystem.Services.Security.PageAccessRules.CanUsePublicSupport(User))
-                {
-                    <a class="service-outline" href="@Url.Content("~/GuestSupport")">Contact staff</a>
-                }
-            </div>
-            <div class="service-error-reference">
-                <span>Error code: @Model.ErrorCode</span>
-                @if (Model.ShowRequestId)
-                {
-                    <span>Reference: @Model.RequestId</span>
-                }
-            </div>
-        </section>
-    </div>
-}
-else if (useSiteLayout)
-{
-    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/access-denied.css" asp-append-version="true" />
-    <div class="access-denied-page">
-        <div class="page-header">
-            <div>
-                <h1>@(signInRequired ? "Sign In Required" : "Access Denied")</h1>
-                <p>@(signInRequired ? "Please sign in to continue to your account." : "You do not have permission to access this page.")</p>
-            </div>
-        </div>
-        <section class="class-form-card access-denied-card" aria-labelledby="access-denied-heading">
-            <div class="access-denied-icon" aria-hidden="true"><i class="bi @(signInRequired ? "bi-box-arrow-in-right" : "bi-shield-lock")"></i></div>
-            <span class="access-denied-status">HTTP @Model.StatusCode</span>
-            <h2 id="access-denied-heading">@(signInRequired ? "Your sign-in session is missing or has expired" : "This page is restricted")</h2>
-            <p>@(signInRequired ? "Sign in again to access this page securely." : "Your account does not have permission to access this page or perform this action.")</p>
-            <div class="class-form-actions access-denied-actions">
-                @if (signInRequired)
-                {
-                    <a class="primary-button" href="@Url.Content("~/Identity/Account/Login")"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Sign In</a>
-                    <a class="outline-button" href="@Url.Content("~/")">Return Home</a>
-                }
-                else if (signedIn && dashboardController != null)
-                {
-                    <a class="primary-button" href="@Url.Action("Index", dashboardController)"><i class="bi bi-grid" aria-hidden="true"></i> Back to Dashboard</a>
-                }
-                else
-                {
-                    <a class="primary-button" href="@Url.Content("~/")">Return Home</a>
-                }
-                @if (SecureSmartTuitionSystem.Services.Security.PageAccessRules.CanUsePublicSupport(User))
-                {
-                    <a class="outline-button" href="@Url.Content("~/GuestSupport")">Contact staff</a>
-                }
-            </div>
-            <div class="access-denied-reference">
-                <span>Error code: @Model.ErrorCode</span>
-                @if (Model.ShowRequestId)
-                {
-                    <span>Reference: @Model.RequestId</span>
-                }
-            </div>
-        </section>
-    </div>
-}
-else
-{
 <section class="error-card" aria-labelledby="error-title">
-    <span class="error-status">HTTP @Model.StatusCode</span><h1 id="error-title">@Model.Title</h1>
+    <span class="error-status">HTTP @Model.StatusCode</span>
+    <h1 id="error-title">@Model.Title</h1>
     <p class="error-message">@Model.Message</p>
-    <dl><div><dt>Error code</dt><dd>@Model.ErrorCode</dd></div>
-    @if (Model.ShowRequestId) { <div><dt>Reference</dt><dd>@Model.RequestId</dd></div> }</dl>
-    <div class="error-actions"><a class="error-button" href="@Url.Content("~/")">Return Home</a>
-    @if (Model.StatusCode == 401) { <a class="error-button secondary" href="@Url.Content("~/Identity/Account/Login")">Sign in</a> }
-    @if (SecureSmartTuitionSystem.Services.Security.PageAccessRules.CanUsePublicSupport(User)) {
-        <a class="error-button secondary" href="@Url.Content("~/GuestSupport")">Contact staff</a>
-    }</div>
+    <dl>
+        <div><dt>Error code</dt><dd>@Model.ErrorCode</dd></div>
+        @if (Model.ShowRequestId)
+        {
+            <div><dt>Reference</dt><dd>@Model.RequestId</dd></div>
+        }
+    </dl>
+    <div class="error-actions">
+        <a class="error-button" href="@Url.Content("~/")">Return Home</a>
+        @if (Model.StatusCode == 401)
+        {
+            <a class="error-button secondary" href="@Url.Content("~/Identity/Account/Login")">Sign in</a>
+        }
+        @if (SecureSmartTuitionSystem.Services.Security.PageAccessRules.CanUsePublicSupport(User))
+        {
+            <a class="error-button secondary" href="@Url.Content("~/GuestSupport")">Contact staff</a>
+        }
+    </div>
 </section>
-
-}
