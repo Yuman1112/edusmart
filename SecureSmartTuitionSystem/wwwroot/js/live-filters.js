@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         while (old.childNodes.length > index) old.lastChild.remove();
         if (!focused && old instanceof HTMLInputElement && old.type !== 'file') { old.value = fresh.value; old.checked = fresh.checked; }
-        if (!focused && old instanceof HTMLSelectElement) old.value = fresh.value;
+        if (old instanceof HTMLSelectElement) old.value = fresh.value;
     }
     async function update(form, url) {
         pending?.abort(); const abort = new AbortController(); pending = abort; const version = ++sequence;
@@ -64,12 +64,22 @@ document.addEventListener("DOMContentLoaded", () => {
     function schedule(form, delay) {
         const previous = state.get(form); clearTimeout(previous);
         pending?.abort(); sequence++;
-        state.set(form, setTimeout(() => { if (form.checkValidity()) form.requestSubmit(); }, delay));
+        state.set(form, setTimeout(() => {
+            if (form.checkValidity()) form.requestSubmit();
+            else form.closest('main')?.removeAttribute('aria-busy');
+        }, delay));
     }
     document.querySelectorAll(selector).forEach(form => {
         form.classList.add('live-filter-form');
         form.addEventListener('input', event => { if (['text', 'search', 'number'].includes(event.target.type)) schedule(form, 350); });
-        form.addEventListener('change', () => schedule(form, 0));
+        form.addEventListener('change', event => {
+            const dependent = event.target.dataset.liveFilterResets;
+            if (dependent) {
+                const field = form.elements.namedItem(dependent);
+                if (field instanceof HTMLSelectElement) field.value = '';
+            }
+            schedule(form, 0);
+        });
         form.addEventListener('submit', event => {
             event.preventDefault(); clearTimeout(state.get(form));
             const url = new URL(form.action || location.href, location.href); url.search = '';

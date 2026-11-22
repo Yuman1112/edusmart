@@ -44,6 +44,15 @@ string connectionString =
         "Connection string 'DefaultConnection' " +
         "was not found.");
 
+var sqlOptions = new SqlConnectionStringBuilder(connectionString);
+// Azure SQL must use encrypted traffic and validate the server certificate.
+if (sqlOptions.DataSource.Contains(".database.windows.net", StringComparison.OrdinalIgnoreCase) &&
+    (sqlOptions.TrustServerCertificate || sqlOptions.Encrypt.Equals(SqlConnectionEncryptOption.Optional)))
+{
+    throw new InvalidOperationException(
+        "Azure SQL requires Encrypt=True or Strict and TrustServerCertificate=False.");
+}
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<AuditLogIntegrity>();
 builder.Services.AddSingleton<FinancialFieldProtection>();

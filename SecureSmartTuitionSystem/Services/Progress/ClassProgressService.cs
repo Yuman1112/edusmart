@@ -47,7 +47,12 @@ public sealed class ClassProgressService(ApplicationDbContext db)
             var topics=syllabus?.Topics.Select(t=>t.Id).ToHashSet()??[];var values=progress.Where(p=>p.ClassSessionId==c.ClassSessionId&&topics.Contains(p.TopicId)).ToList();
             var lessons=ClassScheduleService.BuildLessons([c],changes.Where(x=>x.ClassSessionId==c.ClassSessionId).ToList(),from,to).Where(l=>!l.Cancelled&&syllabus!=null&&l.Date>=syllabus.TrackingFrom&&l.Date.Add(l.End.ToTimeSpan())<=now).ToList();
             var saved=lessons.Select(l=>(Lesson:l,Record:records.FirstOrDefault(r=>r.ClassSessionId==c.ClassSessionId&&ProgressRules.Same(r,l)))).ToList();
-            model.Rows.Add(new(c.ClassSessionId,c.ClassCode,c.ClassName??"",c.Subject.SubjectName+" · "+c.Subject.AcademicLevel,c.TutorUser.FullName??"",count,values.Count(p=>p.Percent==100),ProgressRules.Average(values.Select(p=>p.Percent),count),lessons.Count,saved.Count(x=>x.Record!=null),saved.Count(x=>x.Record==null&&ProgressRules.Late(x.Lesson.Date,x.Lesson.End,now)),saved.Count(x=>x.Record?.SubmittedLate==true)));
+            var schedule = $"{c.DayOfWeek} - {c.StartTime.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)}";
+            var suffix = " - " + schedule;
+            var name = c.ClassName ?? "Unnamed Class";
+            if (name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) name = name[..^suffix.Length];
+            var level = $"{c.Subject.EducationStage} · {c.Subject.AcademicLevel}";
+            model.Rows.Add(new(c.ClassSessionId,c.ClassCode,name,schedule,c.Subject.SubjectName,level,c.TutorUser.FullName??c.TutorUser.Email??"Tutor",count,values.Count(p=>p.Percent==100),ProgressRules.Average(values.Select(p=>p.Percent),count),lessons.Count,saved.Count(x=>x.Record!=null),saved.Count(x=>x.Record==null&&ProgressRules.Late(x.Lesson.Date,x.Lesson.End,now)),saved.Count(x=>x.Record?.SubmittedLate==true)));
         }
         return model;
     }

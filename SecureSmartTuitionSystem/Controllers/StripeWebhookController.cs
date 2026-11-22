@@ -42,6 +42,7 @@ namespace SecureSmartTuitionSystem.Controllers
         }
 
         [HttpPost]
+        [RequestSizeLimit(1_048_576)]
         public async Task<IActionResult> Receive(
             CancellationToken cancellationToken)
         {
@@ -56,16 +57,6 @@ namespace SecureSmartTuitionSystem.Controllers
                         .Status500InternalServerError);
             }
 
-            string requestBody;
-
-            using (var reader =
-                   new StreamReader(Request.Body))
-            {
-                requestBody =
-                    await reader.ReadToEndAsync(
-                        cancellationToken);
-            }
-
             string signatureHeader =
                 Request.Headers["Stripe-Signature"]
                     .ToString();
@@ -75,6 +66,16 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 return BadRequest(
                     "Stripe signature is missing.");
+            }
+
+            string requestBody;
+
+            using (var reader =
+                   new StreamReader(Request.Body))
+            {
+                requestBody =
+                    await reader.ReadToEndAsync(
+                        cancellationToken);
             }
 
             Event stripeEvent;
@@ -87,7 +88,7 @@ namespace SecureSmartTuitionSystem.Controllers
                         signatureHeader,
                         _stripeSettings.WebhookSecret);
             }
-            catch (StripeException exception)
+            catch (Exception exception) when (exception is StripeException or Newtonsoft.Json.JsonException)
             {
                 _logger.LogWarning(
                     exception,
@@ -115,7 +116,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 return Ok();
             }
 
-            if (stripeEvent.Data.Object is not Session session)
+            if (stripeEvent.Data?.Object is not Session session)
             {
                 _logger.LogWarning(
                     "Stripe event {EventId} did not contain " +

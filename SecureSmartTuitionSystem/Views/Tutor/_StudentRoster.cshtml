@@ -12,7 +12,7 @@
         <table class="table align-middle mb-0 edusmart-data-table" data-server-managed="true">
             <thead><tr>
                 <th scope="col">No.</th>
-                @foreach (var col in new[] { ("number", "Student ID"), ("name", "Student Name"), ("class", "Class"), ("subject", "Subject & Level"), ("start", "Start Date"), ("status", "Status") })
+                @foreach (var col in new[] { ("name", "Student Name"), ("class", "Class"), ("subject", "Subject & Level"), ("start", "Start Date"), ("status", "Status") })
                 { <th scope="col" aria-sort="@Direction(col.Item1)"><a href="@Link(1, Model.SortFor(col.Item1))" class="table-sort-button" data-roster-link>@col.Item2 <span class="table-sort-arrow" aria-hidden="true">↕</span></a></th> }
             </tr></thead>
             <tbody>
@@ -20,7 +20,7 @@
                     var student = Model.Students[i];
                     <tr>
                         <td>@((Model.Page - 1) * Model.PageSize + i + 1)</td>
-                        <td>@student.Number</td><td><strong>@student.Name</strong></td>
+                        <td><strong>@student.Name</strong></td>
                         <td><strong>@student.ClassCode</strong><div class="text-muted small">@student.ClassName</div></td>
                         <td>@student.Subject<div class="text-muted small">@student.Level</div></td>
                         <td><time datetime="@student.StartDate.ToString("yyyy-MM-dd")">@student.StartDate.ToString("dd MMM yyyy")</time></td>

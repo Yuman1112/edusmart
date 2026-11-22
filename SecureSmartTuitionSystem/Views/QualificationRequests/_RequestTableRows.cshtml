@@ -4,7 +4,7 @@
         @foreach (var request in Model) {
             number++;
             var badge = request.Status switch { QualificationUpdateStatus.Approved => "tutor-badge-success", QualificationUpdateStatus.Rejected => "teaching-badge-rejected", QualificationUpdateStatus.Cancelled => "qualification-badge-neutral", _ => "tutor-badge-pending" };
-            <tr data-reviewed-at="@(request.ReviewedAtUtc?.AddHours(8).ToString("dd MMM yyyy, h:mm tt") + (request.ReviewedAtUtc.HasValue ? " MYT" : ""))" data-request-id="@request.Id" data-request-status="@((int)request.Status)" data-request-version="@($"{request.Status}|{request.ReviewNotes}")"><td>@number</td><td data-sort-value="@request.Id"><strong>#@request.Id</strong></td>
+            <tr data-reviewed-at="@(request.ReviewedAtUtc?.AddHours(8).ToString("dd MMM yyyy, h:mm tt") + (request.ReviewedAtUtc.HasValue ? " MYT" : ""))" data-request-id="@request.Id" data-request-status="@((int)request.Status)" data-request-version="@($"{request.Status}|{request.ReviewNotes}")"><td>@number</td>
                 @if (admin) { <td><strong>@request.TutorName</strong><div class="small text-muted">@request.TutorId</div></td> }
                 <td class="qualification-details-cell">@foreach(var label in request.ChangedItems){<strong class="d-block">@label</strong>}<div class="small text-muted">@request.ChangedItems.Count item(s) changed</div></td>
                 <td data-sort-value="@request.SubmittedAtUtc.ToString("O")">@request.SubmittedAtUtc.AddHours(8).ToString("dd MMM yyyy")<div class="small text-muted">@request.SubmittedAtUtc.AddHours(8).ToString("h:mm tt") MYT</div></td>

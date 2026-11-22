@@ -20,6 +20,7 @@ public static class SecurityActivityText
         ["OperationError"] = "An operation could not be completed and needs review.",
         ["UnhandledError"] = "An unexpected system error needs review.",
         ["TutorRecordsExported"] = "Tutor records were exported.",
+        ["ReportExported"] = "An analytics report was generated for download.",
         ["AttendanceRecordsExported"] = "Attendance records were exported.",
         ["TutorReactivated"] = "A tutor account was reactivated.",
         ["TutorDeactivated"] = "A tutor account was deactivated."

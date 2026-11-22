@@ -3,7 +3,7 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 function Check-Exit([string]$Step) {
     if ($LASTEXITCODE -ne 0) { throw "$Step failed. Resolve the error before running the project." }
 }
-dotnet restore --use-lock-file
+dotnet restore --locked-mode
 Check-Exit 'NuGet restore'
 dotnet build --no-restore
 Check-Exit 'Build'
@@ -24,5 +24,5 @@ if ($vulnerable.Count -gt 0) {
 }
 dotnet ef migrations has-pending-model-changes
 Check-Exit 'Migration model check (requires dotnet-ef 9.x)'
-Write-Host 'Build, dependency audit and EF model check passed. Run the database and browser checks in SECURITY_UPDATE.md.'
+Write-Host 'Build, dependency audit and EF model check passed. Run the database and browser checks in the acceptance test workbook.'
 # Retain packages.lock.json. Later restores can use: dotnet restore --locked-mode

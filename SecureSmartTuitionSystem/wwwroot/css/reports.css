@@ -4,7 +4,7 @@
 .reports-toolbar .form-label { display: block; font-weight: 650; }
 .reports-toolbar .primary-button, .reports-toolbar .outline-button { min-height: 40px; }
 .reports-note { color: var(--muted); font-size: .9rem; line-height: 1.6; margin: 16px 0 0; }
-.reports-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.reports-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 14px; }
 .reports-summary span, .reports-summary strong { display: block; }
 .reports-summary span { color: var(--muted); font-size: .9rem; }
 .reports-summary strong { font-size: 1.35rem; margin-top: 7px; overflow-wrap: anywhere; }

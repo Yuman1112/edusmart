@@ -8,20 +8,43 @@ namespace SecureSmartTuitionSystem.Services.Reporting;
 public static class AcademicReportExport
 {
     private static string N(decimal? x)=>x?.ToString("0.00",CultureInfo.InvariantCulture)??"N/A";
-    public static List<string[]> Rows(AcademicReport r)
+    public static string Title(AcademicReportSection section) => section switch
     {
-        List<string[]> rows=[["EduSmart - Academic report",r.Filter.Year.ToString(CultureInfo.InvariantCulture)],
-            ["Subject filter",r.Filter.SubjectId?.ToString()??"All","Class filter",r.Filter.ClassId?.ToString()??"All"],
-            ["Published/opened active assessments; fixed publication roster; released grades only; MYT deadlines."],
-            ["Equal-weight assessment percentages. Blank grade averages mean no released marks."],
-            ["Student performance summary"],["Student ID","Name","Assessments","Submitted","Released grades","Average (%)"]];
-        rows.AddRange(r.Students.Select(x=>new[]{x.StudentNumber,x.StudentName,x.Expected.ToString(),x.Submitted.ToString(),x.Graded.ToString(),N(x.Average)}));
-        rows.Add(["Assignment submission rate"]);rows.Add(["ID","Assignment","Class code","Class name","Subject","Due (MYT)","Expected","Submitted","On time","Late","Missing","Rate (%)"]);
-        rows.AddRange(r.Assignments.Select(x=>new[]{x.Id.ToString(),x.Title,x.ClassCode,x.ClassName,x.Subject,x.Due.ToString("yyyy-MM-dd HH:mm"),x.Expected.ToString(),x.Submitted.ToString(),x.OnTime.ToString(),x.Late.ToString(),x.Missing.ToString(),N(x.Rate)}));
-        rows.Add(["Missing counts overdue unsubmitted work only. Rate is submitted / fixed roster; N/A means no roster."]);
+        AcademicReportSection.StudentPerformance => "Student Performance",
+        AcademicReportSection.AssignmentReport => "Assignment Report",
+        _ => "Academic"
+    };
+
+    public static List<string[]> Rows(AcademicReport r, AcademicReportSection section = AcademicReportSection.Combined)
+    {
+        List<string[]> rows = [
+            [$"EduSmart - {Title(section)}", r.Filter.Year.ToString(CultureInfo.InvariantCulture)],
+            ["Subject filter", r.Filter.SubjectId?.ToString() ?? "All", "Class filter", r.Filter.ClassId?.ToString() ?? "All"],
+            ["Published, active, opened assessments. Fixed publication roster. Deadlines shown in Malaysia time."]
+        ];
+        if (section != AcademicReportSection.AssignmentReport)
+        {
+            rows.Add(["Each released grade contributes one percentage. N/A means no released grades."]);
+            rows.Add(["Students with assessment records", r.Students.Count.ToString(), "Released grades", r.Graded.ToString(), "Average (%)", N(r.Average)]);
+            rows.Add(["Student performance summary"]);
+            rows.Add(["Student ID", "Name", "Assessments", "Submitted", "Released grades", "Average (%)"]);
+            rows.AddRange(r.Students.Select(x => new[] {
+                x.StudentNumber, x.StudentName, x.Expected.ToString(), x.Submitted.ToString(), x.Graded.ToString(), N(x.Average)
+            }));
+        }
+        if (section != AcademicReportSection.StudentPerformance)
+        {
+            rows.Add(["Assignment submission rate", N(r.SubmissionRate), "Submitted", r.Submitted.ToString(), "Expected", r.Expected.ToString()]);
+            rows.Add(["ID", "Assignment", "Class code", "Class name", "Subject", "Due (MYT)", "Expected", "Submitted", "On time", "Late", "Missing", "Rate (%)"]);
+            rows.AddRange(r.Assignments.Select(x => new[] {
+                x.Id.ToString(), x.Title, x.ClassCode, x.ClassName, x.Subject, x.Due.ToString("yyyy-MM-dd HH:mm"),
+                x.Expected.ToString(), x.Submitted.ToString(), x.OnTime.ToString(), x.Late.ToString(), x.Missing.ToString(), N(x.Rate)
+            }));
+            rows.Add(["Missing counts overdue unsubmitted work only. Rate is submitted / fixed roster. N/A means no roster."]);
+        }
         return rows;
     }
-    public static byte[] Excel(AcademicReport r)
+    public static byte[] Excel(AcademicReport r, AcademicReportSection section = AcademicReportSection.Combined)
     {
         using var output=new MemoryStream();
         using(var zip=new ZipArchive(output,ZipArchiveMode.Create,true))
@@ -36,18 +59,18 @@ public static class AcademicReportExport
             writer.WriteStartElement("worksheet",ns);writer.WriteStartElement("cols",ns);
             for(int i=1;i<=12;i++){writer.WriteStartElement("col",ns);writer.WriteAttributeString("min",i.ToString());writer.WriteAttributeString("max",i.ToString());writer.WriteAttributeString("width",i is 2 or 4?"45":"23");writer.WriteAttributeString("customWidth","1");writer.WriteEndElement();}writer.WriteEndElement();
             writer.WriteStartElement("sheetData",ns);
-            foreach(var row in Rows(r)){writer.WriteStartElement("row",ns);foreach(var cell in row){writer.WriteStartElement("c",ns);writer.WriteAttributeString("t","inlineStr");writer.WriteStartElement("is",ns);writer.WriteElementString("t",ns,AttendanceExportService.CleanXmlText(cell));writer.WriteEndElement();writer.WriteEndElement();}writer.WriteEndElement();}
+            foreach(var row in Rows(r, section)){writer.WriteStartElement("row",ns);foreach(var cell in row){writer.WriteStartElement("c",ns);writer.WriteAttributeString("t","inlineStr");writer.WriteStartElement("is",ns);writer.WriteElementString("t",ns,AttendanceExportService.CleanXmlText(cell));writer.WriteEndElement();writer.WriteEndElement();}writer.WriteEndElement();}
             writer.WriteEndElement();writer.WriteEndElement();
         }
         return output.ToArray();
     }
     // A printer-friendly, paginated view preserves Unicode with the browser's fonts.
     // Actual PDF downloads below use a standard Courier font and explicitly escape non-ASCII.
-    public static byte[] Pdf(AcademicReport r)
+    public static byte[] Pdf(AcademicReport r, AcademicReportSection section = AcademicReportSection.Combined)
     {
         string Ascii(string value)=>string.Concat(value.Select(c=>c is >= ' ' and <= '~'?c.ToString():"\\u"+((int)c).ToString("X4")));
-        var lines=new List<string>{"EduSmart Academic Report - "+r.Filter.Year,"Non-ASCII names are written as Unicode escape codes. Excel preserves original text."};
-        foreach(var row in Rows(r))
+        var lines=new List<string>{$"EduSmart {Title(section)} - {r.Filter.Year}","Non-ASCII names are written as Unicode escape codes. Excel preserves original text."};
+        foreach(var row in Rows(r, section))
         {
             var line=Ascii(string.Join(" | ",row));
             for(int i=0;i<line.Length;i+=105)lines.Add(line.Substring(i,Math.Min(105,line.Length-i)));
