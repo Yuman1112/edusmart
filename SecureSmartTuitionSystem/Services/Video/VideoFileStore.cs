@@ -100,6 +100,7 @@ public sealed class VideoFileStore
         CancellationToken ct,
         string? currentVideoKey = null)
     {
+        // Reject empty, oversized or non-MP4 uploads before creating a staged file.
         if (upload.Length <= 0
             || upload.Length > MaxBytes
             || !string.Equals(Path.GetExtension(upload.FileName),
@@ -128,18 +129,21 @@ public sealed class VideoFileStore
                 {
                     length += read;
 
+                    // Enforce the size limit on actual bytes read, not only upload metadata.
                     if (length > MaxBytes)
                         throw new InvalidDataException("The video exceeds 200 MB.");
                     await target.WriteAsync(buffer.AsMemory(0, read), ct);
                 }
             }
 
+            // Reject an incomplete upload before inspecting its content.
             if (length != upload.Length)
                 throw new InvalidDataException("The upload was incomplete. Select the video again.");
             using var file = new FileStream(path,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read);
+            // Inspect MP4 structure; the filename extension alone is not sufficient.
             var duration = InspectMp4(file);
 
             if (currentVideoKey != null)
@@ -161,7 +165,11 @@ public sealed class VideoFileStore
         }
         catch
         {
-            // Do not treat a failed upload as successful.
+            /*
+             * OWASP TOP 10 | A10:2025
+             * On writing or inspection failure, attempt to delete the staged file.
+             * Rethrow the exception so this method does not return success.
+             */
             Remove(key);
             throw;
         }
