@@ -1120,6 +1120,39 @@ a {
 .message-unread-badge[hidden], .message-unread[hidden] { display: none !important; }
 .public-nav-link .message-unread-badge { margin-left: 2px; }
 
+/* Keep the admin work queue compact without changing the other sidebar modules. */
+.sidebar-module-button[aria-controls="classEnrollmentMenu"] .sidebar-link-content,
+#classEnrollmentMenu .sidebar-submenu-link {
+    gap: 7px;
+}
+
+.sidebar-module-button[aria-controls="classEnrollmentMenu"] .sidebar-link-content > i {
+    width: 22px;
+    flex-basis: 22px;
+}
+
+#classEnrollmentMenu .sidebar-submenu-link {
+    margin-inline-start: 15px;
+    padding-inline: 9px;
+}
+
+.sidebar-link-content > .message-unread-badge[data-admin-work],
+#classEnrollmentMenu .message-unread-badge[data-admin-work] {
+    display: inline-flex;
+    min-width: 18px;
+    height: 18px;
+    padding-inline: 4px;
+    font-size: .66rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    flex: 0 0 auto;
+}
+
+.sidebar-module-button[aria-controls="classEnrollmentMenu"][aria-expanded="true"] [data-admin-work="total"] {
+    display: none;
+}
+
+
 /* Shared navigation states: group headings and the current page are distinct. */
 .sidebar-link.module-current { color: var(--teal-dark); background: rgba(255, 255, 255, .6); }
 .sidebar-link.module-current i { color: var(--teal-dark); }

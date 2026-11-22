@@ -2,7 +2,7 @@
 @using SecureSmartTuitionSystem.Models.Enrollment
 @using SecureSmartTuitionSystem.Services.Enrollment
 <section class="class-details-card mt-4"><h2>Class Members</h2><p>Withdrawal takes effect next month. Previous enrollment and payment records are retained.</p>
-<div class="table-responsive"><table class="table align-middle"><thead><tr><th>No</th><th>Student ID</th><th>Name</th><th>Start date</th><th>Status</th><th>Effective end</th>@if (Model.CanWithdraw) { <th>Action</th> }</tr></thead><tbody>
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>No</th><th>Name</th><th>Start date</th><th>Status</th><th>Effective end</th>@if (Model.CanWithdraw) { <th>Action</th> }</tr></thead><tbody>
 @{ int no = 0; }
 @foreach (var e in Model.Members)
 {
@@ -13,12 +13,12 @@
         e.EndedAt?.Date.AddDays(-1) ?? DateTime.MaxValue }.Min();
     var ended = e.DropEffectiveDate.HasValue && e.DropEffectiveDate.Value <= ClassScheduleService.Today;
     var status = ended ? "Dropped" : e.Status == StudentEnrollmentStatus.Active && e.StartDate.Date > ClassScheduleService.Today ? "Starts later" : e.Status.ToString();
-    <tr><td>@no</td><td>@e.StudentProfile.StudentNumber</td><td>@e.StudentProfile.FullName</td><td>@e.StartDate.ToString("dd MMM yyyy")</td><td>@status</td><td>@effectiveEnd.ToString("dd MMM yyyy")</td>
+    <tr><td>@no</td><td>@e.StudentProfile.FullName</td><td>@e.StartDate.ToString("dd MMM yyyy")</td><td>@status</td><td>@effectiveEnd.ToString("dd MMM yyyy")</td>
     @if (Model.CanWithdraw) {
     <td><div class="d-flex gap-2 flex-wrap align-items-center"><a class="outline-button table-view-button" asp-controller="EnrollmentExits" asp-action="Index" asp-route-studentProfileId="@e.StudentProfileId"><i class="bi bi-clock-history" aria-hidden="true"></i> Withdrawal history</a>
     @if (User.IsInRole("Admin") && e.StudentProfile.IsActive) { <form class="m-0" asp-controller="Enrollment" asp-action="AddSubjects" method="post"><input type="hidden" name="studentId" value="@e.StudentProfileId" /><button type="submit" class="outline-button table-view-button"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add subjects</button></form> }
     </div></td> }
     </tr>
 }
-@if (!Model.Members.Any()) { <tr><td colspan="7">No enrolled members yet.</td></tr> }
+@if (!Model.Members.Any()) { <tr><td colspan="@(Model.CanWithdraw ? 6 : 5)">No enrolled members yet.</td></tr> }
 </tbody></table></div></section>

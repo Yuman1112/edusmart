@@ -11,7 +11,7 @@ public sealed class ProgressFilter
     [Range(1,int.MaxValue)] public int? SubjectId { get; set; }
     [Range(1,int.MaxValue)] public int? ClassId { get; set; }
 }
-public sealed record ProgressSummary(int Id,string Code,string Name,string Subject,string Tutor,int Topics,int Done,decimal? Average,int Expected,int Submitted,int Missing,int Late);
+public sealed record ProgressSummary(int Id,string Code,string Name,string Schedule,string Subject,string Level,string Tutor,int Topics,int Done,decimal? Average,int Expected,int Submitted,int Missing,int Late);
 public sealed class ProgressIndex
 {
     public ProgressFilter Filter { get; set; } = new();

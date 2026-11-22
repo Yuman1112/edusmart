@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Models.Enrollment;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,7 +36,11 @@ public sealed class NotificationCenterController(ApplicationDbContext db) : Cont
             (!x.ExpiresAt.HasValue || x.ExpiresAt > now) && (x.TargetAudience == AnnouncementAudience.All || x.TargetAudience == audience.Value) &&
             !x.Reads.Any(r => r.UserId == id));
         int guestEnquiries = admin ? await db.GuestEnquiries.AsNoTracking().CountAsync(x => !x.IsResolved) : 0;
-        return Json(new { announcements, notifications, guestEnquiries });
+        var replacements = admin ? await db.ClassLessonChanges.CountAsync(x => x.ReplacementDate == null) : 0;
+        var enrollments = admin ? await db.EnrollmentApplications.CountAsync(x => x.Status == EnrollmentStatus.PendingReview) : 0;
+        var withdrawals = admin ? await db.EnrollmentExitRequests.CountAsync(x =>
+            x.ReviewedByUserId == null && x.RefundStatus != ExitRefundStatus.Cancelled) : 0;
+        return Json(new { announcements, notifications, guestEnquiries, replacements, enrollments, withdrawals });
     }
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ReadAll(int page = 1, bool unreadOnly = false)

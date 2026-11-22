@@ -24,6 +24,10 @@ document.addEventListener("DOMContentLoaded", () => {
             badge("[data-announcement-unread-total]", result.announcements, "announcement(s)");
             badge("[data-notification-unread-total]", result.notifications, "notification(s)");
             badge("[data-guest-enquiry-pending]", result.guestEnquiries, "guest enquiry(s)", "unresolved");
+            badge('[data-admin-work="replacements"]', result.replacements, "replacement(s)", "pending");
+            badge('[data-admin-work="enrollments"]', result.enrollments, "enrollment request(s)", "pending");
+            badge('[data-admin-work="withdrawals"]', result.withdrawals, "withdrawal(s)", "unreviewed");
+            badge('[data-admin-work="total"]', result.replacements + result.enrollments + result.withdrawals, "class and enrollment item(s)", "pending");
             total();
         } catch { /* Retain the last known counts during a temporary connection failure. */ }
         finally { pending = false; }

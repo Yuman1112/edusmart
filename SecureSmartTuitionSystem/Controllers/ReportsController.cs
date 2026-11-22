@@ -3,12 +3,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Services.Reporting;
+using SecureSmartTuitionSystem.ViewModels.Reporting;
+using SecureSmartTuitionSystem.Models.Security;
+using SecureSmartTuitionSystem.Services.Security;
 
 namespace SecureSmartTuitionSystem.Controllers;
 
 [Authorize(Roles = "Admin,Tutor")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class ReportsController(ApplicationDbContext db) : Controller
+public sealed class ReportsController(ApplicationDbContext db, SecurityEventService securityEvents) : Controller
 {
     [HttpGet, Authorize(Roles = "Admin")]
     public async Task<IActionResult> Index(string? end, int? months, CancellationToken ct, int? year = null, int? month = null)
@@ -27,20 +30,40 @@ public sealed class ReportsController(ApplicationDbContext db) : Controller
         return View(await new IncomeReportService(db).BuildAsync(endMonth, months ?? 1, ct));
     }
 
-    [HttpGet, Authorize(Roles = "Admin,Tutor")]
-    public async Task<IActionResult> Academic([FromQuery] SecureSmartTuitionSystem.ViewModels.Reporting.AcademicReportFilter filter, CancellationToken ct)
+    [HttpGet]
+    public Task<IActionResult> Academic([FromQuery] AcademicReportFilter filter, CancellationToken ct) =>
+        BuildAcademicView(filter, AcademicReportSection.Combined, nameof(Academic), ct);
+
+    [HttpGet, Authorize(Roles = "Admin")]
+    public Task<IActionResult> StudentPerformance([FromQuery] AcademicReportFilter filter, CancellationToken ct) =>
+        BuildAcademicView(filter, AcademicReportSection.StudentPerformance, nameof(StudentPerformance), ct);
+
+    [HttpGet, Authorize(Roles = "Admin")]
+    public Task<IActionResult> AssignmentReport([FromQuery] AcademicReportFilter filter, CancellationToken ct) =>
+        BuildAcademicView(filter, AcademicReportSection.AssignmentReport, nameof(AssignmentReport), ct);
+
+    private async Task<IActionResult> BuildAcademicView(AcademicReportFilter filter, AcademicReportSection section, string action, CancellationToken ct)
     {
         if (!ModelState.IsValid) return BadRequest("Choose valid year, subject and class filters.");
-        return View(await new AcademicReportService(db).BuildAsync(User, filter, ct));
+        ViewData["ReportSection"] = section;
+        ViewData["ReportAction"] = action;
+        return View(nameof(Academic), await new AcademicReportService(db).BuildAsync(User, filter, ct));
     }
 
-    [HttpGet, Authorize(Roles = "Admin,Tutor")]
-    public async Task<IActionResult> AcademicExport([FromQuery] SecureSmartTuitionSystem.ViewModels.Reporting.AcademicReportFilter filter, string format, CancellationToken ct)
+    [HttpGet]
+    public async Task<IActionResult> AcademicExport([FromQuery] AcademicReportFilter filter, string format, CancellationToken ct, AcademicReportSection section = AcademicReportSection.Combined)
     {
-        if (!ModelState.IsValid || format is not ("pdf" or "excel")) return BadRequest("Choose a valid report format and filters.");
+        if (!ModelState.IsValid || !Enum.IsDefined(section) || format is not ("pdf" or "excel"))
+            return BadRequest("Choose a valid report format and filters.");
+        if (section != AcademicReportSection.Combined && !User.IsInRole("Admin")) return Forbid();
         var report = await new AcademicReportService(db).BuildAsync(User, filter, ct);
-        return File(format == "pdf" ? AcademicReportExport.Pdf(report) : AcademicReportExport.Excel(report),
-            format == "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"EduSmart - Academic - {filter.Year}." + (format == "pdf" ? "pdf" : "xlsx"));
+        var title = AcademicReportExport.Title(section);
+        var bytes = format == "pdf" ? AcademicReportExport.Pdf(report, section) : AcademicReportExport.Excel(report, section);
+        await securityEvents.RecordAsync(HttpContext, "ReportExported", SecuritySeverity.Information,
+            $"Generated {title} report ({format.ToUpperInvariant()}).");
+        return File(bytes,
+            format == "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"EduSmart - {title} - {filter.Year}." + (format == "pdf" ? "pdf" : "xlsx"));
     }
 
     private static string ReportFileName(IncomeReport report, string extension)
@@ -57,7 +80,9 @@ public sealed class ReportsController(ApplicationDbContext db) : Controller
         if (!ModelState.IsValid || (months ?? 1) is < 1 or > 12) return BadRequest("Choose a period from 1 to 12 months.");
         if (!IncomeReportService.TryEndMonth(end, DateTime.UtcNow, out var month)) return BadRequest();
         var report = await new IncomeReportService(db).BuildAsync(month, months ?? 1, ct);
-        return File(IncomeReportExport.Excel(report), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ReportFileName(report, "xlsx"));
+        var bytes = IncomeReportExport.Excel(report);
+        await securityEvents.RecordAsync(HttpContext, "ReportExported", SecuritySeverity.Information, "Generated Income report (EXCEL).");
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ReportFileName(report, "xlsx"));
     }
 
     [HttpGet, Authorize(Roles = "Admin")]
@@ -66,6 +91,8 @@ public sealed class ReportsController(ApplicationDbContext db) : Controller
         if (!ModelState.IsValid || (months ?? 1) is < 1 or > 12) return BadRequest("Choose a period from 1 to 12 months.");
         if (!IncomeReportService.TryEndMonth(end, DateTime.UtcNow, out var month)) return BadRequest();
         var report = await new IncomeReportService(db).BuildAsync(month, months ?? 1, ct);
-        return File(IncomeReportExport.Pdf(report), "application/pdf", ReportFileName(report, "pdf"));
+        var bytes = IncomeReportExport.Pdf(report);
+        await securityEvents.RecordAsync(HttpContext, "ReportExported", SecuritySeverity.Information, "Generated Income report (PDF).");
+        return File(bytes, "application/pdf", ReportFileName(report, "pdf"));
     }
 }

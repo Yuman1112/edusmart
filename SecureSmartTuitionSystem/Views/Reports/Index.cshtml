@@ -1,14 +1,12 @@
 @model SecureSmartTuitionSystem.Services.Reporting.IncomeReport
 @using System.Globalization
 @{
-    ViewData["Title"] = "Reports & Analytics";
+    ViewData["Title"] = "Income Report";
     var highest = Model.Months.Max(x => x.Gross);
     string chosen = Model.EndMonth.ToString("yyyy-MM", CultureInfo.InvariantCulture);
 }
 @section Styles { <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" /> }
-<p><a class="outline-button" asp-controller="ClassProgress" asp-action="Index">Class Progress Overview →</a></p>
-<div class="page-header"><div><h1>Reports &amp; Analytics</h1><p>View payment activity for the selected period.</p></div></div>
-<p><a class="outline-button" asp-action="Academic">Student performance &amp; assignment reports →</a></p>
+<div class="page-header"><div><h1>Income Report</h1><p>View payment activity for the selected period.</p></div></div>
 <section class="reports-card">
     <form method="get" asp-action="Index" data-live-filter class="reports-toolbar">
         <div><label for="report-year" class="form-label">Year</label><select id="report-year" name="year" class="form-select">

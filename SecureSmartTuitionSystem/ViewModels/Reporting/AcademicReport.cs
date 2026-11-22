@@ -1,6 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.Rendering;
 namespace SecureSmartTuitionSystem.ViewModels.Reporting;
+public enum AcademicReportSection
+{
+    Combined,
+    StudentPerformance,
+    AssignmentReport
+}
+
 public sealed class AcademicReportFilter
 {
     [Range(2000,2100)] public int Year { get; set; } = DateTime.UtcNow.AddHours(8).Year;

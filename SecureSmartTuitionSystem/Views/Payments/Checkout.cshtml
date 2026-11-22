@@ -3,6 +3,7 @@
 
 @{
     ViewData["Title"] = "Payment Details";
+    ViewData["PaymentGuestLayout"] = !Model.PreserveSession;
 
     bool canPay =
         Model.Status == BillStatus.PendingPayment ||

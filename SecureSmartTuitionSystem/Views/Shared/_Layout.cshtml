@@ -27,19 +27,6 @@
             StringComparison.OrdinalIgnoreCase);
 
 
-    bool isAdmin =
-        User.Identity?.IsAuthenticated == true &&
-        User.IsInRole("Admin");
-
-    bool isTutor =
-        User.Identity?.IsAuthenticated == true &&
-        User.IsInRole("Tutor");
-
-    bool isLearner = User.Identity?.IsAuthenticated == true && (User.IsInRole("Parent") || User.IsInRole("Student"));
-
-    bool useStaffLayout =
-        isAdmin || isTutor;
-
     string currentController =
         ViewContext.RouteData.Values["controller"]?
             .ToString() ?? "";
@@ -48,8 +35,32 @@
         ViewContext.RouteData.Values["action"]?
             .ToString() ?? "";
 
+    bool paymentGuestLayout = currentController == "Payments" &&
+        (currentAction is "Success" or "ConfirmPayment" or "ReceiptBySession" ||
+         ViewData["PaymentGuestLayout"] is true);
+    bool showAccountNavigation = !paymentGuestLayout && User.Identity?.IsAuthenticated == true;
+
+    bool isAdmin =
+        showAccountNavigation &&
+        User.IsInRole("Admin");
+
+    bool isTutor =
+        showAccountNavigation &&
+        User.IsInRole("Tutor");
+
+    bool isLearner = showAccountNavigation && (User.IsInRole("Parent") || User.IsInRole("Student"));
+
+    bool useStaffLayout =
+        isAdmin || isTutor;
+
     bool learningModuleActive = currentController == "LearningMaterials" || currentController == "Assessments";
     bool learningMaterialsActive = currentController == "LearningMaterials";
+    bool incomeReportActive = currentController == "Reports" && currentAction == "Index";
+    bool classProgressActive = currentController == "ClassProgress";
+    bool studentPerformanceActive = currentController == "Reports" && currentAction == "StudentPerformance";
+    bool assignmentReportActive = currentController == "Reports" && currentAction == "AssignmentReport";
+    bool reportsModuleActive = currentController == "Reports" || classProgressActive;
+
     bool learningProgressActive = currentController == "Assessments" && currentAction == "Progress";
     bool learningAssessmentsActive = currentController == "Assessments" && !learningProgressActive;
 
@@ -140,7 +151,9 @@
           href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
 
     <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+          integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+"
+          crossorigin="anonymous" />
 
     <link rel="stylesheet"
           href="~/css/site.css"
@@ -156,10 +169,6 @@
 
     <link rel="stylesheet"
           href="~/css/components.css"
-          asp-append-version="true" />
-
-    <link rel="stylesheet"
-          href="~/SecureSmartTuitionSystem.styles.css"
           asp-append-version="true" />
 
     <link rel="stylesheet" href="~/css/class-schedule.css" asp-append-version="true" />
@@ -281,6 +290,7 @@
                                 <span class="sidebar-link-content">
                                     <i class="bi bi-people-fill" aria-hidden="true"></i>
                                     <span>Class &amp; Enrollment</span>
+                                    <span class="message-unread-badge" data-admin-work="total" hidden></span>
                                 </span>
                                 <i class="bi bi-chevron-down sidebar-module-arrow"
                                    aria-hidden="true"></i>
@@ -311,6 +321,7 @@
                                    aria-current="@(pendingActive ? "page" : null)">
                                     <i class="bi bi-clock-history" aria-hidden="true"></i>
                                     <span>Pending Replacements</span>
+                                    <span class="message-unread-badge" data-admin-work="replacements" hidden></span>
                                 </a>
 
                                 <a class="sidebar-submenu-link @(currentController == "AdminEnrollments" ? "active" : "")"
@@ -319,6 +330,7 @@
                                    aria-current="@(currentController == "AdminEnrollments" ? "page" : null)">
                                     <i class="bi bi-clipboard-check" aria-hidden="true"></i>
                                     <span>Enrollment Requests</span>
+                                    <span class="message-unread-badge" data-admin-work="enrollments" hidden></span>
                                 </a>
 
                                 <a class="sidebar-submenu-link @(currentController == "EnrollmentExits" ? "active" : "")"
@@ -327,6 +339,7 @@
                                    aria-current="@(currentController == "EnrollmentExits" ? "page" : null)">
                                     <i class="bi bi-person-dash" aria-hidden="true"></i>
                                     <span>Withdrawal History</span>
+                                    <span class="message-unread-badge" data-admin-work="withdrawals" hidden></span>
                                 </a>
                             </div>
                         </div>
@@ -684,16 +697,49 @@
                         </div>
                     </div>
 
-                    <a class="sidebar-link @(currentController == "ClassProgress" ? "active" : "")" asp-controller="ClassProgress" asp-action="Index"><i class="bi bi-check2-square" aria-hidden="true"></i><span>@(isAdmin ? "Class Progress Overview" : "Class Progress")</span></a>
                     @if (isAdmin)
                     {
-                        <!-- Admin: Reports & Security -->
-                        <a class="sidebar-link @(currentController == "Reports" ? "active" : "")"
-                           asp-controller="Reports" asp-action="Index"
-                           aria-current="@(currentController == "Reports" ? "page" : null)">
-                            <i class="bi bi-bar-chart" aria-hidden="true"></i>
-                            <span>Reports &amp; Analytics</span>
-                        </a>
+                        <div class="sidebar-module">
+                            <button type="button"
+                                    class="sidebar-link sidebar-module-button @(reportsModuleActive ? "module-current" : "")"
+                                    data-bs-toggle="collapse" data-bs-target="#reportsMenu"
+                                    aria-expanded="@(reportsModuleActive ? "true" : "false")" aria-controls="reportsMenu">
+                                <span class="sidebar-link-content">
+                                    <i class="bi bi-bar-chart" aria-hidden="true"></i>
+                                    <span>Reports &amp; Analytics</span>
+                                </span>
+                                <i class="bi bi-chevron-down sidebar-module-arrow" aria-hidden="true"></i>
+                            </button>
+                            <div id="reportsMenu" class="collapse sidebar-submenu @(reportsModuleActive ? "show" : "")">
+                                <a class="sidebar-submenu-link @(incomeReportActive ? "active" : "")"
+                                   asp-controller="Reports" asp-action="Index"
+                                   aria-current="@(incomeReportActive ? "page" : null)">
+                                    <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                                    <span>Income</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(classProgressActive ? "active" : "")"
+                                   asp-controller="ClassProgress" asp-action="Index"
+                                   aria-current="@(classProgressActive ? "page" : null)">
+                                    <i class="bi bi-check2-square" aria-hidden="true"></i>
+                                    <span>Class Progress</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(studentPerformanceActive ? "active" : "")"
+                                   asp-controller="Reports" asp-action="StudentPerformance"
+                                   aria-current="@(studentPerformanceActive ? "page" : null)">
+                                    <i class="bi bi-graph-up" aria-hidden="true"></i>
+                                    <span>Student Performance</span>
+                                </a>
+
+                                <a class="sidebar-submenu-link @(assignmentReportActive ? "active" : "")"
+                                   asp-controller="Reports" asp-action="AssignmentReport"
+                                   aria-current="@(assignmentReportActive ? "page" : null)">
+                                    <i class="bi bi-clipboard-data" aria-hidden="true"></i>
+                                    <span>Assignment Report</span>
+                                </a>
+                            </div>
+                        </div>
 
                         <a class="sidebar-link @(currentController == "Security" ? "active" : "")"
                            asp-controller="Security"
@@ -705,6 +751,11 @@
                     }
                     else
                     {
+                        <a class="sidebar-link @(classProgressActive ? "active" : "")"
+                           asp-controller="ClassProgress" asp-action="Index"
+                           aria-current="@(classProgressActive ? "page" : null)">
+                            <i class="bi bi-check2-square" aria-hidden="true"></i><span>Class Progress</span>
+                        </a>
                         <!-- Tutor: Reports -->
                         <a class="sidebar-link @(currentController == "Reports" ? "active" : "")" asp-controller="Reports" asp-action="Academic">
                             <i class="bi bi-bar-chart" aria-hidden="true"></i><span>Reports &amp; Analytics</span>
@@ -932,7 +983,7 @@
                     <!-- Public Account Buttons -->
                     <div class="public-account">
 
-                        @if (User.Identity?.IsAuthenticated == true)
+                        @if (showAccountNavigation)
                         {
 
                             @if (isLearner)
@@ -1043,7 +1094,10 @@
 
             <!-- Public Page Content -->
             <main class="public-content">
-                @await Component.InvokeAsync("BillingAccessBanner")
+                @if (!paymentGuestLayout)
+                {
+                    @await Component.InvokeAsync("BillingAccessBanner")
+                }
                 @RenderBody()
             </main>
 
@@ -1068,7 +1122,7 @@
             asp-append-version="true">
     </script>
 
-    @if (User.Identity?.IsAuthenticated == true && (User.IsInRole("Admin") || User.IsInRole("Parent") || User.IsInRole("Student") || User.IsInRole("Tutor")))
+    @if (showAccountNavigation && (User.IsInRole("Admin") || User.IsInRole("Parent") || User.IsInRole("Student") || User.IsInRole("Tutor")))
     {
         <script src="~/js/message-unread.js" asp-append-version="true"
                 data-unread-url="@Url.Action("UnreadCounts", "Messages")"></script>
@@ -1078,7 +1132,7 @@
     <script src="~/js/live-filters.js" asp-append-version="true"></script>
     <script src="~/js/table-pagination.js" asp-append-version="true"></script>
 
-    @if (User.Identity?.IsAuthenticated == true)
+    @if (showAccountNavigation)
     {
         <partial name="_IdleSession" />
     }

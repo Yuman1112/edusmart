@@ -15,7 +15,11 @@
 <section class="dashboard-card shared-table-card"><header class="dashboard-card-header"><h2>Monthly bills</h2><span>@Model.TotalRows bill(s)</span></header>
 <div class="table-responsive"><table data-source-table="monthly" data-current-page="@Model.Page" data-page-count="@Model.TotalPages" data-total-rows="@Model.TotalRows" data-page-param="page" class="table align-middle" data-server-paged="true"><thead><tr><th>No</th><th data-sort-key="bill">Bill</th><th data-sort-key="student">Student</th><th data-sort-key="month">Month</th><th data-sort-key="amount">Amount</th><th data-sort-key="due">Due date</th><th data-sort-key="status">Status</th><th>Action</th></tr></thead><tbody>
 @{ int row=(Model.Page-1)*25; }
-@foreach(var bill in Model.Rows) { row++; <tr><td>@row</td><td>@bill.Number</td><td>@bill.StudentProfile.FullName</td><td>@bill.Month.ToString("MMM yyyy")</td><td>RM @bill.Total.ToString("F2")</td><td>@bill.DueAtUtc.AddHours(8).AddSeconds(-1).ToString("dd MMM yyyy")</td><td>@(bill.Status==MonthlyInvoiceStatus.Pending && bill.DueAtUtc<now?"Overdue":bill.Status.ToString())</td><td><a asp-action="Details" asp-route-id="@bill.MonthlyInvoiceId" class="btn btn-sm btn-outline-secondary">@(bill.Status==MonthlyInvoiceStatus.Paid?"Receipt":"View")</a></td></tr> }
+@foreach(var bill in Model.Rows) { row++; <tr><td>@row</td><td>@bill.Number</td><td>@bill.StudentProfile.FullName</td><td>@bill.Month.ToString("MMM yyyy")</td><td>RM @bill.Total.ToString("F2")</td><td>@bill.DueAtUtc.AddHours(8).AddSeconds(-1).ToString("dd MMM yyyy")</td><td>@(bill.Status==MonthlyInvoiceStatus.Pending && bill.DueAtUtc<now?"Overdue":bill.Status.ToString())</td><td><a asp-action="Details" asp-route-id="@bill.MonthlyInvoiceId" class="outline-button">View</a>
+@if (bill.Status == MonthlyInvoiceStatus.Paid && bill.PaidAtUtc.HasValue)
+{
+    <a asp-action="Receipt" asp-route-id="@bill.MonthlyInvoiceId" class="outline-button">Receipt</a>
+}</td></tr> }
 @if(Model.Rows.Count==0) { <tr><td colspan="8">No monthly tuition bills match these filters. Initial and prepaid-plan receipts are available in Payment &amp; Billing. Covered prepaid months are not billed again.</td></tr> }
 </tbody></table></div>
 <nav class="table-pagination" aria-label="Monthly bill pages"><span class="table-pagination-summary">@Model.TotalRows rows · 25 per page</span><div class="table-pagination-controls">
