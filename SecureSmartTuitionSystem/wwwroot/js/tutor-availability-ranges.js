@@ -117,4 +117,7 @@
     form.querySelector('[data-availability-grid-fallback]').hidden = true;
     editor.hidden = false;
     reset(); render();
+    const controls = editor.querySelector('[data-range-controls]');
+    if (controls) controls.disabled = false;
+    editor.querySelector('[data-range-preparing]')?.remove();
 })();

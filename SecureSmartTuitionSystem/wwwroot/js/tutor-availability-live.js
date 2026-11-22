@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
     'use strict';
     const panel = document.querySelector('[data-availability-live]');
     const form = document.getElementById('tutor-availability-form');
@@ -10,13 +10,49 @@
     let active = true, expired = false, busy = false, timer, controller, revision = 0, queued = false;
     const toolbar = document.querySelector('[data-availability-week-form]');
     const weekInput = toolbar?.elements.namedItem('week');
+    let displayedWeek = weekInput?.value;
+    let pendingWeek = null;
+    const weekControls = toolbar ? [...toolbar.querySelectorAll('button, input[type="date"]')] : [];
+    const originalDisabled = new Map(weekControls.map(control => [control, control.disabled]));
+    const weekStatus = toolbar ? document.createElement('span') : null;
+    if (weekStatus) {
+        weekStatus.className = 'form-text m-0';
+        weekStatus.setAttribute('role', 'status');
+        weekStatus.setAttribute('aria-live', 'polite');
+        toolbar.append(weekStatus);
+    }
+    function lockWeek(locked) {
+        weekControls.forEach(control => control.disabled = locked || originalDisabled.get(control));
+        toolbar?.setAttribute('aria-busy', String(locked));
+    }
+    function normalizedWeek(value) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+        const date = new Date(value + 'T00:00:00Z');
+        if (Number.isNaN(date.getTime()) || date.toISOString().slice(0,10) !== value) return null;
+        date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 6) % 7);
+        return date.toISOString().slice(0,10);
+    }
+    function restoreWeekAddress() {
+        if (!displayedWeek) return;
+        const address = new URL(location.href);
+        address.searchParams.set('week', displayedWeek);
+        history.replaceState(null, '', address.href);
+    }
     function chooseWeek(value, updateAddress = true) {
-        if (!weekInput) return;
-        weekInput.value = value;
-        if (!toolbar.reportValidity()) return;
-        endpoint.searchParams.set('week',value);
-        if (updateAddress) { const address=new URL(location.href); address.searchParams.set('week',value); history.pushState(null,'',address.href); }
-        revision++; queued=true; controller?.abort(); refresh();
+        if (!weekInput || pendingWeek || expired) return;
+        const target = normalizedWeek(value);
+        if (!target || target < '2000-01-01' || target > '2100-12-31') {
+            weekInput.value = displayedWeek;
+            if (weekStatus) weekStatus.textContent = 'Choose a week between 2000 and 2100.';
+            return;
+        }
+        // Keep the rendered date and table together until the requested week is ready.
+        weekInput.value = displayedWeek;
+        pendingWeek = { value: target, updateAddress };
+        endpoint.searchParams.set('week', target);
+        lockWeek(true);
+        if (weekStatus) weekStatus.textContent = 'Updating…';
+        revision++; queued = true; controller?.abort(); refresh();
     }
     toolbar?.addEventListener('submit',event=>{event.preventDefault();chooseWeek(weekInput.value);});
     weekInput?.addEventListener('change',()=>chooseWeek(weekInput.value));
@@ -34,19 +70,23 @@
         if (!active || expired || busy || document.hidden || form?.dataset.saving === 'true') return;
         busy = true; queued=false;
         const requestRevision = revision;
-        controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 12000);
+        const requestController = new AbortController();
+        controller = requestController;
+        const timeout = setTimeout(() => requestController.abort(), 12000);
         try {
-            const response = await fetch(endpoint.href, {credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{'X-Requested-With':'XMLHttpRequest'}});
-            if (!active) return;
+            const response = await fetch(endpoint.href, {credentials:'same-origin',cache:'no-store',signal:requestController.signal,headers:{'X-Requested-With':'XMLHttpRequest'}});
+            if (!active || requestRevision !== revision) return;
             if (response.redirected || response.status===401 || response.status===403) {
-                expired=true; clearInterval(timer); status('Automatic updates stopped. Sign in again to continue.'); return;
+                expired=true; clearInterval(timer);
+                if (pendingWeek) { pendingWeek = null; lockWeek(false); restoreWeekAddress(); if (weekStatus) weekStatus.textContent = 'Sign in again to change weeks.'; }
+                status('Automatic updates stopped. Sign in again to continue.'); return;
             }
             if (!response.ok) throw new Error('Unavailable');
             const doc = new DOMParser().parseFromString(await response.text(),'text/html');
             const next = doc.querySelector('[data-availability-state]');
             if (!next?.dataset.version) throw new Error('Invalid response');
             if (!active || requestRevision!==revision || form?.dataset.saving==='true') return;
+            if (pendingWeek && next.dataset.week !== pendingWeek.value) throw new Error('Unexpected week');
             if (form) {
                 if (next.dataset.version !== form.elements.namedItem('Version').value) {
                     form.dataset.stale = 'true';
@@ -55,7 +95,7 @@
                 }
             } else {
                 const current = panel.querySelector('[data-availability-state]');
-                if (current.dataset.version !== next.dataset.version) {
+                if (current.dataset.version !== next.dataset.version || current.dataset.week !== next.dataset.week) {
                     const scroll = current.querySelector('.table-responsive')?.scrollLeft || 0;
                     const focused = current.contains(document.activeElement) ? document.activeElement.closest('a')?.getAttribute('href') : null;
                     const replacement = document.importNode(next,true);
@@ -68,10 +108,30 @@
                 weekInput.value=next.dataset.week;
                 const label=toolbar.querySelector('[data-availability-week-label]'); if(label)label.textContent=next.dataset.weekLabel;
                 endpoint.searchParams.set('week',next.dataset.week);
+                displayedWeek = next.dataset.week;
+                if (pendingWeek) {
+                    if (pendingWeek.updateAddress) {
+                        const address = new URL(location.href);
+                        address.searchParams.set('week', next.dataset.week);
+                        history.pushState(null, '', address.href);
+                    }
+                    pendingWeek = null;
+                    lockWeek(false);
+                    if (weekStatus) weekStatus.textContent = '';
+                }
             }
             status('');
         } catch {
-            if (active && requestRevision===revision) status('Updates are temporarily unavailable. Retrying automatically.');
+            if (active && requestRevision===revision) {
+                if (pendingWeek) {
+                    pendingWeek = null;
+                    endpoint.searchParams.set('week', displayedWeek);
+                    weekInput.value = displayedWeek;
+                    lockWeek(false);
+                    restoreWeekAddress();
+                    if (weekStatus) weekStatus.textContent = 'Could not change week. Your previous week is still shown. Please try again.';
+                } else status('Updates are temporarily unavailable. Retrying automatically.');
+            }
         } finally { clearTimeout(timeout); busy=false; if(queued&&active&&!expired)refresh(); }
     }
     document.addEventListener('availability:saved',()=>{revision++;});

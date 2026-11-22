@@ -1,0 +1,23 @@
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; font-family: "Segoe UI", Arial, sans-serif; font-size: 15px; color: #062f5f; background: radial-gradient(ellipse at top right, #c9f9f7, transparent 55%), #effdfe; }
+.service-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; padding: 18px 5%; background: #fff; border-bottom: 1px solid #d5e7ea; }
+.service-header img { display: block; width: 110px; height: auto; }
+.service-header nav { display: flex; gap: 24px; }
+.service-header nav a { color: #062f5f; text-decoration: none; font-weight: 600; }
+main { flex: 1; padding: 40px 24px; }
+.service-error-page { width: 100%; max-width: 1000px; margin: 0 auto; }
+.page-header { margin-bottom: 24px; }
+h1 { margin: 0 0 10px; font-size: clamp(1.8rem, 3vw, 2.4rem); line-height: 1.2; font-weight: 800; }
+.page-header p, .service-error-card p { color: #69829a; line-height: 1.7; margin: 0; }
+.service-error-card { padding: 32px; background: #fff; border: 1px solid #d5e7ea; border-radius: 16px; box-shadow: 0 10px 30px rgba(7,69,92,.09); }
+.service-error-icon { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: 18px; border-radius: 14px; background: #e5f8f9; color: #008f9f; font-size: 1.8rem; font-weight: 700; }
+.service-error-status { display: inline-block; padding: 5px 10px; margin-bottom: 16px; border: 1px solid #f5b9c0; border-radius: 7px; background: #fff3f4; color: #b4233b; font-size: .85rem; font-weight: 700; }
+h2 { margin: 0 0 12px; font-size: 1.1rem; line-height: 1.4; }
+.service-error-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.service-primary, .service-outline { display: inline-flex; justify-content: center; align-items: center; min-height: 42px; padding: 10px 18px; border: 1px solid #0798a4; border-radius: 9px; text-decoration: none; font-size: .9rem; font-weight: 700; }
+.service-primary { background: #0798a4; color: #fff; }
+.service-outline { background: #fff; color: #056b7d; }
+a:focus-visible { outline: 2px solid #056b7d; outline-offset: 3px; }
+.service-error-reference { display: flex; flex-direction: column; gap: 6px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #d5e7ea; color: #69829a; font-size: .8rem; overflow-wrap: anywhere; }
+footer { padding: 22px; border-top: 1px solid #d5e7ea; color: #69829a; text-align: center; font-size: .85rem; }
+@media(max-width:575.98px) { main { padding: 26px 16px; } .service-error-card { padding: 22px; } .service-header { padding: 16px 20px; } .service-header img { width: 90px; } .service-header nav { gap: 14px; font-size: .85rem; } }

@@ -1,0 +1,18 @@
+@* Independent error shell: no database-backed components or background requests. *@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] · EduSmart</title>
+    <link rel="stylesheet" href="~/css/service-error.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="service-header">
+        <a href="@Url.Content("~/")" aria-label="EduSmart home"><img src="@Url.Content("~/images/logo.png")" alt="EduSmart" /></a>
+        <nav aria-label="Main navigation"><a href="@Url.Content("~/")">Home</a><a href="@Url.Content("~/GuestSupport")">FAQ &amp; Support</a></nav>
+    </header>
+    <main>@RenderBody()</main>
+    <footer>&copy; @DateTime.Now.Year EduSmart · Secure Smart Tuition System</footer>
+</body>
+</html>

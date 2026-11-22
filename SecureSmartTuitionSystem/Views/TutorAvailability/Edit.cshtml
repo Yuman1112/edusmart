@@ -1,14 +1,37 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorAvailabilityViewModel
+@model SecureSmartTuitionSystem.ViewModels.Tutor.TutorAvailabilityViewModel
 @using SecureSmartTuitionSystem.Services.Tutor
 @{
     ViewData["Title"] = "Edit Availability";
     int[] days = { 1, 2, 3, 4, 5, 6 };
     var selected = Model.SelectedSlots.ToHashSet();
+    var initialRanges = new List<(int Day, int Start, int End)>();
+    foreach (var day in days)
+    {
+        var slots = selected.Where(value => value / 48 == day && TutorAvailabilityPolicy.IsOpen(value))
+            .Select(value => value % 48).OrderBy(slot => slot).ToArray();
+        for (int i = 0; i < slots.Length; i++)
+        {
+            int first = slots[i];
+            int last = first;
+            while (i + 1 < slots.Length && slots[i + 1] == last + 1) last = slots[++i];
+            initialRanges.Add((day, first, last + 1));
+        }
+    }
+    string SlotTime(int slot) => new TimeOnly(slot / 2, slot % 2 * 30).ToString("HH:mm");
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/tutor-form.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/tutor-availability.css" asp-append-version="true" />
+    <noscript>
+        <style nonce="@Context.Items["CspNonce"]">
+            #availability-range-editor, #saveTutorAvailability { display: none !important; }
+            [data-availability-grid-fallback][hidden] { display: block !important; }
+        </style>
+    </noscript>
+    <script src="~/js/tutor-availability-ranges.js" asp-append-version="true" defer></script>
+    <script src="~/js/tutor-availability.js" asp-append-version="true" defer></script>
+    <script src="~/js/tutor-availability-live.js" asp-append-version="true" defer></script>
 }
 <div class="page-header">
     <div><h1>Edit Availability</h1><p>@(Model.EmploymentType == SecureSmartTuitionSystem.Models.Tutor.TutorEmploymentType.FullTime ? "Full-time" : "Part-time") · update your regular weekly teaching availability.</p></div>
@@ -55,8 +78,10 @@
                     <span asp-validation-for="RemoveLegacySlots" class="text-danger"></span>
                 </div>
             }
-            <div id="availability-range-editor" hidden>
-                <div class="availability-range-heading"><h3>Add Available Time</h3><strong data-range-total aria-live="polite"></strong></div>
+            <div id="availability-range-editor">
+                <p class="form-text" data-range-preparing role="status">Preparing editing controls… <a asp-action="Edit">Reload</a> if they do not become available.</p>
+                <fieldset data-range-controls disabled class="border-0 p-0 m-0 w-100">
+                <div class="availability-range-heading"><h3>Add Available Time</h3><strong data-range-total aria-live="polite">@(initialRanges.Sum(range => range.End - range.Start) / 2d) / 45 h per week</strong></div>
                 <fieldset class="availability-range-days">
                     <legend>Days</legend>
                     @foreach (var day in days)
@@ -68,13 +93,13 @@
                     <label>Start Time<select class="form-select" data-range-start>
                         @for (int slot = 16; slot < 44; slot++)
                         {
-                            <option value="@slot">@(new TimeOnly(slot / 2, slot % 2 * 30).ToString("HH:mm"))</option>
+                            <option value="@slot" selected="@(slot == 38)">@(new TimeOnly(slot / 2, slot % 2 * 30).ToString("HH:mm"))</option>
                         }
                     </select></label>
                     <label>End Time<select class="form-select" data-range-end>
                         @for (int slot = 17; slot <= 44; slot++)
                         {
-                            <option value="@slot">@(new TimeOnly(slot / 2, slot % 2 * 30).ToString("HH:mm"))</option>
+                            <option value="@slot" selected="@(slot == 42)">@(new TimeOnly(slot / 2, slot % 2 * 30).ToString("HH:mm"))</option>
                         }
                     </select></label>
                     <button type="button" class="outline-button" data-range-add>+ Add Time</button>
@@ -82,9 +107,27 @@
                 </div>
                 <p data-range-message role="status" aria-live="polite" hidden></p>
                 <div class="availability-range-heading availability-range-list-heading"><h3>Your Weekly Availability</h3><span class="form-text">Changes take effect after saving.</span></div>
-                <div data-range-list aria-label="Selected weekly availability"></div>
+                <div data-range-list aria-label="Selected weekly availability">
+                    @if (initialRanges.Count == 0)
+                    {
+                        <p class="availability-range-empty">No available times added. Choose days and a time above to get started.</p>
+                    }
+                    @foreach (var range in initialRanges)
+                    {
+                        <div class="availability-range-row">
+                            <strong>@((DayOfWeek)range.Day)</strong>
+                            <span>@SlotTime(range.Start)–@SlotTime(range.End)</span>
+                            <span>@((range.End - range.Start) / 2d) h</span>
+                            <div class="availability-range-actions">
+                                <button type="button" class="outline-button">Edit</button>
+                                <button type="button" class="outline-button">Remove</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+                </fieldset>
             </div>
-            <div data-availability-grid-fallback>
+            <div data-availability-grid-fallback hidden>
             <div id="availability-day-totals" class="availability-day-totals" role="status" aria-live="polite"></div>
             <p id="availability-limit-message" class="text-danger" role="alert" hidden></p>
             <p id="availability-help">Tick available slots; untick to remove. This pattern repeats every week.</p>
@@ -119,13 +162,11 @@
         </section>
         <div class="class-form-actions">
             <a asp-controller="TutorAvailability" asp-action="Index" class="outline-button">Cancel</a>
+            <noscript><button type="submit" class="primary-button">Save Availability</button></noscript>
             <button id="saveTutorAvailability" type="submit" class="primary-button" disabled><i class="bi bi-check-lg" aria-hidden="true"></i> Save Availability</button>
         </div>
     </form>
 </div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="~/js/tutor-availability-ranges.js" asp-append-version="true"></script>
-    <script src="~/js/tutor-availability.js" asp-append-version="true"></script>
-    <script src="~/js/tutor-availability-live.js" asp-append-version="true"></script>
 }

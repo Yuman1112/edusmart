@@ -38,7 +38,9 @@
     bool paymentGuestLayout = currentController == "Payments" &&
         (currentAction is "Success" or "ConfirmPayment" or "ReceiptBySession" ||
          ViewData["PaymentGuestLayout"] is true);
-    bool showAccountNavigation = !paymentGuestLayout && User.Identity?.IsAuthenticated == true;
+    bool forceGuestErrorLayout = ViewData["UseGuestErrorLayout"] is true;
+    if (forceGuestErrorLayout) isAuthPage = false;
+    bool showAccountNavigation = !forceGuestErrorLayout && !paymentGuestLayout && User.Identity?.IsAuthenticated == true;
 
     bool isAdmin =
         showAccountNavigation &&
