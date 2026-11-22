@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>@ViewData["Title"] · EduSmart</title><link rel="stylesheet" href="~/css/site-errors.css" asp-append-version="true" /></head>
-<body><header class="error-header"><a href="@Url.Content("~/")" aria-label="EduSmart home"><img src="@Url.Content("~/images/logo.png")" alt="EduSmart" /></a></header>
+<body><header class="error-header">
+@if (ViewData["HideHomeLink"] is true)
+{
+    <img src="@Url.Content("~/images/logo.png")" alt="EduSmart" />
+}
+else
+{
+    <a href="@Url.Content("~/")" aria-label="EduSmart home"><img src="@Url.Content("~/images/logo.png")" alt="EduSmart" /></a>
+}
+</header>
 <main>@RenderBody()</main><footer>EduSmart · Secure Smart Tuition System</footer></body></html>

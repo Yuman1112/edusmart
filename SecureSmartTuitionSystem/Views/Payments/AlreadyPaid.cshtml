@@ -1,16 +1,19 @@
-﻿@{ Layout = "~/Views/Shared/_ErrorLayout.cshtml"; ViewData["Title"] = "Payment already completed"; }
+﻿@{ Layout = "~/Views/Shared/_ErrorLayout.cshtml"; ViewData["Title"] = "Payment already completed"; ViewData["HideHomeLink"] = true; }
 <section class="error-card" aria-labelledby="paid-title">
     <span class="error-status payment-status-success">Already settled · PAID</span>
     <h1 id="paid-title">Payment already completed</h1>
     <p class="error-message">This bill has already been settled. You do not need to pay again or request another payment link.</p>
-    <p class="error-message">The student or guardian can sign in to view the available bill and receipt. If enrollment is still being processed or you need help, please contact the centre.</p>
-    <div class="error-actions"><a class="error-button" href="@Url.Content("~/")">Return Home</a>
-    @if (User.Identity?.IsAuthenticated != true) {
-        <a class="error-button secondary" href="@Url.Content("~/Identity/Account/Login")">Sign in</a>
-    } else if (User.IsInRole("Admin") || User.IsInRole("Parent") || User.IsInRole("Student")) {
-        <a class="error-button secondary" href="@Url.Content("~/Billing")">Bills &amp; Receipts</a>
+    <p class="error-message">Sign in with the account associated with this payment to view your bill, receipt or contact staff.</p>
+    <div class="error-actions">
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <form asp-area="Identity" asp-page="/Account/Logout" asp-page-handler="SwitchAccount" method="post">
+            <button type="submit" class="error-button">Sign in with the correct account</button>
+        </form>
     }
-    @if (SecureSmartTuitionSystem.Services.Security.PageAccessRules.CanUsePublicSupport(User)) {
-        <a class="error-button secondary" href="@Url.Content("~/GuestSupport")">Contact staff</a>
-    }</div>
+    else
+    {
+        <a class="error-button" href="@Url.Content("~/Identity/Account/Login")">Sign in</a>
+    }
+    </div>
 </section>
