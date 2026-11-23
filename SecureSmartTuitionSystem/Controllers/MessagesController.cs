@@ -18,6 +18,8 @@ namespace SecureSmartTuitionSystem.Controllers
     public sealed class MessagesController : Controller
     {
         private const long MaximumFileSize = 10 * 1024 * 1024;
+        private const int MaximumAttachmentCount = 5;
+        private const long MaximumAttachmentBytes = 20 * 1024 * 1024;
         private static readonly TimeSpan MessageChangeWindow =
             TimeSpan.FromMinutes(15);
 
@@ -324,7 +326,7 @@ namespace SecureSmartTuitionSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [RequestSizeLimit(MaximumFileSize + 1024 * 1024)]
+        [RequestSizeLimit(MaximumAttachmentBytes + 1024 * 1024)]
         public async Task<IActionResult> Send(SendMessageViewModel model)
         {
             string userId = CurrentUserId();
@@ -344,14 +346,32 @@ namespace SecureSmartTuitionSystem.Controllers
                 ModelState.AddModelError(nameof(model.Content), "Message cannot exceed 2,000 characters.");
             }
 
-            if (string.IsNullOrWhiteSpace(content) && model.Attachment == null)
+            var files = model.Attachments.ToList();
+            if (model.Attachment != null) files.Add(model.Attachment);
+
+            if (string.IsNullOrWhiteSpace(content) && files.Count == 0)
             {
                 ModelState.AddModelError(nameof(model.Content), "Enter a message or select a file.");
             }
 
-            if (model.Attachment != null && !IsValidAttachment(model.Attachment, out string fileError))
+            string? attachmentError = null;
+            if (files.Count > MaximumAttachmentCount || files.Sum(file => file.Length) > MaximumAttachmentBytes)
             {
-                ModelState.AddModelError(nameof(model.Attachment), fileError);
+                attachmentError = "Attach up to 5 files, with a combined limit of 20 MB.";
+            }
+            else
+            {
+                foreach (var file in files)
+                {
+                    if (IsValidAttachment(file, out var fileError)) continue;
+                    attachmentError = fileError;
+                    break;
+                }
+            }
+
+            if (attachmentError != null)
+            {
+                ModelState.AddModelError(nameof(model.Attachments), attachmentError);
                 await _events.RecordAsync(HttpContext, "UploadRejected", SecuritySeverity.Warning,
                     "Message attachment rejected by the file validation policy.");
             }
@@ -374,14 +394,19 @@ namespace SecureSmartTuitionSystem.Controllers
                     : _protection.ProtectText(content)
             };
 
-            if (model.Attachment != null)
+            try
             {
-                await AddAttachment(message, model.Attachment);
+                foreach (var file in files) await AddAttachment(message, file);
+                conversation.LastMessageAt = message.SentAt;
+                _context.ChatMessages.Add(message);
+                await _context.SaveChangesAsync();
             }
-
-            conversation.LastMessageAt = message.SentAt;
-            _context.ChatMessages.Add(message);
-            await _context.SaveChangesAsync();
+            catch
+            {
+                foreach (var attachment in message.Attachments)
+                    DeleteStoredAttachment(attachment.StoredFileName);
+                throw;
+            }
 
             return RedirectToAction(nameof(Index), new { id = model.ConversationId });
         }
@@ -611,8 +636,16 @@ namespace SecureSmartTuitionSystem.Controllers
             string storedName = $"{Guid.NewGuid():N}.bin";
 
             Directory.CreateDirectory(StorageDirectory());
-            await System.IO.File.WriteAllBytesAsync(
-                Path.Combine(StorageDirectory(), storedName), protectedBytes);
+            try
+            {
+                await System.IO.File.WriteAllBytesAsync(
+                    Path.Combine(StorageDirectory(), storedName), protectedBytes);
+            }
+            catch
+            {
+                DeleteStoredAttachment(storedName);
+                throw;
+            }
 
             message.Attachments.Add(new MessageAttachment
             {
@@ -622,6 +655,13 @@ namespace SecureSmartTuitionSystem.Controllers
                 FileSize = file.Length,
                 Sha256Hash = Convert.ToHexString(SHA256.HashData(rawBytes))
             });
+        }
+
+        private void DeleteStoredAttachment(string storedName)
+        {
+            try { System.IO.File.Delete(Path.Combine(StorageDirectory(), storedName)); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
         private static bool IsValidAttachment(IFormFile file, out string error)

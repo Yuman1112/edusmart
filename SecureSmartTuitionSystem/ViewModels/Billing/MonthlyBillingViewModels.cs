@@ -9,6 +9,7 @@ public sealed class MonthlyBillingIndexViewModel
     public string? Month { get; set; }
     public string? Status { get; set; }
     public decimal Outstanding { get; set; }
+    public DateTime StatusAsOfUtc { get; set; }
 }
 
 public sealed class MonthlyEmailStatus

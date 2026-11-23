@@ -4,7 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const messages = document.getElementById("chatMessages");
     const input = document.getElementById("messageContent");
     const fileInput = document.getElementById("messageAttachment");
-    const fileName = document.getElementById("selectedFileName");
+    const previews = document.getElementById("messageAttachmentPreviews");
+    const attachmentError = document.getElementById("messageAttachmentError");
 
     if (messages) {
         messages.scrollTop = messages.scrollHeight;
@@ -24,12 +25,94 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    fileInput?.addEventListener("change", function () {
-        if (!fileName) return;
-        const file = fileInput.files?.[0];
-        fileName.hidden = !file;
-        fileName.textContent = file ? "Attached: " + file.name : "";
-    });
+    if (fileInput && previews && attachmentError) {
+        const megabyte = 1024 * 1024;
+        let selected = [];
+        const urls = new Set();
+
+        function render() {
+            for (const url of urls) URL.revokeObjectURL(url);
+            urls.clear();
+            previews.replaceChildren();
+            previews.hidden = selected.length === 0;
+            selected.forEach((file, index) => {
+                const item = document.createElement("li");
+                if (["image/jpeg", "image/png"].includes(file.type)) {
+                    const image = document.createElement("img");
+                    image.alt = "";
+                    const reader = new FileReader();
+                    reader.addEventListener("load", () => { image.src = reader.result; });
+                    reader.readAsDataURL(file);
+                    item.append(image);
+                }
+                const name = document.createElement("span");
+                name.textContent = `${file.name} · ${(file.size / megabyte).toFixed(2)} MB`;
+                item.append(name);
+
+                if (file.type === "application/pdf") {
+                    const link = document.createElement("a");
+                    link.href = URL.createObjectURL(file);
+                    urls.add(link.href);
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    link.textContent = "Preview PDF";
+                    item.append(link);
+                }
+                if (typeof DataTransfer === "function") {
+                    const remove = document.createElement("button");
+                    remove.type = "button";
+                    remove.textContent = "Remove";
+                    remove.setAttribute("aria-label", `Remove ${file.name}`);
+                    remove.addEventListener("click", () => {
+                        selected.splice(index, 1);
+                        syncFiles();
+                        showError("");
+                        render();
+                        if (previews.hidden) fileInput.focus();
+                        else previews.querySelector("button")?.focus();
+                    });
+                    item.append(remove);
+                }
+                previews.append(item);
+            });
+        }
+
+        function syncFiles() {
+            const transfer = new DataTransfer();
+            for (const file of selected) transfer.items.add(file);
+            fileInput.files = transfer.files;
+        }
+
+        function showError(message) {
+            attachmentError.textContent = message;
+            attachmentError.hidden = !message;
+        }
+
+        fileInput.addEventListener("change", () => {
+            const supportsTransfer = typeof DataTransfer === "function";
+            const incoming = [...fileInput.files];
+            const next = supportsTransfer ? [...selected] : [];
+            for (const file of incoming) {
+                if (!next.some(item => item.name === file.name && item.size === file.size &&
+                    item.lastModified === file.lastModified)) next.push(file);
+            }
+
+            let error = "";
+            if (next.some(file => file.size === 0 || file.size > 10 * megabyte)) {
+                error = "Each attachment must be non-empty and no larger than 10 MB.";
+            } else if (next.some(file => !/\.(pdf|jpe?g|png|docx)$/i.test(file.name))) {
+                error = "Choose a PDF, JPG, PNG or DOCX file.";
+            } else if (next.length > 5 || next.reduce((total, file) => total + file.size, 0) > 20 * megabyte) {
+                error = "Attach up to 5 files, with a combined limit of 20 MB.";
+            }
+
+            if (!error) selected = next;
+            else if (!supportsTransfer) { selected = []; fileInput.value = ""; }
+            if (supportsTransfer) syncFiles();
+            showError(error);
+            render();
+        });
+    }
 
     const editModalElement = document.getElementById("editMessageModal");
     const editMessageId = document.getElementById("editMessageId");

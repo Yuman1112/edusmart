@@ -66,6 +66,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Communication
         [StringLength(2000)]
         public string? Content { get; set; }
 
+        public List<IFormFile> Attachments { get; set; } = new();
         public IFormFile? Attachment { get; set; }
     }
 

@@ -251,6 +251,13 @@
 
                                 @foreach (var file in message.Attachments)
                                 {
+                                    @if (file.ContentType is "image/png" or "image/jpeg")
+                                    {
+                                        <a asp-action="Download" asp-route-id="@file.MessageAttachmentId" asp-route-preview="true" target="_blank" rel="noopener">
+                                            <img class="message-image-preview" src="@Url.Action("Download", new { id = file.MessageAttachmentId, preview = true })"
+                                                 alt="@file.FileName" loading="lazy" />
+                                        </a>
+                                    }
                                     <a asp-action="Download"
                                        asp-route-id="@file.MessageAttachmentId"
                                        class="message-file">
@@ -281,7 +288,6 @@
                     }
                 </div>
 
-                @if (!string.IsNullOrWhiteSpace(supportDraft)) { <div class="alert alert-info mx-3 mt-3">Your support request is ready below. Review it and press Send to share it with staff.</div> }
                 <form asp-action="Send"
                       method="post"
                       enctype="multipart/form-data"
@@ -290,29 +296,35 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="ConversationId" value="@Model.ActiveConversationId" />
                     <input type="file"
-                           name="Attachment"
+                           name="Attachments"
+                           multiple
                            id="messageAttachment"
                            accept=".pdf,.jpg,.jpeg,.png,.docx"
-                           hidden />
+                           class="visually-hidden" aria-label="Attach files" />
 
-                    <label for="messageAttachment" class="attachment-button" title="Attach file">
+                    <label for="messageAttachment" class="attachment-button" title="Attach files">
                         <i class="bi bi-paperclip"></i>
                     </label>
 
                     <div class="composer-input">
+                        @if (!string.IsNullOrWhiteSpace(supportDraft))
+                        {
+                            <p class="small">Review your support request and press Send to share it with staff.</p>
+                        }
                         <textarea name="Content"
                                   id="messageContent"
                                   maxlength="2000"
                                   rows="1"
                                   placeholder="Type a message...">@supportDraft</textarea>
-                        <span id="selectedFileName" hidden></span>
+                        <p id="messageAttachmentError" class="text-danger small" role="alert" hidden></p>
+                        <ul id="messageAttachmentPreviews" aria-label="Selected attachments" hidden></ul>
                     </div>
 
                     <button type="submit" class="send-message-button" aria-label="Send message">
                         <i class="bi bi-send-fill"></i>
                     </button>
                 </form>
-                <p class="attachment-help">PDF, JPG, PNG or DOCX · Maximum 10 MB</p>
+                <p class="attachment-help">PDF, JPG, PNG or DOCX · Up to 5 files · 10 MB per file · 20 MB total</p>
             }
         </div>
     </section>
