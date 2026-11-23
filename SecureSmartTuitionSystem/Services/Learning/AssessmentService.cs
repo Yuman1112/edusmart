@@ -15,6 +15,7 @@ public static class AssessmentRules
     public static DateTime NowMyt => DateTime.UtcNow.AddHours(8);
     public static bool ValidTotalMarks(decimal maximum) => maximum >= 1 && maximum <= 100 && decimal.Truncate(maximum) == maximum;
     public static bool CanSubmit(Assessment a, DateTime now) => a.IsActive && a.PublishedAtUtc.HasValue && !a.ResultsPublishedAtUtc.HasValue && now >= a.OpensAtMyt && now < a.DueAtMyt;
+    public static bool CanGrade(Assessment a, DateTime now) => a.IsActive && a.PublishedAtUtc.HasValue && !a.ResultsPublishedAtUtc.HasValue && now >= a.DueAtMyt;
     public static bool CanEdit(Assessment a, DateTime now) => a.IsActive && !a.ResultsPublishedAtUtc.HasValue && (!a.PublishedAtUtc.HasValue || now < a.OpensAtMyt);
     public static bool ValidMarks(decimal marks, decimal maximum) => maximum > 0 && marks >= 0 && marks <= maximum && decimal.Round(marks, 2) == marks;
     public static string Grade(decimal percentage) => percentage >= 80 ? "A" : percentage >= 70 ? "B" : percentage >= 60 ? "C" : percentage >= 50 ? "D" : "F";
@@ -117,7 +118,7 @@ public sealed class AssessmentService(ApplicationDbContext db)
             IsStaff = Staff(user),
             CanManage = manage,
             CanEdit = manage && row.IsActive && !row.ResultsPublishedAtUtc.HasValue && (!row.PublishedAtUtc.HasValue || now < row.OpensAtMyt),
-            CanGrade = manage && row.PublishedAtUtc.HasValue && !row.ResultsPublishedAtUtc.HasValue,
+            CanGrade = manage && row.IsActive && row.PublishedAtUtc.HasValue && !row.ResultsPublishedAtUtc.HasValue && now >= row.DueAtMyt,
             Submission = new SubmissionForm { AssessmentId = id, RowVersion = row.RowVersion }
         };
         model.QuestionFiles = await db.Set<AssessmentFile>().AsNoTracking().Where(x => x.AssessmentId == id && x.AssessmentParticipantId == null)
@@ -146,7 +147,7 @@ public sealed class AssessmentService(ApplicationDbContext db)
             && now >= row.OpensAtMyt && now < row.DueAtMyt && model.Participants.Any(x => x.SubmittedAtUtc == null);
         model.CanUnsubmit = !model.IsStaff && user.IsInRole("Student") && row.IsActive && row.PublishedAtUtc.HasValue && !row.ResultsPublishedAtUtc.HasValue
             && now >= row.OpensAtMyt && now < row.DueAtMyt
-            && await people.AnyAsync(p => p.SubmittedAtUtc != null && p.Marks == null && p.GradedAtUtc == null);
+            && await people.AnyAsync(p => p.SubmittedAtUtc != null);
         if (!model.IsStaff)
         {
             var ownAnswer = model.Participants.SingleOrDefault();
@@ -285,9 +286,11 @@ public sealed class AssessmentService(ApplicationDbContext db)
             var own = Own(user);
             var p = await db.Set<AssessmentParticipant>().Where(x => x.AssessmentId == id && x.StudentProfile.ApplicationUserId == own).AsTracking().SingleOrDefaultAsync();
             if (p == null || !AssessmentRules.Version(p.RowVersion, rowVersion)) return "Your submission changed. Reload before trying again.";
-            if (p.SubmittedAtUtc == null || p.Marks.HasValue || p.GradedAtUtc.HasValue) return "Only an ungraded submitted answer can be withdrawn.";
+            if (p.SubmittedAtUtc == null) return "Only a submitted answer can be withdrawn.";
             if (!AssessmentRules.CanSubmit(a, AssessmentRules.NowMyt)) return "The deadline has passed.";
             // Keep previous files for reference until a replacement is successfully submitted.
+            // An earlier unreleased grade belongs to the withdrawn answer, not its replacement.
+            p.Marks = null; p.Feedback = null; p.GradedAtUtc = null; p.GradedByUserId = null;
             p.SubmittedAtUtc = null;
             await db.SaveChangesAsync(); return null;
         });
@@ -299,7 +302,8 @@ public sealed class AssessmentService(ApplicationDbContext db)
             var p = await db.Set<AssessmentParticipant>().Where(x => x.AssessmentParticipantId == form.ParticipantId && ids.Contains(x.AssessmentId)).AsTracking().SingleOrDefaultAsync();
             if (p == null || !AssessmentRules.Version(p.RowVersion, form.RowVersion)) return "The submission changed or is unavailable. Reload.";
             var a = await Manage(user).Where(x => x.AssessmentId == p.AssessmentId).AsTracking().SingleAsync();
-            if (!a.IsActive || a.PublishedAtUtc == null || a.ResultsPublishedAtUtc != null || p.SubmittedAtUtc == null) return "This answer is not open for grading. Released results remain locked.";
+            if (!AssessmentRules.CanGrade(a, AssessmentRules.NowMyt)) return "Grading opens at the assessment deadline. Inactive assessments and released results cannot be graded.";
+            if (p.SubmittedAtUtc == null) return "This answer is not open for grading. Released results remain locked.";
             if (!form.Marks.HasValue || !AssessmentRules.ValidMarks(form.Marks.Value, a.MaxMarks)) return $"Enter marks from 0 to {a.MaxMarks:0.##}, with at most two decimal places.";
             if (form.Feedback?.Length > 2000) return "Feedback must be 2,000 characters or fewer.";
             var feedback = string.IsNullOrWhiteSpace(form.Feedback) ? null : form.Feedback.Trim();

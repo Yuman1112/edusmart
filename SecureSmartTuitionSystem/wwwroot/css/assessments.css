@@ -817,3 +817,22 @@
         padding-top: 0;
         margin-top: 12px;
     }
+
+/* Student details: question first, answer actions beside the submitted files. */
+.student-material-page .assessment-submission-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+}
+.student-material-page .assessment-submission-actions .assessment-note { flex: 1 1 260px; }
+.student-material-page .assessment-student-status:not(.class-form-card) {
+    padding: 0 24px 20px;
+}
+.student-material-page .assessment-student-status:not(.class-form-card) .assessment-result-label { display: none; }
+.student-material-page .assessment-student-status:not(.class-form-card) .assessment-student-result-top { margin-bottom: 10px; }
+.student-material-page .assessment-student-status[hidden] { display: none; }

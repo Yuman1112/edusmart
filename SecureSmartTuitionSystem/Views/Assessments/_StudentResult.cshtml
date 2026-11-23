@@ -1,18 +1,18 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Learning.AssessmentDetailsModel
+@model SecureSmartTuitionSystem.ViewModels.Learning.AssessmentDetailsModel
 @{
     var a = Model.Assessment;
     var p = Model.Participants.SingleOrDefault();
     bool released = a.ResultsPublishedAtUtc.HasValue;
     bool graded = released && p?.Marks != null;
 }
-<section class="assessment-student-result assessment-inline-result" hidden="@(p?.SubmittedAtUtc == null)" data-student-result
+<section class="assessment-student-result assessment-student-status @(graded ? "class-form-card mb-4" : "")" hidden="@(p?.SubmittedAtUtc == null)" data-student-result
          data-refresh-url="@Url.Action("Details", new { id = a.Id, fragment = true })"
          data-state="@a.State" data-can-unsubmit="@Model.CanUnsubmit.ToString().ToLowerInvariant()"
          data-can-submit="@Model.CanSubmit.ToString().ToLowerInvariant()"
          aria-label="Your assessment result">
     <div class="assessment-student-result-top">
-        <div class="assessment-result-label"><i class="bi @(graded ? "bi-check-circle" : "bi-clock-history")" aria-hidden="true"></i><h2>Your Result</h2></div>
-        <span class="assessment-badge">@(graded ? "Results released" : released ? "Not submitted" : "Awaiting results")</span>
+        <div class="assessment-result-label"><i class="bi @(graded ? "bi-check-circle" : "bi-clock-history")" aria-hidden="true"></i><h2>@(graded ? "Your Result" : "Submission Status")</h2></div>
+        <span class="assessment-badge">@(graded ? "Results released" : released ? "Not submitted" : "Submitted · Awaiting results")</span>
     </div>
     @if (graded)
     {
@@ -24,6 +24,6 @@
     }
     else
     {
-        <p class="assessment-note mb-0">@(released ? "No confirmed graded submission is available. Unsubmitted work is not automatically graded zero." : p?.SubmittedAtUtc != null ? "Your answer is submitted. Your grade and feedback will appear here when your tutor releases results." : "Submit your answer before the deadline. Released results will appear here.")</p>
+        <p class="assessment-note mb-0">@(released ? "No confirmed graded submission is available. Unsubmitted work is not automatically graded zero." : p?.SubmittedAtUtc != null ? "Your answer has been submitted. Your grade and feedback will appear here once your tutor releases results." : "Submit your answer before the deadline. Released results will appear here.")</p>
     }
 </section>

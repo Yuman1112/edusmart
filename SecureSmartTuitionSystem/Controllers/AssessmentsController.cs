@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
@@ -91,7 +91,7 @@ public sealed class AssessmentsController(ApplicationDbContext db) : Controller
         var files = new List<MaterialFile>(); string? error = null;
         if (ModelState.IsValid) { error = await ReadUploads(form.Files, files); if (error == null) error = await Service.SubmitAsync(User, form, files); }
         else error = "Check your note and attachments.";
-        if (error == null) { TempData["AssessmentSuccess"] = "Assignment submitted. You can withdraw it before the deadline if it has not been graded."; return RedirectToAction(nameof(Details), new { id = form.AssessmentId }); }
+        if (error == null) { TempData["AssessmentSuccess"] = "Answer submitted. You can withdraw and resubmit it before the deadline."; return RedirectToAction(nameof(Details), new { id = form.AssessmentId }); }
         var model = await Service.DetailsAsync(User, form.AssessmentId); if (model == null) return NotFound();
         ModelState.AddModelError("Submission.Files", error); model.Submission.Note = form.Note;
         model.Submission.KeptFileIds = form.KeptFileIds;
