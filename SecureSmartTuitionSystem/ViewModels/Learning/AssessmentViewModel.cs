@@ -22,7 +22,7 @@ public sealed class AssessmentForm : IValidatableObject
     [Required(ErrorMessage = "Please enter an assessment title."), StringLength(150)] public string Title { get; set; } = "";
     [EnumDataType(typeof(AssessmentKind))] public AssessmentKind Kind { get; set; } = AssessmentKind.Assignment;
     [StringLength(4000)] public string? Instructions { get; set; }
-    [Range(typeof(decimal), "0.01", "10000")] public decimal MaxMarks { get; set; } = 100;
+    [Range(typeof(decimal), "1", "100", ErrorMessage = "Total marks must be between 1 and 100.")] public decimal MaxMarks { get; set; } = 100;
     [Required] public DateTime? OpensAtMyt { get; set; }
     [Required] public DateTime? DueAtMyt { get; set; }
     [StringLength(64)] public string? RowVersion { get; set; }
@@ -34,7 +34,7 @@ public sealed class AssessmentForm : IValidatableObject
     {
         if (string.IsNullOrWhiteSpace(Title)) yield return new("Please enter an assessment title.", [nameof(Title)]);
         if (OpensAtMyt.HasValue && DueAtMyt.HasValue && DueAtMyt <= OpensAtMyt) yield return new("Due date must be after the opening time.", [nameof(DueAtMyt)]);
-        if (decimal.Round(MaxMarks, 2) != MaxMarks) yield return new("Use at most two decimal places.", [nameof(MaxMarks)]);
+        if (decimal.Truncate(MaxMarks) != MaxMarks) yield return new("Total marks must be a whole number.", [nameof(MaxMarks)]);
     }
 }
 public sealed class AssessmentFileRow
