@@ -1,0 +1,51 @@
+@model SecureSmartTuitionSystem.ViewModels.Reporting.StudentPerformanceDetails
+@using System.Globalization
+@{
+    ViewData["Title"] = "Student Performance Details";
+    var student = Model.Student;
+    var period = SecureSmartTuitionSystem.Services.Reporting.ReportDownloadNames.Period(Model.Filter.Start, Model.Filter.End);
+    string Number(decimal value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+    string Date(DateTime value) => value.ToString("dd MMM yyyy HH:mm", CultureInfo.InvariantCulture);
+}
+@section Styles { <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" /> }
+<div class="page-header"><div><h1>@student.StudentName</h1><p>@student.StudentNumber · @student.Level · @period</p></div></div>
+<p><a class="outline-button" asp-action="StudentPerformance" asp-route-Year="@Model.Filter.Year"
+      asp-route-Month="@Model.Filter.Month" asp-route-EndMonth="@Model.Filter.EndMonth" asp-route-SubjectId="@Model.Filter.SubjectId"
+      asp-route-ClassId="@Model.Filter.ClassId" asp-route-EducationStage="@Model.Filter.EducationStage"
+      asp-route-AcademicLevel="@Model.Filter.AcademicLevel" asp-route-TutorId="@Model.Filter.TutorId" asp-route-TutorSearch="@Model.Filter.TutorSearch"
+      asp-route-Day="@Model.Filter.Day">Back to Student Performance</a></p>
+<div class="reports-summary">
+    <section class="reports-card"><span>Assessments</span><strong>@student.Expected</strong></section>
+    <section class="reports-card"><span>Submitted</span><strong>@student.Submitted</strong></section>
+    <section class="reports-card"><span>Released grades</span><strong>@student.Graded</strong></section>
+    <section class="reports-card"><span>Overall average</span><strong>@(student.Average is decimal overall ? Number(overall) + "%" : "—")</strong></section>
+</div>
+<section class="reports-card">
+    <h2>Performance by class</h2>
+    <p class="reports-note">Includes all classes with assessment records in the selected period.</p>
+    @foreach (var row in Model.Classes)
+    {
+        <details class="report-class-details">
+            <summary>
+                <strong>@row.ClassName</strong><span>@row.Schedule</span>
+                <span>@row.Summary.Submitted / @row.Summary.Expected submitted · @row.Summary.Graded released grades</span>
+            </summary>
+            <div class="reports-table-wrap">
+                <table class="table reports-table">
+                    <thead><tr><th>Assessment</th><th>Type</th><th>Deadline (MYT)</th><th>Submitted (MYT)</th><th>Released grade</th><th>Feedback</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in row.Assessments)
+                    {
+                        <tr>
+                            <td>@item.Title</td><td>@item.Kind</td><td>@Date(item.DueMyt)</td>
+                            <td>@(item.SubmittedMyt is DateTime submitted ? Date(submitted) : "Not submitted")</td>
+                            <td>@(item.Marks is decimal marks ? $"{Number(marks)} / {Number(item.MaxMarks)}" : item.ResultsReleased ? "No grade" : "Not released")</td>
+                            <td>@(item.Feedback ?? "—")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </details>
+    }
+</section>

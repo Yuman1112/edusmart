@@ -8,6 +8,15 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
     }
 
+    const form = input.closest("form");
+    let submitting = false;
+
+    function submitCompleteCode() {
+        if (form && !submitting && /^[0-9]{6}$/.test(input.value)) {
+            form.requestSubmit();
+        }
+    }
+
     function render() {
         const value = input.value;
         const focused = document.activeElement === input;
@@ -30,6 +39,7 @@ document.addEventListener("DOMContentLoaded", function () {
     input.addEventListener("input", function () {
         input.value = input.value.replace(/\D/g, "").slice(0, 6);
         render();
+        submitCompleteCode();
     });
 
     input.addEventListener("paste", function (event) {
@@ -40,6 +50,7 @@ document.addEventListener("DOMContentLoaded", function () {
             event.preventDefault();
             input.value = code;
             render();
+            submitCompleteCode();
         }
     });
 
@@ -50,11 +61,17 @@ document.addEventListener("DOMContentLoaded", function () {
         input.focus();
     });
 
-    const form = input.closest("form");
-
     if (form) {
-        form.addEventListener("submit", function () {
-            input.value = input.value.replace(/\D/g, "").slice(0, 6);
+        form.addEventListener("submit", function (event) {
+            if (submitting) {
+                event.preventDefault();
+                return;
+            }
+
+            submitting = true;
+            queueMicrotask(() => {
+                if (event.defaultPrevented) submitting = false;
+            });
         });
     }
 

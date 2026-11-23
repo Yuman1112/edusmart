@@ -443,11 +443,17 @@ builder.Services.AddSingleton<Stripe.StripeClient>(
  * =====================================================
  */
 
-var app = builder.Build();
+    var app = builder.Build();
+
+    if (Environment.GetEnvironmentVariable("EDUSMART_IMPORT_DEMO") == "1")
+    {
+        await SecureSmartTuitionSystem.Data.EduSmartDemoSeed.ImportAsync(app);
+        return;
+    }
 
 /*
  * =====================================================
- * DATABASE INITIALISATION
+ * DATABASE INITIALISATIONower
  * =====================================================
  */
 

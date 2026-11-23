@@ -42,6 +42,18 @@ public sealed class ReportsController(ApplicationDbContext db, SecurityEventServ
     public Task<IActionResult> AssignmentReport([FromQuery] AcademicReportFilter filter, CancellationToken ct) =>
         BuildAcademicView(filter, AcademicReportSection.AssignmentReport, nameof(AssignmentReport), ct);
 
+    [HttpGet, Authorize(Roles = "Admin")]
+    public async Task<IActionResult> StudentPerformanceDetails(int id, [FromQuery] AcademicReportFilter filter, CancellationToken ct)
+    {
+        if (!ModelState.IsValid || id < 1) return BadRequest("Choose a valid student and reporting period.");
+        // Drill down across all subjects in the selected reporting period.
+        var period = new AcademicReportFilter { Year = filter.Year, Month = filter.Month, EndMonth = filter.EndMonth };
+        var report = await new AcademicReportService(db).BuildAsync(User, period, ct, studentId: id);
+        var student = report.Students.SingleOrDefault();
+        if (student is null) return NotFound();
+        return View(new StudentPerformanceDetails(filter, student, report.StudentClasses));
+    }
+
     private async Task<IActionResult> BuildAcademicView(AcademicReportFilter filter, AcademicReportSection section, string action, CancellationToken ct)
     {
         if (!ModelState.IsValid) return BadRequest("Choose valid year, subject and class filters.");
@@ -63,15 +75,7 @@ public sealed class ReportsController(ApplicationDbContext db, SecurityEventServ
             $"Generated {title} report ({format.ToUpperInvariant()}).");
         return File(bytes,
             format == "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            $"EduSmart - {title} - {filter.Year}." + (format == "pdf" ? "pdf" : "xlsx"));
-    }
-
-    private static string ReportFileName(IncomeReport report, string extension)
-    {
-        var start = report.Months[0].Month.ToString("MM-yyyy", CultureInfo.InvariantCulture);
-        var end = report.EndMonth.ToString("MM-yyyy", CultureInfo.InvariantCulture);
-        var period = report.Months.Count == 1 ? end : $"{start} to {end}";
-        return $"EduSmart - Income - {period}.{extension}";
+            ReportDownloadNames.FileName(title, filter.Start, filter.End, format == "pdf" ? "pdf" : "xlsx"));
     }
 
     [HttpGet, Authorize(Roles = "Admin")]
@@ -82,7 +86,7 @@ public sealed class ReportsController(ApplicationDbContext db, SecurityEventServ
         var report = await new IncomeReportService(db).BuildAsync(month, months ?? 1, ct);
         var bytes = IncomeReportExport.Excel(report);
         await securityEvents.RecordAsync(HttpContext, "ReportExported", SecuritySeverity.Information, "Generated Income report (EXCEL).");
-        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ReportFileName(report, "xlsx"));
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ReportDownloadNames.FileName("Income", report.Months[0].Month, report.EndMonth, "xlsx"));
     }
 
     [HttpGet, Authorize(Roles = "Admin")]
@@ -93,6 +97,6 @@ public sealed class ReportsController(ApplicationDbContext db, SecurityEventServ
         var report = await new IncomeReportService(db).BuildAsync(month, months ?? 1, ct);
         var bytes = IncomeReportExport.Pdf(report);
         await securityEvents.RecordAsync(HttpContext, "ReportExported", SecuritySeverity.Information, "Generated Income report (PDF).");
-        return File(bytes, "application/pdf", ReportFileName(report, "pdf"));
+        return File(bytes, "application/pdf", ReportDownloadNames.FileName("Income", report.Months[0].Month, report.EndMonth, "pdf"));
     }
 }

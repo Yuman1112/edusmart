@@ -1,0 +1,39 @@
+@model SecureSmartTuitionSystem.ViewModels.Reporting.ReportClassOptions
+@foreach (var field in Model.Fields)
+{
+    if (field.Name == "TutorId")
+    {
+        var selectedTutor = field.Items.FirstOrDefault(item => item.Selected)?.Text ?? "All Tutors";
+        <div class="report-tutor-picker" data-report-tutor-picker>
+            <label class="form-label" id="TutorFilterLabel" for="TutorId">Tutor</label>
+            <select class="form-select" id="TutorId" name="TutorId" asp-items="field.Items" data-tutor-select>
+                <option value="">All Tutors</option>
+            </select>
+            <details data-tutor-dropdown hidden>
+                <summary class="form-select" aria-labelledby="TutorFilterLabel TutorFilterValue">
+                    <span id="TutorFilterValue" data-tutor-value>@selectedTutor</span>
+                </summary>
+                <div class="report-tutor-menu">
+                    <input class="form-control" type="search" aria-label="Search tutors" placeholder="Search tutors" autocomplete="off" data-tutor-search />
+                    <div class="report-tutor-options">
+                        <button type="button" data-tutor-option="" aria-pressed="@(selectedTutor == "All Tutors" ? "true" : "false")">All Tutors</button>
+                        @foreach (var item in field.Items)
+                        {
+                            <button type="button" data-tutor-option="@item.Value" aria-pressed="@(item.Selected ? "true" : "false")">@item.Text</button>
+                        }
+                        <p data-tutor-empty role="status" hidden>No tutors match your search.</p>
+                    </div>
+                </div>
+            </details>
+        </div>
+    }
+    else
+    {
+        <div>
+            <label class="form-label" for="@field.Name">@field.Label</label>
+            <select class="form-select" id="@field.Name" name="@field.Name" asp-items="field.Items">
+                <option value="">All</option>
+            </select>
+        </div>
+    }
+}

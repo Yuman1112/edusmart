@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Services.Reporting;
 using System.Data;
 using System.Security.Claims;
 using Microsoft.Data.SqlClient;
@@ -30,15 +31,13 @@ public sealed class ClassProgressService(ApplicationDbContext db)
     {
         var model=new ProgressIndex{Filter=f};
         var classes=Classes(user).Where(c=>(c.StartDate??c.CreatedAt.AddHours(8)).Year==f.Year);
-        model.Subjects=await classes.Select(c=>new {c.SubjectId,c.Subject.SubjectName,c.Subject.AcademicLevel}).Distinct().OrderBy(c=>c.SubjectName).ThenBy(c=>c.AcademicLevel).Select(c=>new SelectListItem(c.SubjectName+" · "+c.AcademicLevel,c.SubjectId.ToString())).ToListAsync();
-        if(f.SubjectId.HasValue)classes=classes.Where(c=>c.SubjectId==f.SubjectId);
-        model.Classes=await classes.OrderBy(c=>c.ClassCode).Select(c=>new SelectListItem(c.ClassCode+" · "+(c.ClassName??""),c.ClassSessionId.ToString())).ToListAsync();
-        if(f.ClassId.HasValue)classes=classes.Where(c=>c.ClassSessionId==f.ClassId);
+        var selectedIds = await ReportClassFilters.ApplyAsync(classes, f, model.ClassOptions);
+        classes = classes.Where(c => selectedIds.Contains(c.ClassSessionId));
         var list=await classes.Include(c=>c.Subject).Include(c=>c.TutorUser).OrderBy(c=>c.ClassCode).ToListAsync();
         var ids=list.Select(c=>c.ClassSessionId).ToList();var subjectIds=list.Select(c=>c.SubjectId).ToList();
         var syllabuses=await db.Set<ProgressSyllabus>().AsNoTracking().Include(s=>s.Topics).Where(s=>subjectIds.Contains(s.SubjectId)&&s.AcademicYear==f.Year).ToListAsync();
         var progress=await db.Set<ProgressTopicState>().AsNoTracking().Where(p=>ids.Contains(p.ClassSessionId)).ToListAsync();
-        var from=new DateTime(f.Year,f.Month,1);var to=from.AddMonths(1).AddDays(-1);var now=ClassScheduleService.Now;
+        var from=f.Start;var to=f.End.AddMonths(1).AddDays(-1);var now=ClassScheduleService.Now;
         var changes=await db.ClassLessonChanges.AsNoTracking().Where(c=>ids.Contains(c.ClassSessionId)&&((c.OriginalDate>=from&&c.OriginalDate<=to)||(c.ReplacementDate>=from&&c.ReplacementDate<=to))).ToListAsync();
         var records=await db.Set<ProgressLessonRecord>().AsNoTracking().Where(r=>ids.Contains(r.ClassSessionId)&&r.LessonDate>=from&&r.LessonDate<=to).ToListAsync();
         foreach(var c in list)

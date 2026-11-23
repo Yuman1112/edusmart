@@ -1,22 +1,18 @@
+using SecureSmartTuitionSystem.ViewModels.Reporting;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Models.Progress;
 using SecureSmartTuitionSystem.ViewModels.Enrollment;
 namespace SecureSmartTuitionSystem.ViewModels.Progress;
-public sealed class ProgressFilter
+public sealed class ProgressFilter : ReportPeriodFilter
 {
-    [Range(2000,2100)] public int Year { get; set; } = DateTime.UtcNow.AddHours(8).Year;
-    [Range(1,12)] public int Month { get; set; } = DateTime.UtcNow.AddHours(8).Month;
-    [Range(1,int.MaxValue)] public int? SubjectId { get; set; }
-    [Range(1,int.MaxValue)] public int? ClassId { get; set; }
 }
 public sealed record ProgressSummary(int Id,string Code,string Name,string Schedule,string Subject,string Level,string Tutor,int Topics,int Done,decimal? Average,int Expected,int Submitted,int Missing,int Late);
 public sealed class ProgressIndex
 {
     public ProgressFilter Filter { get; set; } = new();
-    public List<SelectListItem> Subjects { get; set; } = [];
-    public List<SelectListItem> Classes { get; set; } = [];
+    public ReportClassOptions ClassOptions { get; } = new();
     public List<ProgressSummary> Rows { get; set; } = [];
 }
 public sealed class ChapterInput

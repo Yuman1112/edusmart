@@ -22,16 +22,21 @@
 }
 <div class="page-header"><div><h1>@title</h1></div></div>
 <section class="reports-card">
-<form method="get" asp-action="@reportAction" data-live-filter class="reports-toolbar">
-<div><label class="form-label" asp-for="Filter.Year">Due-date year</label><input class="form-control" type="number" name="Year" id="Filter_Year" value="@Model.Filter.Year" min="2000" max="2100" /></div>
-<div><label class="form-label" for="SubjectId">Subject</label><select id="SubjectId" name="SubjectId" class="form-select" data-live-filter-resets="ClassId"><option value="">All subjects</option>@foreach(var o in Model.Subjects){<option value="@o.Value" selected="@(Model.Filter.SubjectId?.ToString()==o.Value)">@o.Text</option>}</select></div>
-<div><label class="form-label" for="ClassId">Class</label><select id="ClassId" name="ClassId" class="form-select"><option value="">All classes</option>@foreach(var o in Model.Classes){<option value="@o.Value" selected="@(Model.Filter.ClassId?.ToString()==o.Value)">@o.Text</option>}</select></div>
-<button class="primary-button" type="submit">Apply</button>
-<a class="outline-button" asp-action="AcademicExport" asp-route-section="@reportSection" download asp-route-format="pdf" asp-route-Year="@Model.Filter.Year" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-ClassId="@Model.Filter.ClassId">Export PDF</a>
-<a class="outline-button" asp-action="AcademicExport" asp-route-section="@reportSection" download asp-route-format="excel" asp-route-Year="@Model.Filter.Year" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-ClassId="@Model.Filter.ClassId">Export Excel</a>
+<div class="reports-filter-header">
+    <h2><i class="bi bi-funnel" aria-hidden="true"></i> Filter Report</h2>
+    <a class="reports-clear-filter" hidden="@(!Model.Filter.HasActiveFilters)" asp-action="@reportAction"><i class="bi bi-x-circle" aria-hidden="true"></i> Clear Filters</a>
+</div>
+<form method="get" asp-action="@reportAction" data-live-filter class="reports-filter-grid reports-filter-grid-three">
+<partial name="_ReportPeriodFields" model="Model.Filter" />
+<partial name="_ReportClassFilters" model="Model.ClassOptions" />
+<noscript><button class="primary-button" type="submit">Update Report</button></noscript>
 </form>
+<div class="reports-export-actions">
+<a class="outline-button" asp-action="AcademicExport" asp-route-section="@reportSection" download asp-route-format="pdf" asp-route-Year="@Model.Filter.Year" asp-route-Month="@Model.Filter.Month" asp-route-EndMonth="@Model.Filter.EndMonth" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-ClassId="@Model.Filter.ClassId" asp-route-EducationStage="@Model.Filter.EducationStage" asp-route-AcademicLevel="@Model.Filter.AcademicLevel" asp-route-TutorId="@Model.Filter.TutorId" asp-route-TutorSearch="@Model.Filter.TutorSearch" asp-route-Day="@Model.Filter.Day">Export PDF</a>
+<a class="outline-button" asp-action="AcademicExport" asp-route-section="@reportSection" download asp-route-format="excel" asp-route-Year="@Model.Filter.Year" asp-route-Month="@Model.Filter.Month" asp-route-EndMonth="@Model.Filter.EndMonth" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-ClassId="@Model.Filter.ClassId" asp-route-EducationStage="@Model.Filter.EducationStage" asp-route-AcademicLevel="@Model.Filter.AcademicLevel" asp-route-TutorId="@Model.Filter.TutorId" asp-route-TutorSearch="@Model.Filter.TutorSearch" asp-route-Day="@Model.Filter.Day">Export Excel</a>
+</div>
 <p class="reports-note">
-    Published, active assessments that have opened are grouped by deadline year in Malaysia time. Rosters are fixed at publication.
+    Published, active assessments that have opened are grouped by deadline in Malaysia time. Rosters are fixed at publication.
     @if (showPerformance)
     {
         <text>Performance covers assignments, quizzes and tests. Averages use released results only and weight each result equally.</text>
@@ -55,8 +60,13 @@
 </div>
 @if (showPerformance)
 {
-<section class="reports-card"><h2>Student performance summary</h2><div class="reports-table-wrap"><table class="table reports-table"><thead><tr><th>No.</th><th>Student</th><th>Assessments</th><th>Submitted</th><th>Released grades</th><th>Average score</th></tr></thead><tbody>
-@{int n=0;}@foreach(var row in Model.Students){<tr><td>@(++n)</td><td>@row.StudentName</td><td>@row.Expected</td><td>@row.Submitted</td><td>@row.Graded</td><td>@Percent(row.Average)</td></tr>}
+<section class="reports-card"><h2>Student performance summary</h2><div class="reports-table-wrap"><table class="table reports-table"><thead><tr><th>No.</th><th>Student ID</th><th>Student</th><th>Level</th><th>Assessments</th><th>Submitted</th><th>Released grades</th><th>Average score</th>@if (User.IsInRole("Admin")) { <th>Details</th> }</tr></thead><tbody>
+@{int n=0;}@foreach(var row in Model.Students){<tr><td>@(++n)</td><td>@row.StudentNumber</td><td>@row.StudentName</td><td>@(string.IsNullOrWhiteSpace(row.Level) ? "—" : row.Level)</td><td>@row.Expected</td><td>@row.Submitted</td><td>@row.Graded</td><td>@Percent(row.Average)</td>
+@if (User.IsInRole("Admin"))
+{
+    <td><a class="outline-button" asp-action="StudentPerformanceDetails" asp-route-id="@row.StudentId" asp-route-Year="@Model.Filter.Year" asp-route-Month="@Model.Filter.Month" asp-route-EndMonth="@Model.Filter.EndMonth" asp-route-SubjectId="@Model.Filter.SubjectId" asp-route-ClassId="@Model.Filter.ClassId" asp-route-EducationStage="@Model.Filter.EducationStage" asp-route-AcademicLevel="@Model.Filter.AcademicLevel" asp-route-TutorId="@Model.Filter.TutorId" asp-route-TutorSearch="@Model.Filter.TutorSearch" asp-route-Day="@Model.Filter.Day">View details</a></td>
+}
+</tr>}
 </tbody></table></div>@if(Model.Students.Count==0){<p>No student assessment records match these filters.</p>}</section>
 }
 @if (showAssignments)
@@ -64,7 +74,7 @@
 <section class="reports-card"><h2>Assignment submission overview</h2>
 <div class="reports-chart">@foreach(var row in Model.Assignments){
     <div class="reports-bar-row">
-        <span>@row.ClassCode · #@row.Id</span>
+        <span class="reports-bar-label" title="@row.Title"><strong>@row.Title</strong></span>
         @if (row.Rate is decimal rate)
         {
             var formattedRate = rate.ToString("0.0", CultureInfo.InvariantCulture);
@@ -82,6 +92,8 @@
 @if(Model.Assignments.Count==0){<p>No opened assignments match these filters.</p>}
 </section>
 <section class="reports-card"><h2>Assignment submission rate report</h2><p class="reports-note">Rate = submitted ÷ fixed roster × 100. Missing counts only unsubmitted work whose deadline has passed. Unsubmitted work before the deadline is pending. No roster means no rate. Late counts are retained historical data; current submission rules block uploads at or after the deadline.</p><div class="reports-table-wrap"><table class="table reports-table"><thead><tr><th>No.</th><th>Assignment</th><th>Class</th><th>Subject</th><th>Deadline (MYT)</th><th>Expected</th><th>Submitted</th><th>On time</th><th>Late</th><th>Missing</th><th>Rate</th></tr></thead><tbody>
-@{int n=0;}@foreach(var row in Model.Assignments){<tr><td>@(++n)</td><td>@row.Title</td><td>@row.ClassCode<br/>@row.ClassName</td><td>@row.Subject</td><td>@row.Due.ToString("dd MMM yyyy HH:mm",CultureInfo.InvariantCulture)</td><td>@row.Expected</td><td>@row.Submitted</td><td>@row.OnTime</td><td>@row.Late</td><td>@row.Missing</td><td>@Percent(row.Rate)</td></tr>}
+@{int n=0;}@foreach(var row in Model.Assignments){<tr><td>@(++n)</td><td>@row.Title</td><td class="report-class-cell"><strong>@row.ClassName</strong><span>@row.Schedule</span></td><td>@row.Subject</td><td>@row.Due.ToString("dd MMM yyyy HH:mm",CultureInfo.InvariantCulture)</td><td>@row.Expected</td><td>@row.Submitted</td><td>@row.OnTime</td><td>@row.Late</td><td>@row.Missing</td><td>@Percent(row.Rate)</td></tr>}
 </tbody></table></div></section>
 }
+
+@section Scripts { <script src="~/js/report-tutor-filter.js" asp-append-version="true" defer></script> }

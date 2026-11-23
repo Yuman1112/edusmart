@@ -1,0 +1,31 @@
+@model SecureSmartTuitionSystem.ViewModels.Reporting.ReportPeriodFilter
+@using System.Globalization
+<div>
+    <label class="form-label" for="Year">Year</label>
+    <select id="Year" name="Year" class="form-select">
+        @for (int year = Math.Max(DateTime.UtcNow.AddHours(8).Year + 1, Model.Year); year >= 2000; year--)
+        {
+            <option value="@year" selected="@(year == Model.Year)">@year</option>
+        }
+    </select>
+</div>
+<div>
+    <label class="form-label" for="Month">Start Month</label>
+    <select id="Month" name="Month" class="form-select">
+        <option value="0" selected="@(Model.Month == 0)">All Months</option>
+        @for (int month = 1; month <= 12; month++)
+        {
+            <option value="@month" selected="@(month == Model.Month)">@CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month)</option>
+        }
+    </select>
+</div>
+<div>
+    <label class="form-label" for="EndMonth">End Month</label>
+    <select id="EndMonth" name="EndMonth" class="form-select" disabled="@(Model.Month == 0)">
+        <option value="" selected="@(Model.EndMonth == null || Model.EndMonth <= Model.Month)">Same as Start Month</option>
+        @for (int month = Math.Max(1, Model.Month + 1); month <= 12; month++)
+        {
+            <option value="@month" selected="@(month == Model.EndMonth)">@CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month)</option>
+        }
+    </select>
+</div>

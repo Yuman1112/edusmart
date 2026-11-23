@@ -12,7 +12,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     function total() {
-        badge("[data-communication-unread-total]", count("[data-announcement-unread-total]") + count("[data-notification-unread-total]") + count("[data-message-unread-total]"), "item(s)");
+        const unread = count("[data-announcement-unread-total]") +
+            count("[data-notification-unread-total]") + count("[data-message-unread-total]");
+        const pendingEnquiries = count("[data-guest-enquiry-pending]");
+        badge("[data-communication-unread-total]", unread + pendingEnquiries, "communication item(s)", "new");
     }
     async function refresh() {
         if (pending || document.hidden) return;
