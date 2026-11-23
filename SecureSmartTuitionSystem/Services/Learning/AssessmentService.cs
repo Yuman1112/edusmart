@@ -13,6 +13,7 @@ namespace SecureSmartTuitionSystem.Services.Learning;
 public static class AssessmentRules
 {
     public static DateTime NowMyt => DateTime.UtcNow.AddHours(8);
+    public static bool ValidTotalMarks(decimal maximum) => maximum >= 1 && maximum <= 100 && decimal.Truncate(maximum) == maximum;
     public static bool CanSubmit(Assessment a, DateTime now) => a.IsActive && a.PublishedAtUtc.HasValue && !a.ResultsPublishedAtUtc.HasValue && now >= a.OpensAtMyt && now < a.DueAtMyt;
     public static bool CanEdit(Assessment a, DateTime now) => a.IsActive && !a.ResultsPublishedAtUtc.HasValue && (!a.PublishedAtUtc.HasValue || now < a.OpensAtMyt);
     public static bool ValidMarks(decimal marks, decimal maximum) => maximum > 0 && marks >= 0 && marks <= maximum && decimal.Round(marks, 2) == marks;
@@ -188,7 +189,8 @@ public sealed class AssessmentService(ApplicationDbContext db)
     {
         return await Write(async () => {
             if (!Tutor(user) || !await new LearningMaterialService(db).Classes(user, true).AnyAsync(c => c.ClassSessionId == form.ClassSessionId)) return "This class is unavailable for assessment management.";
-            if (string.IsNullOrWhiteSpace(form.Title) || form.Title.Length > 150 || !Enum.IsDefined(form.Kind) || form.MaxMarks <= 0 || form.MaxMarks > 10000 || decimal.Round(form.MaxMarks, 2) != form.MaxMarks
+            if (!AssessmentRules.ValidTotalMarks(form.MaxMarks)) return "Total marks must be a whole number from 1 to 100.";
+            if (string.IsNullOrWhiteSpace(form.Title) || form.Title.Length > 150 || !Enum.IsDefined(form.Kind)
                 || form.OpensAtMyt == null || form.DueAtMyt == null || form.OpensAtMyt.Value.Year < 2000 || form.DueAtMyt.Value.Year > 2100 || form.DueAtMyt <= form.OpensAtMyt || form.DueAtMyt <= AssessmentRules.NowMyt)
                 return "Check the title, marks and dates. The deadline must be in the future.";
             var cls = await db.ClassSessions.AsNoTracking().SingleAsync(c => c.ClassSessionId == form.ClassSessionId);
