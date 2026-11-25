@@ -1,9 +1,19 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 namespace SecureSmartTuitionSystem.Models.Attendance;
 public enum CorrectionDecision { Pending, Approved, Rejected }
 public sealed class AttendanceCorrectionRequest
 {
     public int AttendanceCorrectionRequestId { get; set; }
+    public bool IsStudentRequest { get; set; }
+    public DateTime? TutorConfirmationRequestedAtUtc { get; set; }
+    [MaxLength(450)] public string? ConfirmationRequestedByUserId { get; set; }
+    [MaxLength(256)] public string? ConfirmationRequestedByName { get; set; }
+    [MaxLength(450)] public string? ConfirmationTutorUserId { get; set; }
+    public bool? TutorSupportsCorrection { get; set; }
+    [MaxLength(500)] public string? TutorConfirmationRemark { get; set; }
+    public DateTime? TutorConfirmedAtUtc { get; set; }
+    [MaxLength(450)] public string? TutorConfirmedByUserId { get; set; }
+    [MaxLength(256)] public string? TutorConfirmedByName { get; set; }
     public int AttendanceRecordId { get; set; }
     [MaxLength(450)] public string RequestedByUserId { get; set; } = "";
     [MaxLength(256)] public string RequestedByName { get; set; } = "";

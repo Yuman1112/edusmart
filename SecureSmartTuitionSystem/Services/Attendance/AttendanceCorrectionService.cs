@@ -1,11 +1,11 @@
-﻿using System.Data;
+using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Attendance;
 using SecureSmartTuitionSystem.ViewModels.Attendance;
 namespace SecureSmartTuitionSystem.Services.Attendance;
-public sealed class AttendanceCorrectionService(ApplicationDbContext db)
+public sealed partial class AttendanceCorrectionService(ApplicationDbContext db)
 {
     public static bool ValidSort(string? sort) => sort is "requested_asc" or "requested_desc" or "lesson_asc" or "lesson_desc" or "student_asc" or "student_desc" or "status_asc" or "status_desc";
     public static IOrderedQueryable<AttendanceCorrectionRequest> Order(IQueryable<AttendanceCorrectionRequest> query, string sort)
@@ -59,6 +59,7 @@ public sealed class AttendanceCorrectionService(ApplicationDbContext db)
                 RequestedAtUtc = DateTime.UtcNow,
                 PreviousStatus = record.Status,
                 RequestedStatus = requested.Value,
+                IsStudentRequest = role == "Student",
                 Reason = reason
             });
             await db.SaveChangesAsync(); await tx.CommitAsync(); return null;
@@ -68,47 +69,11 @@ public sealed class AttendanceCorrectionService(ApplicationDbContext db)
         catch (SqlException ex) when (ex.Number == 1205)
         { await tx.RollbackAsync(); db.ChangeTracker.Clear(); return "Another request changed this record. Reload and try again."; }
     }
-    public async Task<AttendanceCorrectionListViewModel> ListAsync(string userId, bool admin, string status, string sort = "requested_asc")
-    {
-        var query = db.Set<AttendanceCorrectionRequest>().AsNoTracking().Where(x => admin || x.RequestedByUserId == userId);
-        if (status != "all")
-        {
-            var state = status == "approved" ? CorrectionDecision.Approved : status == "rejected" ? CorrectionDecision.Rejected : CorrectionDecision.Pending;
-            query = query.Where(x => x.Decision == state);
-        }
-        var data = await Order(query, sort).Include(x => x.AttendanceRecord).ThenInclude(x => x.AttendanceLesson)
-            .Take(500).ToListAsync();
-        return new AttendanceCorrectionListViewModel
-        {
-            IsAdmin = admin,
-            Status = status,
-            Sort = sort,
-            Rows = data.Select(x => new AttendanceCorrectionListRow
-            {
-                Id = x.AttendanceCorrectionRequestId,
-                RecordId = x.AttendanceRecordId,
-                Date = x.AttendanceRecord.AttendanceLesson.LessonDate,
-                ClassCode = x.AttendanceRecord.AttendanceLesson.ClassCode,
-                Student = x.AttendanceRecord.StudentNumber + " · " + x.AttendanceRecord.StudentName,
-                RequestedBy = x.RequestedByName,
-                RequestedAtUtc = x.RequestedAtUtc,
-                PreviousStatus = x.PreviousStatus,
-                RequestedStatus = x.RequestedStatus,
-                CurrentStatus = x.AttendanceRecord.Status,
-                Reason = x.Reason,
-                Decision = x.Decision,
-                ReviewedBy = x.ReviewedByName,
-                ReviewedAtUtc = x.ReviewedAtUtc,
-                ReviewRemark = x.ReviewRemark,
-                RowVersion = Convert.ToBase64String(x.RowVersion)
-            }).ToList()
-        };
-    }
     public async Task<string?> ReviewAsync(int id, string decision, string? remark, string? version, string adminId, string adminName)
     {
         remark = remark?.Trim();
         if (decision is not ("approve" or "reject")) return "Choose Approve or Reject.";
-        if (string.IsNullOrEmpty(remark) || remark.Length > 500) return "Enter a review reason of 1–500 characters.";
+        if (remark?.Length > 500) return "Review remarks must be 500 characters or fewer.";
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         try
         {
@@ -119,8 +84,13 @@ public sealed class AttendanceCorrectionService(ApplicationDbContext db)
                 .SingleOrDefaultAsync(x => x.AttendanceCorrectionRequestId == id);
             if (request == null || request.Decision != CorrectionDecision.Pending) return "This request is no longer pending.";
             if (Convert.ToBase64String(request.RowVersion) != version) return "This request changed. Reload before reviewing again.";
+            if (decision == "approve" && !AttendanceConfirmationRules.CanApprove(request))
+                return "Wait for the requested Tutor confirmation before approving. You may reject with a reason if the request cannot proceed.";
             if (decision == "approve" && request.AttendanceRecord.Status != request.PreviousStatus)
                 return "The attendance changed after this request. Reject this stale request and ask for a new one.";
+            if (AttendanceConfirmationRules.ReviewRemarkRequired(request, decision) && string.IsNullOrWhiteSpace(remark))
+                return decision == "reject" ? "Enter a reason for rejecting this request." : "Explain the basis for approval when there is no supporting Tutor confirmation.";
+            remark = string.IsNullOrWhiteSpace(remark) ? null : remark;
             request.Decision = decision == "approve" ? CorrectionDecision.Approved : CorrectionDecision.Rejected;
             request.ReviewedByUserId = adminId; request.ReviewedByName = adminName[..Math.Min(adminName.Length, 256)];
             request.ReviewedAtUtc = DateTime.UtcNow; request.ReviewRemark = remark;

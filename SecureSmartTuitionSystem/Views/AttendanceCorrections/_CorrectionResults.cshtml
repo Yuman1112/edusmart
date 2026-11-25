@@ -1,0 +1,21 @@
+@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceCorrectionListViewModel
+@using SecureSmartTuitionSystem.Models.Attendance
+@{ int number = 0; }
+<div data-correction-results>
+    <div class="dashboard-card compact-class-card attendance-unified-results">
+        <div class="dashboard-card-header"><h2><i class="bi bi-pencil-square me-2" aria-hidden="true"></i> Correction Requests</h2><span class="text-muted">@Model.Rows.Count request(s)</span></div><p class="text-muted attendance-result-summary">Showing up to 500 matching requests. Times shown are MYT (UTC+8).</p>
+        @if (Model.Rows.Count == 0) { <div class="p-4">No correction requests match these filters.</div> }
+        else {
+            <div class="table-responsive"><table class="table compact-class-table align-middle"><thead><tr><th>No.</th>
+                @foreach (var column in new[] { ("student","Student"), ("lesson","Lesson"), ("requested","Requested At (MYT)"), ("status","Status") }) {
+                    <th><a class="attendance-sort-link" asp-action="Index" asp-route-status="@Model.Status" asp-route-search="@Model.Search" asp-route-from='@Model.From?.ToString("yyyy-MM-dd")' asp-route-to='@Model.To?.ToString("yyyy-MM-dd")' asp-route-sort='@(Model.Sort == column.Item1 + "_asc" ? column.Item1 + "_desc" : column.Item1 + "_asc")'>@column.Item2 <i class="bi bi-arrow-down-up" aria-hidden="true"></i></a></th>
+                }<th>Requested Change</th><th>Actions</th></tr></thead><tbody>
+                @foreach (var row in Model.Rows) {
+                    number++;
+                    <tr><td>@number</td><td><strong>@row.Student</strong></td><td>@row.ClassCode<br /><small>@row.Date.ToString("dd MMM yyyy")</small></td><td>@row.RequestedAtUtc.AddHours(8).ToString("dd MMM yyyy")<br /><small>@row.RequestedAtUtc.AddHours(8).ToString("HH:mm")</small></td><td><span class="tutor-management-badge @(row.Decision == CorrectionDecision.Approved ? "tutor-badge-success" : row.Decision == CorrectionDecision.Rejected ? "tutor-badge-inactive" : "tutor-badge-pending")">@row.StatusLabel</span></td><td>@(row.PreviousStatus?.ToString() ?? "Unrecorded") → @row.RequestedStatus</td><td><button type="button" class="btn btn-sm btn-outline-secondary class-details-button" data-correction-open data-correction-id="@row.Id" data-correction-url='@Url.Action("Details", new { id = row.Id })' aria-haspopup="dialog">@(row.CanConfirm ? "Confirm" : row.CanReview ? "Review" : "Details")</button></td></tr>
+                }
+            </tbody></table></div>
+        }
+    </div>
+
+</div>

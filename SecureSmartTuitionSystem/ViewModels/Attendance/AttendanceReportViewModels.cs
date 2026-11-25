@@ -62,14 +62,36 @@ public sealed class AttendanceCorrectionListViewModel
 {
     public string Sort { get; set; } = "requested_asc";
     public bool IsAdmin { get; set; }
+    public bool IsTutor { get; set; }
+    public string Search { get; set; } = "";
+    public DateTime? From { get; set; }
+    public DateTime? To { get; set; }
+    public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> TutorChoices { get; set; } = [];
     public string Status { get; set; } = "pending";
     public List<AttendanceCorrectionListRow> Rows { get; set; } = [];
 }
 public sealed class AttendanceCorrectionListRow
 {
+    public bool IsStudentRequest { get; set; }
+    public bool CanRequestConfirmation { get; set; }
+    public bool CanConfirm { get; set; }
+    public bool CanApprove { get; set; }
+    public bool ApprovalRemarksOptional { get; set; }
+    public bool CanReview { get; set; }
+    public bool CanReassign { get; set; }
+    public bool? TutorSupportsCorrection { get; set; }
+    public string? TutorConfirmationRemark { get; set; }
+    public DateTime? TutorConfirmationRequestedAtUtc { get; set; }
+    public string? ConfirmationRequestedByName { get; set; }
+    public string? ConfirmationTutorName { get; set; }
+    public DateTime? TutorConfirmedAtUtc { get; set; }
+    public string? TutorConfirmedByName { get; set; }
+    public string StatusLabel { get; set; } = "";
     public int Id { get; set; }
     public int RecordId { get; set; }
     public DateTime Date { get; set; }
+    public TimeOnly LessonStart { get; set; }
+    public TimeOnly LessonEnd { get; set; }
     public string ClassCode { get; set; } = "";
     public string Student { get; set; } = "";
     public string RequestedBy { get; set; } = "";

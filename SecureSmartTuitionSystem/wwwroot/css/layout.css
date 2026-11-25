@@ -1332,3 +1332,15 @@ body.messages-page-active .staff-content { height: auto !important; min-height: 
     font-size: inherit;
     line-height: inherit;
 }
+
+/* Pending work indicators match Class & Enrollment. */
+.sidebar-link-content > .message-unread-badge[data-review-work],
+.sidebar-submenu .message-unread-badge[data-review-work] {
+    display:inline-flex; min-width:18px; height:18px; padding-inline:4px;
+    font-size:.66rem; font-variant-numeric:tabular-nums; line-height:1; flex:0 0 auto;
+}
+.sidebar-module-button[aria-expanded="true"] [data-review-work="tutor-total"],
+.sidebar-module-button[aria-expanded="true"] [data-review-work="attendance-total"] { display:none; }
+.message-unread-badge[data-review-work][hidden] { display:none !important; }
+
+.sidebar-module-button[aria-controls="tutorAttendanceMenu"][aria-expanded="true"] [data-review-work="confirm"] { display:none; }

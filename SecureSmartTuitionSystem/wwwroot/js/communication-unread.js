@@ -31,6 +31,13 @@ document.addEventListener("DOMContentLoaded", () => {
             badge('[data-admin-work="enrollments"]', result.enrollments, "enrollment request(s)", "pending");
             badge('[data-admin-work="withdrawals"]', result.withdrawals, "withdrawal(s)", "unreviewed");
             badge('[data-admin-work="total"]', result.replacements + result.enrollments + result.withdrawals, "class and enrollment item(s)", "pending");
+            badge('[data-review-work="teaching"]', result.teachingRequests, "teaching request(s)", "pending");
+            badge('[data-review-work="qualification"]', result.qualificationRequests, "qualification request(s)", "pending");
+            badge('[data-review-work="tutor-total"]', (result.teachingRequests || 0) + (result.qualificationRequests || 0), "tutor request(s)", "pending");
+            badge('[data-review-work="correction"]', result.correctionRequests, "correction request(s)", "pending review");
+            badge('[data-review-work="reopen"]', result.reopenRequests, "reopening request(s)", "pending");
+            badge('[data-review-work="attendance-total"]', (result.correctionRequests || 0) + (result.reopenRequests || 0), "attendance request(s)", "pending");
+            badge('[data-review-work="confirm"]', result.tutorConfirmations, "student request(s)", "awaiting confirmation");
             total();
         } catch { /* Retain the last known counts during a temporary connection failure. */ }
         finally { pending = false; }

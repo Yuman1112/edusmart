@@ -1,0 +1,43 @@
+@model SecureSmartTuitionSystem.ViewModels.Attendance.AttendanceCorrectionListRow
+@using SecureSmartTuitionSystem.Models.Attendance
+@{ var r = Model; var reviewForm = $"correction-review-{r.Id}"; var confirmForm = $"correction-confirm-{r.Id}"; }
+<div class="modal-header"><div class="correction-heading"><h2 class="modal-title h5" id="correction-workflow-title">@(r.CanConfirm ? "Tutor Confirmation" : r.CanReview ? "Review Correction Request" : "Correction Request Details")</h2><span class="tutor-management-badge @(r.Decision == CorrectionDecision.Approved ? "tutor-badge-success" : r.Decision == CorrectionDecision.Rejected ? "tutor-badge-inactive" : "tutor-badge-pending")">@r.StatusLabel</span></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+<div class="modal-body correction-compact-body">
+    <div class="alert alert-danger" data-correction-modal-error role="alert" hidden></div>
+    <section class="correction-compact-section"><h3>Request Details</h3><strong>@r.Student</strong><p class="text-muted small mb-2">@r.ClassCode · @r.Date.ToString("dd MMM yyyy") · @r.LessonStart.ToString("hh:mm tt")–@r.LessonEnd.ToString("hh:mm tt") MYT</p><p class="correction-change"><span>@(r.PreviousStatus?.ToString() ?? "Unrecorded")</span><i class="bi bi-arrow-right" aria-label="change to"></i><strong>@r.RequestedStatus</strong></p><p class="correction-wrapped mb-0"><strong>Reason:</strong> @r.Reason</p>
+        @if (r.CurrentStatus != r.PreviousStatus) { <div class="alert alert-warning mt-3 mb-0">The current record is @(r.CurrentStatus?.ToString() ?? "Unrecorded"). It changed after this request, so approval is blocked. Admin may reject the stale request.</div> }
+    </section>
+    <section class="correction-compact-section"><h3>Tutor Confirmation</h3>
+        @if (r.TutorConfirmedAtUtc.HasValue) {
+            <p class="@(r.TutorSupportsCorrection == true ? "text-success" : "text-danger") fw-bold mb-1">@(r.TutorSupportsCorrection == true ? "Supports Correction" : "Does Not Support Correction")</p><p class="correction-wrapped mb-1">@r.TutorConfirmationRemark</p><p class="text-muted small mb-0">@r.ConfirmationTutorName · @r.TutorConfirmedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy · HH:mm") MYT</p>
+        } else if (r.TutorConfirmationRequestedAtUtc.HasValue) {
+            <p class="text-muted mb-1">@(r.CanConfirm ? "Admin has asked you to check the lesson record and provide your opinion." : "Waiting for the assigned tutor's reply. Attendance remains unchanged.")</p><p class="small mb-0">@r.ConfirmationTutorName</p>
+        } else {
+            <p class="text-muted mb-0">@(r.IsStudentRequest ? "No Tutor confirmation requested. Verify the facts before approving." : "Submitted by Tutor directly to Admin.")</p>
+        }
+        @if (r.CanRequestConfirmation) {
+            <form asp-action="RequestTutorConfirmation" method="post" class="correction-workflow-form mt-3" data-confirm="Request Tutor confirmation? Approval will wait for the tutor's reply."><input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="rowVersion" value="@r.RowVersion" /><button type="submit" class="outline-button">Request Tutor Confirmation</button><details class="mt-2"><summary class="small">Lesson tutor unavailable?</summary><label for="fallback-@r.Id" class="form-label mt-2">Replacement Tutor (only if the lesson tutor is unavailable)</label><select id="fallback-@r.Id" name="fallbackTutorId" asp-items='@(ViewData["CorrectionTutorChoices"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)' class="form-select"><option value="">Use lesson tutor</option></select></details></form>
+        }
+        @if (r.CanReassign) {
+            <details class="mt-3"><summary>Assigned tutor unavailable?</summary><form asp-action="ReassignConfirmation" method="post" class="correction-workflow-form"><input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="rowVersion" value="@r.RowVersion" /><label for="assign-@r.Id" class="form-label mt-2">Active Tutor</label><select id="assign-@r.Id" name="tutorId" asp-items='@(ViewData["CorrectionTutorChoices"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)' class="form-select" required><option value="">Select Tutor</option></select><button type="submit" class="outline-button mt-2">Assign Tutor</button></form></details>
+        }
+        <details class="correction-history mt-3"><summary>View History</summary><dl class="attendance-correction-details mt-2 mb-0"><dt>Student Request</dt><dd>@r.RequestedBy · @r.RequestedAtUtc.AddHours(8).ToString("dd MMM yyyy · HH:mm") MYT</dd>
+            @if (r.TutorConfirmationRequestedAtUtc.HasValue) { <dt>Confirmation Requested</dt><dd>@r.ConfirmationRequestedByName · @r.TutorConfirmationRequestedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy · HH:mm") MYT</dd><dt>Assigned Tutor</dt><dd>@r.ConfirmationTutorName</dd> }
+            @if (r.TutorConfirmedAtUtc.HasValue) { <dt>Tutor Replied</dt><dd>@r.TutorConfirmedByName · @r.TutorConfirmedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy · HH:mm") MYT</dd> }
+            @if (r.ReviewedAtUtc.HasValue) { <dt>Admin Decision</dt><dd>@r.ReviewedBy · @r.ReviewedAtUtc.Value.AddHours(8).ToString("dd MMM yyyy · HH:mm") MYT</dd> }
+        </dl></details>
+    </section>
+    @if (r.CanConfirm) {
+        <section class="correction-compact-section"><h3>Your Confirmation</h3><form id="@confirmForm" asp-action="Confirm" method="post" class="correction-workflow-form"><input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="rowVersion" value="@r.RowVersion" /><label for="supports-@r.Id" class="form-label">Tutor's Opinion *</label><select id="supports-@r.Id" name="supports" class="form-select mb-3" required><option value="">Select opinion</option><option value="true">Supports Correction</option><option value="false">Does Not Support Correction</option></select><label for="confirmation-@r.Id" class="form-label">Confirmation Remarks *</label><textarea id="confirmation-@r.Id" name="confirmationRemark" class="form-control" maxlength="500" rows="3" required placeholder="Explain what you checked."></textarea><small class="text-muted">Visible to the applicant and Admin. Your reply does not change attendance.</small></form></section>
+    }
+    @if (r.CanReview) {
+        <section class="correction-compact-section"><h3>Admin Decision</h3><form id="@reviewForm" asp-action="Review" method="post" class="correction-workflow-form" data-correction-review data-approval-optional="@r.ApprovalRemarksOptional.ToString().ToLowerInvariant()"><input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="rowVersion" value="@r.RowVersion" /><label for="review-@r.Id" class="form-label">Review Remarks <span data-review-requirement>@(r.ApprovalRemarksOptional ? "(Optional for approval)" : "(Required)")</span></label><textarea id="review-@r.Id" name="reviewRemark" class="form-control" maxlength="500" rows="3" required="@(!r.ApprovalRemarksOptional)" placeholder="@(r.ApprovalRemarksOptional ? "Add any additional remarks..." : "Explain the checks made and your decision...")"></textarea><small class="text-muted" data-review-help>@(r.ApprovalRemarksOptional ? "Tutor confirmation is recorded. A rejection reason is still required." : "Explain the basis for approval or the reason for rejection.")</small></form>
+            @if (r.TutorConfirmationRequestedAtUtc.HasValue && !r.TutorConfirmedAtUtc.HasValue) { <p class="small text-muted mt-2 mb-0">Approval waits for the Tutor's reply. You may reject with a reason.</p> }
+        </section>
+    }
+    @if (r.Decision != CorrectionDecision.Pending) { <section class="correction-compact-section"><h3>Admin Decision · @r.Decision</h3><p class="correction-wrapped mb-0">@(string.IsNullOrWhiteSpace(r.ReviewRemark) ? "No additional remarks." : r.ReviewRemark)</p></section> }
+</div>
+<div class="modal-footer"><button type="button" class="outline-button" data-bs-dismiss="modal">@(r.CanReview || r.CanConfirm ? "Cancel" : "Close")</button>
+    @if (r.CanConfirm) { <button type="submit" form="@confirmForm" class="primary-button">Send Confirmation to Admin</button> }
+    @if (r.CanReview) { <button type="submit" form="@reviewForm" name="decision" value="reject" class="outline-button correction-reject-button" data-confirm="Reject this correction? Attendance remains unchanged.">Reject</button><button type="submit" form="@reviewForm" name="decision" value="approve" class="primary-button correction-approve-button" disabled="@(!r.CanApprove)" data-confirm="Approve this correction and update attendance?">Approve</button> }
+</div>

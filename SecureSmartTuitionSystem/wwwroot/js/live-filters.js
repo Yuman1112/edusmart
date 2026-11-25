@@ -17,6 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (old.nodeType !== fresh.nodeType || old.nodeName !== fresh.nodeName) { old.replaceWith(fresh.cloneNode(true)); return; }
         if (old.nodeType === Node.TEXT_NODE) { if (old.nodeValue !== fresh.nodeValue) old.nodeValue = fresh.nodeValue; return; }
         if (old.nodeType !== Node.ELEMENT_NODE || old.tagName === 'SCRIPT' || old.hasAttribute('data-live-filter-status')) return;
+        // Keep detached row-detail templates and concurrency tokens current after filtering.
+        if (old.tagName === 'TEMPLATE') { old.content.replaceChildren(fresh.content.cloneNode(true)); return; }
         const focused = old === document.activeElement;
         for (const attr of [...old.attributes]) if (!fresh.hasAttribute(attr.name) && attr.name !== 'nonce') old.removeAttribute(attr.name);
         for (const attr of fresh.attributes) if (attr.name !== 'nonce' && !(focused && attr.name === 'value')) old.setAttribute(attr.name, attr.value);

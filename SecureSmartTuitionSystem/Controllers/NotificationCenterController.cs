@@ -1,3 +1,5 @@
+using SecureSmartTuitionSystem.Models.Attendance;
+using SecureSmartTuitionSystem.Models.Tutor;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
@@ -40,7 +42,12 @@ public sealed class NotificationCenterController(ApplicationDbContext db) : Cont
         var enrollments = admin ? await db.EnrollmentApplications.CountAsync(x => x.Status == EnrollmentStatus.PendingReview) : 0;
         var withdrawals = admin ? await db.EnrollmentExitRequests.CountAsync(x =>
             x.ReviewedByUserId == null && x.RefundStatus != ExitRefundStatus.Cancelled) : 0;
-        return Json(new { announcements, notifications, guestEnquiries, replacements, enrollments, withdrawals });
+        var teachingRequests = admin ? await db.Set<TutorTeachingChangeRequest>().CountAsync(x => x.Status == TeachingChangeStatus.Pending) : 0;
+        var qualificationRequests = admin ? await db.Set<TutorQualificationUpdateRequest>().CountAsync(x => x.Status == QualificationUpdateStatus.Pending) : 0;
+        var correctionRequests = admin ? await db.Set<AttendanceCorrectionRequest>().CountAsync(x => x.Decision == CorrectionDecision.Pending && (x.TutorConfirmationRequestedAtUtc == null || (x.TutorConfirmedAtUtc != null && x.TutorSupportsCorrection != null))) : 0;
+        var reopenRequests = admin ? await db.Set<AttendanceReopenRequest>().CountAsync(x => x.Decision == AttendanceReopenDecision.Pending) : 0;
+        var tutorConfirmations = !admin && User.IsInRole("Tutor") ? await db.Set<AttendanceCorrectionRequest>().CountAsync(x => x.Decision == CorrectionDecision.Pending && x.TutorConfirmationRequestedAtUtc != null && x.TutorConfirmedAtUtc == null && x.ConfirmationTutorUserId == id && x.RequestedByUserId != id) : 0;
+        return Json(new { announcements, notifications, guestEnquiries, replacements, enrollments, withdrawals, teachingRequests, qualificationRequests, correctionRequests, reopenRequests, tutorConfirmations });
     }
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ReadAll(int page = 1, bool unreadOnly = false)

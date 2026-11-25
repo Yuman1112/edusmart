@@ -216,8 +216,23 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<int>("AttendanceRecordId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ConfirmationRequestedByName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ConfirmationRequestedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ConfirmationTutorUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<int>("Decision")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsStudentRequest")
+                        .HasColumnType("bit");
 
                     b.Property<int?>("PreviousStatus")
                         .HasColumnType("int");
@@ -263,6 +278,27 @@ namespace SecureSmartTuitionSystem.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<string>("TutorConfirmationRemark")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("TutorConfirmationRequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("TutorConfirmedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TutorConfirmedByName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("TutorConfirmedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool?>("TutorSupportsCorrection")
+                        .HasColumnType("bit");
 
                     b.HasKey("AttendanceCorrectionRequestId");
 

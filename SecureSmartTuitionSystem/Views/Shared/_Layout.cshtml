@@ -241,7 +241,7 @@
                                     aria-controls="tutorManagementMenu">
                                 <span class="sidebar-link-content">
                                     <i class="bi bi-person-badge" aria-hidden="true"></i>
-                                    <span>Tutor Management</span>
+                                    <span>Tutor Management</span><span class="message-unread-badge" data-review-work="tutor-total" hidden></span>
                                 </span>
                                 <i class="bi bi-chevron-down sidebar-module-arrow"
                                    aria-hidden="true"></i>
@@ -270,13 +270,13 @@
                                    asp-action="Index"
                                    aria-current="@(teachingRequestsActive ? "page" : null)">
                                     <i class="bi bi-clipboard-check" aria-hidden="true"></i>
-                                    <span>Teaching Change Requests</span>
+                                    <span>Teaching Change Requests</span><span class="message-unread-badge" data-review-work="teaching" hidden></span>
                                 </a>
                                 <a class="sidebar-submenu-link @(qualificationRequestsActive ? "active" : "")"
                                    asp-controller="QualificationRequests" asp-action="Index"
                                    aria-current="@(qualificationRequestsActive ? "page" : null)">
                                     <i class="bi bi-file-earmark-check" aria-hidden="true"></i>
-                                    <span>Qualification Update Requests</span>
+                                    <span>Qualification Update Requests</span><span class="message-unread-badge" data-review-work="qualification" hidden></span>
                                 </a>
                             </div>
                         </div>
@@ -403,7 +403,7 @@
 
                                 <span class="sidebar-link-content">
                                     <i class="bi bi-calendar-check" aria-hidden="true"></i>
-                                    <span>Attendance</span>
+                                    <span>Attendance</span><span class="message-unread-badge" data-review-work="attendance-total" hidden></span>
                                 </span>
 
                                 <i class="bi bi-chevron-down sidebar-module-arrow"
@@ -434,14 +434,14 @@
                                    asp-action="Index"
                                    aria-current="@(attendanceCorrectionsActive ? "page" : null)">
                                     <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                    <span>Correction Requests</span>
+                                    <span>Correction Requests</span><span class="message-unread-badge" data-review-work="correction" hidden></span>
                                 </a>
 
                                 <a class="sidebar-submenu-link @(attendanceReopenActive ? "active" : "")"
                                    asp-controller="AttendanceReopen" asp-action="Index"
                                    aria-current="@(attendanceReopenActive ? "page" : null)">
                                     <i class="bi bi-clock-history" aria-hidden="true"></i>
-                                    <span>Reopening Requests</span>
+                                    <span>Reopening Requests</span><span class="message-unread-badge" data-review-work="reopen" hidden></span>
                                 </a>
                             </div>
                         </div>
@@ -577,7 +577,7 @@
 
                                 <span class="sidebar-link-content">
                                     <i class="bi bi-calendar-check" aria-hidden="true"></i>
-                                    <span>Attendance</span>
+                                    <span>Attendance</span><span class="message-unread-badge" data-review-work="confirm" hidden></span>
                                 </span>
 
                                 <i class="bi bi-chevron-down sidebar-module-arrow"
@@ -608,7 +608,7 @@
                                    asp-action="Index"
                                    aria-current="@(attendanceCorrectionsActive ? "page" : null)">
                                     <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                    <span>Correction Requests</span>
+                                    <span>Correction Requests</span><span class="message-unread-badge" data-review-work="confirm" hidden></span>
                                 </a>
 
                                 <a class="sidebar-submenu-link @(attendanceReopenActive ? "active" : "")"

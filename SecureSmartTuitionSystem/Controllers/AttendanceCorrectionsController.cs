@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SecureSmartTuitionSystem.Data;
@@ -14,10 +14,13 @@ public sealed class AttendanceCorrectionsController(ApplicationDbContext db, Use
     private string OwnId => users.GetUserId(User)!;
     private string Role => User.IsInRole("Admin") ? "Admin" : User.IsInRole("Tutor") ? "Tutor" : "Student";
     [HttpGet]
-    public async Task<IActionResult> Index(string status = "pending", string sort = "requested_asc")
+    public async Task<IActionResult> Index(string? status = null, string sort = "requested_asc", string? search = null, DateTime? from = null, DateTime? to = null, bool fragment = false)
     {
-        if (!ModelState.IsValid || status is not ("pending" or "approved" or "rejected" or "all") || !AttendanceCorrectionService.ValidSort(sort)) return BadRequest();
-        return View(await new AttendanceCorrectionService(db).ListAsync(OwnId, Role == "Admin", status, sort));
+        status ??= Role == "Tutor" ? "confirmation" : Role == "Admin" ? "review" : "pending";
+        if (!ModelState.IsValid || status is not ("pending" or "approved" or "rejected" or "all" or "confirmation" or "review") || !AttendanceCorrectionService.ValidSort(sort)) return BadRequest();
+        if (search?.Length > 100 || (from.HasValue && from.Value.Year is < 2000 or > 2100) || (to.HasValue && to.Value.Year is < 2000 or > 2100) || (from.HasValue && to.HasValue && from.Value.Date > to.Value.Date)) return BadRequest("Choose valid search and date filters.");
+        var model = await new AttendanceCorrectionService(db).ListAsync(OwnId, Role == "Admin", status, sort, Role == "Tutor", search, from, to);
+        return fragment ? PartialView("_CorrectionResults", model) : View(model);
     }
     [HttpGet]
     [Authorize(Roles = "Tutor,Student")]
@@ -115,7 +118,44 @@ public sealed class AttendanceCorrectionsController(ApplicationDbContext db, Use
     public async Task<IActionResult> Review(int id, string decision, string? reviewRemark, string? rowVersion)
     {
         var error = ModelState.IsValid ? await new AttendanceCorrectionService(db).ReviewAsync(id, decision, reviewRemark, rowVersion, OwnId, User.Identity?.Name ?? OwnId) : "Check the review values.";
-        TempData[error == null ? "AttendanceCorrectionSuccess" : "AttendanceCorrectionError"] = error ?? "Correction review saved.";
-        return RedirectToAction(nameof(Index));
+        return WorkflowResult(error, "Correction review saved.");
     }
+    [HttpPost, Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RequestTutorConfirmation(int id, string? rowVersion, string? fallbackTutorId)
+    {
+        var error = ModelState.IsValid ? await new AttendanceCorrectionService(db).RequestTutorConfirmationAsync(id, rowVersion, OwnId, User.Identity?.Name ?? OwnId, fallbackTutorId) : "Check the request values.";
+        return WorkflowResult(error, "Tutor confirmation requested. Attendance remains unchanged.", error == null ? "confirmation" : "all");
+    }
+    [HttpPost, Authorize(Roles = "Tutor")]
+    public async Task<IActionResult> Confirm(int id, bool? supports, string? confirmationRemark, string? rowVersion)
+    {
+        if (Role != "Tutor") return Forbid();
+        var error = ModelState.IsValid ? await new AttendanceCorrectionService(db).ConfirmAsync(id, supports, confirmationRemark, rowVersion, OwnId, User.Identity?.Name ?? OwnId) : "Check the confirmation values.";
+        return WorkflowResult(error, "Confirmation sent to Admin. Attendance remains unchanged.", "confirmation");
+    }
+    [HttpPost, Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ReassignConfirmation(int id, string? tutorId, string? rowVersion)
+    {
+        var error = ModelState.IsValid ? await new AttendanceCorrectionService(db).ReassignConfirmationAsync(id, tutorId, rowVersion, OwnId) : "Check the assignment values.";
+        return WorkflowResult(error, "Confirmation assigned to the selected tutor.", "confirmation");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Details(int id)
+    {
+        if (id <= 0) return BadRequest();
+        var model = await new AttendanceCorrectionService(db).ListAsync(OwnId, Role == "Admin", "all", tutor: Role == "Tutor", requestId: id);
+        var row = model.Rows.SingleOrDefault();
+        if (row == null) return NotFound();
+        ViewData["CorrectionTutorChoices"] = model.TutorChoices;
+        return PartialView("_ConfirmationRequest", row);
+    }
+    private IActionResult WorkflowResult(string? error, string success, string? status = null)
+    {
+        if (string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
+            return error == null ? Json(new { ok = true, message = success }) : BadRequest(new { ok = false, message = error });
+        TempData[error == null ? "AttendanceCorrectionSuccess" : "AttendanceCorrectionError"] = error ?? success;
+        return RedirectToAction(nameof(Index), new { status });
+    }
+
 }

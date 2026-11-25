@@ -1,4 +1,4 @@
-﻿/* Attendance page styles */
+/* Attendance page styles */
 .attendance-page {
     color: var(--navy);
 }
@@ -597,3 +597,23 @@
 #reopen-review-modal [role="tabpanel"] { min-height:0; }
 #reopen-review-modal #reopen-history-panel > .text-muted { margin-bottom:14px; }
 @media(max-width:767.98px) { .attendance-submitted-page .attendance-result-header-tools { width:100%; gap:10px; } }
+
+/* Only request-specific detail styling; filter/grid/table use shared Class Module rules. */
+.correction-wrapped { white-space:pre-wrap; overflow-wrap:anywhere; }
+.correction-approve-button { background:#16835d; border-color:#16835d; }
+.correction-reject-button { color:#b62e43; border-color:#b62e43; }
+.correction-workflow-form .class-form-actions { display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+.attendance-unified-list .class-filter-grid .form-control { min-height:42px; border-color:var(--border); border-radius:9px; }
+
+/* Compact correction review: only the body scrolls; actions remain visible. */
+.correction-compact-body .correction-compact-section + .correction-compact-section { border-top:1px solid var(--border); margin-top:18px; padding-top:18px; }
+.correction-compact-section h3 { color:var(--navy); font-size:.95rem; font-weight:750; margin:0 0 10px; }
+.correction-heading { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.correction-change { display:flex; align-items:center; gap:12px; margin:12px 0; }
+.correction-change span, .correction-change strong { background:#edf7fa; padding:4px 12px; border-radius:6px; }
+.correction-history summary { color:var(--teal-dark); cursor:pointer; font-size:.86rem; }
+.correction-history .attendance-correction-details { font-size:.82rem; color:var(--muted); }
+.correction-reload-button { padding:5px 10px; font-size:.78rem; margin-left:auto; margin-right:12px; }
+#correction-workflow-modal .modal-footer { flex-wrap:wrap; gap:8px; }
+#correction-workflow-modal .modal-footer .primary-button:disabled { opacity:.55; cursor:not-allowed; }
+@media(max-width:575px) { .correction-heading { flex:1 1 100%; } #correction-workflow-modal .modal-header { flex-wrap:wrap; gap:8px; } }
