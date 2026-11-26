@@ -28,7 +28,7 @@
         return collator.compare(a,b);
     }
     function pageUrl(state,page) {
-        const url=new URL(location.href);url.hash='';
+        const url=new URL(state.url);url.hash='';
         for(const key of [...url.searchParams.keys()]) if(key.toLowerCase()===state.param.toLowerCase())url.searchParams.delete(key);
         url.searchParams.set(state.param,String(page));return url;
     }
@@ -40,10 +40,17 @@
             if(!toggle.hasAttribute('data-bs-boundary'))toggle.setAttribute('data-bs-boundary','viewport');
         });
     }
-    function init(table) {
+    function init(table, url) {
         if (table.dataset.serverManaged === "true") return;
         prepareDropdowns(table);
-        if(table.dataset.tablePaged==='true' && states.has(table))return;
+        const current = states.get(table);
+        if (table.dataset.tablePaged === 'true' && current) {
+            if (String(current.url) !== String(url)) {
+                current.url = url;
+                current.refresh?.();
+            }
+            return;
+        }
         const previous = states.get(table);
         previous?.observer?.disconnect();
         if(previous?.clickHandler)table.removeEventListener('click',previous.clickHandler,true);
@@ -57,7 +64,7 @@
         if(remote && !nav)nav=card.parentElement?.querySelector('nav.material-pagination,nav.assessment-pagination');
         if(!nav && !manual) {nav=document.createElement('nav');card.append(nav);}
         if(nav){nav.className='table-pagination';nav.setAttribute('aria-label','Table pages');}
-        const state={table,card,nav,remote,loaded:false,page:Number(table.dataset.currentPage)||1,pages:Number(table.dataset.pageCount)||1,
+        const state={table,card,nav,remote,url,loaded:false,page:Number(table.dataset.currentPage)||1,pages:Number(table.dataset.pageCount)||1,
             total:Number(table.dataset.totalRows)||0,param:table.dataset.pageParam||'page',column:-1,direction:1,busy:false,observer:null};
         states.set(table,state);
         const header=table.tHead?.rows[table.tHead.rows.length-1];
@@ -138,9 +145,22 @@
         state.clickHandler=event=>{const button=event.target.closest('[data-table-sort]');if(!button||button.closest('table')!==table)return;event.preventDefault();event.stopImmediatePropagation();void sort(Number(button.dataset.tableSort),button);};
         table.addEventListener('click',state.clickHandler,true);
         function observe(){if(!state.observer)return;Array.from(table.tBodies).forEach(body=>state.observer.observe(body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','hidden']}));}
-        state.observer=new MutationObserver(()=>{prepareDropdowns(table);state.page=1;draw();});observe();draw();
+        if (remote) {
+            state.refresh = () => {
+                state.page = Number(table.dataset.currentPage) || 1;
+                state.pages = Number(table.dataset.pageCount) || 1;
+                state.total = Number(table.dataset.totalRows) || 0;
+                draw();
+            };
+        } else {
+            state.observer = new MutationObserver(() => { prepareDropdowns(table); state.page = 1; draw(); });
+            observe();
+        }
+        draw();
     }
-    function enhance(root=document){root.querySelectorAll('table').forEach(init);}
+    function enhance(root = document, url = location.href) {
+        root.querySelectorAll('table').forEach(table => init(table, url));
+    }
     window.EduSmartTables={enhance};
     document.addEventListener('DOMContentLoaded',()=>{
         enhance();

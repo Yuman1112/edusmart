@@ -26,7 +26,7 @@
 </div>
 <p class="reports-note">Counts cover ended, non-cancelled lessons in the selected period. Missing means no progress was recorded by the two-hour deadline.</p></section>
 <section class="reports-card"><div class="reports-table-wrap"><table class="table reports-table"><thead><tr><th>No.</th><th>Class Name</th><th>Subject &amp; Level</th><th>Tutor</th><th>Ended lessons</th><th>Recorded</th><th>Missing</th><th>Action</th></tr></thead><tbody>
-@{int n=0;}@foreach(var r in Model.Rows){<tr><td>@(++n)</td><td><strong>@r.Name<br />@r.Schedule</strong></td><td><strong>@r.Subject</strong><div class="small text-muted">@r.Level</div></td><td>@r.Tutor</td><td>@r.Expected</td><td>@r.Submitted</td><td>@r.Missing</td><td><a class="outline-button" asp-action="Details" asp-route-id="@r.Id" asp-route-month="@Model.Filter.Start.Month">View progress</a></td></tr>}
+@{int n=0;}@foreach(var r in Model.Rows){<tr><td>@(++n)</td><td><strong>@r.Name<br />@r.Schedule</strong></td><td><strong>@r.Subject</strong><div class="small text-muted">@r.Level</div></td><td>@r.Tutor</td><td>@r.Expected</td><td>@r.Submitted</td><td>@r.Missing</td><td><a class="outline-button" asp-action="Details" asp-all-route-data="@Model.Filter.RouteValues("overview.")" asp-route-id="@r.Id" asp-route-month="@Model.Filter.Start.Month" asp-route-endMonth="@Model.Filter.End.Month">View progress</a></td></tr>}
 </tbody></table></div>@if(Model.Rows.Count==0){<p>No classes match these filters.</p>}</section>
 
 @section Scripts { <script src="~/js/report-tutor-filter.js" asp-append-version="true" defer></script> }

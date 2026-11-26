@@ -48,12 +48,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const next = page.querySelector('main');
             if (!next || !next.querySelector(selector)) throw new Error('Unexpected response. Reload this page to continue.');
             if (version !== sequence) return;
-            window.EduSmartTables?.enhance(next);
+            window.EduSmartTables?.enhance(next, url);
             const x = window.scrollX, y = window.scrollY;
             const regions = [...main.querySelectorAll('.table-responsive')].map(n => [n, n.scrollLeft, n.scrollTop]);
             patch(main, next);
             main.querySelectorAll(selector).forEach(node => node.classList.add("live-filter-form"));
-            window.EduSmartTables?.enhance(main);
+            window.EduSmartTables?.enhance(main, url);
             regions.forEach(([node, left, top]) => { if (node.isConnected) { node.scrollLeft = left; node.scrollTop = top; } });
             window.history.replaceState(null, '', url);
             window.scrollTo({ left: x, top: y, behavior: 'instant' });

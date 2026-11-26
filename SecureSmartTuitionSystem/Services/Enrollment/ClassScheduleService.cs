@@ -21,7 +21,7 @@ public sealed class ClassScheduleService(ApplicationDbContext db)
         return false;
     }
     public static bool ValidOn(ClassSession c, DateTime date) => c.Status == ClassSessionStatus.Active && date.Date >= FirstDate(c) && date.Date <= AcademicYearPolicy.ClassEnd(c);
-    public async Task<List<LessonItem>> GetLessonsAsync(DateTime from, DateTime to, string? tutorId = null, int? classId = null)
+    public async Task<List<LessonItem>> GetLessonsAsync(DateTime from, DateTime to, string? tutorId = null, int? classId = null, bool includeCompletedHistory = false)
     {
         var query = db.ClassSessions.AsNoTracking().Include(x => x.Subject).Include(x => x.TutorUser).AsQueryable();
         if (tutorId != null) query = query.Where(x => x.TutorUserId == tutorId);
@@ -30,13 +30,15 @@ public sealed class ClassScheduleService(ApplicationDbContext db)
         var ids = classes.Select(x => x.ClassSessionId).ToList();
         var changes = await db.ClassLessonChanges.AsNoTracking().Where(x => ids.Contains(x.ClassSessionId) &&
             ((x.OriginalDate >= from && x.OriginalDate <= to) || (x.ReplacementDate >= from && x.ReplacementDate <= to))).ToListAsync();
-        return BuildLessons(classes, changes, from, to);
+        return BuildLessons(classes, changes, from, to, includeCompletedHistory);
     }
-    public static List<LessonItem> BuildLessons(List<ClassSession> classes, List<ClassLessonChange> changes, DateTime from, DateTime to)
+    public static List<LessonItem> BuildLessons(List<ClassSession> classes, List<ClassLessonChange> changes, DateTime from, DateTime to, bool includeCompletedHistory = false)
     {
         var result = new List<LessonItem>();
         foreach (var c in classes)
         {
+            var first = FirstDate(c);
+            var last = AcademicYearPolicy.ClassEnd(c);
             for (var date = from.Date; date <= to.Date; date = date.AddDays(1))
             {
                 var change = changes.FirstOrDefault(x => x.ClassSessionId == c.ClassSessionId && x.OriginalDate.Date == date);
@@ -44,7 +46,9 @@ public sealed class ClassScheduleService(ApplicationDbContext db)
                 var closedHistory = c.Status == ClassSessionStatus.Closed && c.ClosedAtUtc.HasValue &&
                     date >= FirstDate(c) && date <= AcademicYearPolicy.ClassEnd(c) &&
                     date.Add(c.EndTime.ToTimeSpan()) <= c.ClosedAtUtc.Value.AddHours(8);
-                if (change == null && ((!ValidOn(c, date) && !closedHistory) || !LateMonthEnrollmentPolicy.IsRegularTeachingDate(date) || date.DayOfWeek != c.DayOfWeek)) continue;
+                var completedHistory = includeCompletedHistory && c.Status == ClassSessionStatus.Completed &&
+                    date >= first && date <= last;
+                if (change == null && ((!ValidOn(c, date) && !closedHistory && !completedHistory) || !LateMonthEnrollmentPolicy.IsRegularTeachingDate(date) || date.DayOfWeek != c.DayOfWeek)) continue;
                 result.Add(new LessonItem { Class = c, Date = date, OriginalDate = date,
                     Start = change?.OriginalStartTime ?? c.StartTime, End = change?.OriginalEndTime ?? c.EndTime,
                     Venue = c.Venue, Cancelled = change != null, ChangeId = change?.ClassLessonChangeId, Reason = change?.CancellationReason ?? "" });

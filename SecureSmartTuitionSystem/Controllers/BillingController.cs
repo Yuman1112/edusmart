@@ -85,9 +85,9 @@ namespace SecureSmartTuitionSystem.Controllers
             // Split Pending monthly invoices by due date to avoid overlapping counts.
             var monthly = _monthlyBilling.Accessible(User).AsNoTracking();
             totalBillCount += await monthly.CountAsync();
-            pendingBillCount += await monthly.CountAsync(x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc >= currentTime);
+            pendingBillCount += await monthly.CountAsync(x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc > currentTime);
             paidBillCount += await monthly.CountAsync(x => x.Status == MonthlyInvoiceStatus.Paid);
-            overdueBillCount += await monthly.CountAsync(x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc < currentTime);
+            overdueBillCount += await monthly.CountAsync(x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc <= currentTime);
             totalPendingAmount += await monthly.Where(x => x.Status == MonthlyInvoiceStatus.Pending)
                 .SumAsync(x => (decimal?)x.Total) ?? 0m;
 

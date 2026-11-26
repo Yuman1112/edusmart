@@ -56,13 +56,13 @@ public sealed class MonthlyBillingController(MonthlyBillingService billing, Mont
             query = query.Where(x => x.Month == selected);
         }
         if (status == "paid") query = query.Where(x => x.Status == MonthlyInvoiceStatus.Paid);
-        if (status == "pending") query = query.Where(x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc >= now);
-        if (status == "overdue") query = query.Where(x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc < now);
+        if (status == "pending") query = query.Where(x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc > now);
+        if (status == "overdue") query = query.Where(x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc <= now);
         int count = await query.CountAsync(ct), pages = Math.Max(1, (int)Math.Ceiling(count / 25d)); page = Math.Clamp(page, 1, pages);
         var rows = await TableOrder.Apply(query.Include(x => x.StudentProfile), HttpContext?.Request.Query, "month", true,
             ("bill", x => x.MonthlyInvoiceId), ("student", x => x.StudentProfile.FullName), ("month", x => x.Month),
             ("amount", x => x.Total), ("due", x => x.DueAtUtc),
-            ("status", x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc < now ? "Overdue" : x.Status == MonthlyInvoiceStatus.Pending ? "Unpaid" : x.Status == MonthlyInvoiceStatus.Paid ? "Paid" : "Cancelled"))
+            ("status", x => x.Status == MonthlyInvoiceStatus.Pending && x.DueAtUtc <= now ? "Overdue" : x.Status == MonthlyInvoiceStatus.Pending ? "Unpaid" : x.Status == MonthlyInvoiceStatus.Paid ? "Paid" : "Cancelled"))
             .ThenByDescending(x => x.MonthlyInvoiceId).Skip((page - 1) * 25).Take(25).ToListAsync(ct);
         return View(new MonthlyBillingIndexViewModel { Rows=rows, Page=page, TotalPages=pages, TotalRows=count, Month=month, Status=status, Outstanding=outstanding, StatusAsOfUtc=now });
     }

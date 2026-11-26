@@ -158,6 +158,12 @@ namespace SecureSmartTuitionSystem.Controllers
             if (!model.RequestedStartDate.HasValue || model.RequestedStartDate.Value.Date < ClassScheduleService.Today || model.RequestedStartDate.Value.Date > ClassScheduleService.Today.AddYears(1))
             { ModelState.AddModelError(nameof(model.RequestedStartDate), "Choose a start date from today through the next year."); await PopulateSelectionViewModelAsync(model); return View(SelectClassesViewPath, model); }
 
+            if (!ModelState.IsValid)
+            {
+                await PopulateSelectionViewModelAsync(model);
+                return View(SelectClassesViewPath, model);
+            }
+
             var selectedClasses =
                 await _context.ClassSessions
                     .AsNoTracking()

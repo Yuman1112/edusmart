@@ -54,8 +54,9 @@ public sealed class ChatbotContextService(ApplicationDbContext db, MonthlyBillin
                 $"Enrollment bill {b.BillNumber}: {b.Currency} {b.TotalAmount:F2}; status {b.Status}; due {b.DueAt.AddHours(8):dd MMM yyyy HH:mm} MYT.", "/Billing/Details/" + b.BillId));
             // Do not allow Admin's broad MonthlyBilling access through a family chatbot tool.
             var recurring = await monthly.Accessible(user).AsNoTracking().OrderByDescending(x => x.Month).Take(10).ToListAsync(ct);
+            var asOfUtc = DateTime.UtcNow;
             foreach (var b in recurring) rows.Add(new("monthly-" + b.MonthlyInvoiceId, b.Number,
-                $"Monthly bill {b.Number}, tuition {b.Month:MMM yyyy}: MYR {b.Total:F2}; status {(b.Status == MonthlyInvoiceStatus.Pending && b.DueAtUtc < DateTime.UtcNow ? "Overdue" : b.Status.ToString())}; due {b.DueAtUtc.AddHours(8).AddSeconds(-1):dd MMM yyyy HH:mm} MYT.", "/MonthlyBilling/Details/" + b.MonthlyInvoiceId));
+                $"Monthly bill {b.Number}, tuition {b.Month:MMM yyyy}: MYR {b.Total:F2}; status {b.DisplayStatus(asOfUtc)}; due {b.DueAtUtc.AddHours(8).AddSeconds(-1):dd MMM yyyy HH:mm} MYT.", "/MonthlyBilling/Details/" + b.MonthlyInvoiceId));
             rows.Add(new("bills-scope", "Account query scope", "Only this signed-in user's permitted family records were queried. Up to 10 latest enrollment bills and 10 latest monthly bills are listed; the complete outstanding amount is in balance-summary, not a total of this preview. Open the billing pages for complete history.", "/Billing"));
         }
         if (scope == "enrollments")

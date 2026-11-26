@@ -44,7 +44,7 @@ public sealed class ClassProgressService(ApplicationDbContext db)
         {
             var syllabus=syllabuses.SingleOrDefault(s=>s.SubjectId==c.SubjectId);var count=syllabus?.Topics.Count??0;
             var topics=syllabus?.Topics.Select(t=>t.Id).ToHashSet()??[];var values=progress.Where(p=>p.ClassSessionId==c.ClassSessionId&&topics.Contains(p.TopicId)).ToList();
-            var lessons=ClassScheduleService.BuildLessons([c],changes.Where(x=>x.ClassSessionId==c.ClassSessionId).ToList(),from,to).Where(l=>!l.Cancelled&&syllabus!=null&&l.Date>=syllabus.TrackingFrom&&l.Date.Add(l.End.ToTimeSpan())<=now).ToList();
+            var lessons=ClassScheduleService.BuildLessons([c],changes.Where(x=>x.ClassSessionId==c.ClassSessionId).ToList(),from,to,includeCompletedHistory:true).Where(l=>!l.Cancelled&&syllabus!=null&&l.Date>=syllabus.TrackingFrom&&l.Date.Add(l.End.ToTimeSpan())<=now).ToList();
             var saved=lessons.Select(l=>(Lesson:l,Record:records.FirstOrDefault(r=>r.ClassSessionId==c.ClassSessionId&&ProgressRules.Same(r,l)))).ToList();
             var schedule = $"{c.DayOfWeek} - {c.StartTime.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)}";
             var suffix = " - " + schedule;
@@ -55,12 +55,14 @@ public sealed class ClassProgressService(ApplicationDbContext db)
         }
         return model;
     }
-    public async Task<ProgressDetails?> DetailsAsync(ClaimsPrincipal user,int id,int month,DateTime? date=null,int key=0,int historyPage=1)
+    public async Task<ProgressDetails?> DetailsAsync(ClaimsPrincipal user,int id,int month,DateTime? date=null,int key=0,int historyPage=1,int? endMonth=null)
     {
         var c=await Classes(user).Include(c=>c.Subject).Include(c=>c.TutorUser).SingleOrDefaultAsync(c=>c.ClassSessionId==id);if(c==null)return null;
         var syllabus=await db.Set<ProgressSyllabus>().AsNoTracking().Include(s=>s.Topics).SingleOrDefaultAsync(s=>s.SubjectId==c.SubjectId&&s.AcademicYear==Year(c));
-        var from=new DateTime(Year(c),month,1);var to=from.AddMonths(1).AddDays(-1);
-        var model=new ProgressDetails{Class=c,Syllabus=syllabus,Month=month,State=await db.Set<ProgressClassState>().AsNoTracking().SingleOrDefaultAsync(s=>s.ClassSessionId==id)};
+        var from = new DateTime(Year(c), month, 1);
+        var to = new DateTime(Year(c), endMonth ?? month, 1).AddMonths(1).AddDays(-1);
+        if (date.HasValue && (date.Value.Date < from || date.Value.Date > to)) return null;
+        var model=new ProgressDetails{Class=c,Syllabus=syllabus,Month=month,EndMonth=endMonth ?? month,State=await db.Set<ProgressClassState>().AsNoTracking().SingleOrDefaultAsync(s=>s.ClassSessionId==id)};
         model.Progress=await db.Set<ProgressTopicState>().AsNoTracking().Where(p=>p.ClassSessionId==id).ToListAsync();
         model.Records=await db.Set<ProgressLessonRecord>().AsNoTracking().Where(r=>r.ClassSessionId==id&&r.LessonDate>=from&&r.LessonDate<=to).ToListAsync();
         var history=db.Set<ProgressChange>().AsNoTracking().Where(h=>h.ClassSessionId==id);
@@ -69,7 +71,7 @@ public sealed class ClassProgressService(ApplicationDbContext db)
         model.History=await history.Include(h=>h.Topic).Include(h=>h.LessonRecord).OrderByDescending(h=>h.RecordedAtUtc).ThenByDescending(h=>h.Id).Skip((model.HistoryPage-1)*25).Take(25).ToListAsync();
         var actorIds=model.History.Select(h=>h.ActorUserId).Distinct().ToList();
         model.Actors=await db.Users.AsNoTracking().Where(u=>actorIds.Contains(u.Id)).ToDictionaryAsync(u=>u.Id,u=>(u.UserName??"Account")+" · "+(u.FullName??""));
-        model.Lessons=(await new ClassScheduleService(db).GetLessonsAsync(from,to,classId:id)).Where(l=>!l.Cancelled&&syllabus!=null&&l.Date>=syllabus.TrackingFrom).ToList();
+        model.Lessons=(await new ClassScheduleService(db).GetLessonsAsync(from,to,classId:id,includeCompletedHistory:true)).Where(l=>!l.Cancelled&&syllabus!=null&&l.Date>=syllabus.TrackingFrom).ToList();
         if(date.HasValue)model.Selected=model.Lessons.SingleOrDefault(l=>l.Date==date.Value.Date&&(l.Replacement?l.ChangeId:0)==key);
         var selected=model.Selected;var now=ClassScheduleService.Now;
         var existing=selected==null?null:model.Records.SingleOrDefault(r=>r.LessonDate==selected.Date&&r.ChangeKey==key);

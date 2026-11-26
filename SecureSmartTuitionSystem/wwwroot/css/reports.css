@@ -18,7 +18,7 @@
 .reports-table caption { caption-side: top; color: var(--muted); }
 .reports-table td, .reports-table th { padding: 12px; }
 .reports-table-wrap:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
-@media(max-width: 767px) { .reports-summary { grid-template-columns: 1fr; gap: 0; } .reports-card { padding: 18px; } .reports-bar-row { grid-template-columns: 72px minmax(0, 1fr) 100px; font-size: .8rem; } }
+@media (max-width: 767px) { .reports-summary { grid-template-columns: 1fr; gap: 0; } .reports-card { padding: 18px; } .reports-bar-row { font-size: .8rem; } }
 
 .reports-bar-row { grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) 5.5rem; }
 .reports-bar-label { min-width: 0; }
@@ -29,7 +29,7 @@
 .report-class-details summary span { margin-left: 1rem; }
 @media (max-width: 600px) {
     .reports-bar-row { grid-template-columns: minmax(0, 1fr) 5rem; }
-    .reports-bar-label { grid-column: 1 / -1; }
+    .reports-bar-row > :first-child { grid-column: 1 / -1; }
 }
 
 .reports-filter-header {
@@ -97,6 +97,9 @@
 .report-tutor-options button:hover,
 .report-tutor-options button[aria-pressed="true"] { background: var(--surface-tint); }
 .report-tutor-options p { margin: .5rem; }
+@media (min-width: 576px) and (max-width: 991px) {
+    .reports-filter-grid-three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 575px) {
     .reports-filter-grid-three { grid-template-columns: minmax(0, 1fr); }
 }

@@ -36,7 +36,10 @@ public sealed class IncomeReportService(ApplicationDbContext db)
         if (months < 1 || months > 12) throw new ArgumentOutOfRangeException(nameof(months));
         endMonth = new DateTime(endMonth.Year, endMonth.Month, 1);
         DateTime start = endMonth.AddMonths(1 - months);
-        DateTime startUtc = start.AddHours(-8), endUtc = endMonth.AddMonths(1).AddHours(-8);
+        DateTime startUtc = start.AddHours(-8);
+        var periodEndUtc = endMonth.AddMonths(1).AddHours(-8);
+        var nowUtc = DateTime.UtcNow;
+        var endUtc = periodEndUtc < nowUtc ? periodEndUtc : nowUtc;
 
         // Dates are stored as UTC; classify months in Malaysia time (UTC+8).
         // Group in SQL so the report does not load all payment rows.

@@ -1,6 +1,11 @@
 @model SecureSmartTuitionSystem.ViewModels.Billing.MonthlyBillingIndexViewModel
 @using SecureSmartTuitionSystem.Models.Billing
-@{ ViewData["Title"]="Monthly Tuition Bills"; var now=Model.StatusAsOfUtc; }
+@{
+    ViewData["Title"] = "Monthly Tuition Bills";
+    var now = Model.StatusAsOfUtc;
+    var tableSort = Context.Request.Query["tableSort"].ToString();
+    var tableDirection = Context.Request.Query["tableDirection"].ToString();
+}
 <div class="page-header"><div><h1>Monthly Tuition Bills</h1><p>Monthly tuition after the initial prepaid plan ends. All amounts are in MYR.</p></div></div>
 @if (User.IsInRole("Admin")) { <p><a asp-action="Recovery" class="btn btn-outline-primary">Review missing monthly bills</a></p> }
 @if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success">@success</div> }
@@ -15,7 +20,7 @@
 <section class="dashboard-card shared-table-card"><header class="dashboard-card-header"><h2>Monthly bills</h2><span>@Model.TotalRows bill(s)</span></header>
 <div class="table-responsive"><table data-source-table="monthly" data-current-page="@Model.Page" data-page-count="@Model.TotalPages" data-total-rows="@Model.TotalRows" data-page-param="page" class="table align-middle" data-server-paged="true"><thead><tr><th>No</th><th data-sort-key="bill">Bill</th><th data-sort-key="student">Student</th><th data-sort-key="month">Month</th><th data-sort-key="amount">Amount</th><th data-sort-key="due">Due date</th><th data-sort-key="status">Status</th><th>Action</th></tr></thead><tbody>
 @{ int row=(Model.Page-1)*25; }
-@foreach(var bill in Model.Rows) { row++; <tr><td>@row</td><td>@bill.Number</td><td>@bill.StudentProfile.FullName</td><td>@bill.Month.ToString("MMM yyyy")</td><td>RM @bill.Total.ToString("F2")</td><td>@bill.DueAtUtc.AddHours(8).AddSeconds(-1).ToString("dd MMM yyyy")</td><td>@(bill.Status == MonthlyInvoiceStatus.Pending ? (bill.DueAtUtc < now ? "Overdue" : "Unpaid") : bill.Status.ToString())</td><td><a asp-action="Details" asp-route-id="@bill.MonthlyInvoiceId" class="outline-button">View</a>
+@foreach(var bill in Model.Rows) { row++; <tr><td>@row</td><td>@bill.Number</td><td>@bill.StudentProfile.FullName</td><td>@bill.Month.ToString("MMM yyyy")</td><td>RM @bill.Total.ToString("F2")</td><td>@bill.DueAtUtc.AddHours(8).AddSeconds(-1).ToString("dd MMM yyyy")</td><td>@bill.DisplayStatus(now)</td><td><a asp-action="Details" asp-route-id="@bill.MonthlyInvoiceId" class="outline-button">View</a>
 @if (bill.Status == MonthlyInvoiceStatus.Paid && bill.PaidAtUtc.HasValue)
 {
     <a asp-action="Receipt" asp-route-id="@bill.MonthlyInvoiceId" class="outline-button">Receipt</a>
@@ -27,6 +32,6 @@
  var label=target.index switch {0=>"First",1=>"Previous",2=>Model.Page.ToString(),3=>"Next",_=>"Last"};
  if(target.index==2) { <span class="table-page-button active" aria-current="page">@label</span> }
  else if(target.value==Model.Page) { <button type="button" class="table-page-button" disabled>@label</button> }
- else { <a class="table-page-button" asp-action="Index" asp-route-page="@target.value" asp-route-month="@Model.Month" asp-route-status="@Model.Status">@label</a> }
+ else { <a class="table-page-button" asp-action="Index" asp-route-page="@target.value" asp-route-month="@Model.Month" asp-route-status="@Model.Status" asp-route-tableSort="@tableSort" asp-route-tableDirection="@tableDirection">@label</a> }
 }
 </div></nav></section>

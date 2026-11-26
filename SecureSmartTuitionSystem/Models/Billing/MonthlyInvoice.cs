@@ -5,6 +5,10 @@ namespace SecureSmartTuitionSystem.Models.Billing;
 public enum MonthlyInvoiceStatus { Pending, Paid, Cancelled }
 public sealed class MonthlyInvoice
 {
+    public string DisplayStatus(DateTime asOfUtc) => Status == MonthlyInvoiceStatus.Pending
+        ? (DueAtUtc <= asOfUtc ? "Overdue" : "Unpaid")
+        : Status.ToString();
+
     public int MonthlyInvoiceId { get; set; }
     public int StudentProfileId { get; set; }
     public DateTime Month { get; set; }

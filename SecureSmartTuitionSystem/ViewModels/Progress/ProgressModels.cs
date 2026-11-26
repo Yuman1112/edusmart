@@ -7,6 +7,24 @@ using SecureSmartTuitionSystem.ViewModels.Enrollment;
 namespace SecureSmartTuitionSystem.ViewModels.Progress;
 public sealed class ProgressFilter : ReportPeriodFilter
 {
+    public Dictionary<string, string> RouteValues(string prefix = "")
+    {
+        var values = new Dictionary<string, string?>
+        {
+            [nameof(Year)] = Year.ToString(),
+            [nameof(Month)] = Month.ToString(),
+            [nameof(EndMonth)] = EndMonth?.ToString(),
+            [nameof(EducationStage)] = EducationStage?.ToString(),
+            [nameof(AcademicLevel)] = AcademicLevel,
+            [nameof(SubjectId)] = SubjectId?.ToString(),
+            [nameof(TutorSearch)] = TutorSearch,
+            [nameof(TutorId)] = TutorId,
+            [nameof(Day)] = Day?.ToString(),
+            [nameof(ClassId)] = ClassId?.ToString()
+        };
+        return values.Where(item => item.Value is not null)
+            .ToDictionary(item => prefix + item.Key, item => item.Value!);
+    }
 }
 public sealed record ProgressSummary(int Id,string Code,string Name,string Schedule,string Subject,string Level,string Tutor,int Topics,int Done,decimal? Average,int Expected,int Submitted,int Missing,int Late);
 public sealed class ProgressIndex
@@ -55,6 +73,19 @@ public sealed class ProgressDetails
     public int HistoryTotal { get; set; }
     public int HistoryPages => Math.Max(1,(int)Math.Ceiling(HistoryTotal/25d));
     public int Month { get; set; }
+    public int EndMonth { get; set; }
+    public ProgressFilter? OverviewFilter { get; set; }
+    public Dictionary<string, string> OverviewRoute => OverviewFilter?.RouteValues("overview.") ?? [];
+    public Dictionary<string, string> PeriodRoute
+    {
+        get
+        {
+            var route = OverviewRoute;
+            route["month"] = Month.ToString();
+            route["endMonth"] = EndMonth.ToString();
+            return route;
+        }
+    }
     public LessonItem? Selected { get; set; }
     public bool CanSave { get; set; }
     public bool IsLate { get; set; }

@@ -54,8 +54,11 @@ public sealed class MonthlyBillingWorker(IServiceScopeFactory scopes, ILogger<Mo
     public static string ReminderKind(MonthlyInvoice bill, DateTime nowUtc)
     {
         if (bill.Status != MonthlyInvoiceStatus.Pending || bill.Total <= 0) return "";
-        var days = nowUtc < bill.DueAtUtc ? 0 : (nowUtc.AddHours(8).Date - bill.DueAtUtc.AddHours(8).Date).Days + 1;
-        return days > 7 ? "overdue-restricted" : days >= 4 ? "overdue-warning" : "bill-issued";
+        if (nowUtc < bill.DueAtUtc) return "bill-issued";
+        if (MonthlyBillingService.IsRestricted(bill, nowUtc)) return "overdue-restricted";
+
+        var daysOverdue = (nowUtc.AddHours(8).Date - bill.DueAtUtc.AddHours(8).Date).Days + 1;
+        return daysOverdue >= 4 ? "overdue-warning" : "";
     }
     private async Task NotifyAsync(IServiceProvider services, CancellationToken ct)
     {
@@ -98,7 +101,7 @@ public sealed class MonthlyBillingWorker(IServiceScopeFactory scopes, ILogger<Mo
         { logger.LogWarning("Billing reminder emails are not configured; in-app alerts remain available."); return; }
         var now = DateTime.UtcNow;
         var pending = await db.Set<BillingReminder>().AsNoTracking().Where(x =>
-            ((x.Kind == "bill-issued" && x.MonthlyInvoice.DueAtUtc >= now) || (x.Kind == "overdue-restricted" && x.Day == day)) &&
+            ((x.Kind == "bill-issued" && x.MonthlyInvoice.DueAtUtc > now) || (x.Kind == "overdue-restricted" && x.Day == day)) &&
             x.EmailAttemptedAtUtc == null && x.MonthlyInvoice.Status == MonthlyInvoiceStatus.Pending &&
             db.ParentStudents.Any(p => p.StudentProfileId == x.MonthlyInvoice.StudentProfileId && p.IsActive && p.ParentProfile.ApplicationUserId == x.UserId))
             .Select(x => x.BillingReminderId).ToListAsync(ct);

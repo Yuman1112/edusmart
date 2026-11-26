@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Services.Progress;
+using SecureSmartTuitionSystem.Services.Enrollment;
 using SecureSmartTuitionSystem.ViewModels.Progress;
 namespace SecureSmartTuitionSystem.Controllers;
 [Authorize(Roles="Admin,Tutor")]
@@ -40,10 +41,23 @@ public sealed class ClassProgressController(ApplicationDbContext db, SecurityEve
             ReportDownloadNames.FileName(title, filter.Start, filter.End, pdf ? "pdf" : "xlsx"));
     }
 
-    [HttpGet] public async Task<IActionResult> Details(int id,int? month=null,DateTime? date=null,int key=0,int historyPage=1)
+    [HttpGet]
+    public async Task<IActionResult> Details(int id, int? month = null, DateTime? date = null, int key = 0,
+        int historyPage = 1, int? endMonth = null, [FromQuery(Name = "overview")] ProgressFilter? overview = null)
     {
-        if(!ModelState.IsValid||id<1||month is <1 or >12||key<0||historyPage is <1 or >10000||date?.Year is <2000 or >2100)return BadRequest("Choose a valid lesson.");
-        var model=await Service.DetailsAsync(User,id,date?.Month??month??DateTime.UtcNow.AddHours(8).Month,date,key,historyPage);return model==null?NotFound():View(model);
+        if (!ModelState.IsValid || id < 1 || month is < 1 or > 12 || endMonth is < 1 or > 12 ||
+            key < 0 || historyPage is < 1 or > 10000 || date?.Year is < 2000 or > 2100)
+            return BadRequest("Choose a valid lesson.");
+
+        var start = month ?? date?.Month ?? ClassScheduleService.Today.Month;
+        var end = endMonth ?? start;
+        if (end < start || (date.HasValue && (date.Value.Month < start || date.Value.Month > end)))
+            return BadRequest("Choose a lesson in the selected period.");
+
+        var model = await Service.DetailsAsync(User, id, start, date, key, historyPage, end);
+        if (model is null) return NotFound();
+        model.OverviewFilter = Request.Query.ContainsKey("overview.Year") ? overview : null;
+        return View(model);
     }
     [HttpGet,Authorize(Roles="Admin")] public async Task<IActionResult> Syllabus(int id)
     {if(!ModelState.IsValid||id<1)return BadRequest();var m=await Service.SyllabusAsync(User,id);return m==null?NotFound():View(m);}
@@ -53,18 +67,33 @@ public sealed class ClassProgressController(ApplicationDbContext db, SecurityEve
         var error=await Service.SaveSyllabusAsync(User,form);TempData[error==null?"ProgressSuccess":"ProgressError"]=error??"Subject outline saved.";
         return RedirectToAction(nameof(Syllabus),new{id=form.ClassId});
     }
-    [HttpPost,Authorize(Roles="Tutor"),RequestSizeLimit(262144)] public async Task<IActionResult> Save(LessonProgressForm form)
+    [HttpPost,Authorize(Roles="Tutor"),RequestSizeLimit(262144)] public async Task<IActionResult> Save(LessonProgressForm form, int? month, int? endMonth, [FromQuery(Name = "overview")] ProgressFilter? overview)
     {
         if(User.IsInRole("Admin"))return Forbid();
         if(!ModelState.IsValid)return BadRequest("Check the lesson, summary and progress values.");
         if(!await Service.Classes(User).AnyAsync(c=>c.ClassSessionId==form.ClassId))return NotFound();
         var error=await Service.SaveLessonAsync(User,form);TempData[error==null?"ProgressSuccess":"ProgressError"]=error??"Teaching progress saved. Completed subchapters are locked.";
-        return RedirectToAction(nameof(Details),new{id=form.ClassId,date=form.Date.ToString("yyyy-MM-dd"),key=form.ChangeKey});
+        return ReturnToDetails(form.ClassId, month, endMonth, overview, form.Date, form.ChangeKey);
     }
-    [HttpPost,Authorize(Roles="Admin")] public async Task<IActionResult> Reopen(ReopenProgressForm form)
+    [HttpPost,Authorize(Roles="Admin")] public async Task<IActionResult> Reopen(ReopenProgressForm form, int? month, int? endMonth, [FromQuery(Name = "overview")] ProgressFilter? overview)
     {
         if(!ModelState.IsValid)return BadRequest("Enter the correction reason and reload the latest progress.");
         var error=await Service.ReopenAsync(User,form);TempData[error==null?"ProgressSuccess":"ProgressError"]=error??"Progress corrected. The original values and reason are retained in history.";
-        return RedirectToAction(nameof(Details),new{id=form.ClassId});
+        return ReturnToDetails(form.ClassId, month, endMonth, overview);
+    }
+
+    private RedirectToActionResult ReturnToDetails(int classId, int? month, int? endMonth,
+        ProgressFilter? overview, DateTime? date = null, int? key = null)
+    {
+        var route = new Microsoft.AspNetCore.Routing.RouteValueDictionary();
+        if (Request.Query.ContainsKey("overview.Year") && overview is not null)
+            foreach (var item in overview.RouteValues("overview.")) route[item.Key] = item.Value;
+
+        route["id"] = classId;
+        route["month"] = month;
+        route["endMonth"] = endMonth;
+        route["date"] = date?.ToString("yyyy-MM-dd");
+        route["key"] = key;
+        return RedirectToAction(nameof(Details), route);
     }
 }
