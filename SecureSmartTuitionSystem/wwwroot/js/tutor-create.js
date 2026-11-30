@@ -410,43 +410,43 @@
 
     const teachingCatalog = {
         "YEAR 1": [
-            "BC", "BMP", "BIP", "MM", "SCI"
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "SCI"
         ],
         "YEAR 2": [
-            "BC", "BMP", "BIP", "MM", "SCI"
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "SCI"
         ],
         "YEAR 3": [
-            "BC", "BMP", "BIP", "MM", "SCI"
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "SCI"
         ],
         "YEAR 4": [
-            "BC", "BMP", "BIP", "MM", "SCI", "SEJ"
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "SCI", "SEJ"
         ],
         "YEAR 5": [
-            "BC", "BMP", "BIP", "MM", "SCI", "SEJ"
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "SCI", "SEJ"
         ],
         "YEAR 6": [
-            "BC", "BMP", "BIP", "MM", "SCI", "SEJ"
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "SCI", "SEJ"
         ],
 
         "FORM 1": [
-            "BC", "BMK", "BIK", "MM", "SCI",
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "SCI",
             "SEJ", "GEO", "RBT", "ASK"
         ],
         "FORM 2": [
-            "BC", "BMK", "BIK", "MM", "SCI",
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "SCI",
             "SEJ", "GEO", "RBT", "ASK"
         ],
         "FORM 3": [
-            "BC", "BMK", "BIK", "MM", "SCI",
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "SCI",
             "SEJ", "GEO", "RBT", "ASK"
         ],
         "FORM 4": [
-            "BC", "BMK", "BIK", "MM", "AM",
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "AM",
             "BIO", "CHE", "PHY", "SEJ",
             "ACC", "EKO", "PER"
         ],
         "FORM 5": [
-            "BC", "BMK", "BIK", "MM", "AM",
+            "BC", "BMP", "BMK", "BIP", "BIK", "MM", "AM",
             "BIO", "CHE", "PHY", "SEJ",
             "ACC", "EKO", "PER"
         ]
@@ -458,10 +458,10 @@
 
     const subjectDisplayNames = {
         BC: "Chinese",
-        BMP: "Bahasa Melayu (Primary)",
-        BMK: "Bahasa Melayu (Secondary)",
-        BIP: "English (Primary)",
-        BIK: "English (Secondary)",
+        BMP: "Bahasa Melayu Pemahaman",
+        BMK: "Bahasa Melayu Karangan",
+        BIP: "English Comprehension",
+        BIK: "English Essay",
         MM: "Mathematics",
         SCI: "Science",
         SEJ: "Sejarah",

@@ -52,7 +52,7 @@
     <div class="reports-table-wrap" role="region" aria-label="Payment report for selected months" tabindex="0">
         <table class="table reports-table"><caption>Payment activity in Malaysia time. Amounts are in MYR.</caption>
             <thead><tr><th scope="col">Month</th><th scope="col">Gross received</th><th scope="col">Tracked refunds</th><th scope="col">Net tracked</th><th scope="col">Payments</th></tr></thead>
-            <tbody>@foreach (var row in Model.Months) { <tr><th scope="row">@row.Month.ToString("MMM yyyy", CultureInfo.InvariantCulture)</th><td>@row.Gross.ToString("N2")</td><td>@row.Refunds.ToString("N2")</td><td>@row.Net.ToString("N2")</td><td>@row.PaymentCount</td></tr> }</tbody>
+            <tbody>@foreach (var row in Model.Months) { <tr><th scope="row" data-sort-value="@row.Month.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">@row.Month.ToString("MMM yyyy", CultureInfo.InvariantCulture)</th><td>@row.Gross.ToString("N2")</td><td>@row.Refunds.ToString("N2")</td><td>@row.Net.ToString("N2")</td><td>@row.PaymentCount</td></tr> }</tbody>
         </table>
     </div>
 </section>

@@ -338,7 +338,7 @@
     color: var(--navy);
 }
 
-    .table th {
+    .table thead th {
         padding: 14px 17px;
         border-bottom-color: var(--border);
         color: var(--navy-soft);

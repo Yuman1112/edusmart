@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using SecureSmartTuitionSystem.Data;
 using SecureSmartTuitionSystem.Models.Enrollment;
@@ -26,9 +26,10 @@ public sealed class TutorSchedulingService(ApplicationDbContext db)
             || end - start < TimeSpan.FromMinutes(30) || end - start > TimeSpan.FromHours(4)
             || !TutorAvailabilityService.Covers(availability, (int)day, start, end)) return false;
         var first = from.Date.AddDays(((int)day - (int)from.DayOfWeek + 7) % 7);
+        while (first <= to.Date && !LateMonthEnrollmentPolicy.IsRegularTeachingDate(first)) first = first.AddDays(7);
         if (first > to.Date || first.Add(start.ToTimeSpan()) <= now) return false;
         for (var date = first; date <= to.Date; date = date.AddDays(7))
-            if (booked.Any(x => !x.Cancelled && x.Date.Date == date && start < x.End && end > x.Start)) return false;
+            if (LateMonthEnrollmentPolicy.IsRegularTeachingDate(date) && booked.Any(x => !x.Cancelled && x.Date.Date == date && start < x.End && end > x.Start)) return false;
         return true;
     }
     public static List<TutorWeeklySlot> BuildSlots(IEnumerable<int> availability, IReadOnlyList<LessonItem> booked,
@@ -45,9 +46,13 @@ public sealed class TutorSchedulingService(ApplicationDbContext db)
                 var end = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(minutes + durationMinutes));
                 if (!IsFree(values, booked, from, to, (DayOfWeek)day, start, end, now)) continue;
                 var first = from.Date.AddDays((day - (int)from.DayOfWeek + 7) % 7);
+                while (first <= to.Date && !LateMonthEnrollmentPolicy.IsRegularTeachingDate(first)) first = first.AddDays(7);
+                int lessonCount = 0;
+                for (var date = first; date <= to.Date; date = date.AddDays(7))
+                    if (LateMonthEnrollmentPolicy.IsRegularTeachingDate(date)) lessonCount++;
                 result.Add(new TutorWeeklySlot($"{day}:{start:HH:mm}:{end:HH:mm}", ((DayOfWeek)day).ToString(), day,
                     start.ToString("HH:mm", CultureInfo.InvariantCulture), end.ToString("HH:mm", CultureInfo.InvariantCulture),
-                    first.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), (to.Date - first).Days / 7 + 1));
+                    first.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), lessonCount));
             }
         }
         return result;

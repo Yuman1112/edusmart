@@ -40,6 +40,8 @@ namespace SecureSmartTuitionSystem.Data
 
         public DbSet<SecureSmartTuitionSystem.Models.Learning.LearningMaterial> LearningMaterials => Set<SecureSmartTuitionSystem.Models.Learning.LearningMaterial>();
 
+        public DbSet<GuestEnquiry> GuestEnquiries => Set<GuestEnquiry>();
+
         public DbSet<EnrollmentExitRequest> EnrollmentExitRequests => Set<EnrollmentExitRequest>();
         public DbSet<ClassLessonChange> ClassLessonChanges => Set<ClassLessonChange>();
         public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
@@ -698,16 +700,17 @@ namespace SecureSmartTuitionSystem.Data
                     .HasPrecision(10, 2);
 
                 /*
-                 * Prevent duplicate current enrollment for
-                 * the same student and class.
+                 * Preserve separate, non-overlapping enrollment periods.
+                 * Date overlap is validated under the enrollment transaction;
+                 * this unique key also prevents duplicate period insertion.
                  */
                 entity.HasIndex(enrollment => new
                 {
                     enrollment.StudentProfileId,
-                    enrollment.ClassSessionId
+                    enrollment.ClassSessionId,
+                    enrollment.StartDate
                 })
-                    .IsUnique()
-                    .HasFilter("[Status] IN (0, 1)");
+                    .IsUnique();
 
                 entity.HasOne(enrollment =>
                         enrollment.StudentProfile)

@@ -55,6 +55,43 @@
         // Scroll the conversation only; leave the document's scroll position alone.
         conversation.scrollTop = conversation.scrollHeight;
     };
+    // Consume HTTP chunks as they arrive. This does not animate a completed JSON reply.
+    const readStream = async response => {
+        if (!response.body?.getReader) throw new Error("Streaming is unavailable in this browser.");
+        const reader = response.body.getReader(), decoder = new TextDecoder();
+        let buffer = "", final = null, draft = null, draftText = null;
+        const handle = line => {
+            if (!line.trim()) return;
+            const event = JSON.parse(line);
+            if (event.type === "start") {
+                updateHandoff(null);
+                conversation.querySelectorAll(".faq-empty").forEach(x => x.remove());
+                draft = node("article", undefined, "faq-turn faq-stream-draft");
+                const question = node("p", undefined, "faq-user-question");
+                question.append(node("strong", "You"), node("br"), document.createTextNode(event.payload.question));
+                draftText = node("p", "Preparing a response…");
+                const answer = node("div", undefined, "faq-assistant-answer");
+                answer.append(node("strong", "EduSmart support"), node("p", "Checking approved sources before displaying the response.", "faq-hint"), draftText);
+                draft.append(question, answer); conversation.append(draft);
+            } else if (event.type === "draft" && draftText) {
+                draftText.textContent = event.payload.text || "Checking the response…";
+                conversation.scrollTop = conversation.scrollHeight;
+            } else if (event.type === "done") final = event.payload;
+        };
+        try {
+            while (true) {
+                const { value, done } = await reader.read();
+                buffer += done ? decoder.decode() : decoder.decode(value, { stream:true });
+                let split;
+                while ((split=buffer.indexOf("\n"))>=0) { handle(buffer.slice(0,split)); buffer=buffer.slice(split+1); }
+                if (buffer.length > 100000) throw new Error("Unexpected response size.");
+                if(done)break;
+            }
+            if(buffer.trim())handle(buffer);
+            if(!final)throw new Error("The response was interrupted. Please try again.");
+            return final;
+        } finally { draft?.remove(); reader.releaseLock(); }
+    };
     const submit = async (event, clear) => {
         event.preventDefault();
         if (busy) return;
@@ -72,12 +109,13 @@
         try {
             const response = await fetch(form.action, {
                 method: "POST", body: data, credentials: "same-origin", cache: "no-store",
-                headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" }, signal: controller.signal
+                headers: { "X-Requested-With": "XMLHttpRequest", "Accept": clear ? "application/json" : "application/x-ndjson, application/json" }, signal: controller.signal
             });
             if (response.status === 429) throw new Error("Too many questions. Please wait a minute and try again.");
-            if (!response.headers.get("content-type")?.includes("application/json"))
+            const kind = response.headers.get("content-type") || "";
+            if (!kind.includes("application/json") && !kind.includes("application/x-ndjson"))
                 throw new Error("Your session may have changed. Reload this page and try again.");
-            const result = await response.json();
+            const result = kind.includes("application/x-ndjson") && response.ok ? await readStream(response) : await response.json();
             if (!response.ok) throw new Error(result.error || "Unable to complete your request. Please try again.");
             if (clear) {
                 if (!result.cleared) throw new Error("Unable to clear the conversation. Please try again.");

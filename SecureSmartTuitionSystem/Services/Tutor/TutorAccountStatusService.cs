@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Encodings.Web;
 using SecureSmartTuitionSystem.Models;
 using SecureSmartTuitionSystem.Models.Security;
@@ -44,7 +44,7 @@ public sealed class TutorAccountStatusService(
             var cancelled = changes.Where(change => change.ClassSessionId == c.ClassSessionId)
                 .Select(change => change.OriginalDate.Date).ToHashSet();
             var last = AcademicYearPolicy.ClassEnd(c);
-            while (next <= last && cancelled.Contains(next)) next = next.AddDays(7);
+            while (next <= last && (cancelled.Contains(next) || !LateMonthEnrollmentPolicy.IsRegularTeachingDate(next))) next = next.AddDays(7);
             if (next <= last)
                 result.Add($"{c.ClassCode}: scheduled lesson {next:dd MMM yyyy}, {c.StartTime:HH:mm}–{c.EndTime:HH:mm}");
         }

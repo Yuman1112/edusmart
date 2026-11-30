@@ -1,4 +1,4 @@
-﻿
+
 /* =========================================================
    EDUSMART - ADD TUTOR CREATE PAGE
 ========================================================= */
@@ -716,10 +716,13 @@
 /* Input Wrapper */
 #edit-tutor-form .tutor-readonly-wrapper {
     position: relative;
+    min-width: 0;
+    --ui-input-padding-end: 44px;
 }
 
 /* Read-only Input */
 #edit-tutor-form .tutor-readonly-field {
+    padding-inline-end: var(--ui-input-padding-end, 44px);
     background-color: #f3f6f8;
     border: 1px solid #d8e1e7;
     color: #526477;
@@ -841,3 +844,4 @@
         padding: 0;
     }
 }
+#edit-tutor-form .tutor-readonly-field:is(.is-invalid,.input-validation-error) {background-image:none;}

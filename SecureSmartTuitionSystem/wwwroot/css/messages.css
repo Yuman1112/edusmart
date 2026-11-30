@@ -485,7 +485,9 @@ body.messages-page-active {
 
 .message-file {
     display: flex;
-    min-width: 280px;
+    min-width: 0;
+    width: min(280px, 100%);
+    max-width: 100%;
     margin: 3px 0 7px;
     padding: 10px;
     align-items: center;
@@ -631,7 +633,8 @@ body.messages-page-active {
     }
 
     .message-file {
-        min-width: 220px;
+        min-width: 0;
+        width: min(220px, 100%);
     }
 }
 
@@ -782,3 +785,5 @@ body.messages-page-active {
 .contact-search-results > .contact-active { background: var(--surface-tint); color: var(--teal-dark); }
 .contact-no-results { padding: 10px; color: var(--muted); font-size: .82rem; }
 .contact-picker-row [hidden] { display: none !important; }
+
+.message-file > i {flex-shrink:0;}

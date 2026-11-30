@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 using SecureSmartTuitionSystem.Models.Attendance;
 namespace SecureSmartTuitionSystem.ViewModels.Attendance;
@@ -18,7 +18,8 @@ public sealed class AttendanceLessonRow
     public bool Replacement { get; set; }
     public int? SavedId { get; set; }
     public string ClassCode { get; set; } = "";
-    public string ClassName { get; set; } = "";
+    public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
     public string TutorName { get; set; } = "";
     public TimeOnly Start { get; set; }
     public TimeOnly End { get; set; }
@@ -32,7 +33,8 @@ public sealed class AttendanceSheetViewModel
     public bool Replacement { get; set; }
     public string RowVersion { get; set; } = "";
     public string ClassCode { get; set; } = "";
-    public string ClassName { get; set; } = "";
+    public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
     public string TutorName { get; set; } = "";
     public TimeOnly Start { get; set; }
     public TimeOnly End { get; set; }

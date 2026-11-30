@@ -60,42 +60,9 @@ public sealed class EnrollmentExitsController(ApplicationDbContext db, Enrollmen
         return RedirectToAction(nameof(Index));
     }
     [Authorize(Roles = "Admin"), HttpGet]
-    public async Task<IActionResult> AdminWithdraw(int enrollmentId)
-    {
-        var existing = await db.EnrollmentExitRequests.AsNoTracking().FirstOrDefaultAsync(x => x.StudentEnrollmentId == enrollmentId);
-        if (existing != null) return RedirectToAction(nameof(Details), new { id = existing.EnrollmentExitRequestId });
-        var model = await WithdrawalPreviewAsync(enrollmentId);
-        return model == null ? NotFound() : View(model);
-    }
+    public IActionResult AdminWithdraw(int enrollmentId) => Forbid();
     [Authorize(Roles = "Admin"), HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> AdminWithdraw(SecureSmartTuitionSystem.ViewModels.Enrollment.AdminWithdrawalViewModel model)
-    {
-        var preview = confirmations.Read(model.ConfirmationToken, UserId);
-        if (preview == null || preview.EnrollmentId != model.EnrollmentId) return BadRequest("The confirmation expired. Open the enrollment and try again.");
-        var existingRequest = await db.EnrollmentExitRequests.AsNoTracking().FirstOrDefaultAsync(x => x.StudentEnrollmentId == model.EnrollmentId);
-        if (existingRequest != null) return RedirectToAction(nameof(Details), new { id = existingRequest.EnrollmentExitRequestId });
-        if (!model.GuardianRequestConfirmed || !model.BillingEffectConfirmed)
-            ModelState.AddModelError(string.Empty, "Confirm the guardian request and the billing effect before recording withdrawal.");
-        var current = await WithdrawalPreviewAsync(model.EnrollmentId);
-        if (current == null) return NotFound();
-        if (!ModelState.IsValid)
-        {
-            current.Reason = model.Reason; current.GuardianRequestConfirmed = model.GuardianRequestConfirmed; current.BillingEffectConfirmed = model.BillingEffectConfirmed;
-            ModelState.Remove(nameof(model.ConfirmationToken));
-            return View(current);
-        }
-        try
-        {
-            var result = await exits.StopAsync(User, model.EnrollmentId, model.Reason, preview.EffectiveDate, preview.Refund);
-            TempData["SuccessMessage"] = "Admin-assisted withdrawal recorded. Refund processing is a separate step.";
-            return RedirectToAction(nameof(Details), new { id = result.EnrollmentExitRequestId });
-        }
-        catch (InvalidOperationException ex)
-        {
-            TempData["ErrorMessage"] = ex.Message;
-            return RedirectToAction(nameof(AdminWithdraw), new { enrollmentId = model.EnrollmentId });
-        }
-    }
+    public IActionResult AdminWithdraw(SecureSmartTuitionSystem.ViewModels.Enrollment.AdminWithdrawalViewModel model) => Forbid();
     private async Task<SecureSmartTuitionSystem.ViewModels.Enrollment.AdminWithdrawalViewModel?> WithdrawalPreviewAsync(int enrollmentId)
     {
         var enrollment = await exits.Accessible(User).AsNoTracking().Include(x => x.StudentProfile).Include(x => x.ClassSession)

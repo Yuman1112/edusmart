@@ -516,6 +516,10 @@ a {
 }
 
 .public-nav-link {
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    line-height: 1.5;
     display: inline-flex;
     padding: 10px 12px;
     align-items: center;

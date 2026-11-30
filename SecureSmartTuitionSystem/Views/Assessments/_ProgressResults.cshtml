@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Learning.AssessmentProgressModel
+@model SecureSmartTuitionSystem.ViewModels.Learning.AssessmentProgressModel
 @using SecureSmartTuitionSystem.Services.Learning
 @{
     string SortUrl(string key) => Url.Action("Progress", new { Page = 1, Model.Filter.ClassId, Model.Filter.StudentId, Model.Filter.SubjectId, Model.Filter.Kind, Model.Filter.Month, Model.Filter.Search, Model.Filter.Status, Sort = Model.Filter.Sort == key + "_asc" ? key + "_desc" : key + "_asc" })!;
@@ -41,7 +41,7 @@
         else
         {
             <div class="table-responsive">
-                <table class="table compact-class-table align-middle" data-pagination="off">
+                <table data-source-table="progress" data-current-page="@Model.Filter.Page" data-page-count="@Model.PageCount" data-total-rows="@Model.Total" data-page-param="Page" class="table compact-class-table align-middle" data-pagination="off">
                     <thead>
                         <tr>
                             <th scope="col">No.</th>
@@ -54,7 +54,7 @@
                             <th scope="col" aria-sort="@SortState("due")"><a class="assessment-sort-link" href="@SortUrl("due")" data-assessment-nav>Due (MYT) <i class="bi @SortIcon("due")" aria-hidden="true"></i></a></th>
                             <th scope="col" aria-sort="@SortState("status")"><a class="assessment-sort-link" href="@SortUrl("status")" data-assessment-nav>Status <i class="bi @SortIcon("status")" aria-hidden="true"></i></a></th>
                             <th scope="col" aria-sort="@SortState("result")"><a class="assessment-sort-link" href="@SortUrl("result")" data-assessment-nav>Result <i class="bi @SortIcon("result")" aria-hidden="true"></i></a></th>
-                            <th scope="col">Feedback</th>
+                            <th scope="col" data-sort-key="feedback" data-sort-param="Sort">Feedback</th>
                         </tr>
                     </thead>
                     <tbody>

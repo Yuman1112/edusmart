@@ -599,3 +599,5 @@
     .browse-empty-state p span + span {
         margin-top: 4px;
     }
+.browse-date-field { grid-column:1 / -1; }
+.browse-date-field input { max-width:320px; }

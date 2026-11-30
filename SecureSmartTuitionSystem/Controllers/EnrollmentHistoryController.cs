@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Services.Tables;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,43 +26,31 @@ public sealed class EnrollmentHistoryController(ApplicationDbContext db) : Contr
             (User.IsInRole("Student") && a.ExistingStudentProfile != null && a.ExistingStudentProfile.ApplicationUserId == userId));
         if (status.HasValue) query = query.Where(a => a.Status == status.Value);
         const int pageSize = 25;
-        // Page actual class rows, not applications. A legacy application without
-        // classes is represented by one placeholder row.
-        var ordered = query.OrderByDescending(a => a.SubmittedAt).ThenByDescending(a => a.EnrollmentApplicationId);
-        var rowCounts = await ordered.Select(a => a.SelectedSubjects.Count).ToListAsync();
-        var totalRows = rowCounts.Sum(n => Math.Max(1, n));
+        var display = from application in query
+            from subject in application.SelectedSubjects.DefaultIfEmpty()
+            select new {
+                application.EnrollmentApplicationId,
+                SubjectId = subject == null ? 0 : subject.EnrollmentApplicationSubjectId,
+                application.ApplicationNumber, application.StudentName, application.SubmittedAt,
+                application.RequestedStartDate, DurationMonths = application.EnrollmentDurationMonths,
+                application.Status, application.RejectionReason,
+                ClassName = subject == null ? "—" : subject.ClassSession.ClassName ?? subject.ClassSession.ClassCode
+            };
+        var totalRows = await display.CountAsync();
         var pages = Math.Max(1, (int)Math.Ceiling(totalRows / (double)pageSize));
         page = Math.Clamp(page, 1, pages);
         var rowOffset = (page - 1) * pageSize;
-        var applicationOffset = 0;
-        var precedingRows = 0;
-        while (applicationOffset < rowCounts.Count && precedingRows + Math.Max(1, rowCounts[applicationOffset]) <= rowOffset)
-        {
-            precedingRows += Math.Max(1, rowCounts[applicationOffset]);
-            applicationOffset++;
-        }
-        // At most 25 applications are needed to fill 25 rows, since each has
-        // at least one display row. The first may be partially on the prior page.
-        var applications = await ordered.Skip(applicationOffset).Take(pageSize)
-            .Select(a => new EnrollmentHistoryRow
-            {
-                ApplicationNumber = a.ApplicationNumber, StudentName = a.StudentName,
-                SubmittedAt = a.SubmittedAt, RequestedStartDate = a.RequestedStartDate,
-                DurationMonths = a.EnrollmentDurationMonths, Status = a.Status,
-                RejectionReason = a.RejectionReason,
-                Classes = a.SelectedSubjects.OrderBy(s => s.EnrollmentApplicationSubjectId)
-                    .Select(s => s.ClassSession.ClassName ?? s.ClassSession.ClassCode).ToList()
-            }).ToListAsync();
-        var rows = applications.SelectMany(application => application.Classes.Count == 0
-            ? new[] { application }
-            : application.Classes.Select(className => new EnrollmentHistoryRow
-            {
-                ApplicationNumber = application.ApplicationNumber, StudentName = application.StudentName,
-                SubmittedAt = application.SubmittedAt, RequestedStartDate = application.RequestedStartDate,
-                DurationMonths = application.DurationMonths, Status = application.Status,
-                RejectionReason = application.RejectionReason, Classes = new List<string> { className }
-            }))
-            .Skip(rowOffset - precedingRows).Take(pageSize).ToList();
+        var ordered = TableOrder.Apply(display, HttpContext?.Request.Query, "submitted", true,
+            ("student", x => x.StudentName), ("class", x => x.ClassName), ("submitted", x => x.SubmittedAt),
+            ("start", x => x.RequestedStartDate), ("duration", x => x.DurationMonths), ("status", x => x.Status == EnrollmentStatus.ApprovedPendingPayment ? "Approved Pending Payment" :
+                x.Status == EnrollmentStatus.Cancelled ? "Cancelled" : x.Status == EnrollmentStatus.Enrolled ? "Enrolled" :
+                x.Status == EnrollmentStatus.PaymentConfirmed ? "Payment Confirmed" : x.Status == EnrollmentStatus.PendingReview ? "Pending Review" : "Rejected"))
+            .ThenByDescending(x => x.EnrollmentApplicationId).ThenBy(x => x.SubjectId);
+        var rows = await ordered.Skip(rowOffset).Take(pageSize).Select(x => new EnrollmentHistoryRow {
+            ApplicationNumber = x.ApplicationNumber, StudentName = x.StudentName, SubmittedAt = x.SubmittedAt,
+            RequestedStartDate = x.RequestedStartDate, DurationMonths = x.DurationMonths, Status = x.Status,
+            RejectionReason = x.RejectionReason, Classes = new List<string> { x.ClassName }
+        }).ToListAsync();
         return View(new EnrollmentHistoryViewModel { Rows = rows, Page = page, TotalPages = pages,
             Status = status, RowOffset = rowOffset, TotalRows = totalRows });
     }

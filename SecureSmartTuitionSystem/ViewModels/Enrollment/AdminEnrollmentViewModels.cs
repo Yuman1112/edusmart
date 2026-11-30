@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Services.Enrollment;
 
@@ -189,8 +189,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 
         public int ClassSessionId { get; set; }
 
-        public string ClassName { get; set; }
-            = string.Empty;
+        public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
 
         public string SubjectName { get; set; }
             = string.Empty;

@@ -11,5 +11,10 @@ public static class ChatbotPrivacyPolicy
         return Regex.IsMatch(value, @"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\bsk-[A-Za-z0-9_-]+|(?:\d[\s()+-]*){7,}|(?:password|pwd|secret|token|api[ _-]?key)\s*[:=]|(?:server|data source|initial catalog)\s*=", RegexOptions.IgnoreCase)
             || new[] { "other student", "another student", "other parent", "another family", "all students", "student list", "system prompt", "connection string", "smtp password", "api key", "private note", "security log", "其他学生", "别人的", "所有学生", "身份证", "银行卡", "信用卡", "密钥", "系统提示", "安全日志", "内部备注" }.Any(x => value.Contains(x, StringComparison.OrdinalIgnoreCase));
     }
+    // AI output must never solicit credentials, even when no literal secret is
+    // present yet. Public reset instructions can still use the approved local FAQ.
+    public static bool IsUnsafeAnswer(string text) => IsSensitive(text) || Regex.IsMatch(text,
+        @"\b(?:give|send|provide|share|enter|submit|tell)\b.{0,80}\b(?:password|passcode|otp|verification code|card number|cvv)\b|(?:提供|输入|发送|告诉).{0,30}(?:密码|验证码|银行卡号)",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline);
     public static string ForHistory(string question) => IsSensitive(question) ? "[Confidential question omitted. Please use secure account pages or Messages.]" : question;
 }

@@ -375,11 +375,17 @@
                             </td>
 
                             <td class="class-name-column">
-                                <strong>
-                                    @(session.ClassName
-                                                                ?? "Unnamed Class")
-                                                                               </strong>
-                                                                           </td>
+                                @{
+                                    var fullName = session.ClassName ?? "Unnamed Class";
+                                    var scheduleSuffix = $" - {session.DayOfWeek} - {session.StartTime.ToString("hh:mm tt", System.Globalization.CultureInfo.InvariantCulture)}";
+                                    var title = fullName.EndsWith(scheduleSuffix, StringComparison.OrdinalIgnoreCase)
+                                        ? fullName[..^scheduleSuffix.Length] : fullName;
+                                }
+                                <strong class="class-name-full">
+                                    <span>@title</span>
+                                    <span>@scheduleSuffix[3..]</span>
+                                </strong>
+                            </td>
 
                             <td>
                                 <strong>
@@ -465,7 +471,11 @@
                                         Cancelled
                                     </span>
                                 }
-                                else
+                                else if (session.Status == ClassSessionStatus.Closed)
+        {
+            <span class="status-pill status-danger">Closed</span>
+        }
+        else
                                 {
                                     <span class="status-pill status-warning">
                                         Completed
@@ -485,6 +495,8 @@
                                         Details
                                     </a>
 
+                                    @if (session.Status != ClassSessionStatus.Closed)
+                                    {
                                     <div class="dropdown class-action-dropdown">
 
                                         <button type="button"
@@ -499,6 +511,8 @@
 
                                         <ul class="dropdown-menu dropdown-menu-end class-action-menu">
 
+                                            @if (session.Status != ClassSessionStatus.Closed)
+                                            {
                                             <li>
                                                 <a asp-controller="ClassSessions"
                                                    asp-action="Edit"
@@ -509,6 +523,8 @@
                                                     Edit Class
                                                 </a>
                                             </li>
+
+                                            }
 
                                             @if (
                                                                                 session.Status ==
@@ -538,8 +554,9 @@
                                                 <li>
                                                     <a asp-controller="ClassSchedules" asp-action="Index" asp-route-classSessionId="@session.ClassSessionId" class="dropdown-item action-cancel"><i class="bi bi-calendar-x"></i> Cancel a dated lesson</a>
                                                 </li>
+                                                <li><a asp-action="Close" asp-route-id="@session.ClassSessionId" class="dropdown-item action-cancel"><i class="bi bi-archive"></i> Close Class</a></li>
                                             }
-                                            else
+                                            else if (session.Status != ClassSessionStatus.Closed)
                                             {
                                                 <li>
                                                     <hr class="dropdown-divider" />
@@ -566,6 +583,7 @@
                                         </ul>
                                     </div>
 
+                                    }
                                 </div>
                             </td>
                         </tr>

@@ -521,7 +521,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     }
 
                     int occupiedSeats =
-                        await new EnrollmentRulesService(_context).OccupiedSeatsAsync(classSession.ClassSessionId, application.EnrollmentApplicationId);
+                        await new EnrollmentRulesService(_context).OccupiedSeatsAsync(classSession.ClassSessionId, application.EnrollmentApplicationId, startDate: application.RequestedStartDate);
 
                     if (occupiedSeats >=
                         classSession.Capacity)

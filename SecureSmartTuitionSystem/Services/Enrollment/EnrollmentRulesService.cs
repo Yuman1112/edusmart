@@ -5,33 +5,22 @@ using SecureSmartTuitionSystem.Models.Enrollment;
 namespace SecureSmartTuitionSystem.Services.Enrollment;
 public sealed class EnrollmentRulesService(ApplicationDbContext db)
 {
-    // A subject may be enrolled again in a new academic year, not duplicated within one year.
-    public async Task<HashSet<int>> UnavailableSubjectsAsync(int studentId, int year, int? excludeApplicationId = null, CancellationToken ct = default)
+    public async Task<HashSet<int>> UnavailableSubjectsAsync(int studentId, DateTime start, int? excludeApplicationId = null, CancellationToken ct = default, DateTime? end = null)
     {
-        var enrolled = await db.StudentEnrollments.AsNoTracking()
-            .Where(e => e.StudentProfileId == studentId && e.StartDate.Year == year &&
-                (!excludeApplicationId.HasValue || e.EnrollmentApplicationId != excludeApplicationId.Value))
-            .Select(e => e.ClassSession.SubjectId).ToListAsync(ct);
-        var pending = await db.Set<EnrollmentApplicationSubject>().AsNoTracking()
-            .Where(x => x.EnrollmentApplication.ExistingStudentProfileId == studentId &&
-                x.EnrollmentApplication.RequestedStartDate.Year == year &&
-                (!excludeApplicationId.HasValue || x.EnrollmentApplicationId != excludeApplicationId.Value) &&
-                (x.EnrollmentApplication.Status == EnrollmentStatus.PendingReview ||
-                 x.EnrollmentApplication.Status == EnrollmentStatus.ApprovedPendingPayment ||
-                 x.EnrollmentApplication.Status == EnrollmentStatus.PaymentConfirmed))
-            .Select(x => x.ClassSession.SubjectId).ToListAsync(ct);
-        return enrolled.Concat(pending).ToHashSet();
+        var snapshot = await EnrollmentAvailability.LoadAsync(db, [], studentId, excludeApplicationId, ct);
+        var subjects = await db.StudentEnrollments.Where(x=>x.StudentProfileId==studentId).Select(x=>x.ClassSession.SubjectId)
+            .Union(db.Set<EnrollmentApplicationSubject>().Where(x=>x.EnrollmentApplication.ExistingStudentProfileId==studentId).Select(x=>x.ClassSession.SubjectId)).Distinct().ToListAsync(ct);
+        return subjects.Where(subject=>snapshot.SubjectBlocked(studentId,subject,start,end??AcademicYearPolicy.EndOfYear(start))).ToHashSet();
     }
-    public async Task<int> OccupiedSeatsAsync(int classId, int? excludeApplicationId = null, CancellationToken ct = default)
+    // Default is the maximum booked occupancy from today onward, also used when
+    // an Admin reduces capacity. Enrollment callers pass the requested start.
+    public async Task<int> OccupiedSeatsAsync(int classId, int? excludeApplicationId = null, CancellationToken ct = default, DateTime? startDate = null)
     {
-        var today = ClassScheduleService.Today;
-        int enrolled = await db.StudentEnrollments.CountAsync(e => e.ClassSessionId == classId &&
-            (e.Status == StudentEnrollmentStatus.Active || e.Status == StudentEnrollmentStatus.PendingDrop) &&
-            e.StartDate.Year >= today.Year && (!e.DropEffectiveDate.HasValue || e.DropEffectiveDate > today) && (!e.EndedAt.HasValue || e.EndedAt > today), ct);
-        int reserved = await db.Set<EnrollmentApplicationSubject>().CountAsync(x => x.ClassSessionId == classId &&
-            (!excludeApplicationId.HasValue || x.EnrollmentApplicationId != excludeApplicationId.Value) &&
-            (x.EnrollmentApplication.Status == EnrollmentStatus.ApprovedPendingPayment || x.EnrollmentApplication.Status == EnrollmentStatus.PaymentConfirmed), ct);
-        return enrolled + reserved;
+        var c=await db.ClassSessions.AsNoTracking().SingleAsync(x=>x.ClassSessionId==classId,ct);
+        var from=(startDate??ClassScheduleService.Today).Date;
+        if(ClassScheduleService.FirstDate(c)>from)from=ClassScheduleService.FirstDate(c);
+        var snapshot=await EnrollmentAvailability.LoadAsync(db,[classId],null,excludeApplicationId,ct);
+        return snapshot.PeakSeats(classId,from,AcademicYearPolicy.ClassEnd(c));
     }
     public async Task<string?> ValidateAsync(List<int> ids, DateTime start, int? studentId = null, int? applicationId = null, CancellationToken ct = default, int? durationMonths = null)
     {
@@ -39,17 +28,23 @@ public sealed class EnrollmentRulesService(ApplicationDbContext db)
         if (classes.Count != ids.Distinct().Count() || classes.Count == 0) return "Select valid classes.";
         if (studentId.HasValue)
         {
-            var unavailable = await UnavailableSubjectsAsync(studentId.Value, start.Year, applicationId, ct);
-            if (classes.Any(c => unavailable.Contains(c.SubjectId)))
-                return "This subject has already been enrolled or has a pending application for the selected academic year.";
+            var snapshot=await EnrollmentAvailability.LoadAsync(db,ids,studentId,applicationId,ct);
+            if(classes.Any(c=>snapshot.SubjectBlocked(studentId.Value,c.SubjectId,start,AcademicYearPolicy.ClassEnd(c))))
+                return "This subject overlaps an existing enrollment or pending application. Choose a start date after it ends.";
         }
         if (classes.GroupBy(c => c.SubjectId).Any(g => g.Count() > 1)) return "Select only one class for each subject.";
         if (durationMonths.HasValue) { var planError = AcademicYearPolicy.Validate(start, durationMonths.Value, classes); if (planError != null) return planError; }
+        var cancelled = await db.ClassLessonChanges.AsNoTracking().Where(x => ids.Contains(x.ClassSessionId))
+            .Select(x => new { x.ClassSessionId, x.OriginalDate }).ToListAsync(ct);
         foreach (var c in classes)
         {
+            if (LateMonthEnrollmentPolicy.RemainingDates(start, c.DayOfWeek, ClassScheduleService.FirstDate(c),
+                AcademicYearPolicy.ClassEnd(c), c.StartTime, ClassScheduleService.Now,
+                cancelled.Where(x => x.ClassSessionId == c.ClassSessionId).Select(x => x.OriginalDate)).Count == 0)
+                return $"Class {c.ClassName} has no remaining regular lessons in the requested start month. Choose another start month.";
             if (!c.Subject.IsActive) return $"Subject {c.Subject.SubjectName} is no longer available for enrollment.";
             if (!ClassScheduleService.ValidOn(c, start)) return $"Class {c.ClassName} is unavailable on the selected enrollment start date.";
-            if (await OccupiedSeatsAsync(c.ClassSessionId, applicationId, ct) >= c.Capacity) return $"Class {c.ClassName} has reached its maximum capacity, including approved applications awaiting payment.";
+            if (await OccupiedSeatsAsync(c.ClassSessionId, applicationId, ct, start) >= c.Capacity) return $"Class {c.ClassName} has reached its maximum capacity, including approved applications awaiting payment.";
         }
         var other = studentId.HasValue ? await db.StudentEnrollments.AsNoTracking().Include(x => x.ClassSession)
             .Where(x => x.StudentProfileId == studentId && x.StartDate.Year == start.Year && (x.Status == StudentEnrollmentStatus.Active || x.Status == StudentEnrollmentStatus.PendingDrop) &&
@@ -57,8 +52,8 @@ public sealed class EnrollmentRulesService(ApplicationDbContext db)
         other = other.Where(e => AcademicYearPolicy.ClassEnd(e.ClassSession) >= start.Date).ToList();
         foreach (var c in classes)
         {
-            if (other.Any(e => e.ClassSession.SubjectId == c.SubjectId)) return "The student is already enrolled in this subject. Withdraw the existing subject before starting another class for it.";
-            if (other.Any(e => e.ClassSessionId == c.ClassSessionId)) return $"The student is already enrolled in {c.ClassName}.";
+            // Subject duplication was checked against the actual enrollment
+            // intervals above. A later, non-overlapping period is not a duplicate.
             foreach (var o in other.Where(e => e.ClassSession.Status == ClassSessionStatus.Active))
             {
                 DateTime otherStart = o.StartDate > ClassScheduleService.FirstDate(o.ClassSession) ? o.StartDate : ClassScheduleService.FirstDate(o.ClassSession);

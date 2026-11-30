@@ -46,7 +46,7 @@ public static class IncomeReportExport
             Row(1, ["Month (MYT)", "Gross received (MYR)", "Tracked refunds (MYR)", "Net tracked (MYR)", "Payments"]);
             int row = 2;
             foreach (var item in report.Months)
-                Row(row++, [item.Month.ToString("yyyy-MM", Culture), Amount(item.Gross), Amount(item.Refunds), Amount(item.Net), item.PaymentCount.ToString(Culture)], true);
+                Row(row++, [item.Month.ToString("MM-yyyy", Culture), Amount(item.Gross), Amount(item.Refunds), Amount(item.Net), item.PaymentCount.ToString(Culture)], true);
             Row(row, ["Total", Amount(report.Gross), Amount(report.Refunds), Amount(report.Net), report.Months.Sum(x => x.PaymentCount).ToString(Culture)], true);
             Row(row + 2, ["Gross includes successful MYR payments. Net deducts completed refunds recorded in the system. Other refunds and fees are not included."]);
             Row(row + 3, ["Current month figures are month-to-date (Malaysia time)."]);
@@ -60,10 +60,10 @@ public static class IncomeReportExport
         // Fixed ASCII content only. Build a one-page PDF with precise xref byte offsets.
         var content = new StringBuilder("BT /F1 16 Tf 42 800 Td (EduSmart - Income Report) Tj /F1 9 Tf 0 -24 Td ");
         void Line(string value) { content.Append('(').Append(value.Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)")).Append(") Tj 0 -19 Td "); }
-        Line($"{report.Months.Count} month(s) ending {report.EndMonth:yyyy-MM} | MYT | Currency: MYR");
+        Line($"{report.Months.Count} month(s) ending {report.EndMonth.ToString("MM-yyyy", Culture)} | MYT | Currency: MYR");
         Line("Month       Gross received   Tracked refunds      Net tracked     Payments");
         foreach (var item in report.Months)
-            Line($"{item.Month:yyyy-MM} {Amount(item.Gross),15} {Amount(item.Refunds),17} {Amount(item.Net),16} {item.PaymentCount,12}");
+            Line($"{item.Month.ToString("MM-yyyy", Culture)} {Amount(item.Gross),15} {Amount(item.Refunds),17} {Amount(item.Net),16} {item.PaymentCount,12}");
         Line($"Total   {Amount(report.Gross),15} {Amount(report.Refunds),17} {Amount(report.Net),16} {report.Months.Sum(x => x.PaymentCount),12}");
         Line("Current month figures are month-to-date (Malaysia time).");
         Line("Gross includes successful MYR payments.");

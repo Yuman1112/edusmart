@@ -319,7 +319,7 @@
                 ];
 
             return selectedOption
-                ? selectedOption.text.trim()
+                ? selectedOption.text.trim().replace(/\s*·\s*TU[0-9]+\b/gi, "").trim()
                 : "";
         }
 

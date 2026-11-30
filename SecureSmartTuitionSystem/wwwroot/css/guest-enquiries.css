@@ -1,0 +1,19 @@
+.guest-enquiry-counts { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:24px; }
+.guest-count-card { background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:6px; }
+.guest-count-card span { color:var(--muted);font-size:.9rem; }
+.guest-count-card strong { color:var(--navy);font-size:1.7rem;font-weight:800; }
+.guest-enquiry-table { border:1px solid var(--border);border-radius:16px;background:var(--white);overflow:hidden;box-shadow:var(--shadow); }
+.guest-enquiry-table .table { margin:0; }
+.guest-email,.guest-message { overflow-wrap:anywhere; }
+.guest-message { white-space:pre-wrap; }
+.guest-status { display:inline-block;border-radius:999px;padding:5px 10px;font-size:.8rem;font-weight:700;white-space:nowrap; }
+.guest-status.unread { color:#175596;background:#e7f1ff; }
+.guest-status.awaiting { color:#805800;background:var(--warning-soft); }
+.guest-status.resolved { color:#00764f;background:var(--success-soft); }
+.guest-enquiry-pages,.guest-reply-actions { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px; }
+.guest-reply-actions { padding:16px 0 0; }
+.guest-reply-composer { margin-top:20px; }
+.guest-reply-composer summary { list-style:none;cursor:pointer; }
+@media(max-width:700px) { .guest-enquiry-counts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+.guest-correspondence + .guest-correspondence { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color, #d5e7ea); }

@@ -35,7 +35,7 @@ public sealed class ClassSchedulesController(ApplicationDbContext db, ClassSched
     {
         var c = await Allowed.AsNoTracking().FirstOrDefaultAsync(x => x.ClassSessionId == classSessionId);
         if (c == null) return NotFound();
-        if (!ClassScheduleService.ValidOn(c, date) || date.DayOfWeek != c.DayOfWeek || date.Date.Add(c.EndTime.ToTimeSpan()) <= ClassScheduleService.Now) return BadRequest();
+        if (!LateMonthEnrollmentPolicy.IsRegularTeachingDate(date) || !ClassScheduleService.ValidOn(c, date) || date.DayOfWeek != c.DayOfWeek || date.Date.Add(c.EndTime.ToTimeSpan()) <= ClassScheduleService.Now) return BadRequest();
         ViewBag.ClassName = c.ClassName ?? "Class";
         return View(new CancelLessonModel { ClassSessionId = classSessionId, Date = date.Date });
     }
@@ -50,7 +50,7 @@ public sealed class ClassSchedulesController(ApplicationDbContext db, ClassSched
         model.Reason = model.Reason?.Trim() ?? "";
         if (string.IsNullOrWhiteSpace(model.Reason))
             ModelState.AddModelError(nameof(model.Reason), "Please enter a cancellation reason.");
-        if (!ClassScheduleService.ValidOn(c, model.Date) || model.Date.DayOfWeek != c.DayOfWeek || model.Date.Add(c.EndTime.ToTimeSpan()) <= ClassScheduleService.Now)
+        if (!LateMonthEnrollmentPolicy.IsRegularTeachingDate(model.Date) || !ClassScheduleService.ValidOn(c, model.Date) || model.Date.DayOfWeek != c.DayOfWeek || model.Date.Add(c.EndTime.ToTimeSpan()) <= ClassScheduleService.Now)
             ModelState.AddModelError("", "Only a scheduled lesson that has not finished can be cancelled.");
         if (await db.ClassLessonChanges.AnyAsync(x => x.ClassSessionId == c.ClassSessionId && x.OriginalDate == model.Date))
             ModelState.AddModelError("", "This lesson has already been cancelled. Use Pending Replacements.");
@@ -82,6 +82,7 @@ public sealed class ClassSchedulesController(ApplicationDbContext db, ClassSched
     {
         var c = await LoadChange(id);
         if (c == null) return NotFound();
+        if (c.ClassSession.Status == ClassSessionStatus.Closed) return BadRequest();
         if (c.ReplacementDate.HasValue && c.ReplacementDate.Value.Add(c.ReplacementStartTime!.Value.ToTimeSpan()) <= ClassScheduleService.Now) return BadRequest();
         return View(new ReplacementModel { ChangeId = id, Original = c, Date = c.ReplacementDate,
             Start = c.ReplacementStartTime ?? c.OriginalStartTime, End = c.ReplacementEndTime ?? c.OriginalEndTime,
@@ -118,6 +119,7 @@ public sealed class ClassSchedulesController(ApplicationDbContext db, ClassSched
     private async Task<List<string>> ReplacementErrors(ClassLessonChange c, ReplacementModel model)
     {
         var errors = new List<string>();
+        if (c.ClassSession.Status == ClassSessionStatus.Closed) { errors.Add("A closed class is read-only."); return errors; }
         if (c.ReplacementDate.HasValue && c.ReplacementDate.Value.Add(c.ReplacementStartTime!.Value.ToTimeSpan()) <= ClassScheduleService.Now)
             errors.Add("A replacement that has started cannot be rescheduled.");
         if (!ClassScheduleService.MeetLink(model.Venue)) errors.Add("Use a valid HTTPS Google Meet link.");
@@ -154,6 +156,7 @@ public sealed class ClassSchedulesController(ApplicationDbContext db, ClassSched
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var c = await LoadChange(changeId);
         if (c == null) return NotFound();
+        if (c.ClassSession.Status == ClassSessionStatus.Closed) return BadRequest();
         if (!c.ReplacementDate.HasValue) return RedirectToAction(nameof(Pending));
         if (c.ReplacementDate.Value.Add(c.ReplacementStartTime!.Value.ToTimeSpan()) <= ClassScheduleService.Now) return BadRequest();
         var oldDate = c.ReplacementDate.Value;

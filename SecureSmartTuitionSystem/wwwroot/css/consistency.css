@@ -1,0 +1,175 @@
+/* EduSmart application design tokens. Loaded after shared/page styles.
+   Screen-only: exported documents and printed receipts retain document styling. */
+:root {
+    --ui-font: "Segoe UI", Arial, sans-serif;
+    --ui-text: 1rem;
+    --ui-table-text: .86rem;
+    --ui-table-secondary: .78rem;
+    --ui-table-heading: .72rem;
+    --ui-table-button: .8rem;
+    --ui-badge: .78rem;
+    --ui-table-cell-padding: 15px 14px;
+    --edusmart-page-title: var(--ui-page-title);
+    --edusmart-section-title: var(--ui-section-title);
+    --edusmart-subtitle: 1rem;
+    --ui-small: .86rem;
+    --ui-label: .9rem;
+    --ui-page-title: clamp(1.8rem, 3vw, 2.7rem);
+    --ui-section-title: 1.12rem;
+    --ui-card-radius: 16px;
+    --ui-control-radius: 9px;
+    --ui-button-radius: 10px;
+    --ui-control-height: 44px;
+    --ui-focus-ring: 0 0 0 .2rem rgba(7,152,164,.15);
+}
+@media screen {
+    body.edusmart-ui { font-family:var(--ui-font);font-size:var(--ui-text);line-height:1.6;color:var(--navy); }
+    .edusmart-ui main :is(h1,h2,h3,h4,h5,h6) {font-family:var(--ui-font) !important;color:var(--navy);line-height:1.3;}
+    .edusmart-ui main h1:not(.guest-hero h1) {font-size:var(--ui-page-title) !important;font-weight:800 !important;line-height:1.2 !important;}
+    .edusmart-ui main h2 {font-size:var(--ui-section-title) !important;font-weight:700 !important;}
+    .edusmart-ui main :is(h3,h4,h5,h6) {font-size:1rem !important;font-weight:700 !important;}
+    .edusmart-ui main :is(strong,b) {font-weight:700;}
+    .edusmart-ui :is(.modal-title,.dashboard-card-header h2,.browse-card-header h2) {font-size:var(--ui-section-title) !important;font-weight:700 !important;}
+    .edusmart-ui main :is(.page-header,.browse-page-header) h1 {margin:0 0 .45rem;}
+    .edusmart-ui main :is(.page-header,.browse-page-header) p {font-size:.95rem;line-height:1.6;color:var(--muted);margin:0;}
+
+    .edusmart-ui main label:not(:where(.class-selection-label,.btn,.outline-button,.primary-button,.attachment-button)) {font-family:inherit;font-size:var(--ui-label) !important;font-weight:600 !important;color:var(--navy);}
+    .edusmart-ui main :is(.form-check-label,label:has(input[type="checkbox"]),label:has(input[type="radio"])) {font-weight:400 !important;}
+    .edusmart-ui main :is(input,select,textarea,button) {font-family:inherit;}
+    .edusmart-ui main :is(.form-control,.form-select,input[type="text"],input[type="email"],input[type="password"],input[type="search"],input[type="date"],input[type="month"],input[type="number"],input[type="tel"],input[type="url"],input[type="datetime-local"],select) {
+        font-size:1rem !important;line-height:1.5;min-height:var(--ui-control-height);
+        border-radius:var(--ui-control-radius) !important;
+    }
+    .edusmart-ui main :is(.form-control,.form-select):not(.input-validation-error):not(.is-invalid):not(:disabled):not(:focus) {border-color:var(--border);}
+    .edusmart-ui main :is(input,select,textarea):focus-visible {outline:2px solid var(--teal);outline-offset:2px;}
+    .edusmart-ui main :is(.form-control,.form-select):focus {border-color:var(--teal);box-shadow:var(--ui-focus-ring);}
+    .edusmart-ui main :is(.form-control,.form-select):is(.input-validation-error,.is-invalid):focus {border-color:var(--red) !important;box-shadow:0 0 0 .2rem rgba(216,44,58,.12);}
+    .edusmart-ui main :is(input,select,textarea):disabled {cursor:not-allowed;opacity:1;color:var(--navy-soft);}
+    .edusmart-ui main :is(.form-text,.form-hint,.faq-hint,.tutor-section-description,.attachment-help,.student-files-hint,.assessment-upload-help) {font-size:var(--ui-small) !important;line-height:1.6;color:var(--muted);}
+    .edusmart-ui main :is(.field-validation-error,.invalid-feedback) {font-size:var(--ui-small) !important;font-weight:400;color:var(--red);line-height:1.5;margin-top:4px;}
+    .edusmart-ui main :is(.field-validation-valid,.validation-summary-valid) {display:none;}
+
+    /* Shared geometry; primary/outline/danger remain distinct semantic actions. */
+    .edusmart-ui main :is(.btn,.primary-button,.outline-button,.browse-primary-button,.browse-outline-button,.browse-disabled-button,.guest-button,.guest-cta-outline-button,.guest-cta-white-button,.learner-button,.login-button,.payment-submit-button,.payment-result-button,.payment-link-button,.receipt-print-button,.receipt-outline-button,.enrollment-action-button):not(:where(.btn-close,.password-toggle)) {
+        display:inline-flex;align-items:center;justify-content:center;gap:8px;
+        min-height:44px;padding:9px 18px;border-radius:var(--ui-button-radius) !important;
+        font-family:inherit !important;font-size:.95rem !important;font-weight:700 !important;line-height:1.4;text-decoration:none;
+        transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease;
+    }
+    .edusmart-ui main :is(.primary-button,.browse-primary-button,.guest-button-primary,.login-button,.payment-submit-button,.receipt-print-button,.send-message-button) {
+        background:var(--teal) !important;color:#fff !important;border:1px solid var(--teal) !important;box-shadow:none;
+    }
+    .edusmart-ui main :is(.outline-button,.browse-outline-button,.guest-button-outline,.receipt-outline-button) {
+        background:#fff;color:var(--teal-dark);border:1px solid var(--teal);box-shadow:none;
+    }
+    .edusmart-ui main :is(.primary-button,.browse-primary-button,.guest-button-primary,.login-button,.payment-submit-button,.receipt-print-button,.send-message-button):hover:not(:disabled):not([aria-disabled="true"]) {background:var(--teal-dark) !important;border-color:var(--teal-dark) !important;transform:none;}
+    .edusmart-ui main :is(.outline-button,.browse-outline-button,.guest-button-outline,.receipt-outline-button):hover:not(:disabled):not([aria-disabled="true"]) {background:var(--surface-tint);color:var(--teal-deep);transform:none;}
+    .edusmart-ui main :is(.btn,.primary-button,.outline-button,.browse-primary-button,.browse-outline-button,.guest-button,.login-button):focus-visible {outline:2px solid var(--teal-dark);outline-offset:3px;}
+    .edusmart-ui main :is(button,.btn,.primary-button,.outline-button):is(:disabled,[aria-disabled="true"],.disabled) {cursor:not-allowed;opacity:.55;transform:none;}
+    .edusmart-ui main :is(.btn-sm,.table-view-button,.table-details-button,.class-details-button,.billing-details-button,.announcement-small-button),
+    .edusmart-ui main table :is(.btn,.primary-button,.outline-button):not(:where(.btn-close,.password-toggle)) {min-height:32px;padding:5px 9px;font-size:.8rem !important;border-radius:7px !important;gap:5px;}
+    .edusmart-ui main :is(.class-more-button,.tutor-more-button) {width:34px;min-height:32px;padding:5px;}
+    .edusmart-ui main :is(.table-sort-button,.sort-button,.enrollment-sort-button) {min-height:0;}
+
+    .edusmart-ui main :is(.dashboard-card,.class-form-card,.class-details-card,.browse-card,.browse-class-card,.enrollment-card,.enrollment-details-card,.tutor-management-filter-card,.tutor-management-list-card,.reports-card,.login-card,.payment-card,.receipt-card) {
+        border-radius:var(--ui-card-radius) !important;border:1px solid var(--border);background-color:#fff;box-shadow:var(--shadow);
+    }
+    .edusmart-ui main .alert {font-size:.95rem;line-height:1.6;padding:14px 18px;border-radius:var(--ui-control-radius);border-width:1px;}
+    .edusmart-ui main .alert.alert-dismissible {padding-right:3.25rem;}
+    .edusmart-ui main .alert-success {background:var(--success-soft);border-color:#b9dfcc;color:#176344;}
+    .edusmart-ui main .alert-danger {background:var(--danger-soft);border-color:#efc6cb;color:#9e2635;}
+    .edusmart-ui main .alert-warning {background:var(--warning-soft);border-color:#ecd49e;color:#805500;}
+    .edusmart-ui main .alert-info {background:var(--surface-tint);border-color:var(--border);color:var(--teal-deep);}
+    .edusmart-ui main :is(.badge,.status-pill,.guest-status,.tutor-status-badge,.tutor-setup-badge,.free-fee-badge) {font-family:inherit;font-size:var(--ui-badge);font-weight:700;line-height:1.3;border-radius:999px;}
+    .edusmart-ui main .table-page-button {font-family:inherit;font-size:.78rem;font-weight:600;border-radius:7px;}
+    .edusmart-ui main .table-pagination-summary {font-size:.8rem;}
+}
+
+@media screen {
+    .edusmart-ui main .login-success {border-radius:var(--ui-control-radius);font-size:.95rem;}
+    .edusmart-ui main .login-success-title {font-weight:700;}
+    .edusmart-ui main .login-errors {font-size:var(--ui-small);line-height:1.5;color:var(--red);}
+}
+@media screen {
+    .edusmart-ui main :is(.class-form-card,.class-details-card,.reports-card,.tutor-management-filter-card,.enrollment-card,.login-card) {padding:24px;}
+    /* Low-specificity defaults: component padding (icons, search and grouped
+       controls) wins. Never replace an icon field's reserved text space. */
+    :where(.edusmart-ui main) :is(.form-control,.form-select):not(:where(textarea,[type="file"],[type="hidden"],[hidden],.visually-hidden)) {
+        min-height:var(--ui-control-height);padding-block:10px;
+        padding-inline-start:var(--ui-input-padding-start,14px);
+    }
+    :where(.edusmart-ui main) .form-control:not(:where(textarea,[type="file"],[type="hidden"],[hidden],.visually-hidden)) {padding-inline-end:var(--ui-input-padding-end,14px);}
+    :where(.edusmart-ui main) .form-select {padding-inline-end:var(--ui-input-padding-end,2.5rem);}
+    .edusmart-ui main .btn-danger {--bs-btn-bg:var(--red);--bs-btn-border-color:var(--red);}
+    .edusmart-ui main .btn-outline-danger {--bs-btn-color:var(--red);--bs-btn-border-color:var(--red);}
+}
+@media screen and (max-width:600px) {
+    .edusmart-ui main :is(.class-form-card,.class-details-card,.reports-card,.tutor-management-filter-card,.enrollment-card,.login-card) {padding:18px;}
+}
+
+/* All application data tables use the Class Sessions type, spacing and borders.
+   Screen-only rules leave exported/printed documents unchanged. */
+@media screen {
+    .edusmart-ui main table { width:100%; border-collapse:collapse; font-family:inherit !important;
+        font-size:var(--ui-table-text) !important; color:var(--navy); margin-bottom:0 !important;
+        --bs-table-bg:#fff; --bs-table-striped-bg:#fff; --bs-table-striped-color:var(--navy); }
+    .edusmart-ui main table thead th { background:var(--surface-muted) !important; color:var(--navy) !important;
+        font-family:inherit !important; font-size:var(--ui-table-heading) !important; font-weight:700 !important;
+        text-transform:uppercase; letter-spacing:.03em; line-height:1.5; }
+    .edusmart-ui main table :is(th,td) { padding:var(--ui-table-cell-padding) !important; vertical-align:middle !important;
+        border:0 !important; border-bottom:1px solid var(--border) !important; }
+    .edusmart-ui main table tbody :is(td,th) { font-family:inherit !important; font-size:var(--ui-table-text) !important; line-height:1.5 !important; }
+    .edusmart-ui main table tbody tr:last-child > :is(td,th) { border-bottom:0 !important; }
+    .edusmart-ui main table thead :is(button,a) { font-size:inherit !important; font-weight:inherit; }
+    .edusmart-ui main table .table-number-column { width:56px; }
+    .edusmart-ui main table .table-row-number { width:56px; color:var(--navy-soft); text-align:center; }
+}
+
+/* Normalise descendants, not only td: inherited sizes cannot override a
+   page-specific font-size on the actual text element. Semantic roles follow. */
+@media screen {
+    .edusmart-ui main table tbody :is(td,th) {font-weight:400;}
+    .edusmart-ui main table tbody :is(p,div,span,a,strong,b,em) {font-family:inherit !important;font-size:inherit !important;line-height:1.5 !important;}
+    .edusmart-ui main table tbody :is(strong,b,.tutor-name,.tutor-list-subject,.class-name-full,.fee-text) {font-size:var(--ui-table-text) !important;font-weight:700 !important;}
+    .edusmart-ui main table tbody :is(small,.small,.text-muted,.class-secondary-text,.tutor-user-id,.material-file-name,.tutor-list-email-hint) {font-size:var(--ui-table-secondary) !important;font-weight:400;line-height:1.5;}
+    .edusmart-ui main table tbody :is(.badge,.status-pill,.guest-status,.tutor-status-badge,.tutor-setup-badge,.free-fee-badge,.status-badge,.class-status-badge,.assessment-badge,.progress-status,.material-badge,.tutor-management-badge,.tutor-teaching-subject-badge,.billing-status,.billing-payment-status,.payment-status,.enrollment-status-pill,.announcement-status,.announcement-read-status,.lesson-status,.class-available-badge,.class-full-badge) {font-size:var(--ui-badge) !important;font-weight:700 !important;line-height:1.3 !important;display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;}
+    .edusmart-ui main table tbody :is(.btn,.primary-button,.outline-button,.table-view-button,.table-details-button,.class-details-button) {font-size:var(--ui-table-button) !important;font-weight:700 !important;line-height:1.4;}
+    .edusmart-ui main table thead th :is(a,button,.table-sort-button) {font-family:inherit !important;font-size:var(--ui-table-heading) !important;font-weight:700 !important;line-height:1.5;}
+    .edusmart-ui main table :is(.table-number-column,.number-column,.column-number,.table-row-number) {width:56px;text-align:center;}
+    .edusmart-ui main table tbody :is(.tutor-list-identity,.class-name-column) :is(strong,.tutor-name,.class-name-full) {font-size:var(--ui-table-text) !important;}
+    .edusmart-ui main :is(.table-pagination-summary,#tutorTotalCount) {font-size:.8rem !important;font-weight:400;line-height:1.5;}
+    .edusmart-ui main :is(.page-header,.browse-page-header) p,
+    .edusmart-ui main .tutor-management-subtitle {font-size:.95rem !important;font-weight:400;line-height:1.6;}
+    .edusmart-ui :is(.modal,.assessment-feedback-dialog) {font-family:var(--ui-font);font-size:var(--ui-text);line-height:1.6;}
+    .edusmart-ui :is(.modal,.assessment-feedback-dialog) :is(h1,h2,h3,.modal-title) {font-family:var(--ui-font) !important;font-size:var(--ui-section-title) !important;font-weight:700 !important;line-height:1.3;}
+}
+
+@media screen {
+    .edusmart-ui main .shared-table-card {border:1px solid var(--border) !important;border-radius:var(--ui-card-radius) !important;box-shadow:var(--shadow) !important;}
+}
+
+/* Structural exceptions belong to the shared form system, not to each page.
+   Bootstrap already owns the [hidden] display rule; do not duplicate it. */
+@media screen {
+    .edusmart-ui main :is(.form-control,.form-select) {min-width:0;max-width:100%;}
+    .edusmart-ui main .input-group > :is(.form-control,.form-select):not(:first-child) {border-start-start-radius:0 !important;border-end-start-radius:0 !important;}
+    .edusmart-ui main .input-group > :is(.form-control,.form-select):not(:last-child):not(.dropdown-toggle) {border-start-end-radius:0 !important;border-end-end-radius:0 !important;}
+    .edusmart-ui main :is(.page-header,.browse-page-header,.dashboard-card-header,.tutor-management-list-header,.billing-table-heading) {gap:12px;flex-wrap:wrap;}
+    .edusmart-ui main :is(.page-header,.browse-page-header,.dashboard-card-header,.tutor-management-list-header,.billing-table-heading) > * {min-width:0;max-width:100%;}
+    .edusmart-ui main :is(.page-header,.browse-page-header,.dashboard-card-header,.tutor-management-list-header,.billing-table-heading) :is(h1,h2) {overflow-wrap:anywhere;white-space:normal;}
+    .edusmart-ui main :is(.page-header,.browse-page-header) :is(.btn,.primary-button,.outline-button) {white-space:normal;max-width:100%;}
+    .edusmart-ui main .alert {overflow-wrap:anywhere;}
+}
+
+@media screen {
+    .edusmart-ui main .input-group-text {font-size:1rem !important;}
+    .edusmart-ui main table .dropdown-menu,
+    .edusmart-ui main table .dropdown-menu .dropdown-item {font-size:var(--ui-table-text) !important;line-height:1.5;}
+}
+
+@media screen {
+    .edusmart-ui main .message-composer :is(.attachment-button,.send-message-button) {
+        width:42px;height:42px;min-height:42px;flex:0 0 42px;padding:0;
+        border-radius:50% !important;font-size:1.1rem !important;line-height:1;
+    }
+}

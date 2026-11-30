@@ -82,7 +82,7 @@ public sealed class ChatbotContextService(ApplicationDbContext db, MonthlyBillin
                         (x.EnrollmentApplication.Status == EnrollmentStatus.ApprovedPendingPayment || x.EnrollmentApplication.Status == EnrollmentStatus.PaymentConfirmed))
             }).Where(x => x.Occupied < x.Capacity).OrderBy(x => x.AcademicLevel).ThenBy(x => x.SubjectName).Take(20).ToListAsync(ct);
             foreach (var c in classes) rows.Add(new("class-" + c.ClassSessionId, c.ClassCode,
-                $"{c.ClassCode}: {c.ClassName}; level {c.AcademicLevel}; subject {c.SubjectName}; {c.DayOfWeek} {c.StartTime:hh:mm tt}; listed monthly tuition MYR {c.MonthlyFee:F2}; seats {c.Capacity-c.Occupied}; start {(c.StartDate.HasValue ? c.StartDate.Value.ToString("dd MMM yyyy") : "check class page")}.", "/Classes"));
+                $"{c.ClassCode}: {SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(c.ClassName)}; level {c.AcademicLevel}; subject {c.SubjectName}; {c.DayOfWeek} {c.StartTime:hh:mm tt}; listed monthly tuition MYR {c.MonthlyFee:F2}; seats {c.Capacity-c.Occupied}; start {(c.StartDate.HasValue ? c.StartDate.Value.ToString("dd MMM yyyy") : "check class page")}.", "/Classes"));
             rows.Add(new("classes-scope", "Availability query scope", "This is a live preview of up to 20 available classes, optionally filtered by a YEAR or FORM number in the question. It is not a full catalogue or a seat reservation. Start-date eligibility and final fees are validated during enrollment.", "/Classes"));
         }
         return rows;

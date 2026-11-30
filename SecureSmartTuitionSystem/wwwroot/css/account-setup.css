@@ -1,0 +1,15 @@
+/* Account setup owns its password-button geometry; no unscoped inline CSS. */
+.account-setup-page .password-toggle-input {
+    padding-inline-end:52px;
+}
+.account-setup-page .password-toggle {
+    position:absolute;top:50%;right:8px;transform:translateY(-50%);
+    display:inline-flex;align-items:center;justify-content:center;
+    width:32px;min-height:32px;padding:0;border:0;background:transparent;
+    color:var(--teal-dark);line-height:1;z-index:2;
+}
+.account-setup-page .password-toggle:hover {color:var(--teal);background:transparent;}
+.account-setup-page .password-toggle:focus-visible {outline:2px solid var(--teal);outline-offset:2px;}
+.account-setup-page .password-toggle-input:is(.is-invalid,.input-validation-error,:invalid) {background-image:none !important;}
+.account-setup-page input[type="password"]::-ms-reveal,
+.account-setup-page input[type="password"]::-ms-clear {display:none;}

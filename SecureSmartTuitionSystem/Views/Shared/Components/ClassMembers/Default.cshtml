@@ -13,7 +13,6 @@
     @if (Model.CanWithdraw) {
     <td><div class="d-flex gap-2 flex-wrap"><a asp-controller="EnrollmentExits" asp-action="Index" asp-route-studentProfileId="@e.StudentProfileId">Withdrawal history</a>
     @if (User.IsInRole("Admin") && e.StudentProfile.IsActive) { <form asp-controller="Enrollment" asp-action="AddSubjects" method="post"><input type="hidden" name="studentId" value="@e.StudentProfileId" /><button type="submit" class="btn btn-sm btn-outline-primary">Add subjects</button></form> }
-    @if (User.IsInRole("Admin") && e.Status == StudentEnrollmentStatus.Active) { <a class="btn btn-sm btn-outline-danger" asp-controller="EnrollmentExits" asp-action="AdminWithdraw" asp-route-enrollmentId="@e.StudentEnrollmentId">Withdraw</a> }
     </div></td> }
     </tr>
 }

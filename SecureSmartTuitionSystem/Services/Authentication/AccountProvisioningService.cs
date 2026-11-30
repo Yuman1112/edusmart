@@ -585,13 +585,9 @@ namespace SecureSmartTuitionSystem.Services.Authentication
                     await _context.StudentEnrollments
                         .AnyAsync(
                             enrollment =>
-                                enrollment.StartDate.Year == application.RequestedStartDate.Year && enrollment.StudentProfileId ==
-                                studentProfile.StudentProfileId &&
-                                enrollment.ClassSessionId ==
-                                selected.ClassSessionId &&
-                                (enrollment.Status ==
-                                    StudentEnrollmentStatus.Active ||
-                                 (enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > ClassScheduleService.Today))),
+                                enrollment.EnrollmentApplicationId == application.EnrollmentApplicationId &&
+                                enrollment.StudentProfileId == studentProfile.StudentProfileId &&
+                                enrollment.ClassSessionId == selected.ClassSessionId,
                             cancellationToken);
 
                 if (enrollmentExists)

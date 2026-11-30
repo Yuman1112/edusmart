@@ -20,7 +20,7 @@
     <partial name="_EnrollmentSteps" model="4" />
 
     <form asp-controller="EnrollmentSubmission" asp-action="Submit"
-          method="post" id="enrollmentOptionsForm">
+          method="post" id="enrollmentOptionsForm" data-now="@SecureSmartTuitionSystem.Services.Enrollment.ClassScheduleService.Now.ToString("yyyy-MM-ddTHH:mm:ss")">
         @Html.AntiForgeryToken()
 
         @foreach (int classId in Model.SelectedClassSessionIds)
@@ -49,6 +49,10 @@
                     @foreach (var item in selectedClasses)
                     {
                         <div class="selected-class-summary-item option-class-item"
+                             data-day="@item.Day" data-name="@item.ClassName"
+                             data-term-start="@item.TermStart.ToString("yyyy-MM-dd")"
+                             data-term-end="@item.TermEnd.ToString("yyyy-MM-dd")"
+                             data-start="@item.StartTime" data-cancelled="@string.Join(",", item.CancelledDates)"
                              data-fee="@item.MonthlyFee.ToString(
                                  "0.00",
                                  CultureInfo.InvariantCulture)"
@@ -57,6 +61,7 @@
                                 <strong>@item.ClassName</strong>
                                 <span>@item.SubjectName · @item.EducationStage · @item.AcademicLevel</span>
                                 <small>@item.Day · @item.StartTime – @item.EndTime · @item.TutorName</small>
+                                <small class="remaining-lessons-summary" aria-live="polite"></small>
                             </div>
                             <strong>@(item.MonthlyFee == 0 ? "Free" : $"RM {item.MonthlyFee:F2}/month")</strong>
                         </div>
@@ -97,28 +102,38 @@
                         <i class="bi bi-info-circle" aria-hidden="true"></i>
                         <div>
                             <p id="academicPlanStatus" class="enrollment-plan-summary" role="status" aria-live="polite" data-term-end="@Model.SelectedTermEndDate?.ToString("yyyy-MM-dd")"></p>
-                            <p>Discounts apply to tuition fees only. Plans must end by 31 December or the class term end date, whichever comes first.</p>
-                            <p>Tuition includes the selected start month. A partial first month is charged at the full monthly rate.</p>
+                            <ul class="mb-0 ps-3">
+                                <li><strong>Class schedule:</strong> Four regular lessons per full month, held between the 1st and 28th.</li>
+                                <li><strong>Centre holidays:</strong> No regular lessons on the 29th–31st. Separately notified replacement lessons may take place.</li>
+                                <li><strong>Tuition:</strong> Tuition includes the selected start month. A partial first month is charged at the full monthly rate. Discounts apply to tuition fees only.</li>
+                                <li><strong>Plan end:</strong> By 31 December or the class term end date, whichever comes first.</li>
+                            </ul>
+                            <section id="noRemainingLessons" role="alert" hidden
+                                     style="margin-top:1rem;padding-top:1rem;border-top:1px solid #b9d6dc;">
+                                <div style="border-left:3px solid #dc3545;padding-left:1rem;color:#243746;">
+                                    <h3 style="font-size:1rem;color:#b02a37;margin:0 0 .5rem;"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> No regular lessons remain this month</h3>
+                                    <p>The following classes have no remaining regular lessons:</p>
+                                    <ol id="noRemainingLessonsList" style="padding-left:1.25rem;margin-bottom:.75rem;"></ol>
+                                    <p style="margin-bottom:0;"><strong>What to do:</strong> Choose another start date or go back and remove these classes. Normal classes run from the 1st to the 28th.</p>
+                                </div>
+                            </section>
                         </div>
                     </div>
                     <div class="form-group full-width" id="finalTwoWeeksSection" hidden>
                         <div class="enrollment-warning-card">
                             <div class="warning-card-heading">
                                 <i class="bi bi-exclamation-triangle"></i>
-                                <strong>Final two weeks confirmation</strong>
+                                <strong>Partial-month enrollment confirmation</strong>
                             </div>
-                            <p>The selected start date falls within the final two weeks of the month.</p>
+                            <p>The following classes have only one or two regular lessons remaining in the selected start month. Cancelled lessons are excluded; replacement lessons follow separate eligibility.</p>
+                            <ul id="remainingLessonWarnings" aria-live="polite"></ul>
                             <label class="enrollment-option-label">
                                 <input asp-for="FinalTwoWeeksConfirmed" class="form-check-input"
                                        id="finalTwoWeeksConfirmed" />
-                                <span><strong>I understand and want to continue.</strong></span>
+                                <span><strong>I have reviewed these remaining lesson dates, understand that the full monthly tuition applies, and want to continue.</strong></span>
                             </label>
                             <span asp-validation-for="FinalTwoWeeksConfirmed" class="text-danger"></span>
-                            <label class="enrollment-option-label">
-                                <input asp-for="FinalTwoWeeksFeeAcknowledged" class="form-check-input" id="finalTwoWeeksFeeAcknowledged" />
-                                <span>I understand that the full monthly tuition applies even if the first month is partial.</span>
-                            </label>
-                            <span asp-validation-for="FinalTwoWeeksFeeAcknowledged" class="text-danger"></span>
+
                         </div>
                     </div>
                     <div class="form-group full-width">
@@ -276,6 +291,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/enrollment-lessons.js" asp-append-version="true"></script>
     <partial name="_ValidationScriptsPartial" />
 
     <script nonce="@Context.Items["CspNonce"]">
@@ -329,7 +345,6 @@
                         "finalTwoWeeksConfirmed"
                     );
 
-                const finalTwoWeeksFeeAcknowledged = document.getElementById("finalTwoWeeksFeeAcknowledged");
 
                 const selectedClassItems =
                     Array.from(
@@ -419,7 +434,7 @@
                     let limit = new Date(start.getFullYear(), 11, 31);
                     if (status.dataset.termEnd) { const term = new Date(status.dataset.termEnd + "T00:00:00"); if (term < limit) limit = term; }
                     let maximum = limit < start ? 0 : (limit.getFullYear() - start.getFullYear()) * 12 + limit.getMonth() - start.getMonth() + 1;
-                    if (limit.getDate() < new Date(limit.getFullYear(), limit.getMonth() + 1, 0).getDate()) maximum--;
+                    if (limit.getDate() < 28) maximum--;
                     maximum = Math.max(0, Math.min(12, maximum));
                     const allowed = [1, 3, 6, 9, 12].filter(x => x <= maximum); if (maximum === 2) allowed.push(2);
                     Array.from(durationSelect.options).forEach(option => { const available = allowed.includes(Number(option.value)); option.disabled = !available; option.hidden = !available; });
@@ -619,51 +634,7 @@
                     updateFees();
                 }
                 function updateFinalTwoWeeks() {
-                    if (!requestedStartDate.value) {
-                        finalTwoWeeksSection.hidden =
-                            true;
-
-                        finalTwoWeeksConfirmed.required = false;
-                        finalTwoWeeksFeeAcknowledged.required = false;
-
-                        return;
-                    }
-
-                    const selectedDate =
-                        new Date(
-                            requestedStartDate.value +
-                            "T00:00:00"
-                        );
-
-                    const lastDayOfMonth =
-                        new Date(
-                            selectedDate.getFullYear(),
-                            selectedDate.getMonth() + 1,
-                            0
-                        );
-
-                    const finalTwoWeeksStart =
-                        new Date(lastDayOfMonth);
-
-                    finalTwoWeeksStart.setDate(
-                        lastDayOfMonth.getDate() -
-                        13
-                    );
-
-                    const isFinalTwoWeeks =
-                        selectedDate >=
-                        finalTwoWeeksStart;
-
-                    finalTwoWeeksSection.hidden =
-                        !isFinalTwoWeeks;
-
-                    finalTwoWeeksConfirmed.required = isFinalTwoWeeks;
-                    finalTwoWeeksFeeAcknowledged.required = isFinalTwoWeeks;
-
-                    if (!isFinalTwoWeeks) {
-                        finalTwoWeeksConfirmed.checked = false;
-                        finalTwoWeeksFeeAcknowledged.checked = false;
-                    }
+                    window.EduSmartEnrollmentLessons.update();
                 }
 
                 hardcopyCheckbox.addEventListener(

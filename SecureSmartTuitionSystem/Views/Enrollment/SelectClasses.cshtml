@@ -128,7 +128,7 @@
                     <div class="form-group">
                         <label for="academicLevelFilter"
                                class="form-label">
-                            Academic Level
+                            Class Level
                         </label>
 
                         <select id="academicLevelFilter"
@@ -150,7 +150,7 @@
                                 class="form-select"
                                 disabled>
                             <option value="">
-                                Select academic level first
+                                Select class level first
                             </option>
                         </select>
                     </div>
@@ -214,6 +214,7 @@
                             classItem.StudentCount;
 
                             <article class="selectable-class-card"
+                                     data-availability="@System.Text.Json.JsonSerializer.Serialize(classItem.AvailabilityByDate)"
                                      data-class-id="@classItem.ClassSessionId"
                                      data-term-start="@classItem.TermStart.ToString("yyyy-MM-dd")" data-term-end="@classItem.TermEnd.ToString("yyyy-MM-dd")"
                                      data-stage="@classItem.EducationStage"
@@ -235,8 +236,15 @@
                                     <span class="class-selection-content">
                                         <span class="class-card-top">
                                             <span>
+                                                @{
+                                                    var fullClassName = classItem.ClassName;
+                                                    var scheduleSuffix = $" - {classItem.Day} - {classItem.StartTime}";
+                                                    var classTitle = fullClassName.EndsWith(scheduleSuffix, StringComparison.OrdinalIgnoreCase)
+                                                        ? fullClassName[..^scheduleSuffix.Length] : fullClassName;
+                                                }
                                                 <strong class="class-card-name">
-                                                    @classItem.ClassName
+                                                    <span style="display:block;">@classTitle</span>
+                                                    <span style="display:block;">@classItem.Day - @classItem.StartTime</span>
                                                 </strong>
 
                                                 <span class="class-card-subject">
@@ -285,19 +293,7 @@
                                             <span>
                                                 <i class="bi bi-people"></i>
 
-                                                @if (remainingSeats <= 0)
-                                                {
-                                                    <span class="text-danger">
-                                                        Class full
-                                                    </span>
-                                                }
-                                                else
-                                                {
-                                                    <span>
-                                                        @remainingSeats
-                                                        seat(s) available
-                                                    </span>
-                                                }
+                                                <span class="class-seat-count">@remainingSeats seat(s) available</span>
                                             </span>
                                         </span>
                                     </span>
@@ -529,14 +525,6 @@
             const requestedStartDate =
                 document.getElementById("requestedStartDate");
 
-            const finalTwoWeeksSection =
-                document.getElementById("finalTwoWeeksSection");
-
-            const finalTwoWeeksConfirmed =
-                document.getElementById(
-                    "finalTwoWeeksConfirmed"
-                );
-
             const reviewButton =
                 document.getElementById(
                     "reviewApplicationButton"
@@ -630,14 +618,14 @@
                 setFirstOption(
                     levelSelect,
                     selectedStage
-                        ? "All Academic Levels"
+                        ? "All Class Levels"
                         : "Select education stage first",
                     !selectedStage
                 );
 
                 setFirstOption(
                     subjectSelect,
-                    "Select academic level first",
+                    "Select class level first",
                     true
                 );
 
@@ -668,7 +656,7 @@
                     subjectSelect,
                     selectedLevel
                         ? "All Subjects"
-                        : "Select academic level first",
+                        : "Select class level first",
                     !selectedLevel
                 );
 
@@ -763,9 +751,13 @@
 
                     const date = requestedStartDate?.value || "";
                     const yearMatches = Boolean(date) && date.slice(0, 4) === card.dataset.termStart.slice(0, 4) && date >= card.dataset.termStart && date <= card.dataset.termEnd;
-                    if (!yearMatches) { const checkbox = card.querySelector(".class-selection-checkbox"); if (checkbox) checkbox.checked = false; }
+                    const seats = JSON.parse(card.dataset.availability || "{}")[date] ?? -1;
+                    const available = yearMatches && seats > 0;
+                    const seatLabel = card.querySelector(".class-seat-count");
+                    if(seatLabel)seatLabel.textContent=seats>0?`${seats} seat(s) available`:seats===0?"Class full for this start date":"Unavailable for this start date";
+                    if (!available) { const checkbox = card.querySelector(".class-selection-checkbox"); if (checkbox) checkbox.checked = false; }
                     const shouldDisplay =
-                        yearMatches && stageMatches &&
+                        available && stageMatches &&
                         levelMatches &&
                         subjectMatches;
 
@@ -893,54 +885,6 @@
 
                 if (selectedClassesEmpty) {
                     selectedClassesEmpty.hidden = selectedCards.length > 0;
-                }
-            }
-
-            function updateFinalTwoWeeksWarning() {
-                if (!requestedStartDate ||
-                    !finalTwoWeeksSection ||
-                    !finalTwoWeeksConfirmed) {
-                    return;
-                }
-
-                if (!requestedStartDate.value) {
-                    finalTwoWeeksSection.hidden = true;
-                    finalTwoWeeksConfirmed.required = false;
-                    return;
-                }
-
-                const selectedDate =
-                    new Date(
-                        requestedStartDate.value +
-                        "T00:00:00"
-                    );
-
-                const lastDayOfMonth =
-                    new Date(
-                        selectedDate.getFullYear(),
-                        selectedDate.getMonth() + 1,
-                        0
-                    );
-
-                const finalTwoWeeksStart =
-                    new Date(lastDayOfMonth);
-
-                finalTwoWeeksStart.setDate(
-                    lastDayOfMonth.getDate() - 13
-                );
-
-                const isFinalTwoWeeks =
-                    selectedDate >= finalTwoWeeksStart;
-
-                finalTwoWeeksSection.hidden =
-                    !isFinalTwoWeeks;
-
-                finalTwoWeeksConfirmed.required =
-                    isFinalTwoWeeks;
-
-                if (!isFinalTwoWeeks) {
-                    finalTwoWeeksConfirmed.checked =
-                        false;
                 }
             }
 
@@ -1083,7 +1027,7 @@
                 }
             );
 
-            requestedStartDate?.addEventListener("change", () => { filterClassCards(); updateSelectionSummary(); updateFinalTwoWeeksWarning(); });
+            requestedStartDate?.addEventListener("change", () => { filterClassCards(); updateSelectionSummary(); });
 
             reviewButton?.addEventListener(
                 "click",
@@ -1122,7 +1066,7 @@
             );
 
             updateSelectionSummary();
-            updateFinalTwoWeeksWarning();
+           
             filterClassCards();
         });
     </script>

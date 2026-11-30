@@ -1,0 +1,27 @@
+@model SecureSmartTuitionSystem.ViewModels.Communication.GuestInbox
+@{ ViewData["Title"] = "Guest enquiries"; }
+@section Styles { <link rel="stylesheet" href="~/css/guest-enquiries.css" asp-append-version="true" /> }
+<div class="page-header"><div><h1>Guest enquiries</h1><p>Review visitor questions and reply directly by email.</p></div></div>
+<div class="guest-enquiry-counts">
+<div class="guest-count-card"><span>Total enquiries</span><strong>@Model.Total</strong></div>
+<div class="guest-count-card"><span>Unread</span><strong>@Model.Unread</strong></div>
+<div class="guest-count-card"><span>Awaiting reply</span><strong>@Model.AwaitingReply</strong></div>
+<div class="guest-count-card"><span>Resolved</span><strong>@Model.Resolved</strong></div>
+</div>
+<form method="get" data-live-filter class="mb-3"><label for="guestStatus" class="form-label">Status</label><select id="guestStatus" name="status" class="form-select" style="max-width:280px;"><option value="all" selected="@(Model.Status == "all")">All enquiries</option><option value="unread" selected="@(Model.Status == "unread")">Unread</option><option value="awaiting" selected="@(Model.Status == "awaiting")">Awaiting reply</option><option value="resolved" selected="@(Model.Status == "resolved")">Resolved</option></select><noscript><button>Apply</button></noscript></form>
+<section class="dashboard-card guest-enquiry-table"><div class="table-responsive"><table data-source-table="guest" data-current-page="@Model.Page" data-page-count="@Model.TotalPages" data-total-rows="@Model.FilteredTotal" data-page-param="page" class="table" data-server-paged="true"><thead><tr><th>No.</th><th data-sort-key="name">Name</th><th data-sort-key="email">Email</th><th data-sort-key="status">Status</th><th>Actions</th></tr></thead><tbody>
+@for (int i = 0; i < Model.Rows.Count; i++) { var item = Model.Rows[i]; <tr><td>@((Model.Page - 1) * 25 + i + 1)</td><td>@item.Contact.Name</td><td class="guest-email">@item.Contact.Email</td><td><span class="guest-status @(item.IsResolved ? "resolved" : item.ReadAtUtc.HasValue ? "awaiting" : "unread")">@item.Status</span></td><td><a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary btn-sm">Review</a></td></tr> }
+</tbody></table></div>
+@if (Model.Rows.Count == 0) { <p class="p-3">No enquiries match this status.</p> }
+<nav class="table-pagination" aria-label="Enquiry pages"><span class="table-pagination-summary">@(Model.FilteredTotal == 0 ? 0 : (Model.Page - 1) * 25 + 1)–@Math.Min(Model.Page * 25, Model.FilteredTotal) of @Model.FilteredTotal rows · 25 per page</span><div class="table-pagination-controls">
+@foreach (var entry in new[] { (Label: "First", Target: 1), (Label: "Previous", Target: Math.Max(1, Model.Page - 1)) }) {
+ if (Model.Page == 1) { <button class="table-page-button" type="button" disabled>@entry.Label</button> } else { <a class="table-page-button" asp-action="Index" asp-route-status="@Model.Status" asp-route-page="@entry.Target">@entry.Label</a> }
+}
+@for (var n = Math.Max(1, Model.Page - 2); n <= Math.Min(Model.TotalPages, Model.Page + 2); n++) {
+ if (n == Model.Page) { <span class="table-page-button active" aria-current="page">@n</span> } else { <a class="table-page-button" asp-action="Index" asp-route-status="@Model.Status" asp-route-page="@n">@n</a> }
+}
+@foreach (var entry in new[] { (Label: "Next", Target: Math.Min(Model.TotalPages, Model.Page + 1)), (Label: "Last", Target: Model.TotalPages) }) {
+ if (Model.Page == Model.TotalPages) { <button class="table-page-button" type="button" disabled>@entry.Label</button> } else { <a class="table-page-button" asp-action="Index" asp-route-status="@Model.Status" asp-route-page="@entry.Target">@entry.Label</a> }
+}
+</div></nav>
+</section>

@@ -189,35 +189,9 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
                         });
                 }
 
-                int lastDay =
-                    DateTime.DaysInMonth(
-                        selectedDate.Year,
-                        selectedDate.Month);
+                // Class-specific confirmation is validated against trusted database records
+                // by EnrollmentSubmissionController, never against posted AvailableClasses.
 
-                int finalTwoWeeksStartDay =
-                    lastDay - 13;
-
-                bool isFinalTwoWeeks =
-                    selectedDate.Day >=
-                    finalTwoWeeksStartDay;
-
-                if (isFinalTwoWeeks && !FinalTwoWeeksFeeAcknowledged)
-                {
-                    yield return new ValidationResult(
-                        "Please acknowledge the full monthly fee for a partial month.",
-                        new[] { nameof(FinalTwoWeeksFeeAcknowledged) });
-                }
-
-                if (isFinalTwoWeeks &&
-                    !FinalTwoWeeksConfirmed)
-                {
-                    yield return new ValidationResult(
-                        "Please confirm that you want to start during the final two weeks of the month.",
-                        new[]
-                        {
-                            nameof(FinalTwoWeeksConfirmed)
-                        });
-                }
             }
 
             int[] validDurationOptions =
@@ -311,11 +285,13 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
         public DateTime TermEnd { get; set; }
 
 
+        public List<string> CancelledDates { get; set; } = new();
+
         public string ClassCode { get; set; }
             = string.Empty;
 
-        public string ClassName { get; set; }
-            = string.Empty;
+        public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
 
         public string EducationStage { get; set; }
             = string.Empty;
@@ -342,6 +318,7 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
 
         public int Capacity { get; set; }
 
+        public Dictionary<string,int> AvailabilityByDate { get; set; } = new();
         public int StudentCount { get; set; }
 
         public int RemainingCapacity =>

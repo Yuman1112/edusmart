@@ -74,7 +74,7 @@
 
     bool billingModuleActive = currentController == "Billing" || currentController == "Payments" || currentController == "BillingCoverage" || currentController == "MonthlyBilling";
 
-    bool communicationActive = currentController == "Announcements" || currentController == "Messages" || currentController == "Faq" || (!isAdmin && currentController == "NotificationCenter");
+    bool communicationActive = currentController == "Announcements" || currentController == "Messages" || currentController == "Faq" || currentController == "GuestEnquiries" || currentController == "GuestSupport" || (!isAdmin && currentController == "NotificationCenter");
     bool pendingActive = currentController == "ClassSchedules" && (currentAction == "Pending" || currentAction == "Replacement" || currentAction == "Unschedule");
     bool calendarActive = currentController == "ClassSchedules" && !pendingActive;
 
@@ -139,10 +139,11 @@
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/learner-navigation.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/theme.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/consistency.css" asp-append-version="true" />
 
 </head>
 
-<body>
+<body class="edusmart-ui">
 
     @if (isAuthPage)
     {
@@ -557,7 +558,12 @@
                                 @await Component.InvokeAsync("MessageUnread")
                             </a>
 
-                            @if (!isAdmin)
+                            @if (isAdmin)
+                            {
+                                <a class="sidebar-submenu-link @(currentController == "GuestEnquiries" ? "active" : "")" asp-controller="GuestEnquiries" asp-action="Index"><i class="bi bi-envelope" aria-hidden="true"></i><span>Guest enquiries</span></a>
+                            }
+
+                            @if (!isAdmin && !User.IsInRole("Tutor"))
                             {
                                 <a class="sidebar-submenu-link @(currentController == "Faq" ? "active" : "")"
                                    asp-controller="Faq" asp-action="Index" aria-current="@(currentController == "Faq" ? "page" : null)">
@@ -722,9 +728,9 @@
                                 Attendance
                             </a>
 
-                            <div class="dropdown">
+                            <div class="learner-nav-group dropdown">
                                 <button type="button" class="public-nav-link dropdown-toggle @(currentController == "Billing" || currentController == "Payments" || currentController == "MonthlyBilling" ? "active" : "")" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-credit-card" aria-hidden="true"></i>Payment &amp; Billing</button>
-                                <div class="dropdown-menu">
+                                <div class="dropdown-menu learner-nav-menu">
                                     <a class="dropdown-item @(currentController == "Billing" || currentController == "Payments" ? "active" : "")" asp-controller="Billing" asp-action="Index">Bills &amp; Receipts</a>
                                     <a class="dropdown-item @(currentController == "MonthlyBilling" ? "active" : "")" asp-controller="MonthlyBilling" asp-action="Index">Monthly Tuition Bills</a>
                                 </div>
@@ -772,7 +778,7 @@
                         else
                         {
                             <a class="btn-public-register"
-                               href="/Identity/Account/Register">
+                               asp-area="" asp-controller="Enrollment" asp-action="StudentDetails">
                                 Register
                             </a>
 

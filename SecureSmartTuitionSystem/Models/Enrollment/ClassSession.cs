@@ -7,7 +7,8 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
     {
         Active,
         Cancelled,
-        Completed
+        Completed,
+        Closed
     }
 
     public class ClassSession
@@ -21,7 +22,8 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
 
         [StringLength(200)]
         [Display(Name = "Class Name")]
-        public string? ClassName { get; set; }
+        public string? ClassName { get => _className == null ? null : SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string? _className;
 
         [StringLength(
             500,
@@ -67,6 +69,14 @@ namespace SecureSmartTuitionSystem.Models.Enrollment
 
         public ClassSessionStatus Status { get; set; }
             = ClassSessionStatus.Active;
+
+        public DateTime? ClosedAtUtc { get; set; }
+
+        [StringLength(500)]
+        public string? ClosureReason { get; set; }
+
+        [StringLength(450)]
+        public string? ClosedByUserId { get; set; }
 
         public Subject Subject { get; set; } = null!;
 

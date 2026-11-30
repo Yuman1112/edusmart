@@ -255,7 +255,11 @@ else
                             Cancelled
                         </span>
                     }
-                    else
+                    else if (item.Status == ClassSessionStatus.Closed)
+        {
+            <span class="status-pill status-danger">Closed</span>
+        }
+        else
                     {
                         <span class="status-pill status-warning">
                             Completed

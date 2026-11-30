@@ -184,8 +184,8 @@
 
 /* Email and Expertise can wrap */
 
-.tutor-management-table td:nth-child(2),
-.tutor-management-table td:nth-child(3) {
+.tutor-management-table td:nth-child(3),
+.tutor-management-table td:nth-child(4) {
     overflow-wrap: anywhere;
 }
 

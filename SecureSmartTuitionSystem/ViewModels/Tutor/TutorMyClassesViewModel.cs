@@ -1,4 +1,4 @@
-﻿using SecureSmartTuitionSystem.Models.Enrollment;
+using SecureSmartTuitionSystem.Models.Enrollment;
 
 namespace SecureSmartTuitionSystem.ViewModels.Tutor
 {
@@ -55,8 +55,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Tutor
         public string ClassCode { get; set; }
             = string.Empty;
 
-        public string ClassName { get; set; }
-            = string.Empty;
+        public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
 
         public string EducationStage { get; set; }
             = string.Empty;
@@ -94,8 +94,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Tutor
         public string ClassCode { get; set; }
             = string.Empty;
 
-        public string ClassName { get; set; }
-            = string.Empty;
+        public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
 
         public string EducationStage { get; set; }
             = string.Empty;

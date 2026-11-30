@@ -56,8 +56,8 @@ public sealed class EnrollmentExitService(ApplicationDbContext db, ClassSchedule
     }
     public async Task<EnrollmentExitRequest> StopAsync(ClaimsPrincipal user, int enrollmentId, string reason, DateTime? expectedEffectiveDate = null, decimal? expectedRefund = null)
     {
-        if (!user.IsInRole("Admin") && !user.IsInRole("Parent") && !user.IsInRole("Student"))
-            throw new InvalidOperationException("Only Admin, the enrolled student, or their linked parent can submit a withdrawal.");
+        if (user.IsInRole("Admin") || (!user.IsInRole("Parent") && !user.IsInRole("Student")))
+            throw new InvalidOperationException("Only the enrolled student or their linked parent can submit a withdrawal.");
         if (string.IsNullOrWhiteSpace(reason) || reason.Length > 500) throw new InvalidOperationException("A withdrawal reason of up to 500 characters is required.");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var e = await Accessible(user).Include(x => x.ClassSession).FirstOrDefaultAsync(x => x.StudentEnrollmentId == enrollmentId)

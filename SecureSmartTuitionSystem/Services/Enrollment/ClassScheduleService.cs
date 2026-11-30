@@ -16,7 +16,9 @@ public sealed class ClassScheduleService(ApplicationDbContext db)
         if (dayA != dayB || timeA >= endTimeB || endTimeA <= timeB) return false;
         var from = startA.Date > startB.Date ? startA.Date : startB.Date;
         var to = endA.HasValue && endB.HasValue ? (endA.Value.Date < endB.Value.Date ? endA.Value.Date : endB.Value.Date) : endA?.Date ?? endB?.Date ?? new DateTime(2100, 12, 31);
-        return from.AddDays(((int)dayA - (int)from.DayOfWeek + 7) % 7) <= to;
+        for (var date = from.AddDays(((int)dayA - (int)from.DayOfWeek + 7) % 7); date <= to; date = date.AddDays(7))
+            if (LateMonthEnrollmentPolicy.IsRegularTeachingDate(date)) return true;
+        return false;
     }
     public static bool ValidOn(ClassSession c, DateTime date) => c.Status == ClassSessionStatus.Active && date.Date >= FirstDate(c) && date.Date <= AcademicYearPolicy.ClassEnd(c);
     public async Task<List<LessonItem>> GetLessonsAsync(DateTime from, DateTime to, string? tutorId = null, int? classId = null)
@@ -38,7 +40,11 @@ public sealed class ClassScheduleService(ApplicationDbContext db)
             for (var date = from.Date; date <= to.Date; date = date.AddDays(1))
             {
                 var change = changes.FirstOrDefault(x => x.ClassSessionId == c.ClassSessionId && x.OriginalDate.Date == date);
-                if (change == null && (!ValidOn(c, date) || date.DayOfWeek != c.DayOfWeek)) continue;
+                // Archiving must retain past regular lessons, without reopening enrollment eligibility.
+                var closedHistory = c.Status == ClassSessionStatus.Closed && c.ClosedAtUtc.HasValue &&
+                    date >= FirstDate(c) && date <= AcademicYearPolicy.ClassEnd(c) &&
+                    date.Add(c.EndTime.ToTimeSpan()) <= c.ClosedAtUtc.Value.AddHours(8);
+                if (change == null && ((!ValidOn(c, date) && !closedHistory) || !LateMonthEnrollmentPolicy.IsRegularTeachingDate(date) || date.DayOfWeek != c.DayOfWeek)) continue;
                 result.Add(new LessonItem { Class = c, Date = date, OriginalDate = date,
                     Start = change?.OriginalStartTime ?? c.StartTime, End = change?.OriginalEndTime ?? c.EndTime,
                     Venue = c.Venue, Cancelled = change != null, ChangeId = change?.ClassLessonChangeId, Reason = change?.CancellationReason ?? "" });

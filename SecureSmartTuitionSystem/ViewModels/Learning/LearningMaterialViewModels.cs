@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 namespace SecureSmartTuitionSystem.ViewModels.Learning;
@@ -28,7 +28,8 @@ public sealed class MaterialRow
     public string Title { get; set; } = "";
     public string? Description { get; set; }
     public string ClassCode { get; set; } = "";
-    public string ClassName { get; set; } = "";
+    public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
     public string Subject { get; set; } = "";
     public string Level { get; set; } = "";
     public string Tutor { get; set; } = "";

@@ -204,48 +204,6 @@
     }
 
 
-/* Consistent on-screen tables; document printing keeps its original layout. */
-@media screen {
-    :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) {
-        width: 100%;
-        border-collapse: collapse;
-        color: var(--navy);
-        font-family: inherit;
-        font-size: .86rem
-    }
-
-        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) thead th {
-            background: var(--surface-muted) !important;
-            color: var(--navy) !important;
-            font-size: .72rem !important;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .03em;
-            text-align: left
-        }
-
-        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) th,
-        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) td {
-            padding: 15px 14px !important;
-            border-bottom: 1px solid var(--border)
-        }
-
-        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) tbody td {
-            font-size: .86rem !important;
-            line-height: 1.5
-        }
-
-        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) thead :is(button,a) {
-            font-size: inherit;
-            color: inherit
-        }
-
-        :is(.table,.billing-table,.payment-table,.receipt-table,.availability-table) tbody tr:last-child td {
-            border-bottom: 0
-        }
-}
-
-
 /* Shared Class Sessions table appearance on screen.
    Status badges, warning rows, form controls and numeric alignment stay intact. */
 @media screen {
@@ -328,4 +286,35 @@
     .shared-table-card > .table-pagination[hidden] {
         display: none !important;
     }
+}
+
+.alert-success.alert-dismissible { position:relative; padding-right:3.25rem; }
+.alert-success .success-close { position:absolute; right:1rem; top:50%; transform:translateY(-50%);
+    border:0; background:transparent; color:inherit; font:inherit; font-size:1.5rem;
+    line-height:1; padding:.25rem; cursor:pointer; }
+.alert-success .success-close:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+/* Shared table sorting controls, including legacy per-page sort links. */
+main table .table-sort-button {
+    display:inline-flex; align-items:center; gap:5px; border:0; padding:0;
+    background:transparent; color:inherit; font:inherit; font-weight:700;
+    text-transform:inherit; letter-spacing:inherit; text-decoration:none; cursor:pointer;
+}
+main table .table-sort-arrow { color:#87a9c0; font-size:.95em; }
+main table th[aria-sort="ascending"] .table-sort-arrow { color:var(--teal); }
+main table th[aria-sort="descending"] .table-sort-arrow { color:var(--teal); }
+main table th[aria-sort="ascending"] .table-sort-arrow::after { content:' ↑'; }
+main table th[aria-sort="descending"] .table-sort-arrow::after { content:' ↓'; }
+main table .table-sort-button:focus-visible { outline:2px solid var(--teal); outline-offset:4px; border-radius:2px; }
+main table[aria-busy="true"] .table-sort-button { cursor:progress; opacity:.65; }
+.table-pagination { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.table-pagination-summary { color:var(--navy-soft); font-size:.8rem; }
+.table-pagination-controls { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:6px; }
+.table-page-button[aria-disabled="true"] { pointer-events:none; opacity:.5; }
+
+main table th:is([aria-sort="ascending"],[aria-sort="descending"]) .table-sort-arrow { font-size:0; }
+main table th:is([aria-sort="ascending"],[aria-sort="descending"]) .table-sort-arrow::after { font-size:.85rem; }
+
+/* Row headings identify data; only column headings receive header fill. */
+@media screen {
+    main .table tbody th[scope="row"] { background-color:var(--bs-table-bg, #fff); text-transform:none; letter-spacing:normal; }
 }

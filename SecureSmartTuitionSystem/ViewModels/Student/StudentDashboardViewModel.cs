@@ -1,4 +1,4 @@
-﻿namespace SecureSmartTuitionSystem.ViewModels.Student
+namespace SecureSmartTuitionSystem.ViewModels.Student
 {
     public class StudentDashboardViewModel
     {
@@ -27,8 +27,8 @@
         public string ClassCode { get; set; }
             = string.Empty;
 
-        public string ClassName { get; set; }
-            = string.Empty;
+        public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
 
         public string SubjectName { get; set; }
             = string.Empty;

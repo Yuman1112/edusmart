@@ -218,24 +218,50 @@ namespace SecureSmartTuitionSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReadAll()
+        {
+            if (User.IsInRole("Admin")) return RedirectToAction(nameof(Index));
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId)) return Challenge();
+            await MarkAccessibleReadAsync(userId, null);
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkRead(int id)
         {
             if (User.IsInRole("Admin")) return NoContent();
-            string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId)) return Challenge();
             if (!await GetAccessibleQuery().AnyAsync(x => x.AnnouncementId == id)) return NotFound();
-            if (!await _context.AnnouncementReads.AnyAsync(x => x.AnnouncementId == id && x.UserId == userId))
+            await MarkAccessibleReadAsync(userId, id);
+            return NoContent();
+        }
+
+        private async Task MarkAccessibleReadAsync(string userId, int? announcementId)
+        {
+            // Both single and bulk reads are idempotent; preserve existing read timestamps.
+            // Retry only when another request inserted a competing read record.
+            for (var attempt = 0; ; attempt++)
             {
-                _context.AnnouncementReads.Add(new AnnouncementRead {
-                    AnnouncementId = id, UserId = userId, ReadAt = DateTime.UtcNow
-                });
-                try { await _context.SaveChangesAsync(); }
-                catch (DbUpdateException)
+                var accessible = GetAccessibleQuery();
+                if (announcementId.HasValue) accessible = accessible.Where(x => x.AnnouncementId == announcementId.Value);
+                var ids = await accessible.Where(x => !x.Reads.Any(read => read.UserId == userId))
+                    .OrderBy(x => x.AnnouncementId).Select(x => x.AnnouncementId).ToListAsync();
+                if (ids.Count == 0) return;
+                var now = DateTime.UtcNow;
+                var additions = ids.Select(id => new AnnouncementRead { AnnouncementId = id, UserId = userId, ReadAt = now }).ToList();
+                _context.AnnouncementReads.AddRange(additions);
+                try { await _context.SaveChangesAsync(); return; }
+                catch (DbUpdateException) when (attempt < 2)
                 {
+                    foreach (var read in additions) _context.Entry(read).State = EntityState.Detached;
+                    // Do not swallow unrelated database failures.
                     if (!await _context.AnnouncementReads.AsNoTracking()
-                        .AnyAsync(x => x.AnnouncementId == id && x.UserId == userId)) throw;
+                        .AnyAsync(x => x.UserId == userId && ids.Contains(x.AnnouncementId))) throw;
                 }
             }
-            return NoContent();
         }
 
         [Authorize(Roles = "Admin")]

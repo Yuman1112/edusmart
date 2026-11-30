@@ -1,4 +1,4 @@
-﻿/* =====================================================
+/* =====================================================
     3. LOGIN PAGE
 ========================================================= */
 .login-page {
@@ -97,12 +97,18 @@
 
 .login-input-wrapper {
     position: relative;
+    min-width: 0;
+    --ui-input-padding-start: 52px;
+    --ui-input-padding-end: 14px;
 }
+.login-password-wrapper { --ui-input-padding-end: 52px; }
 
-.login-input-wrapper i {
+.login-input-wrapper > i {
     position: absolute;
     top: 50%;
-    left: 18px;
+    left: 16px;
+    width: 20px;
+    text-align: center;
     z-index: 2;
     color: var(--teal-dark);
     font-size: 1.1rem;
@@ -113,7 +119,8 @@
 .login-input-wrapper .form-control {
     width: 100%;
     min-height: 57px;
-    padding: 13px 17px 13px 52px;
+    padding-block: 10px;
+    padding-inline: var(--ui-input-padding-start) var(--ui-input-padding-end);
     border: 1px solid var(--border);
     border-radius: 12px;
     color: var(--navy);
@@ -140,13 +147,18 @@
 .login-input-wrapper .password-toggle {
     position: absolute;
     top: 50%;
-    right: 12px;
+    right: 8px;
+    width: 32px;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     z-index: 3;
     transform: translateY(-50%);
     border: none;
     background: transparent;
     color: var(--teal-dark);
-    padding: 6px 8px;
+    padding: 0;
     line-height: 1;
     cursor: pointer;
 }
@@ -156,8 +168,15 @@
     background: transparent;
 }
 
-.login-input-wrapper .password-toggle:focus {
+/* Pointer clicks only change the eye glyph; keep a keyboard-only focus cue. */
+.login-input-wrapper .password-toggle:focus:not(:focus-visible) {
     outline: none;
+    border: 0;
+    box-shadow: none;
+}
+.login-input-wrapper .password-toggle:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
     box-shadow: none;
 }
 
@@ -173,13 +192,11 @@
     pointer-events: none;
 }
 
-.login-input-wrapper
-input[type="password"],
-.login-input-wrapper
-input[type="text"]#loginPassword {
-    padding-right: 52px;
-}
-        
+/* Validation text/border remains visible; the decorative error icon must not
+   occupy the password reveal button's reserved slot. Applies when revealed too. */
+.login-password-wrapper .form-control:is(.is-invalid,.input-validation-error) {background-image:none;}
+.login-input-wrapper:not(.login-password-wrapper) .form-control:is(.is-invalid,.input-validation-error) {padding-inline-end:44px;}
+
 .login-field .text-danger {
     font-size: 0.85rem;
 }

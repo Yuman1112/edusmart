@@ -1,0 +1,14 @@
+@model SecureSmartTuitionSystem.Services.Billing.MonthlyRecoveryView
+@{ ViewData["Title"] = "Missing monthly bills"; }
+<div class="page-header"><div><h1>Missing monthly bills</h1><p>Review eligible unpaid tuition months omitted while the system was offline.</p></div></div>
+@if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success">@success</div> }
+@if (TempData["ErrorMessage"] is string error) { <div class="alert alert-danger">@error</div> }
+<form method="get" class="mb-3"><label for="recoveryMonth" class="form-label">Billing month</label><div class="d-flex gap-2"><input id="recoveryMonth" name="month" type="month" min="2000-01" max="@DateTime.UtcNow.AddHours(8).ToString("yyyy-MM")" value="@Model.Month.ToString("yyyy-MM")" class="form-control" style="max-width:240px" required /><button class="btn btn-outline-primary">Preview missing bills</button></div></form>
+<div class="alert alert-info">Only missing invoices with a verified paid initial bill are listed. Prepaid coverage and effective withdrawal dates are respected. Completed classes are considered for historical months; cancelled classes require separate review. These new bills receive a fresh payment period. This does not charge a card automatically.</div>
+<section class="dashboard-card"><header class="dashboard-card-header"><h2>@Model.Month.ToString("MMMM yyyy")</h2><span>@Model.Rows.Count missing bill(s)</span></header><div class="table-responsive"><table class="table"><thead><tr><th>No.</th><th>Student</th><th>Tuition items</th><th>Total</th></tr></thead><tbody>
+@for (var i=0;i<Model.Rows.Count;i++) { var row=Model.Rows[i]; <tr><td>@(i+1)</td><td>@row.Number<br />@row.Name</td><td>@foreach(var line in row.Lines) { <div>@line.Description — RM @line.Amount.ToString("F2")</div> }</td><td>RM @row.Total.ToString("F2")</td></tr> }
+@if(Model.Rows.Count==0) { <tr><td colspan="4">No eligible missing bills for this month.</td></tr> }
+</tbody></table></div></section>
+<form asp-action="Recover" method="post" class="mt-3"><input name="token" type="hidden" value="@Model.Token" />
+@if(Model.Rows.Count>0) { <label class="d-block mb-3"><input type="checkbox" name="confirmed" value="true" required /> I checked this month's missing bills, prepaid periods and any manual payment records.</label> }
+<div class="d-flex justify-content-between gap-3"><a asp-action="Index" class="btn btn-outline-secondary">Back to monthly bills</a>@if(Model.Rows.Count>0) { <button class="btn btn-primary">Create reviewed missing bills</button> }</div></form>

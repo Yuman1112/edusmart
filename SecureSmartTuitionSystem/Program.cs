@@ -51,6 +51,7 @@ builder.Services.AddSingleton<PaymentCallbackTokenService>();
 builder.Services.AddSingleton<SecurityEventService>();
 builder.Services.Configure<ChatbotSettings>(builder.Configuration.GetSection(ChatbotSettings.SectionName));
 builder.Services.AddHttpClient<SecureSmartTuitionSystem.Services.Communication.ChatbotAIService>(client => client.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddScoped<IGuestEnquiryEmailSender, GuestEnquiryEmailSender>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotKnowledgeStore>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotContextService>();
 builder.Services.AddScoped<SecureSmartTuitionSystem.Services.Communication.ChatbotAssistantService>();
@@ -202,6 +203,10 @@ builder.Services.AddRateLimiter(options =>
 
     options.RejectionStatusCode =
         StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("GuestEnquiryPolicy", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 3, Window = TimeSpan.FromMinutes(15), QueueLimit = 0, AutoReplenishment = true }));
 
     foreach (var policy in new[] { ("LoginPolicy", 5), ("PublicFormPolicy", 20), ("ChatbotPolicy", 6), ("PaymentPolicy", 10) })
     {

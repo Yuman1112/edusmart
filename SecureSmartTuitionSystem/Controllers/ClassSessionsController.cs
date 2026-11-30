@@ -28,7 +28,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 || !TeachingSubjectCatalog.IsValidStageAndLevel(request.EducationStage.Value.ToString(), request.AcademicLevel)
                 || string.IsNullOrWhiteSpace(request.SubjectName) || !request.StartDate.HasValue
                 || request.DurationMinutes < 30 || request.DurationMinutes > 240)
-                return BadRequest(new { message = "Complete the subject, level, term dates and lesson duration (30–240 minutes)." });
+                return BadRequest(new { message = "Complete the subject, level, term dates and lesson duration (30â€“240 minutes)." });
             var termError = TutorSchedulingService.ValidateTerm(request.StartDate.Value, request.EndDate, ClassScheduleService.Now);
             if (termError != null) return BadRequest(new { message = termError });
             var service = new TutorSchedulingService(_context);
@@ -424,6 +424,12 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            if (session.Status == ClassSessionStatus.Closed)
+            {
+                TempData["ErrorMessage"] = "A closed class is read-only. Create a new class session.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
             var model = new ClassSessionFormViewModel
             {
                 ClassSessionId = session.ClassSessionId,
@@ -529,6 +535,60 @@ namespace SecureSmartTuitionSystem.Controllers
             }
         }
 
+        private async Task<string?> ClosureBlockReasonAsync(ClassSession session)
+        {
+            var id = session.ClassSessionId;
+            var now = ClassScheduleService.Now;
+            var today = now.Date;
+            var time = TimeOnly.FromDateTime(now);
+            var live = await _context.StudentEnrollments.AnyAsync(x => x.ClassSessionId == id &&
+                (x.Status == StudentEnrollmentStatus.Active || x.Status == StudentEnrollmentStatus.PendingDrop));
+            var pending = await _context.EnrollmentApplications.AnyAsync(x =>
+                (x.Status == EnrollmentStatus.PendingReview || x.Status == EnrollmentStatus.ApprovedPendingPayment ||
+                 x.Status == EnrollmentStatus.PaymentConfirmed) && x.SelectedSubjects.Any(y => y.ClassSessionId == id));
+            var replacements = await _context.ClassLessonChanges.AnyAsync(x => x.ClassSessionId == id &&
+                (!x.ReplacementDate.HasValue || !x.ReplacementStartTime.HasValue || !x.ReplacementEndTime.HasValue ||
+                 x.ReplacementEndTime <= x.ReplacementStartTime || x.ReplacementDate > today ||
+                 (x.ReplacementDate == today && x.ReplacementEndTime > time)));
+            var refunds = await _context.EnrollmentExitRequests.AnyAsync(x => x.StudentEnrollment.ClassSessionId == id &&
+                (x.RefundStatus == ExitRefundStatus.PendingReview || x.RefundStatus == ExitRefundStatus.Processing ||
+                 x.RefundStatus == ExitRefundStatus.PendingProvider || x.RefundStatus == ExitRefundStatus.Failed));
+            return ClassClosurePolicy.BlockReason(session.Status, live, pending, replacements, refunds);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Close(int id)
+        {
+            var session = await _context.ClassSessions.AsNoTracking().FirstOrDefaultAsync(x => x.ClassSessionId == id);
+            if (session == null) return NotFound();
+            return View(new CloseClassViewModel { ClassSessionId = id, ClassName = session.ClassName ?? session.ClassCode,
+                BlockReason = await ClosureBlockReasonAsync(session) });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Close(int id, CloseClassViewModel model)
+        {
+            if (id != model.ClassSessionId) return BadRequest();
+            model.Reason = model.Reason?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(model.Reason) && !ModelState.ContainsKey(nameof(model.Reason)))
+                ModelState.AddModelError(nameof(model.Reason), "Reason field is required.");
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            var session = await _context.ClassSessions.FirstOrDefaultAsync(x => x.ClassSessionId == id);
+            if (session == null) return NotFound();
+            model.ClassName = session.ClassName ?? session.ClassCode;
+            model.BlockReason = await ClosureBlockReasonAsync(session);
+            if (!ModelState.IsValid || model.BlockReason != null) return View(model);
+            session.Status = ClassSessionStatus.Closed;
+            session.ClosedAtUtc = DateTime.UtcNow;
+            session.ClosedByUserId = _userManager.GetUserId(User);
+            session.ClosureReason = model.Reason;
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            TempData["SuccessMessage"] = "Class closed successfully. Its history has been retained.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id)
@@ -541,6 +601,7 @@ namespace SecureSmartTuitionSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Complete(int id)
         {
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             var session =
                 await _context.ClassSessions
                     .FirstOrDefaultAsync(item =>
@@ -551,25 +612,19 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
-            if (session.Status != ClassSessionStatus.Active)
-            {
-                TempData["ErrorMessage"] =
-                    "Only an active class can be marked as completed.";
-
-                return RedirectToAction(nameof(Index));
-            }
-
-            if (!session.EndDate.HasValue || session.EndDate.Value.Date >= ClassScheduleService.Today ||
-                await _context.ClassLessonChanges.AnyAsync(x => x.ClassSessionId == id && (x.ReplacementDate == null || x.ReplacementDate >= ClassScheduleService.Today)))
-            {
-                TempData["ErrorMessage"] = "Set a past term end date and resolve outstanding replacements before completing the class.";
-                return RedirectToAction(nameof(Index));
-            }
-            if (await _context.EnrollmentApplications.AnyAsync(x => (x.Status == EnrollmentStatus.ApprovedPendingPayment || x.Status == EnrollmentStatus.PaymentConfirmed) && x.SelectedSubjects.Any(y => y.ClassSessionId == id)))
-            { TempData["ErrorMessage"] = "Resolve approved applications awaiting payment before completing this class."; return RedirectToAction(nameof(Index)); }
+            var changes = await _context.ClassLessonChanges.AsNoTracking().Where(x => x.ClassSessionId == id)
+                .Select(x => new ClassLessonChange { OriginalDate = x.OriginalDate, ReplacementDate = x.ReplacementDate,
+                    ReplacementStartTime = x.ReplacementStartTime, ReplacementEndTime = x.ReplacementEndTime }).ToListAsync();
+            var pending = await _context.EnrollmentApplications.AsNoTracking()
+                .Where(x => (x.Status == EnrollmentStatus.ApprovedPendingPayment || x.Status == EnrollmentStatus.PaymentConfirmed) &&
+                    x.SelectedSubjects.Any(y => y.ClassSessionId == id)).Select(x => x.Status).Distinct().ToListAsync();
+            var reason = ClassCompletionPolicy.BlockReason(session, ClassScheduleService.Now, changes,
+                pending.Contains(EnrollmentStatus.ApprovedPendingPayment), pending.Contains(EnrollmentStatus.PaymentConfirmed));
+            if (reason != null) { TempData["ErrorMessage"] = reason; return RedirectToAction(nameof(Index)); }
             session.Status = ClassSessionStatus.Completed;
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             TempData["SuccessMessage"] =
                 $"Class {session.ClassName} was marked as completed.";
@@ -593,6 +648,11 @@ namespace SecureSmartTuitionSystem.Controllers
                 return NotFound();
             }
 
+            if (session.Status == ClassSessionStatus.Closed)
+            {
+                TempData["ErrorMessage"] = "A closed class cannot be reactivated. Create a new class session.";
+                return RedirectToAction(nameof(Index));
+            }
             if (session.Status == ClassSessionStatus.Active)
             {
                 TempData["ErrorMessage"] =
@@ -750,6 +810,11 @@ namespace SecureSmartTuitionSystem.Controllers
             ClassSessionFormViewModel model,
             int? existingClassSessionId)
         {
+            // Basic field errors take precedence over protected-timetable rules.
+            ValidateTime(model);
+            if (!model.StartTime.HasValue || !model.EndTime.HasValue ||
+                (ModelState.TryGetValue(nameof(model.StartTime), out var startEntry) && startEntry.Errors.Count > 0) ||
+                (ModelState.TryGetValue(nameof(model.EndTime), out var endEntry) && endEntry.Errors.Count > 0)) return;
             if (model.StartDate.HasValue)
             {
                 model.EndDate ??= AcademicYearPolicy.EndOfYear(model.StartDate.Value);
@@ -761,12 +826,17 @@ namespace SecureSmartTuitionSystem.Controllers
                 if (model.EndDate.HasValue && (model.EndDate.Value.Date < model.StartDate.Value.Date || model.EndDate.Value.Year > 2100))
                     ModelState.AddModelError(nameof(model.EndDate), "End date must be on or after start date (through 2100).");
                 if (model.EndDate.HasValue && model.DayOfWeek.HasValue &&
-                    model.StartDate.Value.Date.AddDays(((int)model.DayOfWeek.Value - (int)model.StartDate.Value.DayOfWeek + 7) % 7) > model.EndDate.Value.Date)
+                    !LateMonthEnrollmentPolicy.HasRegularLessonBetween(model.StartDate.Value, model.EndDate.Value, model.DayOfWeek.Value))
                     ModelState.AddModelError(nameof(model.EndDate), "The date range must contain at least one lesson on the selected weekday.");
             }
             if (existingClassSessionId.HasValue)
             {
                 var previous = await _context.ClassSessions.AsNoTracking().Include(x => x.Subject).FirstOrDefaultAsync(x => x.ClassSessionId == existingClassSessionId.Value);
+                if (previous?.Status == ClassSessionStatus.Closed)
+                {
+                    ModelState.AddModelError("", "A closed class is read-only. Create a new class session to offer this class again.");
+                    return;
+                }
                 bool promised = await _context.EnrollmentApplications.AnyAsync(x => (x.Status == EnrollmentStatus.ApprovedPendingPayment || x.Status == EnrollmentStatus.PaymentConfirmed) && x.SelectedSubjects.Any(y => y.ClassSessionId == existingClassSessionId.Value)) ||
                     await _context.StudentEnrollments.AnyAsync(x => x.ClassSessionId == existingClassSessionId.Value && (x.Status == StudentEnrollmentStatus.Active || x.Status == StudentEnrollmentStatus.PendingDrop));
                 if (previous != null && (ClassScheduleService.FirstDate(previous) <= ClassScheduleService.Today || promised) &&
@@ -783,8 +853,9 @@ namespace SecureSmartTuitionSystem.Controllers
                         .Where(x => (x.Status == EnrollmentStatus.ApprovedPendingPayment || x.Status == EnrollmentStatus.PaymentConfirmed || x.Status == EnrollmentStatus.Enrolled) &&
                             x.SelectedSubjects.Any(y => y.ClassSessionId == existingClassSessionId.Value))
                         .Select(x => new { x.RequestedStartDate, x.EnrollmentDurationMonths }).ToListAsync();
-                    if (commitments.Any(x => new DateTime(x.RequestedStartDate.Year, x.RequestedStartDate.Month, 1)
-                        .AddMonths(x.EnrollmentDurationMonths).AddDays(-1) > model.EndDate.Value.Date))
+                    var proposed = new ClassSession { StartDate = model.StartDate ?? previous?.StartDate,
+                        EndDate = model.EndDate, DayOfWeek = model.DayOfWeek ?? previous?.DayOfWeek ?? DayOfWeek.Monday };
+                    if (commitments.Any(x => !AcademicYearPolicy.CoversPlan(proposed, x.RequestedStartDate, x.EnrollmentDurationMonths)))
                         ModelState.AddModelError(nameof(model.EndDate), "End date cannot be earlier than an approved or paid tuition period. Use a new class session for a shorter term.");
                 }
                 if (model.EndDate.HasValue && await _context.ClassLessonChanges.AnyAsync(x => x.ClassSessionId == existingClassSessionId.Value && x.OriginalDate > model.EndDate.Value))
@@ -818,17 +889,8 @@ namespace SecureSmartTuitionSystem.Controllers
                     }
                 }
             }
-            if (existingClassSessionId.HasValue && model.EndDate.HasValue)
-            {
-                var commitments = await _context.EnrollmentApplications.AsNoTracking().Where(a =>
-                    (a.Status == EnrollmentStatus.ApprovedPendingPayment || a.Status == EnrollmentStatus.PaymentConfirmed || a.Status == EnrollmentStatus.Enrolled) &&
-                    a.SelectedSubjects.Any(x => x.ClassSessionId == existingClassSessionId.Value)).Select(a => new { a.RequestedStartDate, a.EnrollmentDurationMonths }).ToListAsync();
-                if (commitments.Any(a => new DateTime(a.RequestedStartDate.Year, a.RequestedStartDate.Month, 1).AddMonths(a.EnrollmentDurationMonths).AddDays(-1) > model.EndDate.Value.Date))
-                    ModelState.AddModelError(nameof(model.EndDate), "The proposed end date would shorten an approved or paid tuition period. Review those commitments first.");
-            }
             ValidateStageAndLevel(model);
             ValidateSubject(model);
-            ValidateTime(model);
             ValidateGoogleMeetLink(model);
 
             // Preserve existing assignments when only unrelated details change.
@@ -1034,7 +1096,7 @@ namespace SecureSmartTuitionSystem.Controllers
                 return;
             }
 
-            if (model.StartTime.Value >=
+            if (model.StartTime.Value >
                 model.EndTime.Value)
             {
                 ModelState.AddModelError(

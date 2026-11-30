@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using SecureSmartTuitionSystem.Models.Learning;
@@ -12,7 +12,7 @@ public sealed class AssessmentFilter
     [EnumDataType(typeof(AssessmentKind))] public AssessmentKind? Kind { get; set; }
     [RegularExpression(@"^(20\d{2}|2100)-(0[1-9]|1[0-2])$")] public string? Month { get; set; }
     [Required, RegularExpression("^(active|inactive|draft|all)$")] public string Status { get; set; } = "active";
-    [Required, RegularExpression("^(due_asc|due_desc|title_asc|title_desc|updated_desc|class_asc|class_desc|status_asc|status_desc|student_asc|student_desc|result_asc|result_desc)$")] public string Sort { get; set; } = "due_asc";
+    [Required, RegularExpression("^(submissions_asc|submissions_desc|feedback_asc|feedback_desc|due_asc|due_desc|title_asc|title_desc|updated_desc|class_asc|class_desc|status_asc|status_desc|student_asc|student_desc|result_asc|result_desc)$")] public string Sort { get; set; } = "due_asc";
     [Range(1, 100000)] public int Page { get; set; } = 1;
 }
 public sealed class AssessmentForm : IValidatableObject
@@ -48,7 +48,8 @@ public sealed class AssessmentRow
     public int Id { get; set; }
     public int ClassId { get; set; }
     public string Title { get; set; } = ""; public AssessmentKind Kind { get; set; }
-    public string ClassCode { get; set; } = ""; public string ClassName { get; set; } = "";
+    public string ClassCode { get; set; } = ""; public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
     public string Subject { get; set; } = ""; public string Tutor { get; set; } = "";
     public string? Instructions { get; set; }
     public decimal MaxMarks { get; set; }

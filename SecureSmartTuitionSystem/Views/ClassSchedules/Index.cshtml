@@ -6,6 +6,7 @@
     var next = Model.Mode == "month" ? Model.Anchor.AddMonths(1) : Model.Anchor.AddDays(Model.Mode == "week" ? 7 : 1);
 }
 <div class="page-header"><div><h1>Class Calendar</h1><p>Weekly classes and dated replacements · Malaysia time (MYT)</p></div></div>
+<p class="alert alert-info">Normal weekly classes run from the 1st to the 28th (four per complete month). The 29th–31st are centre holidays; notified replacement lessons may still be scheduled.</p>
 @if (TempData["SuccessMessage"] != null) { <div class="alert alert-success" role="status" data-success-timeout="5000">@TempData["SuccessMessage"]</div> }
 <section class="calendar-controls" aria-label="Calendar controls">
 <div class="calendar-control-row calendar-control-primary">

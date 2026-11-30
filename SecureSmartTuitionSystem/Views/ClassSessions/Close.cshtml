@@ -1,0 +1,26 @@
+@model SecureSmartTuitionSystem.ViewModels.Enrollment.CloseClassViewModel
+@{ ViewData["Title"] = "Close Class"; }
+@section Styles {
+    <link rel="stylesheet" href="~/css/class-sessions.css" asp-append-version="true" />
+}
+<div class="page-header"><div><h1>Close Class</h1><p>@Model.ClassName</p></div></div>
+<div class="class-form-card">
+    <p>Closing takes effect immediately. This class will no longer accept enrollment or appear as an available class. Existing records and bills remain available.</p>
+    <p>This action cannot be undone. To offer the class again, create a new class session. No withdrawal, transfer or refund is performed by this action.</p>
+    @if (Model.BlockReason != null) {
+        <div class="alert alert-warning" role="alert">@Model.BlockReason</div>
+        <a asp-action="Details" asp-route-id="@Model.ClassSessionId" class="outline-button">Back to class</a>
+    } else {
+        <form asp-action="Close" asp-route-id="@Model.ClassSessionId" method="post">
+            <input asp-for="ClassSessionId" type="hidden" />
+            <label asp-for="Reason" class="form-label">Reason</label>
+            <textarea asp-for="Reason" class="form-control" rows="4" maxlength="500"></textarea>
+            <span asp-validation-for="Reason" class="text-danger"></span>
+            <div class="class-form-actions">
+                <a asp-action="Details" asp-route-id="@Model.ClassSessionId" class="outline-button">Back to class</a>
+                <button type="submit" class="btn btn-danger" data-confirm="Close this class permanently? Records will be retained.">Close Class</button>
+            </div>
+        </form>
+    }
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

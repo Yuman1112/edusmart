@@ -826,3 +826,6 @@
     color: var(--muted);
     font-size: 0.82rem;
 }
+/* Full class names remain readable at every viewport width. */
+.class-name-column strong.class-name-full { white-space: normal; overflow: visible; text-overflow: clip; max-width: none; overflow-wrap: anywhere; }
+.class-name-full > span { display: block; }

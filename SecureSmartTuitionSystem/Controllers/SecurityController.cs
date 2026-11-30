@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Services.Tables;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -66,8 +67,19 @@ public sealed class SecurityController : Controller
         int total = await query.CountAsync();
         int pages = Math.Max(1, (int)Math.Ceiling(total / 25d));
         pageNumber = Math.Clamp(pageNumber, 1, pages);
-        var records = await query.OrderByDescending(x => x.AuditLogEntryId)
-            .Skip((pageNumber - 1) * 25).Take(25).ToListAsync();
+        List<SecureSmartTuitionSystem.Models.Security.AuditLogEntry> records;
+        var sort = HttpContext?.Request.Query["tableSort"].ToString();
+        if (sort is "activity" or "check" or "user") {
+            var entries = await query.ToListAsync();
+            var ordered = TableOrder.Local(entries, HttpContext?.Request.Query, "time", true,
+                ("time", x => x.OccurredAtUtc), ("activity", x => SecurityActivityText.Summary(x)),
+                ("check", x => _integrity.Verify(x) ? "Verified" : "Review required"), ("user", x => SecurityActivityText.UserLabel(x.ActorName)));
+            records = ordered.ThenByDescending(x => x.AuditLogEntryId).Skip((pageNumber - 1) * 25).Take(25).ToList();
+        } else {
+            records = await TableOrder.Apply(query, HttpContext?.Request.Query, "time", true,
+                ("time", x => x.OccurredAtUtc), ("severity", x => x.Severity))
+                .ThenByDescending(x => x.AuditLogEntryId).Skip((pageNumber - 1) * 25).Take(25).ToListAsync();
+        }
         var since = DateTime.UtcNow.AddDays(-1);
         return View(new SecurityIndexViewModel {
             From = from, To = to, UserId = userId, Severity = severity,

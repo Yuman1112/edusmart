@@ -7,6 +7,7 @@
     var next = calendar.Mode == "month" ? calendar.Anchor.AddMonths(1) : calendar.Anchor.AddDays(calendar.Mode == "week" ? 7 : 1);
 }
 <div class="page-header"><div><h1>My Classes</h1><p>Your lessons and replacements · Malaysia time (MYT). Class access begins on the enrollment start date.</p></div></div>
+<p class="alert alert-info">Normal weekly classes run from the 1st to the 28th (four per complete month). The 29th–31st are centre holidays; notified replacement lessons may still be scheduled.</p>
 @if (User.IsInRole("Parent") && Model.Children.Count > 0)
 {
 <form method="get" data-live-filter class="learner-calendar-child"><label for="childChoice" class="form-label">Child</label><input type="hidden" name="date" value="@calendar.Anchor.ToString("yyyy-MM-dd")" /><input type="hidden" name="mode" value="@calendar.Mode" /><select name="studentId" id="childChoice" class="form-select">@foreach (var child in Model.Children) { <option value="@child.StudentProfileId" selected="@(Model.Student?.StudentProfileId == child.StudentProfileId)">@child.FullName (@child.StudentNumber)</option> }</select><noscript><button class="btn btn-primary mt-2">View</button></noscript></form>

@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function update(url) {
         controller?.abort();
         const current = new AbortController(); controller = current;
-        results.setAttribute("aria-busy", "true"); status.textContent = "Updating filters…";
+        results.setAttribute("aria-busy", "true"); status.hidden = true; status.textContent = "";
         try {
             const response = await fetch(url, { signal: current.signal, cache: "no-store", credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } });
             if (!response.ok) throw new Error("Request failed");
@@ -15,8 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (current.signal.aborted) return;
             results.replaceChildren(...Array.from(next.childNodes));
             window.history.replaceState(null, "", url);
-            status.textContent = "Filters updated.";
-        } catch (error) { if (error.name !== "AbortError" && !current.signal.aborted) status.textContent = "Could not update results. Refresh the page to retry or sign in again."; }
+            status.hidden = true; status.textContent = "";
+            window.EduSmartTables?.enhance(results);
+        } catch (error) { if (error.name !== "AbortError" && !current.signal.aborted) { status.hidden = false; status.textContent = "Could not update results. Refresh the page to retry or sign in again."; } }
         finally { if (controller === current) results.setAttribute("aria-busy", "false"); }
     }
     function filteredUrl() {

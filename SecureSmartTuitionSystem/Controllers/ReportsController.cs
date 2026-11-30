@@ -29,8 +29,8 @@ public sealed class ReportsController(ApplicationDbContext db) : Controller
 
     private static string ReportFileName(IncomeReport report, string extension)
     {
-        var start = report.Months[0].Month.ToString("MMM yyyy", CultureInfo.InvariantCulture);
-        var end = report.EndMonth.ToString("MMM yyyy", CultureInfo.InvariantCulture);
+        var start = report.Months[0].Month.ToString("MM-yyyy", CultureInfo.InvariantCulture);
+        var end = report.EndMonth.ToString("MM-yyyy", CultureInfo.InvariantCulture);
         var period = report.Months.Count == 1 ? end : $"{start} to {end}";
         return $"EduSmart - Income - {period}.{extension}";
     }

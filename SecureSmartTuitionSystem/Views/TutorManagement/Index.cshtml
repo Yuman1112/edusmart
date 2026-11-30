@@ -1,12 +1,15 @@
-﻿@model IReadOnlyList<SecureSmartTuitionSystem.ViewModels.Tutor.TutorListItem>
+@model IReadOnlyList<SecureSmartTuitionSystem.ViewModels.Tutor.TutorListItem>
 
 @{
     ViewData["Title"] = "Tutor Management";
+    var tutorNumber = 0;
 }
 
-<link rel="stylesheet"
+@section Styles {
+    <link rel="stylesheet"
       href="~/css/tutor-management.css"
       asp-append-version="true" />
+}
 
 <div class="container-fluid py-4 tutor-management-page">
 
@@ -160,6 +163,7 @@
                 ========================================== -->
                 <thead>
                     <tr>
+                        <th scope="col" class="table-number-column">No.</th>
 
                         <!-- Tutor Name -->
                         <th scope="col"
@@ -260,6 +264,8 @@
                             data-sort-expertise="@tutor.AreaOfExpertise"
                             data-status="@(tutor.IsActive ? "active" : "inactive")"
                             data-setup="@(tutor.SetupPending ? "pending" : "completed")">
+
+                            <td class="table-row-number" data-row-number>@(++tutorNumber)</td>
 
                             <!-- Tutor Name + User ID -->
                             <td>
@@ -429,7 +435,7 @@
                     <tr id="tutorEmptyRow"
                         style="display:none;">
 
-                        <td colspan="6"
+                        <td colspan="7"
                             class="text-center text-muted py-4">
                             No tutors found.
                         </td>

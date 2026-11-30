@@ -17,11 +17,11 @@
     </select></div>
     <div class="col-12"><a asp-action="Index" class="outline-button" data-security-reset>Reset</a><noscript><button type="submit" class="primary-button">Filter</button></noscript></div>
 </form>
-<p id="securityFilterStatus" class="text-muted" role="status" aria-live="polite">Filters update automatically.</p>
+<p id="securityFilterStatus" class="text-muted" role="status" aria-live="polite" hidden></p>
 <div id="securityResults" aria-live="polite">
 <section class="dashboard-card"><header class="dashboard-card-header"><h2>Activity history</h2><span>@Model.TotalRecords record(s)</span></header>
-<div class="table-responsive"><table data-server-paged="true" class="table align-middle">
-    <thead><tr><th>No</th><th>Time</th><th>User</th><th>Activity</th><th>Severity</th><th>Record check</th><th>Action</th></tr></thead>
+<div class="table-responsive"><table data-source-table="security" data-current-page="@Model.PageNumber" data-page-count="@Model.TotalPages" data-total-rows="@Model.TotalRecords" data-page-param="pageNumber" data-server-paged="true" class="table align-middle">
+    <thead><tr><th>No</th><th data-sort-key="time">Time</th><th data-sort-key="user">User</th><th data-sort-key="activity">Activity</th><th data-sort-key="severity">Severity</th><th data-sort-key="check">Record check</th><th>Action</th></tr></thead>
     <tbody>
     @if (Model.Rows.Count == 0) { <tr><td colspan="7">No matching activity.</td></tr> }
     @{ int rowNumber = (Model.PageNumber - 1) * 25; }

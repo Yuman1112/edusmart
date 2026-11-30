@@ -7,8 +7,8 @@
     <a asp-action="Index" class="btn btn-outline-secondary">Show all plans</a>
 </form>
 <p class="text-muted">@(string.IsNullOrEmpty(Model.Month) ? "Showing all linked enrollment plans, including future start dates." : $"Showing plans that include {Model.Month}.") Payment date and tuition coverage months can be different.</p>
-<section class="dashboard-card"><header class="dashboard-card-header"><h2>Enrollment plans</h2><span>@Model.TotalRecords record(s)</span></header><div class="table-responsive"><table class="table align-middle" data-server-paged="true">
-<thead><tr><th>No</th><th>Student</th><th>Class</th><th>Application</th><th>Stated plan months</th><th>Initial bill</th><th>Enrollment</th></tr></thead><tbody>
+<section class="dashboard-card"><header class="dashboard-card-header"><h2>Enrollment plans</h2><span>@Model.TotalRecords record(s)</span></header><div class="table-responsive"><table data-source-table="coverage" data-current-page="@Model.Page" data-page-count="@Model.TotalPages" data-total-rows="@Model.TotalRecords" data-page-param="page" class="table align-middle" data-server-paged="true">
+<thead><tr><th>No</th><th data-sort-key="student">Student</th><th data-sort-key="class">Class</th><th data-sort-key="application">Application</th><th data-sort-key="plan">Stated plan months</th><th data-sort-key="bill">Initial bill</th><th data-sort-key="enrollment">Enrollment</th></tr></thead><tbody>
 @foreach (var row in Model.Rows) {
 <tr><td>@(++rowNumber)</td><td>@row.Student (@row.StudentNumber)</td><td>@row.Class</td><td>@row.ApplicationNumber</td>
 <td>@(row.StartMonth.Year == row.EndMonth.Year && row.StartMonth.Month == row.EndMonth.Month ? row.StartMonth.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) : $"{row.StartMonth.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)} to {row.EndMonth.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}")</td>

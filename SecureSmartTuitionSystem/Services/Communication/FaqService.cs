@@ -19,8 +19,11 @@ public static class FaqService
         new FaqEntry("schedule", "Where can I check class schedules?",
             "Open the classes or schedule page to view available class details. Contact the centre if you need help with a schedule change or class availability.",
             ["schedule", "timetable", "class time", "class", "课程", "时间表", "上课"]),
+        new FaqEntry("monthly-lessons", "How do monthly lessons and partial-month enrollment work?",
+            "Regular weekly classes run from the 1st to the 28th, giving four scheduled lessons per complete month. The 29th–31st are centre holidays, except separately notified replacement lessons. Each selected class is checked separately against its own weekday and term dates. If only one or two regular lessons remain in the start month, review their dates and confirm the partial-month enrollment. If a selected class has no remaining regular lesson that month, change the start date or remove that class. The existing full monthly tuition still applies to a partial first month; replacement lessons follow separate eligibility.",
+            ["monthly lessons", "four lessons", "4 lessons", "last two lessons", "final two lessons", "partial-month", "29th", "30th", "31st", "补习假期", "最后两堂"]),
         new FaqEntry("support", "How can I speak to a staff member?",
-            "Use Messages to start or continue a conversation with the centre. Staff can help with questions that are not covered here.",
+            "Guests can choose Contact staff without signing in, then leave their name, email and question. Staff can reply by email. Signed-in families can use Messages for account support. Staff can help with questions that are not covered here.",
             ["human", "staff", "contact", "support", "help", "admin", "人工", "客服", "帮助"])
     });
 

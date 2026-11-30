@@ -1,10 +1,4 @@
 /* Learners use a compact top navigation; staff retain their sidebar. */
-.learner-nav-group > button {
-    border: 0;
-    background: transparent;
-    font-family: inherit;
-}
-
 .learner-nav-menu {
     min-width: 245px;
     padding: 8px;
@@ -93,7 +87,3 @@
     }
 }
 
-.learner-nav-group > button.active {
-    background: #ddfaf8;
-    color: var(--teal-dark);
-}

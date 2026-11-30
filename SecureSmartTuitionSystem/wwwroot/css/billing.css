@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    EDUSMART - PAYMENT AND BILLING
 ========================================================= */
 
@@ -173,6 +173,8 @@
 
 .billing-search-input {
     position: relative;
+    min-width: 0;
+    --ui-input-padding-start: 44px;
 }
 
     .billing-search-input > i {
@@ -187,7 +189,7 @@
 
     .billing-search-input .form-control {
         min-height: 48px;
-        padding-left: 43px;
+        padding-inline-start: var(--ui-input-padding-start);
         border-color: var(--border);
         border-radius: 10px;
         color: var(--navy);

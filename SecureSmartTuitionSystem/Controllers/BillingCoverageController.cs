@@ -1,3 +1,4 @@
+using SecureSmartTuitionSystem.Services.Tables;
 using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,7 +41,14 @@ public sealed class BillingCoverageController(ApplicationDbContext db) : Control
         int count = await query.CountAsync(cancellationToken);
         int pages = Math.Max(1, (int)Math.Ceiling(count / 25d));
         page = Math.Clamp(page, 1, pages);
-        var enrollments = await query.OrderBy(e => e.StudentProfile.StudentNumber).ThenBy(e => e.StudentEnrollmentId)
+        var enrollments = await TableOrder.Apply(query, HttpContext?.Request.Query, "student", false,
+            ("student", e => e.StudentProfile.FullName), ("class", e => e.ClassSession.ClassName ?? e.ClassSession.ClassCode),
+            ("application", e => e.EnrollmentApplication!.ApplicationNumber), ("plan", e => e.EnrollmentApplication!.RequestedStartDate.Year * 12 + e.EnrollmentApplication.RequestedStartDate.Month),
+            ("bill", e => db.Bills.Where(b => b.EnrollmentApplicationId == e.EnrollmentApplicationId).OrderBy(b => b.BillId).Select(b => b.BillNumber).FirstOrDefault()),
+            ("enrollment", e => e.Status == SecureSmartTuitionSystem.Models.Enrollment.StudentEnrollmentStatus.Active ? "Active" :
+                e.Status == SecureSmartTuitionSystem.Models.Enrollment.StudentEnrollmentStatus.Completed ? "Completed" :
+                e.Status == SecureSmartTuitionSystem.Models.Enrollment.StudentEnrollmentStatus.Dropped ? "Dropped" : "PendingDrop"))
+            .ThenBy(e => e.EnrollmentApplication!.EnrollmentDurationMonths).ThenBy(e => e.StudentEnrollmentId)
             .Skip((page - 1) * 25).Take(25)
             .Select(e => new { e.StudentEnrollmentId, e.EnrollmentApplicationId,
                 Student = e.StudentProfile.FullName, StudentNumber = e.StudentProfile.StudentNumber,

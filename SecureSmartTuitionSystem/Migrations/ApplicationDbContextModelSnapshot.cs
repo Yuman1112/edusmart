@@ -915,6 +915,65 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.ToTable("ConversationUserPreferences");
                 });
 
+            modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.GuestEnquiry", b =>
+                {
+                    b.Property<int>("GuestEnquiryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GuestEnquiryId"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ProtectedContact")
+                        .IsRequired()
+                        .HasMaxLength(24000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProtectedConversation")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProtectedRecoveryHistory")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProtectedReply")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReplyAttemptId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ReplyClaimedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReplySentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ReplyState")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ResolvedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("SubmissionKey")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("GuestEnquiryId");
+
+                    b.HasIndex("SubmissionKey")
+                        .IsUnique();
+
+                    b.HasIndex("IsResolved", "CreatedAtUtc");
+
+                    b.ToTable("GuestEnquiries");
+                });
+
             modelBuilder.Entity("SecureSmartTuitionSystem.Models.Communication.MessageAttachment", b =>
                 {
                     b.Property<int>("MessageAttachmentId")
@@ -1110,6 +1169,17 @@ namespace SecureSmartTuitionSystem.Migrations
                     b.Property<string>("ClassName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ClosedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ClosureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1549,9 +1619,8 @@ namespace SecureSmartTuitionSystem.Migrations
 
                     b.HasIndex("EnrollmentApplicationId");
 
-                    b.HasIndex("StudentProfileId", "ClassSessionId")
-                        .IsUnique()
-                        .HasFilter("[Status] IN (0, 1)");
+                    b.HasIndex("StudentProfileId", "ClassSessionId", "StartDate")
+                        .IsUnique();
 
                     b.ToTable("StudentEnrollments");
                 });

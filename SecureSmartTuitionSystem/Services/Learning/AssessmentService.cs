@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
@@ -86,6 +86,8 @@ public sealed class AssessmentService(ApplicationDbContext db)
         "class_desc" => q.OrderByDescending(x => x.ClassSession.ClassCode).ThenByDescending(x => x.ClassSession.TutorUser.FullName).ThenBy(x => x.AssessmentId),
         "status_asc" => q.OrderBy(x => !x.IsActive ? (x.PublishedAtUtc == null ? 4 : 3) : x.PublishedAtUtc == null ? 0 : x.ResultsPublishedAtUtc == null ? 1 : 2).ThenBy(x => x.DueAtMyt).ThenBy(x => x.AssessmentId),
         "status_desc" => q.OrderByDescending(x => !x.IsActive ? (x.PublishedAtUtc == null ? 4 : 3) : x.PublishedAtUtc == null ? 0 : x.ResultsPublishedAtUtc == null ? 1 : 2).ThenBy(x => x.DueAtMyt).ThenBy(x => x.AssessmentId),
+        "submissions_asc" => q.OrderBy(x => x.Participants.Count(p => p.SubmittedAtUtc != null)).ThenBy(x => x.Participants.Count).ThenBy(x => x.AssessmentId),
+        "submissions_desc" => q.OrderByDescending(x => x.Participants.Count(p => p.SubmittedAtUtc != null)).ThenByDescending(x => x.Participants.Count).ThenBy(x => x.AssessmentId),
         "updated_desc" => q.OrderByDescending(x => x.UpdatedAtUtc).ThenByDescending(x => x.AssessmentId),
         _ => q.OrderBy(x => x.DueAtMyt).ThenBy(x => x.AssessmentId)
     };
@@ -364,6 +366,8 @@ public sealed class AssessmentService(ApplicationDbContext db)
             "result_desc" => scope.OrderBy(p => p.Assessment.ResultsPublishedAtUtc != null && p.Marks != null ? 0 : 1)
                 .ThenByDescending(p => p.Assessment.ResultsPublishedAtUtc != null && p.Marks != null ? (decimal?)(p.Marks.Value / p.Assessment.MaxMarks * 100) : null),
             "due_desc" => scope.OrderByDescending(p => p.Assessment.DueAtMyt),
+            "feedback_asc" => scope.OrderBy(p => p.Assessment.ResultsPublishedAtUtc != null ? p.Feedback : null),
+            "feedback_desc" => scope.OrderByDescending(p => p.Assessment.ResultsPublishedAtUtc != null ? p.Feedback : null),
             "updated_desc" => scope.OrderByDescending(p => p.Assessment.UpdatedAtUtc),
             _ => scope.OrderBy(p => p.Assessment.DueAtMyt)
         };

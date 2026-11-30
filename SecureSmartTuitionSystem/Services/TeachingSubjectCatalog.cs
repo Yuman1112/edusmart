@@ -38,7 +38,9 @@ public static class TeachingSubjectCatalog
     {
         "BC",
         "BMP",
+        "BMK",
         "BIP",
+        "BIK",
         "MM",
         "SCI"
     };
@@ -48,7 +50,9 @@ public static class TeachingSubjectCatalog
     {
         "BC",
         "BMP",
+        "BMK",
         "BIP",
+        "BIK",
         "MM",
         "SCI",
         "SEJ"
@@ -58,7 +62,9 @@ public static class TeachingSubjectCatalog
     private static readonly string[] FormOneToThreeSubjects =
     {
         "BC",
+        "BMP",
         "BMK",
+        "BIP",
         "BIK",
         "MM",
         "SCI",
@@ -72,7 +78,9 @@ public static class TeachingSubjectCatalog
     private static readonly string[] FormFourToFiveSubjects =
     {
         "BC",
+        "BMP",
         "BMK",
+        "BIP",
         "BIK",
         "MM",
         "AM",
@@ -208,10 +216,10 @@ public static class TeachingSubjectCatalog
         return subjectCode?.Trim().ToUpperInvariant() switch
         {
             "BC" => "Chinese",
-            "BMP" => "Bahasa Melayu (Primary)",
-            "BMK" => "Bahasa Melayu (Secondary)",
-            "BIP" => "English (Primary)",
-            "BIK" => "English (Secondary)",
+            "BMP" => "Bahasa Melayu Pemahaman",
+            "BMK" => "Bahasa Melayu Karangan",
+            "BIP" => "English Comprehension",
+            "BIK" => "English Essay",
             "MM" => "Mathematics",
             "SCI" => "Science",
             "SEJ" => "Sejarah",

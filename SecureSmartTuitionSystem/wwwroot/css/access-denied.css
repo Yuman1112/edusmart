@@ -1,0 +1,23 @@
+/* Access Denied uses the shared palette/type scale and stays in document flow. */
+.access-denied-page {
+    display:grid;place-items:center;min-height:55vh;
+    padding:clamp(24px,5vw,64px) 16px;
+}
+.access-denied-card {
+    width:100%;max-width:560px;min-width:0;
+    padding:clamp(24px,4vw,40px);
+    border:1px solid var(--border);border-radius:var(--ui-card-radius,16px);
+    background:var(--white);box-shadow:var(--shadow);text-align:center;
+}
+.access-denied-icon {
+    display:flex;align-items:center;justify-content:center;
+    width:64px;height:64px;margin:0 auto 20px;border-radius:50%;
+    background:var(--surface-tint);color:var(--teal-dark);font-size:2rem;
+}
+.access-denied-eyebrow {
+    display:block;margin-bottom:10px;color:var(--teal-dark);
+    font-size:.78rem;font-weight:700;letter-spacing:.08em;
+}
+.access-denied-card h1 {margin:0 0 16px;overflow-wrap:anywhere;}
+.access-denied-card p {margin:0 0 24px;color:var(--muted);line-height:1.6;}
+.access-denied-card .primary-button {max-width:100%;white-space:normal;}

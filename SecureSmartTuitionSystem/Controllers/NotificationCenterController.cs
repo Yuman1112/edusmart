@@ -56,13 +56,4 @@ public sealed class NotificationCenterController(ApplicationDbContext db) : Cont
         return RedirectToAction(nameof(Index), new { page, unreadOnly });
     }
 
-    [HttpPost, ValidateAntiForgeryToken] public async Task<IActionResult> MarkUnread(long id, int page = 1, bool unreadOnly = false)
-    {
-        var user = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var today = ClassScheduleService.Today;
-        var n = await db.UserNotifications.FirstOrDefaultAsync(x => x.UserNotificationId == id && x.UserId == user && (x.AvailableFromDate == null || x.AvailableFromDate <= today));
-        if (n == null) return NotFound();
-        if (n.ReadAtUtc != null) { n.ReadAtUtc = null; await db.SaveChangesAsync(); }
-        return RedirectToAction(nameof(Index), new { page, unreadOnly });
-    }
 }

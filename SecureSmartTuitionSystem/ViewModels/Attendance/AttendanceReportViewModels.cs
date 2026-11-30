@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using SecureSmartTuitionSystem.Models.Attendance;
 namespace SecureSmartTuitionSystem.ViewModels.Attendance;
 public sealed class AttendanceReportFilter
@@ -24,7 +24,8 @@ public sealed class AttendanceReportRow
     public TimeOnly Start { get; set; }
     public TimeOnly End { get; set; }
     public string ClassCode { get; set; } = "";
-    public string ClassName { get; set; } = "";
+    public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
     public string Tutor { get; set; } = "";
     public string StudentNumber { get; set; } = "";
     public string StudentName { get; set; } = "";

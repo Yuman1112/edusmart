@@ -1,0 +1,56 @@
+@model SecureSmartTuitionSystem.ViewModels.Communication.GuestEnquiryDetails
+@using SecureSmartTuitionSystem.Models.Communication
+@{ ViewData["Title"] = "Guest enquiry"; var item = Model.Enquiry; bool blocked = item.IsResolved || item.ReplyState is GuestReplyState.Sending or GuestReplyState.Unconfirmed; }
+@section Styles { <link rel="stylesheet" href="~/css/guest-enquiries.css" asp-append-version="true" /> }
+<div class="page-header"><div><h1>Guest enquiry #@item.Id</h1><p>@item.CreatedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT · @item.Status</p></div></div>
+@if (TempData["GuestReplySuccess"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["GuestReplyError"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+@if (item.ReplyState is GuestReplyState.Sending or GuestReplyState.Unconfirmed) { <div class="alert alert-warning">This email is sending or delivery is unconfirmed. Sending again is blocked to prevent duplicates. Check the mail server if this persists.</div> }
+<section class="class-details-card"><dl><dt>Name</dt><dd>@item.Contact.Name</dd><dt>Email</dt><dd>@item.Contact.Email</dd><dt>Question</dt><dd class="guest-message">@item.Contact.Message</dd></dl>
+@if (item.ReplySentAtUtc.HasValue) { <h2>Sent reply</h2><p class="text-muted">@item.ReplySentAtUtc.Value.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</p><p class="guest-message">@item.ReplyText</p> }
+@if (!blocked) {
+<details class="guest-reply-composer" open="@(!ViewData.ModelState.IsValid)"><summary class="btn btn-primary">Reply by email</summary>
+<form asp-action="Reply" method="post" class="mt-3">
+<input type="hidden" name="Id" value="@item.Id" /><input type="hidden" name="ConversationVersion" value="@(item.Conversation?.Count ?? 0)" />
+@if (ViewData.ModelState.TryGetValue(string.Empty, out var errors)) { foreach (var e in errors.Errors) { <p class="text-danger" role="alert">@e.ErrorMessage</p> } }
+<label for="staffReply" class="form-label">Your reply</label><textarea id="staffReply" name="Reply" class="form-control" rows="6" minlength="5" maxlength="4000" required>@Model.Reply.Reply</textarea><span data-valmsg-for="Reply" class="text-danger">@Html.ValidationMessage("Reply")</span>
+<p class="text-muted mt-2">This reply will be emailed to @item.Contact.Email using the centre's configured email account. Do not disclose account records without normal identity checks.</p>
+<div class="guest-reply-actions"><a asp-action="Index" class="btn btn-outline-secondary">Back to enquiries</a><button type="submit" class="btn btn-primary">Send reply</button></div>
+</form></details>
+} else { <a asp-action="Index" class="btn btn-outline-secondary">Back to enquiries</a> }
+</section>
+
+@if (!item.IsResolved && item.ReplyState is GuestReplyState.Sending or GuestReplyState.Unconfirmed) {
+<section class="class-details-card mt-3"><h2>Review delivery outcome</h2>
+<p>Check the centre mailbox or SMTP logs before continuing. Recovery is available 15 minutes after the attempt; it never sends an email automatically.</p>
+<p>Attempt: @item.ReplyAttemptId · @(item.ReplyClaimedAtUtc?.AddHours(8).ToString("dd MMM yyyy HH:mm") ?? "Legacy attempt") MYT</p>
+<p class="guest-message">@item.ReplyText</p>
+<form asp-action="Recover" method="post"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="attemptId" value="@item.ReplyAttemptId" />
+<label class="form-label" for="deliveryOutcome">Verified outcome</label><select id="deliveryOutcome" name="outcome" class="form-select mb-3" required><option value="">Choose outcome</option><option value="sent">Confirmed sent — record as resolved</option><option value="not-sent">Confirmed not sent — allow a new attempt</option></select>
+<label class="form-label" for="deliveryTime">Actual sent time (MYT; required only for confirmed sent)</label><input id="deliveryTime" type="datetime-local" name="sentAtLocal" class="form-control mb-3" />
+<label class="form-label" for="deliveryReason">Verification evidence / reason</label><textarea id="deliveryReason" name="reason" maxlength="500" required class="form-control mb-3"></textarea>
+<label class="d-block mb-3"><input type="checkbox" name="confirmed" value="true" required /> I checked the mail server and verified this outcome.</label><button class="btn btn-primary">Save verified outcome</button></form></section>
+}
+@if (!string.IsNullOrEmpty(item.RecoveryHistory)) { <section class="class-details-card mt-3"><h2>Delivery review history</h2><p class="guest-message">@item.RecoveryHistory</p></section> }
+
+<section class="class-details-card mt-3"><h2>Email follow-up</h2>
+<p class="text-muted">Incoming email replies arrive in the centre mailbox. Staff review that mailbox and record follow-ups here; incoming mail is not automatically synchronised.</p>
+@if (item.IsResolved && item.ReplyState == GuestReplyState.Sent) {
+<details><summary class="btn btn-outline-primary">Record received follow-up</summary>
+<form asp-action="Reopen" method="post" class="mt-3">
+<input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="attemptId" value="@item.ReplyAttemptId" />
+<label class="form-label" for="followUp">Customer's follow-up</label><textarea id="followUp" name="followUp" minlength="5" maxlength="2000" required rows="5" class="form-control mb-3"></textarea>
+<label class="form-label" for="receivedAtLocal">Received at (MYT)</label><input id="receivedAtLocal" name="receivedAtLocal" type="datetime-local" required class="form-control mb-3" />
+<label class="d-block mb-3"><input type="checkbox" name="confirmed" value="true" required /> I verified this follow-up came from @item.Contact.Email in the centre mailbox.</label>
+<button type="submit" class="btn btn-primary">Record and reopen enquiry</button></form></details>
+}
+</section>
+@if (item.Conversation?.Count > 0) {
+<section class="class-details-card mt-3"><h2>Previous correspondence</h2>
+@foreach (var turn in item.Conversation) {
+<article class="guest-correspondence"><h3>Previous question</h3><p class="guest-message">@turn.Question</p>
+<h3>Sent reply</h3><p class="text-muted">@turn.SentAtUtc?.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</p><p class="guest-message">@turn.Reply</p>
+<p class="text-muted">Follow-up received: @turn.ReceivedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT · Recorded by @turn.RecordedBy at @turn.RecordedAtUtc.AddHours(8).ToString("dd MMM yyyy HH:mm") MYT</p></article>
+}
+</section>
+}

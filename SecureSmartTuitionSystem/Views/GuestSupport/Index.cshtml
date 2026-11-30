@@ -1,0 +1,32 @@
+@model SecureSmartTuitionSystem.ViewModels.Communication.GuestSupportForm
+@{ ViewData["Title"] = "Contact staff"; }
+<div class="guest-support-page" style="width:100%;max-width:760px;margin-inline:auto;">
+<div class="page-header"><div>
+<h1>Contact staff</h1>
+<p>Leave your question and an email address where staff can reply.<br />Staff will reply directly to your email within 1–3 days.</p>
+</div></div>
+<div>
+@if (TempData["GuestSupportSaved"] is string saved) { <div class="alert alert-success" role="status">@saved</div> }
+<div class="card p-4">
+<form asp-action="Index" method="post" id="guestSupportForm">
+@if (ViewData.ModelState.TryGetValue(string.Empty, out var formState) && formState.Errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        @foreach (var error in formState.Errors) { <p class="mb-0">@error.ErrorMessage</p> }
+    </div>
+}
+<input asp-for="SubmissionKey" type="hidden" />
+<div style="display:none;" aria-hidden="true"><label asp-for="Website">Leave empty</label><input asp-for="Website" tabindex="-1" autocomplete="off" /></div>
+<div class="mb-3"><label asp-for="Name" class="form-label">Name</label><input asp-for="Name" class="form-control" maxlength="100" autocomplete="name" required /><span asp-validation-for="Name" class="text-danger"></span></div>
+<div class="mb-3"><label asp-for="Email" class="form-label">Email for staff replies</label><input asp-for="Email" type="email" class="form-control" maxlength="254" autocomplete="email" placeholder="you@gmail.com" required /><span asp-validation-for="Email" class="text-danger"></span></div>
+<div class="mb-3"><label asp-for="Message" class="form-label">Your question</label><textarea asp-for="Message" class="form-control" rows="5" minlength="5" maxlength="2000" required></textarea><span asp-validation-for="Message" class="text-danger"></span></div>
+<p class="text-muted">Do not include passwords, IC numbers, bank details or payment credentials. Sign in for questions about your personal bills or account records.</p>
+<label class="d-block mb-3"><input asp-for="Consent" type="checkbox" data-msg-required="This field is required." required /> I agree that centre staff may use my name, email and question to respond to this enquiry.</label>
+<span asp-validation-for="Consent" class="text-danger d-block"></span>
+<div style="display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;">
+    <a asp-controller="Faq" asp-action="Index" class="btn btn-outline-secondary" style="flex:0 1 auto;min-width:0;white-space:normal;">Back to FAQ</a>
+    <button type="submit" class="btn btn-primary" style="flex:0 1 auto;min-width:0;white-space:normal;margin-left:auto;">Send enquiry to staff</button>
+</div>
+</form></div></div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> <script src="~/js/guest-support.js" asp-append-version="true" defer></script> }

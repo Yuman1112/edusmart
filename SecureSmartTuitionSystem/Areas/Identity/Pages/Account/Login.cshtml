@@ -38,7 +38,7 @@
         @if (TempData["SuccessMessage"] is string successMessage)
         {
             const string passwordCreated = "Your password has been created successfully.";
-            <div class="login-success" role="status">
+            <div class="login-success alert alert-success" role="status">
                 <i class="bi bi-check-circle-fill login-success-icon" aria-hidden="true"></i>
                 <div class="login-success-copy">
                     @if (successMessage.StartsWith(passwordCreated, StringComparison.Ordinal))
@@ -71,7 +71,7 @@
                 </label>
 
                 <div class="login-input-wrapper">
-                    <i class="bi bi-person"></i>
+                    <i class="bi bi-person" aria-hidden="true"></i>
 
                     <input asp-for="Input.UserId"
                            class="form-control"
@@ -91,17 +91,17 @@
                     Password
                 </label>
 
-                <div class="login-input-wrapper">
-                    <i class="bi bi-lock"></i>
+                <div class="login-input-wrapper login-password-wrapper">
+                    <i class="bi bi-lock" aria-hidden="true"></i>
 
                     <input asp-for="Input.Password"
                            id="loginPassword"
-                           class="form-control pe-5"
+                           class="form-control"
                            autocomplete="current-password"
                            placeholder="Enter your password" />
 
                     <button type="button"
-                            class="btn password-toggle"
+                            class="password-toggle"
                             data-target="loginPassword"
                             aria-label="Show password">
                         <i class="bi bi-eye"></i>
@@ -124,8 +124,9 @@
         <div class="login-register-link">
             <span>Do not have an account?</span>
 
-            <a asp-area="Identity"
-               asp-page="/Account/Register">
+            <a asp-area=""
+               asp-controller="Enrollment"
+               asp-action="StudentDetails">
                 Register here
             </a>
         </div>

@@ -251,7 +251,7 @@
 
                         <div class="enrollment-information-item">
                             <span>
-                                Final Two Weeks Confirmed
+                                Partial-month Lessons Confirmed
                             </span>
 
                             <strong>
@@ -1058,4 +1058,8 @@
 @if (Model.Status == EnrollmentStatus.PaymentConfirmed)
 {
 <div class="class-details-card mt-3"><h2>Paid enrollment needs fulfillment</h2><p>The verified payment is retained. Resolve class/account issues, then retry enrollment creation without charging again.</p><form asp-controller="Payments" asp-action="RetryEnrollment" method="post"><input type="hidden" name="applicationId" value="@Model.EnrollmentApplicationId" /><button class="btn btn-primary">Retry enrollment fulfillment</button></form></div>
+}
+
+@if (Model.Status == EnrollmentStatus.ApprovedPendingPayment) {
+<div class="alert alert-info mt-3">Selected seats remain reserved while payment is pending, including after the due date. If the family will not proceed, cancel this unpaid application to release the seats.</div>
 }

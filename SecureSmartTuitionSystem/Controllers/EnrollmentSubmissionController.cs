@@ -186,12 +186,12 @@ namespace SecureSmartTuitionSystem.Controllers
             {
                 string? userId = _userManager.GetUserId(User);
                 if (userId == null || !await _context.StudentProfiles.AnyAsync(x => x.StudentProfileId == addStudentId.Value && x.IsActive &&
-                    ((User.IsInRole("Student") && x.ApplicationUserId == userId) ||
+                    (User.IsInRole("Admin") || (User.IsInRole("Student") && x.ApplicationUserId == userId) ||
                      (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))))) return Forbid();
-                var unavailable = await new EnrollmentRulesService(_context).UnavailableSubjectsAsync(addStudentId.Value, model.RequestedStartDate!.Value.Year);
-                if (selectedClasses.Any(x => unavailable.Contains(x.SubjectId)))
+                var check = await EnrollmentAvailability.LoadAsync(_context,model.SelectedClassSessionIds.ToList(),addStudentId);
+                if (selectedClasses.Any(x => check.SubjectBlocked(addStudentId.Value,x.SubjectId,model.RequestedStartDate!.Value,AcademicYearPolicy.ClassEnd(x))))
                 {
-                    ModelState.AddModelError("", "This subject has already been enrolled or has a pending application for the selected academic year.");
+                    ModelState.AddModelError("", "This subject overlaps an existing enrollment or pending application. Choose a start date after it ends.");
                     await PopulateSelectionViewModelAsync(model);
                     return View(SelectClassesViewPath, model);
                 }
@@ -380,6 +380,33 @@ namespace SecureSmartTuitionSystem.Controllers
                         model);
                 }
 
+                var cancelledDates = await _context.ClassLessonChanges.AsNoTracking()
+                    .Where(x => model.SelectedClassSessionIds.Contains(x.ClassSessionId))
+                    .Select(x => new { x.ClassSessionId, x.OriginalDate }).ToListAsync();
+                var remainingByClass = selectedClasses.Select(c => new {
+                    Class = c,
+                    Dates = LateMonthEnrollmentPolicy.RemainingDates(model.RequestedStartDate!.Value,
+                        c.DayOfWeek, ClassScheduleService.FirstDate(c), AcademicYearPolicy.ClassEnd(c),
+                        c.StartTime, ClassScheduleService.Now, cancelledDates.Where(x => x.ClassSessionId == c.ClassSessionId).Select(x => x.OriginalDate))
+                }).ToList();
+                foreach (var item in remainingByClass.Where(x => x.Dates.Count == 0))
+                    ModelState.AddModelError(nameof(model.RequestedStartDate),
+                        $"{GetClassName(item.Class)} has no remaining regular lessons in the selected month. Choose a different start date or remove this class. Regular lessons run from the 1st to the 28th.");
+                bool needsConfirmation = remainingByClass.Any(x => x.Dates.Count is 1 or 2);
+                if (needsConfirmation && !model.FinalTwoWeeksConfirmed)
+                    ModelState.AddModelError(nameof(model.FinalTwoWeeksConfirmed),
+                        "Confirm the listed classes with only one or two regular lessons remaining and acknowledge the full monthly tuition.");
+                // One explicit checkbox covers both the dates and existing full-month fee policy.
+                model.FinalTwoWeeksConfirmed = needsConfirmation && model.FinalTwoWeeksConfirmed;
+                model.FinalTwoWeeksFeeAcknowledged = model.FinalTwoWeeksConfirmed;
+                if (!ModelState.IsValid)
+                {
+                    await PopulateSelectionViewModelAsync(model);
+                    SetFeePreview(model);
+                    return View(EnrollmentOptionsViewPath, model);
+                }
+
+
                 /*
                  * Check selected classes for schedule
                  * conflicts.
@@ -461,7 +488,7 @@ namespace SecureSmartTuitionSystem.Controllers
                     }
 
                     int occupiedSeats =
-                        await new EnrollmentRulesService(_context).OccupiedSeatsAsync(classSession.ClassSessionId);
+                        await new EnrollmentRulesService(_context).OccupiedSeatsAsync(classSession.ClassSessionId, startDate: model.RequestedStartDate ?? GetRequestedStartDate());
 
                     if (occupiedSeats >=
                         classSession.Capacity)
@@ -1107,15 +1134,7 @@ namespace SecureSmartTuitionSystem.Controllers
                             ClassSessionStatus.Active &&
                         (!session.EndDate.HasValue || session.EndDate.Value >= DateTime.UtcNow.AddHours(8).Date) &&
                         (session.StartDate ?? session.CreatedAt.AddHours(8)).Year >= DateTime.UtcNow.AddHours(8).Year &&
-                        session.Subject.IsActive &&
-                        _context.StudentEnrollments.Count(
-                            enrollment =>
-                                enrollment.StartDate.Year >= ClassScheduleService.Today.Year && enrollment.ClassSessionId ==
-                                    session.ClassSessionId &&
-                                (enrollment.Status ==
-                                    StudentEnrollmentStatus.Active ||
-                                 ((enrollment.Status == StudentEnrollmentStatus.PendingDrop && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date)) && (!enrollment.DropEffectiveDate.HasValue || enrollment.DropEffectiveDate.Value > DateTime.UtcNow.AddHours(8).Date)))) <
-                        session.Capacity)
+                        session.Subject.IsActive)
                     .OrderBy(session =>
                         session.Subject.EducationStage)
                     .ThenBy(session =>
@@ -1136,16 +1155,9 @@ namespace SecureSmartTuitionSystem.Controllers
                     (User.IsInRole("Admin") || (User.IsInRole("Student") && x.ApplicationUserId == userId) ||
                      (User.IsInRole("Parent") && x.ParentStudents.Any(link => link.IsActive && link.ParentProfile.ApplicationUserId == userId))));
                 if (!ownsStudent) classSessions.Clear();
-                else
-                {
-                    var unavailableByYear = new Dictionary<int, HashSet<int>>();
-                    var rules = new EnrollmentRulesService(_context);
-                    foreach (var year in classSessions.Select(x => ClassScheduleService.FirstDate(x).Year).Distinct())
-                        unavailableByYear[year] = await rules.UnavailableSubjectsAsync(addStudentId.Value, year);
-                    classSessions = classSessions.Where(x => !unavailableByYear[ClassScheduleService.FirstDate(x).Year].Contains(x.SubjectId)).ToList();
-                }
             }
 
+            var availability = await EnrollmentAvailability.LoadAsync(_context,classSessions.Select(x=>x.ClassSessionId).ToList(),addStudentId);
             var availableClasses =
                 new List<
                     EnrollmentSelectableClassViewModel>();
@@ -1153,13 +1165,21 @@ namespace SecureSmartTuitionSystem.Controllers
             foreach (var classSession
                      in classSessions)
             {
-                int occupiedSeats =
-                    await new EnrollmentRulesService(_context).OccupiedSeatsAsync(classSession.ClassSessionId);
-                if (occupiedSeats >= classSession.Capacity) continue;
-
+                int occupiedSeats = availability.PeakSeats(classSession.ClassSessionId,
+                    model.RequestedStartDate ?? GetRequestedStartDate(), AcademicYearPolicy.ClassEnd(classSession));
+                var dates = new Dictionary<string,int>();
+                var from = ClassScheduleService.Today;
+                var until = AcademicYearPolicy.ClassEnd(classSession);
+                if (until > from.AddYears(1)) until = from.AddYears(1);
+                for(var day=from;day<=until;day=day.AddDays(1)) {
+                    if(day<ClassScheduleService.FirstDate(classSession)||day.Year!=ClassScheduleService.FirstDate(classSession).Year)continue;
+                    var blocked=addStudentId.HasValue&&availability.SubjectBlocked(addStudentId.Value,classSession.SubjectId,day,AcademicYearPolicy.ClassEnd(classSession));
+                    dates[day.ToString("yyyy-MM-dd")]=blocked?-1:Math.Max(0,classSession.Capacity-availability.PeakSeats(classSession.ClassSessionId,day,AcademicYearPolicy.ClassEnd(classSession)));
+                }
                 availableClasses.Add(
                     new EnrollmentSelectableClassViewModel
                     {
+                        AvailabilityByDate = dates,
                         ClassSessionId =
                             classSession.ClassSessionId,
                         TermStart = ClassScheduleService.FirstDate(classSession),
@@ -1218,10 +1238,16 @@ namespace SecureSmartTuitionSystem.Controllers
                     });
             }
 
-            model.AvailableClasses =
-                availableClasses;
+            var availableIds = availableClasses.Select(x => x.ClassSessionId).ToList();
+            var cancelled = await _context.ClassLessonChanges.AsNoTracking()
+                .Where(x => availableIds.Contains(x.ClassSessionId))
+                .Select(x => new { x.ClassSessionId, x.OriginalDate }).ToListAsync();
+            foreach (var item in availableClasses)
+                item.CancelledDates = cancelled.Where(x => x.ClassSessionId == item.ClassSessionId)
+                    .Select(x => x.OriginalDate.ToString("yyyy-MM-dd")).ToList();
+            model.AvailableClasses = availableClasses;
             var selectedTerms = await _context.ClassSessions.AsNoTracking().Where(x => model.SelectedClassSessionIds.Contains(x.ClassSessionId)).ToListAsync();
-            model.SelectedTermEndDate = selectedTerms.Count > 0 ? selectedTerms.Select(AcademicYearPolicy.ClassEnd).Min() : null;
+            model.SelectedTermEndDate = selectedTerms.Count > 0 ? selectedTerms.Select(AcademicYearPolicy.BillableEnd).Min() : null;
 
             model.AcademicLevelOptions =
                 classSessions

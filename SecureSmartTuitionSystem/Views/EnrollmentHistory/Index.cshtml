@@ -10,6 +10,7 @@
             <div>
                 <h1 class="h4 mb-1">Enrollment History</h1>
                 <p class="mb-0">Review your enrollment applications and their current status.</p>
+                <p class="text-muted small mb-0">Approved applications reserve seats while payment is pending. If you will not proceed, contact staff to cancel the unpaid application.</p>
             </div>
             <span class="text-muted">@Model.TotalRows row(s)</span>
         </header>
@@ -25,15 +26,15 @@
         <button class="btn btn-primary" type="submit">Filter</button>
     </form>
         <div class="table-responsive">
-            <table class="table align-middle" data-server-paged="true">
+            <table data-source-table="enrollments" data-current-page="@Model.Page" data-page-count="@Model.TotalPages" data-total-rows="@Model.TotalRows" data-page-param="page" class="table align-middle" data-server-paged="true">
                 <thead><tr>
                     <th scope="col">No</th>
-                    <th scope="col">Student</th>
-                    <th scope="col">Classes</th>
-                    <th scope="col">Submitted</th>
-                    <th scope="col">Start date</th>
-                    <th scope="col">Plan</th>
-                    <th scope="col">Status</th>
+                    <th scope="col" data-sort-key="student">Student</th>
+                    <th scope="col" data-sort-key="class">Classes</th>
+                    <th scope="col" data-sort-key="submitted">Submitted</th>
+                    <th scope="col" data-sort-key="start">Start date</th>
+                    <th scope="col" data-sort-key="duration">Plan</th>
+                    <th scope="col" data-sort-key="status">Status</th>
                 </tr></thead>
                 <tbody>
                 @foreach (var row in Model.Rows)

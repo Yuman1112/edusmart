@@ -36,7 +36,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Enrollment
             200,
             ErrorMessage = "Class name cannot exceed 200 characters.")]
         [Display(Name = "Class Name")]
-        public string? ClassName { get; set; }
+        public string? ClassName { get => _className == null ? null : SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string? _className;
 
         [StringLength(
             500,

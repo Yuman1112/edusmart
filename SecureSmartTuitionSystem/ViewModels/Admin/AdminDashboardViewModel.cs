@@ -20,7 +20,8 @@ namespace SecureSmartTuitionSystem.ViewModels.Admin
 
     public class AdminClassItemViewModel
     {
-        public string ClassName { get; set; } = string.Empty;
+        public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
 
         public string Schedule { get; set; } = string.Empty;
 

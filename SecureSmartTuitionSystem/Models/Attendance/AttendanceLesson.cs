@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using SecureSmartTuitionSystem.Models.Enrollment;
 using SecureSmartTuitionSystem.Models.Identity;
 namespace SecureSmartTuitionSystem.Models.Attendance;
@@ -16,7 +16,8 @@ public sealed class AttendanceLesson
     public TimeOnly EndTime { get; set; }
     [MaxLength(450)] public string TutorUserId { get; set; } = "";
     [MaxLength(30)] public string ClassCode { get; set; } = "";
-    [MaxLength(200)] public string ClassName { get; set; } = "";
+    [MaxLength(200)] public string ClassName { get => SecureSmartTuitionSystem.Services.Enrollment.ClassNameFormatter.Clean(_className); set => _className = value; }
+        private string _className = "";
     [MaxLength(100)] public string TutorName { get; set; } = "";
     public DateTime UpdatedAtUtc { get; set; }
     [MaxLength(450)] public string UpdatedByUserId { get; set; } = "";

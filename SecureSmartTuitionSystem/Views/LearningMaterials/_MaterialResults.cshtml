@@ -1,4 +1,4 @@
-﻿@model SecureSmartTuitionSystem.ViewModels.Learning.MaterialIndexModel
+@model SecureSmartTuitionSystem.ViewModels.Learning.MaterialIndexModel
 @{
     string NextSort(string key) => Model.Filter.Sort == key + "_asc" ? key + "_desc" : key + "_asc";
     string AriaSort(string key) => Model.Filter.Sort == key + "_asc" ? "ascending" : Model.Filter.Sort == key + "_desc" ? "descending" : "none";
@@ -76,7 +76,7 @@
         else
         {
             <div class="table-responsive material-table-scroll">
-                <table class="table align-middle compact-class-table" data-pagination="off">
+                <table data-source-table="materials" data-current-page="@Model.Filter.Page" data-page-count="@Model.PageCount" data-total-rows="@Model.Total" data-page-param="Page" class="table align-middle compact-class-table" data-pagination="off">
                     <thead>
                         <tr>
                             <th scope="col" class="number-column column-number">No.</th>

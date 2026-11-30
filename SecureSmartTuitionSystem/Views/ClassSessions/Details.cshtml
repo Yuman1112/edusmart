@@ -38,6 +38,8 @@
     </div>
 
     <div class="class-detail-header-actions">
+        @if (Model.Status != ClassSessionStatus.Closed)
+        {
         <a asp-controller="ClassSessions"
            asp-action="Edit"
            asp-route-id="@Model.ClassSessionId"
@@ -45,6 +47,7 @@
             <i class="bi bi-pencil-square"></i>
             Edit
         </a>
+        }
 
         <a asp-controller="ClassSessions"
            asp-action="Index"
@@ -55,6 +58,13 @@
     </div>
 </div>
 
+@if (Model.Status == ClassSessionStatus.Closed)
+{
+    <div class="alert alert-secondary" role="status">
+        <strong>Closed @(Model.ClosedAtUtc?.AddHours(8).ToString("dd MMM yyyy HH:mm")) MYT</strong>
+        <p class="mb-0">@Model.ClosureReason</p>
+    </div>
+}
 <div class="class-details-card">
     <div class="class-details-title">
         <div>
@@ -68,6 +78,10 @@
         else if (Model.Status == ClassSessionStatus.Cancelled)
         {
             <span class="status-pill status-danger">Cancelled</span>
+        }
+        else if (Model.Status == ClassSessionStatus.Closed)
+        {
+            <span class="status-pill status-danger">Closed</span>
         }
         else
         {
@@ -184,3 +198,11 @@
 
 @await Component.InvokeAsync("ClassMembers", new { classSessionId = Model.ClassSessionId })
 
+
+@if (Model.Status == ClassSessionStatus.Active) {
+<details class="class-details-card mt-3"><summary><strong>When can I mark this class as completed?</strong></summary>
+<p class="mt-3">The term end date must be earlier than today. All cancelled lessons need complete replacement schedules, and those replacements must have ended. Resolve approved unpaid applications and any paid applications awaiting enrollment creation.</p>
+@if (Model.EndDate.HasValue) { <p>Term end: <strong>@Model.EndDate.Value.ToString("dd MMM yyyy")</strong>. Earliest completion date: <strong>@Model.EndDate.Value.AddDays(1).ToString("dd MMM yyyy") MYT</strong>, provided the other conditions are met.</p> }
+<p>Open <a asp-controller="ClassSchedules" asp-action="Index" asp-route-classSessionId="@Model.ClassSessionId">Calendar</a> to review cancelled and replacement lessons. Paid term commitments remain protected when editing dates.</p>
+</details>
+}

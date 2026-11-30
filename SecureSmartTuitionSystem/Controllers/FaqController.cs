@@ -35,6 +35,23 @@ public sealed class FaqController(ChatbotAssistantService assistant, ChatbotSess
         ModelState.Remove(nameof(model.Scope));
         ModelState.Remove(nameof(model.IncludeAccountData));
         if (!ModelState.IsValid) return InvalidInput(model);
+        bool streaming = IsAsyncRequest && Request.Headers.Accept.ToString().Contains("application/x-ndjson", StringComparison.OrdinalIgnoreCase);
+        bool started = false;
+        async Task Emit(string type, object payload)
+        {
+            if (!started)
+            {
+                Response.ContentType = "application/x-ndjson; charset=utf-8";
+                Response.Headers["X-Accel-Buffering"] = "no";
+                Response.Headers.CacheControl = "no-store";
+                // Establish the guest session cookie before the first flush.
+                HttpContext.Session.SetString("Chatbot.StreamSession", "1");
+                await HttpContext.Session.CommitAsync(ct);
+                await Response.StartAsync(ct); started = true;
+            }
+            await Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new { type, payload }, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }) + "\n", ct);
+            await Response.Body.FlushAsync(ct);
+        }
         ChatbotTurn turn;
         if (!string.IsNullOrWhiteSpace(model.Topic))
         {
@@ -47,9 +64,11 @@ public sealed class FaqController(ChatbotAssistantService assistant, ChatbotSess
             string question = model.Question?.Trim() ?? "";
             if (question.Length == 0) { ModelState.AddModelError(nameof(model.Question), "Choose a question or type your question."); return InvalidInput(model); }
             var history = sessions.Read(HttpContext.Session, UserId);
+            if (streaming) await Emit("start", new { question = ChatbotPrivacyPolicy.ForHistory(question) });
             try
             {
-                var answer = await assistant.AskAsync(User, question, model.Scope, model.IncludeAccountData, history, ct);
+                var answer = await assistant.AskAsync(User, question, model.Scope, model.IncludeAccountData, history, ct,
+                    streaming ? text => Emit("draft", new { text }) : null);
                 turn = new(ChatbotPrivacyPolicy.ForHistory(question), answer.Text, answer.IsAI, answer.NeedsHuman, answer.Sources, ChatbotContextService.ResolveScope(question, "auto") is "bills" or "enrollments");
             }
             catch (Exception ex) when (ex is Microsoft.EntityFrameworkCore.DbUpdateException or Microsoft.Data.SqlClient.SqlException)
@@ -64,7 +83,9 @@ public sealed class FaqController(ChatbotAssistantService assistant, ChatbotSess
                 saved.Add(turn);
                 sessions.Save(HttpContext.Session, UserId, saved);
             }
-            return Json(new { turn, handoffToken = AuthenticatedId is {} id ? sessions.IssueHandoff(id, turn) : null });
+            var handoffToken = AuthenticatedId is {} id ? sessions.IssueHandoff(id, turn) : null;
+            if (streaming) { await HttpContext.Session.CommitAsync(ct); await Emit("done", new { turn, handoffToken }); return new EmptyResult(); }
+            return Json(new { turn, handoffToken });
         }
         if (turn.IncludedAccountData || turn.Sources.Any(s => !(s.Id.StartsWith("faq-") || s.Id.StartsWith("kb-"))))
         {

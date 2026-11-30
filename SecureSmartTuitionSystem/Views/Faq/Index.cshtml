@@ -31,8 +31,10 @@ else { <p class="faq-hint mt-3">Quick answers and website lookups are available.
 </div>
 <div class="faq-support"><h3>Talk to staff</h3><p>You can contact staff at any time. A reply may take time.</p>
 @if (User.Identity?.IsAuthenticated != true) {
-<p class="faq-hint">Sign in to access your account records or message staff.</p>
-<a asp-area="Identity" asp-page="/Account/Login" asp-route-returnUrl="/Faq" class="outline-button">Sign in for account support</a>
+<p class="faq-hint">Leave your name, email and question. Staff can reply by email; no sign-in is required.</p>
+<a asp-controller="GuestSupport" asp-action="Index" class="outline-button guest-support-action">Contact staff without signing in</a>
+<p class="faq-hint mt-3">For personal bills or account records, sign in for account support.</p>
+<a asp-area="Identity" asp-page="/Account/Login" asp-route-returnUrl="/Faq" class="outline-button guest-support-action">Sign in for account support</a>
 }
 else if (User.IsInRole("Admin")) { <a asp-controller="Messages" asp-action="Index" class="outline-button">Open messages</a> }
 else {

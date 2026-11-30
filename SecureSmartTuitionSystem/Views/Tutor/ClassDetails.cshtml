@@ -67,6 +67,10 @@
                 Cancelled
             </span>
         }
+        else if (Model.Status == ClassSessionStatus.Closed)
+        {
+            <span class="status-pill status-danger">Closed</span>
+        }
         else
         {
             <span class="status-pill status-warning">
